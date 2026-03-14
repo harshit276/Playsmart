@@ -1,0 +1,145 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "PlaySmart",
+      "tagline": "Train smarter. Buy right. Play better.",
+      "tone": "Performance Pro",
+      "description": "An AI-powered badminton companion that feels like a mix of Strava's analytics, Duolingo's progress tracking, and Nike Training Club's premium aesthetic. Dark mode first, high contrast, neon accents."
+    },
+    "typography": {
+      "font_family": {
+        "heading": "Barlow Condensed, sans-serif",
+        "body": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-5xl md:text-7xl font-black tracking-tighter uppercase",
+        "h2": "text-3xl md:text-5xl font-bold tracking-tight uppercase",
+        "h3": "text-2xl md:text-3xl font-semibold tracking-tight",
+        "h4": "text-xl md:text-2xl font-semibold",
+        "body_lg": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed text-zinc-400",
+        "caption": "text-sm font-medium tracking-wide uppercase text-zinc-500"
+      },
+      "import_url": "https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100&family=Inter:wght@100..900&family=JetBrains+Mono:wght@400;700&display=swap"
+    },
+    "colors": {
+      "theme": "dark",
+      "palette": {
+        "background": "#09090b",
+        "foreground": "#fafafa",
+        "card": "#18181b",
+        "card_foreground": "#fafafa",
+        "popover": "#18181b",
+        "popover_foreground": "#fafafa",
+        "primary": "#bef264",
+        "primary_foreground": "#09090b",
+        "secondary": "#27272a",
+        "secondary_foreground": "#fafafa",
+        "muted": "#27272a",
+        "muted_foreground": "#a1a1aa",
+        "accent": "#bef264",
+        "accent_foreground": "#09090b",
+        "destructive": "#ef4444",
+        "destructive_foreground": "#fafafa",
+        "border": "#27272a",
+        "input": "#27272a",
+        "ring": "#bef264"
+      },
+      "gradients": {
+        "hero": "bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950",
+        "card_hover": "hover:bg-zinc-800/50 transition-colors duration-300",
+        "accent_glow": "shadow-[0_0_20px_rgba(190,242,100,0.3)]"
+      }
+    },
+    "layout": {
+      "container": "container mx-auto px-4 md:px-6 max-w-7xl",
+      "section_spacing": "py-16 md:py-24",
+      "component_spacing": "space-y-6",
+      "grid_dashboard": "grid grid-cols-1 md:grid-cols-12 gap-6",
+      "border_radius": "rounded-xl"
+    },
+    "visual_enhancers": {
+      "glass": "bg-zinc-900/60 backdrop-blur-xl border border-white/10",
+      "neon_border": "border border-lime-400/50 shadow-[0_0_15px_rgba(190,242,100,0.2)]",
+      "subtle_border": "border border-white/5",
+      "shadows": {
+        "card": "shadow-none",
+        "floating": "shadow-2xl shadow-black/50"
+      }
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide px-8 py-4 rounded-full transition-all hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(190,242,100,0.3)]",
+      "secondary": "bg-zinc-800 text-white hover:bg-zinc-700 font-semibold px-6 py-3 rounded-full border border-white/10",
+      "ghost": "text-zinc-400 hover:text-lime-400 hover:bg-lime-400/10 px-4 py-2 rounded-lg"
+    },
+    "cards": {
+      "base": "bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-zinc-700 transition-all duration-300",
+      "interactive": "group relative overflow-hidden bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-lime-400/50 transition-all duration-300 cursor-pointer",
+      "stat": "bg-zinc-900/50 border border-white/5 p-4 rounded-lg flex flex-col justify-between h-full"
+    },
+    "inputs": {
+      "base": "bg-zinc-950 border border-zinc-800 focus:border-lime-400 focus:ring-1 focus:ring-lime-400 rounded-lg px-4 py-3 text-white placeholder:text-zinc-600 w-full transition-all"
+    }
+  },
+  "pages": {
+    "landing": {
+      "structure": [
+        "Hero Section (Full height, dark moody image, neon text)",
+        "Features Grid (Bento style)",
+        "Social Proof/Trusted By",
+        "CTA Section (Join the revolution)"
+      ],
+      "hero_image": "https://images.unsplash.com/photo-1761286753703-570ed91dd90e?q=80&w=2070&auto=format&fit=crop"
+    },
+    "auth": {
+      "structure": "Split screen. Left: Motivational Image. Right: Minimalist OTP Form.",
+      "image": "https://images.unsplash.com/photo-1771854399835-f413978006cb?q=80&w=1974&auto=format&fit=crop"
+    },
+    "dashboard": {
+      "layout": "Bento Grid (12 cols)",
+      "widgets": [
+        { "name": "Skill Profile", "col_span": "md:col-span-8", "row_span": "row-span-2", "type": "Radar Chart + Stats" },
+        { "name": "Streak", "col_span": "md:col-span-4", "row_span": "row-span-1", "type": "Fire Icon + Count" },
+        { "name": "Next Drill", "col_span": "md:col-span-4", "row_span": "row-span-1", "type": "Video Thumbnail + Action" }
+      ]
+    },
+    "equipment": {
+      "layout": "List View with Compatibility Score",
+      "card_style": "Horizontal card. Left: Product Image. Center: Specs (Bars). Right: Match Score (Circle).",
+      "images": {
+        "yonex_power": "https://images.unsplash.com/photo-1564227050211-b6061acd4158?q=80&w=2070&auto=format&fit=crop",
+        "victor_speed": "https://images.unsplash.com/photo-1564227122460-9e131708b3a6?q=80&w=2070&auto=format&fit=crop",
+        "shuttles": "https://images.unsplash.com/photo-1708312604109-16c0be9326cd?q=80&w=2070&auto=format&fit=crop"
+      }
+    }
+  },
+  "assets": {
+    "icons": "Lucide React (already installed)",
+    "charts": "Recharts (use ResponsiveContainer)",
+    "images": {
+      "hero_bg": "https://images.unsplash.com/photo-1761286753703-570ed91dd90e?q=80&w=2070&auto=format&fit=crop",
+      "auth_bg": "https://images.unsplash.com/photo-1771854399835-f413978006cb?q=80&w=1974&auto=format&fit=crop",
+      "racket_1": "https://images.unsplash.com/photo-1564227050211-b6061acd4158?q=80&w=2070&auto=format&fit=crop",
+      "racket_2": "https://images.unsplash.com/photo-1564227122460-9e131708b3a6?q=80&w=2070&auto=format&fit=crop",
+      "shuttles": "https://images.unsplash.com/photo-1708312604109-16c0be9326cd?q=80&w=2070&auto=format&fit=crop"
+    }
+  },
+  "universal_guidelines": [
+    "Use 'Barlow Condensed' for all headings to give that athletic, compressed feel.",
+    "Always use the 'Volt Green' (#bef264) for primary actions. It is the 'Go' signal.",
+    "Dark mode is mandatory. Do not create a light mode toggle unless explicitly asked later.",
+    "Use Lucide icons with stroke-width={1.5} for a premium, thin look.",
+    "All cards must have a subtle 1px border (border-zinc-800) to define edges in dark mode.",
+    "Charts should use the neon palette: #bef264 (Lime), #38bdf8 (Sky), #a855f7 (Purple).",
+    "For interactive elements, always add 'cursor-pointer' and a hover state (brightness-110 or scale-105).",
+    "Ensure all images have 'object-cover' and 'rounded-xl' unless they are full-screen backgrounds.",
+    "Add 'data-testid' to all interactive elements for testing.",
+    "Use 'sonner' for toasts.",
+    "Never use generic HTML dropdowns. Use Shadcn Select.",
+    "Never use generic HTML date pickers. Use Shadcn Calendar.",
+    "Avoid 'Inter' for Headings. Use 'Barlow Condensed'."
+  ]
+}
