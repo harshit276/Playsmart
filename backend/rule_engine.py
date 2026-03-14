@@ -123,6 +123,59 @@ def get_top_recommendations(profile, equipment_list, top_n=3):
     for eq in equipment_list:
         sc = calculate_compatibility_score(profile, eq, rules)
         scored.append({"equipment": eq, "score": sc})
+    scored.sort(key=lambda x: x["score"]["total"], reverse=True)
+    return scored[:top_n]
 
+
+def calculate_shoe_score(profile, shoe):
+    score = {"skill_match": 0, "play_style_match": 0, "budget_match": 0, "performance_fit": 0, "total": 0}
+    skill = profile.get("skill_level", "Intermediate")
+    budget = profile.get("budget_range", "Medium")
+    play_style = profile.get("play_style", "All-round")
+
+    rec_levels = shoe.get("recommended_skill_level", [])
+    if isinstance(rec_levels, str):
+        rec_levels = [rec_levels]
+    if skill in rec_levels:
+        score["skill_match"] = 40
+    elif any(l in rec_levels for l in ["Beginner", "Beginner+", "Intermediate", "Advanced"]):
+        score["skill_match"] = 20
+
+    weight = shoe.get("weight_grams", 300)
+    support = shoe.get("ankle_support", "Mid")
+    if play_style == "Speed" and weight < 300:
+        score["play_style_match"] = 30
+    elif play_style == "Power" and support in ["Mid", "High"]:
+        score["play_style_match"] = 30
+    elif play_style == "Defense" and shoe.get("durability", 5) >= 8:
+        score["play_style_match"] = 25
+    else:
+        score["play_style_match"] = 20
+
+    budget_rules = {"Low": 3500, "Medium": 6000, "High": 10000, "Premium": 50000}
+    max_b = budget_rules.get(budget, 6000)
+    price = shoe.get("price_range_value", 5000)
+    if price <= max_b:
+        score["budget_match"] = min(20, int(10 + (1 - price / max_b) * 10))
+    else:
+        score["budget_match"] = max(0, int(20 - (price / max_b - 1) * 20))
+
+    cushion = shoe.get("cushioning", "")
+    if cushion in ["Power Cushion+", "Power Cushion", "Gel", "Energymax", "Cloud"]:
+        score["performance_fit"] = 10
+    elif cushion in ["EVA", "Bounse+", "Kalensole", "Cloud Lite"]:
+        score["performance_fit"] = 7
+    else:
+        score["performance_fit"] = 5
+
+    score["total"] = score["skill_match"] + score["play_style_match"] + score["budget_match"] + score["performance_fit"]
+    return score
+
+
+def get_top_shoe_recommendations(profile, shoes_list, top_n=3):
+    scored = []
+    for shoe in shoes_list:
+        sc = calculate_shoe_score(profile, shoe)
+        scored.append({"equipment": shoe, "score": sc})
     scored.sort(key=lambda x: x["score"]["total"], reverse=True)
     return scored[:top_n]

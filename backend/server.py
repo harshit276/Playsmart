@@ -226,31 +226,28 @@ async def get_equipment(equipment_id: str):
 # ─── Recommendation Routes ───
 
 @api_router.get("/recommendations/equipment/{user_id}")
-async def get_equipment_recommendations(user_id: str):
-    from rule_engine import get_top_recommendations
+async def get_equipment_recommendations(user_id: str, category: str = "racket"):
+    from rule_engine import get_top_recommendations, get_top_shoe_recommendations
     from ai_explainer import generate_explanation
 
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found. Complete assessment first.")
 
-    rackets = await db.equipment.find({"category": "racket"}, {"_id": 0}).to_list(100)
-    top_recs = get_top_recommendations(profile, rackets, top_n=3)
+    if category == "shoes":
+        shoes = await db.equipment.find({"category": "shoes"}, {"_id": 0}).to_list(100)
+        top_recs = get_top_shoe_recommendations(profile, shoes, top_n=3)
+    else:
+        rackets = await db.equipment.find({"category": "racket"}, {"_id": 0}).to_list(100)
+        top_recs = get_top_recommendations(profile, rackets, top_n=3)
 
     results = []
     for rec in top_recs:
         eq = rec["equipment"]
         sc = rec["score"]
-
         explanation = await generate_explanation(profile, eq, sc)
         prices = await db.equipment_prices.find({"product_id": eq["id"]}, {"_id": 0}).to_list(10)
-
-        results.append({
-            "equipment": eq,
-            "score": sc,
-            "explanation": explanation,
-            "prices": prices,
-        })
+        results.append({"equipment": eq, "score": sc, "explanation": explanation, "prices": prices})
 
     return {"recommendations": results, "profile_summary": {
         "skill_level": profile.get("skill_level"),
@@ -258,6 +255,46 @@ async def get_equipment_recommendations(user_id: str):
         "budget_range": profile.get("budget_range"),
         "primary_goal": profile.get("primary_goal"),
     }}
+
+
+@api_router.get("/recommendations/gear/{user_id}")
+async def get_gear_recommendations(user_id: str):
+    profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    skill = profile.get("skill_level", "Beginner")
+    budget = profile.get("budget_range", "Medium")
+    gear_categories = ["shuttlecock", "string", "grip", "bag"]
+
+    results = {}
+    for cat in gear_categories:
+        items = await db.equipment.find({"category": cat}, {"_id": 0}).to_list(50)
+        # Filter by skill level match and sort by budget fit
+        matched = []
+        for item in items:
+            rec_levels = item.get("recommended_skill_level", [])
+            if isinstance(rec_levels, str):
+                rec_levels = [rec_levels]
+            if skill in rec_levels or not rec_levels:
+                prices = await db.equipment_prices.find({"product_id": item["id"]}, {"_id": 0}).to_list(10)
+                matched.append({"equipment": item, "prices": prices, "reason": _gear_reason(item, skill, budget)})
+        results[cat] = matched[:2]
+
+    return {"gear": results, "profile_level": skill}
+
+
+def _gear_reason(item, skill, budget):
+    cat = item.get("category", "")
+    brand = item.get("brand", "")
+    model = item.get("model", "")
+    reasons = {
+        "shuttlecock": f"The {brand} {model} is ideal for {skill} players. {'Nylon shuttles are durable and cost-effective for practice.' if item.get('type') == 'Nylon' else 'Feather shuttles provide authentic flight for competitive play.'}",
+        "string": f"The {brand} {model} offers {'excellent durability for regular play' if item.get('durability', 5) >= 8 else 'great repulsion for powerful shots'}. Perfect for {skill} players.",
+        "grip": f"The {brand} {model} provides {'excellent tackiness' if item.get('tackiness', 5) >= 8 else 'great sweat absorption'}. Essential for maintaining racket control.",
+        "bag": f"The {brand} {model} with {item.get('capacity', 'multiple')} capacity is well-suited for a {skill} player's gear needs.",
+    }
+    return reasons.get(cat, f"Great choice for {skill} level players.")
 
 
 @api_router.get("/recommendations/training/{user_id}")
