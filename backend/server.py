@@ -994,7 +994,11 @@ if IS_SERVERLESS:
     ANALYSIS_TEMP_DIR = Path("/tmp/athlyticai_uploads")
 else:
     ANALYSIS_TEMP_DIR = Path(os.environ.get("UPLOAD_TEMP_DIR", str(ROOT_DIR / "temp_uploads")))
-ANALYSIS_TEMP_DIR.mkdir(exist_ok=True)
+try:
+    ANALYSIS_TEMP_DIR.mkdir(exist_ok=True)
+except OSError:
+    ANALYSIS_TEMP_DIR = Path("/tmp/athlyticai_uploads")
+    ANALYSIS_TEMP_DIR.mkdir(exist_ok=True)
 
 
 def _run_ai_pipeline(video_path: str, sport: str = "badminton", target_player: str = "auto") -> dict:
@@ -1812,7 +1816,10 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
 
 
 HIGHLIGHTS_DIR = ANALYSIS_TEMP_DIR / "highlights"
-HIGHLIGHTS_DIR.mkdir(exist_ok=True)
+try:
+    HIGHLIGHTS_DIR.mkdir(exist_ok=True)
+except OSError:
+    pass
 
 
 @api_router.get("/highlights/{analysis_id}")
