@@ -85,3 +85,27 @@ frontend/node_modules/.cache/default-development/0.pack
 *.env
 *.env.*
 frontend/node_modules/.cache/default-development/1.pack
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Temp uploads
+temp_uploads/
+backend/temp_uploads/
+
+# TensorFlow models
+*.h5
+*.pb
+*.tflite
+*.savedmodel
+
+# SSH / secret keys
+*.key
+*.key.pub
+ssh-key-*
+
+# OS
+Thumbs.db

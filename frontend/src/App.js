@@ -12,6 +12,12 @@ import EquipmentPage from "@/pages/EquipmentPage";
 import TrainingPage from "@/pages/TrainingPage";
 import ProgressPage from "@/pages/ProgressPage";
 import PlayerCardPage from "@/pages/PlayerCardPage";
+import AnalyzePage from "@/pages/AnalyzePage";
+import CommunityPage from "@/pages/CommunityPage";
+import HighlightsPage from "@/pages/HighlightsPage";
+import BlogListPage from "@/pages/BlogListPage";
+import BlogPostPage from "@/pages/BlogPostPage";
+import InstallPrompt from "@/components/InstallPrompt";
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -84,12 +90,17 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/blog" element={<BlogListPage />} />
+      <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/assessment" element={<ProtectedRoute><AssessmentPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<RequireProfile><DashboardPage /></RequireProfile>} />
       <Route path="/equipment" element={<RequireProfile><EquipmentPage /></RequireProfile>} />
       <Route path="/training" element={<RequireProfile><TrainingPage /></RequireProfile>} />
       <Route path="/progress" element={<RequireProfile><ProgressPage /></RequireProfile>} />
+      <Route path="/analyze" element={<RequireProfile><AnalyzePage /></RequireProfile>} />
+      <Route path="/highlights" element={<RequireProfile><HighlightsPage /></RequireProfile>} />
+      <Route path="/community" element={<RequireProfile><CommunityPage /></RequireProfile>} />
       <Route path="/card" element={<RequireProfile><PlayerCardPage /></RequireProfile>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -104,6 +115,7 @@ function App() {
           <Navbar />
           <AppRoutes />
           <Toaster position="bottom-right" />
+          <InstallPrompt />
         </div>
       </AuthProvider>
     </BrowserRouter>

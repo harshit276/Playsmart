@@ -1,5 +1,5 @@
 """
-PlaySmart Recommendation Rule Engine - Deterministic equipment recommendations.
+AthlyticAI Recommendation Rule Engine - Deterministic equipment recommendations.
 """
 
 

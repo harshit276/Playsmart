@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://athlyticai.com/sitemap.xml

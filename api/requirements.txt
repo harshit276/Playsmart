@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+motor
+pymongo[srv]
+python-dotenv
+PyJWT
+python-multipart
+dnspython
+aiofiles
+certifi

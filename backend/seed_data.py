@@ -1,5 +1,5 @@
 """
-PlaySmart Seed Data - Comprehensive badminton equipment, drills, and training data.
+AthlyticAI Seed Data - Comprehensive badminton equipment, drills, and training data.
 """
 
 RACKETS = [
@@ -84,6 +84,70 @@ EQUIPMENT_PRICES = [
     {"product_id": "r022", "marketplace": "Flipkart", "price": 5199, "mrp": 6499, "discount_percent": 20, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.flipkart.com/li-ning-ss9"},
     {"product_id": "r015", "marketplace": "Amazon", "price": 3999, "mrp": 5499, "discount_percent": 27, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/dp/B09YZA567"},
     {"product_id": "r015", "marketplace": "Flipkart", "price": 4199, "mrp": 5499, "discount_percent": 24, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.flipkart.com/li-ning-windstorm"},
+    # --- Remaining rackets ---
+    {"product_id": "r002", "marketplace": "Amazon", "price": 13499, "mrp": 16999, "discount_percent": 21, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Astrox+99+Pro"},
+    {"product_id": "r002", "marketplace": "Flipkart", "price": 13999, "mrp": 16999, "discount_percent": 18, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+astrox+99+pro"},
+    {"product_id": "r003", "marketplace": "Amazon", "price": 10499, "mrp": 12999, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Nanoflare+700"},
+    {"product_id": "r003", "marketplace": "Flipkart", "price": 10999, "mrp": 12999, "discount_percent": 15, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+nanoflare+700"},
+    {"product_id": "r004", "marketplace": "Amazon", "price": 12499, "mrp": 15499, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Nanoflare+800"},
+    {"product_id": "r004", "marketplace": "Flipkart", "price": 12999, "mrp": 15499, "discount_percent": 16, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+nanoflare+800"},
+    {"product_id": "r006", "marketplace": "Amazon", "price": 14499, "mrp": 17999, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Voltric+Z-Force+II"},
+    {"product_id": "r006", "marketplace": "Flipkart", "price": 14999, "mrp": 17999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+voltric+z+force"},
+    {"product_id": "r007", "marketplace": "Amazon", "price": 11999, "mrp": 14999, "discount_percent": 20, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Astrox+88S+Pro"},
+    {"product_id": "r007", "marketplace": "Flipkart", "price": 12499, "mrp": 14999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+astrox+88s+pro"},
+    {"product_id": "r008", "marketplace": "Amazon", "price": 14499, "mrp": 17999, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Nanoflare+1000Z"},
+    {"product_id": "r008", "marketplace": "Flipkart", "price": 14999, "mrp": 17999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+nanoflare+1000z"},
+    {"product_id": "r010", "marketplace": "Amazon", "price": 12499, "mrp": 15499, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Duora+10"},
+    {"product_id": "r010", "marketplace": "Flipkart", "price": 12999, "mrp": 15499, "discount_percent": 16, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.flipkart.com/search?q=yonex+duora+10"},
+    {"product_id": "r011", "marketplace": "Amazon", "price": 10499, "mrp": 12999, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Li-Ning+Axforce+80"},
+    {"product_id": "r011", "marketplace": "Flipkart", "price": 10999, "mrp": 12999, "discount_percent": 15, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=li+ning+axforce+80"},
+    {"product_id": "r012", "marketplace": "Amazon", "price": 13499, "mrp": 16999, "discount_percent": 21, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Li-Ning+Bladex+900"},
+    {"product_id": "r012", "marketplace": "Flipkart", "price": 13999, "mrp": 16999, "discount_percent": 18, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=li+ning+bladex+900"},
+    {"product_id": "r013", "marketplace": "Amazon", "price": 8999, "mrp": 11499, "discount_percent": 22, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Li-Ning+Tectonic+7"},
+    {"product_id": "r013", "marketplace": "Flipkart", "price": 9499, "mrp": 11499, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=li+ning+tectonic+7"},
+    {"product_id": "r016", "marketplace": "Amazon", "price": 11499, "mrp": 13999, "discount_percent": 18, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Victor+Thruster+K+9900"},
+    {"product_id": "r016", "marketplace": "Flipkart", "price": 11999, "mrp": 13999, "discount_percent": 14, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+thruster+k+9900"},
+    {"product_id": "r017", "marketplace": "Amazon", "price": 10999, "mrp": 13499, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Victor+Jetspeed+S+12"},
+    {"product_id": "r017", "marketplace": "Flipkart", "price": 11499, "mrp": 13499, "discount_percent": 15, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+jetspeed+s12"},
+    {"product_id": "r018", "marketplace": "Amazon", "price": 7999, "mrp": 9999, "discount_percent": 20, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Victor+Brave+Sword+12"},
+    {"product_id": "r018", "marketplace": "Flipkart", "price": 8499, "mrp": 9999, "discount_percent": 15, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+brave+sword+12"},
+    {"product_id": "r019", "marketplace": "Amazon", "price": 8499, "mrp": 10499, "discount_percent": 19, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Victor+Auraspeed+90K"},
+    {"product_id": "r019", "marketplace": "Flipkart", "price": 8999, "mrp": 10499, "discount_percent": 14, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+auraspeed+90k"},
+    {"product_id": "r020", "marketplace": "Amazon", "price": 8999, "mrp": 11499, "discount_percent": 22, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Victor+DriveX+9X"},
+    {"product_id": "r020", "marketplace": "Flipkart", "price": 9499, "mrp": 11499, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+drivex+9x"},
+    {"product_id": "r023", "marketplace": "Amazon", "price": 1299, "mrp": 1799, "discount_percent": 28, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/s?k=Victor+AL-2200+badminton"},
+    {"product_id": "r023", "marketplace": "Flipkart", "price": 1399, "mrp": 1799, "discount_percent": 22, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+al+2200"},
+    # --- Shoes ---
+    {"product_id": "s001", "marketplace": "Amazon", "price": 8999, "mrp": 11499, "discount_percent": 22, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Power+Cushion+65Z3"},
+    {"product_id": "s001", "marketplace": "Flipkart", "price": 9499, "mrp": 11499, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+65z3"},
+    {"product_id": "s002", "marketplace": "Amazon", "price": 9499, "mrp": 11999, "discount_percent": 21, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Aerus+Z2"},
+    {"product_id": "s002", "marketplace": "Flipkart", "price": 9999, "mrp": 11999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+aerus+z2"},
+    {"product_id": "s003", "marketplace": "Amazon", "price": 6999, "mrp": 8999, "discount_percent": 22, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Yonex+Power+Cushion+88D2"},
+    {"product_id": "s003", "marketplace": "Flipkart", "price": 7499, "mrp": 8999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+88d2+shoes"},
+    {"product_id": "s004", "marketplace": "Amazon", "price": 7499, "mrp": 9499, "discount_percent": 21, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Victor+A960+badminton+shoes"},
+    {"product_id": "s004", "marketplace": "Flipkart", "price": 7999, "mrp": 9499, "discount_percent": 16, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+a960"},
+    {"product_id": "s005", "marketplace": "Amazon", "price": 7999, "mrp": 9999, "discount_percent": 20, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Victor+S82II+badminton"},
+    {"product_id": "s005", "marketplace": "Flipkart", "price": 8499, "mrp": 9999, "discount_percent": 15, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+s82"},
+    {"product_id": "s006", "marketplace": "Amazon", "price": 4999, "mrp": 6499, "discount_percent": 23, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/s?k=Victor+P9200+badminton"},
+    {"product_id": "s006", "marketplace": "Flipkart", "price": 5499, "mrp": 6499, "discount_percent": 15, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+p9200"},
+    {"product_id": "s007", "marketplace": "Amazon", "price": 6499, "mrp": 8499, "discount_percent": 24, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Li-Ning+Ranger+V+badminton"},
+    {"product_id": "s007", "marketplace": "Flipkart", "price": 6999, "mrp": 8499, "discount_percent": 18, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=li+ning+ranger+v"},
+    {"product_id": "s008", "marketplace": "Amazon", "price": 4499, "mrp": 5999, "discount_percent": 25, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/s?k=Li-Ning+Shadow+Pro+badminton"},
+    {"product_id": "s008", "marketplace": "Flipkart", "price": 4999, "mrp": 5999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=li+ning+shadow+pro"},
+    {"product_id": "s009", "marketplace": "Amazon", "price": 6999, "mrp": 8999, "discount_percent": 22, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.amazon.in/s?k=Asics+Gel+Blade+8"},
+    {"product_id": "s009", "marketplace": "Flipkart", "price": 7499, "mrp": 8999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.flipkart.com/search?q=asics+gel+blade+8"},
+    {"product_id": "s010", "marketplace": "Amazon", "price": 2999, "mrp": 4299, "discount_percent": 30, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/s?k=Asics+Upcourt+5"},
+    {"product_id": "s010", "marketplace": "Flipkart", "price": 3299, "mrp": 4299, "discount_percent": 23, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=asics+upcourt+5"},
+    {"product_id": "s011", "marketplace": "Decathlon", "price": 3999, "mrp": 5299, "discount_percent": 25, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.decathlon.in/search?Ntt=bs+990+badminton"},
+    {"product_id": "s011", "marketplace": "Amazon", "price": 4499, "mrp": 5299, "discount_percent": 15, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Perfly+BS+990+badminton"},
+    {"product_id": "s012", "marketplace": "Decathlon", "price": 1999, "mrp": 2999, "discount_percent": 33, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.decathlon.in/search?Ntt=bs+560+badminton"},
+    {"product_id": "s012", "marketplace": "Amazon", "price": 2499, "mrp": 2999, "discount_percent": 17, "shipping_fee": 0, "delivery_eta": "3-5 days", "listing_url": "https://www.amazon.in/s?k=Perfly+BS+560"},
+    {"product_id": "s013", "marketplace": "Amazon", "price": 3499, "mrp": 4999, "discount_percent": 30, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/s?k=Yonex+SHB+37EX"},
+    {"product_id": "s013", "marketplace": "Flipkart", "price": 3799, "mrp": 4999, "discount_percent": 24, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=yonex+shb+37ex"},
+    {"product_id": "s014", "marketplace": "Amazon", "price": 3999, "mrp": 5499, "discount_percent": 27, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/s?k=Li-Ning+Saga+Lite+3"},
+    {"product_id": "s014", "marketplace": "Flipkart", "price": 4299, "mrp": 5499, "discount_percent": 22, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=li+ning+saga+lite"},
+    {"product_id": "s015", "marketplace": "Amazon", "price": 1699, "mrp": 2499, "discount_percent": 32, "shipping_fee": 0, "delivery_eta": "2-3 days", "listing_url": "https://www.amazon.in/s?k=Victor+A170+badminton+shoes"},
+    {"product_id": "s015", "marketplace": "Flipkart", "price": 1899, "mrp": 2499, "discount_percent": 24, "shipping_fee": 0, "delivery_eta": "2-4 days", "listing_url": "https://www.flipkart.com/search?q=victor+a170"},
 ]
 
 DRILLS = [
@@ -305,6 +369,49 @@ TRAINING_PLANS = {
             ]},
         ]
     },
+    "Advanced": {
+        "id": "tp_advanced", "name": "Elite Performance", "level": "Advanced", "duration_days": 30, "description": "Push your limits with tournament-level intensity and advanced technique refinement.",
+        "weeks": [
+            {"week": 1, "theme": "Explosive Power", "days": [
+                {"day": 1, "focus_area": "Power Footwork", "drills": ["d003", "d031", "d027"], "duration_minutes": 50, "type": "training"},
+                {"day": 2, "focus_area": "Smash Mastery", "drills": ["d011", "d043", "d053"], "duration_minutes": 55, "type": "training"},
+                {"day": 3, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 4, "focus_area": "Deception & Net", "drills": ["d015", "d039", "d035"], "duration_minutes": 50, "type": "training"},
+                {"day": 5, "focus_area": "Attack Combos", "drills": ["d011", "d008", "d023", "d058"], "duration_minutes": 60, "type": "training"},
+                {"day": 6, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 7, "focus_area": "Match Intensity", "drills": ["d048", "d027", "d055"], "duration_minutes": 55, "type": "training"},
+            ]},
+            {"week": 2, "theme": "Tactical Mastery", "days": [
+                {"day": 8, "focus_area": "Court Coverage", "drills": ["d003", "d004", "d031"], "duration_minutes": 55, "type": "training"},
+                {"day": 9, "focus_area": "Defense Under Pressure", "drills": ["d019", "d047", "d042"], "duration_minutes": 55, "type": "training"},
+                {"day": 10, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 11, "focus_area": "Net Domination", "drills": ["d015", "d016", "d039", "d035"], "duration_minutes": 60, "type": "training"},
+                {"day": 12, "focus_area": "Smash + Drop Combos", "drills": ["d011", "d043", "d013", "d014"], "duration_minutes": 60, "type": "training"},
+                {"day": 13, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 14, "focus_area": "Endurance + Speed", "drills": ["d048", "d003", "d055", "d027"], "duration_minutes": 65, "type": "training"},
+            ]},
+            {"week": 3, "theme": "Competition Prep", "days": [
+                {"day": 15, "focus_area": "Explosive Drills", "drills": ["d023", "d031", "d058"], "duration_minutes": 55, "type": "training"},
+                {"day": 16, "focus_area": "Full Court Attack", "drills": ["d011", "d008", "d043", "d053"], "duration_minutes": 65, "type": "training"},
+                {"day": 17, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 18, "focus_area": "Defensive Mastery", "drills": ["d019", "d020", "d047", "d042"], "duration_minutes": 60, "type": "training"},
+                {"day": 19, "focus_area": "Match Simulation", "drills": ["d059", "d048", "d008"], "duration_minutes": 60, "type": "training"},
+                {"day": 20, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 21, "focus_area": "Peak Speed", "drills": ["d003", "d004", "d027", "d055"], "duration_minutes": 60, "type": "training"},
+            ]},
+            {"week": 4, "theme": "Tournament Ready", "days": [
+                {"day": 22, "focus_area": "Power Peaks", "drills": ["d011", "d012", "d023", "d058"], "duration_minutes": 65, "type": "training"},
+                {"day": 23, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 24, "focus_area": "Tactical Play", "drills": ["d015", "d043", "d047", "d059"], "duration_minutes": 65, "type": "training"},
+                {"day": 25, "focus_area": "Stamina Test", "drills": ["d048", "d027", "d055", "d003"], "duration_minutes": 70, "type": "training"},
+                {"day": 26, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 27, "focus_area": "All-Round Simulation", "drills": ["d008", "d011", "d015", "d019"], "duration_minutes": 70, "type": "training"},
+                {"day": 28, "focus_area": "Recovery", "drills": [], "duration_minutes": 0, "type": "rest"},
+                {"day": 29, "focus_area": "Final Intensity", "drills": ["d059", "d058", "d053", "d048"], "duration_minutes": 70, "type": "training"},
+                {"day": 30, "focus_area": "Tournament Simulation", "drills": ["d008", "d011", "d015", "d019", "d043"], "duration_minutes": 75, "type": "training"},
+            ]},
+        ]
+    },
 }
 
 
@@ -316,7 +423,15 @@ async def seed_database(db):
     # Check if already seeded
     count = await db.equipment.count_documents({})
     if count > 0:
-        logger.info("Database already seeded. Skipping.")
+        # Re-seed prices if new ones were added
+        price_count = await db.equipment_prices.count_documents({})
+        if price_count < len(EQUIPMENT_PRICES):
+            await db.equipment_prices.delete_many({})
+            await db.equipment_prices.insert_many(EQUIPMENT_PRICES)
+            await db.equipment_prices.create_index("product_id")
+            logger.info(f"Re-seeded {len(EQUIPMENT_PRICES)} price entries (was {price_count})")
+        else:
+            logger.info("Database already seeded. Skipping.")
         return
 
     logger.info("Seeding database...")

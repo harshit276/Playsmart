@@ -1,14 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Zap, Target, Dumbbell, BarChart3, Play, ShieldCheck, ChevronRight } from "lucide-react";
 
 const FEATURES = [
-  { icon: Target, title: "AI Equipment Match", desc: "Data-driven racket recommendations based on your exact profile.", color: "text-lime-400" },
+  { icon: Target, title: "AI Equipment Match", desc: "Data-driven equipment recommendations based on your exact profile.", color: "text-lime-400" },
   { icon: Dumbbell, title: "Training Plans", desc: "Structured 30-day programs tailored to your skill level.", color: "text-sky-400" },
   { icon: BarChart3, title: "Progress Tracking", desc: "Track streaks, completed sessions, and skill development.", color: "text-purple-400" },
-  { icon: Play, title: "Video Tutorials", desc: "Curated coaching videos from top badminton channels.", color: "text-amber-400" },
+  { icon: Play, title: "Video Tutorials", desc: "Curated coaching videos from top sports channels.", color: "text-amber-400" },
   { icon: ShieldCheck, title: "Price Comparison", desc: "Compare prices across Amazon, Flipkart, and Decathlon.", color: "text-emerald-400" },
   { icon: Zap, title: "Skill Assessment", desc: "Understand your level, strengths, and areas to improve.", color: "text-rose-400" },
 ];
@@ -100,7 +100,12 @@ export default function LandingPage() {
       <footer className="py-8 border-t border-zinc-800/50 text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Zap className="w-4 h-4 text-lime-400" />
-          <span className="font-heading font-bold text-sm uppercase tracking-wide text-zinc-500">PlaySmart</span>
+          <span className="font-heading font-bold text-sm uppercase tracking-wide text-zinc-500">AthlyticAI</span>
+        </div>
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <Link to="/blog" className="text-zinc-500 hover:text-lime-400 text-xs font-medium transition-colors">Blog</Link>
+          <span className="text-zinc-700">|</span>
+          <Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-xs font-medium transition-colors">Login</Link>
         </div>
         <p className="text-zinc-600 text-xs">AI-powered badminton companion. All recommendations are data-driven.</p>
       </footer>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PlaySmart Backend API Comprehensive Testing
+AthlyticAI Backend API Comprehensive Testing
 Tests all backend endpoints for the badminton companion app
 """
 
@@ -10,14 +10,14 @@ import sys
 from datetime import datetime
 import uuid
 
-class PlaySmartAPITester:
+class AthlyticAIAPITester:
     def __init__(self, base_url="https://smart-racket-guide.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
         self.user_id = None
         self.tests_run = 0
         self.tests_passed = 0
-        self.test_phone = "9876543210"
+        self.test_email = "test@playsmart.dev"
         
     def log(self, message):
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
@@ -78,7 +78,7 @@ class PlaySmartAPITester:
             return False
             
         success, data = self.run_test("Root Endpoint", "GET", "", 200)
-        if success and 'PlaySmart API' in str(data):
+        if success and 'AthlyticAI API' in str(data):
             self.log("✅ Root endpoint returns correct API name")
         return success
 
@@ -92,7 +92,7 @@ class PlaySmartAPITester:
             "POST", 
             "auth/send-otp",
             200,
-            {"phone": self.test_phone}
+            {"email": self.test_email}
         )
         
         if not success:
@@ -112,7 +112,7 @@ class PlaySmartAPITester:
             "POST",
             "auth/verify-otp", 
             200,
-            {"phone": self.test_phone, "otp": str(otp)}
+            {"email": self.test_email, "otp": str(otp)}
         )
         
         if not success:
@@ -401,16 +401,16 @@ class PlaySmartAPITester:
             "POST",
             "auth/verify-otp",
             400,
-            {"phone": self.test_phone, "otp": "000000"}
+            {"email": self.test_email, "otp": "000000"}
         )
         
-        # Test invalid phone format
+        # Test invalid email format
         success, _ = self.run_test(
-            "Invalid Phone Format",
+            "Invalid Email Format",
             "POST",
-            "auth/send-otp", 
+            "auth/send-otp",
             400,
-            {"phone": "123"}
+            {"email": "not-an-email"}
         )
         
         # Test nonexistent user profile
@@ -426,9 +426,9 @@ class PlaySmartAPITester:
 
     def run_all_tests(self):
         """Run complete test suite"""
-        self.log("🚀 Starting PlaySmart API Test Suite")
+        self.log("🚀 Starting AthlyticAI API Test Suite")
         self.log(f"Base URL: {self.base_url}")
-        self.log(f"Test Phone: {self.test_phone}")
+        self.log(f"Test Email: {self.test_email}")
         
         test_results = {
             'health_check': self.test_health_check(),
@@ -474,7 +474,7 @@ class PlaySmartAPITester:
 
 
 def main():
-    tester = PlaySmartAPITester()
+    tester = AthlyticAIAPITester()
     return tester.run_all_tests()
 
 

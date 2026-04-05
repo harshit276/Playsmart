@@ -1,0 +1,10 @@
+app/
+*.h5
+*.pb
+*.tflite
+node_modules/
+frontend/src/
+frontend/public/
+__pycache__/
+*.pyc
+temp_uploads/

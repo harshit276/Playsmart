@@ -2,38 +2,69 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Share2, Copy, Zap, Star, Target, Dumbbell, Flame } from "lucide-react";
+import { Share2, Copy, Zap, Star, Target, Dumbbell, Flame, Award, Trophy } from "lucide-react";
 import api from "@/lib/api";
+import ShareModal from "@/components/ShareModal";
+import { BadgeStrip } from "@/components/BadgeDisplay";
 
 export default function PlayerCardPage() {
   const { user } = useAuth();
   const [card, setCard] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [badgesData, setBadgesData] = useState(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareData, setShareData] = useState(null);
 
   useEffect(() => {
     if (user?.id) {
-      api.get(`/player-card/${user.id}`).then(r => setCard(r.data.card)).catch(() => {}).finally(() => setLoading(false));
+      Promise.allSettled([
+        api.get(`/player-card/${user.id}`),
+        api.get(`/badges/${user.id}`),
+      ]).then(([cardRes, badgesRes]) => {
+        if (cardRes.status === "fulfilled") setCard(cardRes.value.data.card);
+        if (badgesRes.status === "fulfilled") setBadgesData(badgesRes.value.data);
+      }).finally(() => setLoading(false));
     }
   }, [user?.id]);
 
   const handleShare = async () => {
-    const shareText = card
-      ? `My PlaySmart Profile:\nSkill: ${card.skill_level}\nStyle: ${card.play_style}\nGoal: ${card.primary_goal}\nRecommended: ${card.recommended_racket || "N/A"}\n\nTrain smarter with PlaySmart!`
-      : "Check out PlaySmart!";
+    try {
+      const { data } = await api.get(`/share/player-card/${user.id}`);
+      setShareData(data);
+      setShareOpen(true);
+    } catch {
+      // Fallback share
+      const shareText = card
+        ? `My AthlyticAI Profile:\nSport: ${(card.active_sport || "").replace("_", " ")}\nSkill: ${card.skill_level}\nStyle: ${card.play_style}\nGoal: ${card.primary_goal}\n\nTrain smarter with AthlyticAI!`
+        : "Check out AthlyticAI!";
 
-    if (navigator.share) {
-      try { await navigator.share({ title: "My PlaySmart Card", text: shareText }); } catch {}
-    } else {
-      await navigator.clipboard.writeText(shareText);
-      toast.success("Copied to clipboard!");
+      setShareData({
+        title: "My AthlyticAI Card",
+        text: shareText,
+        card: {
+          player_name: user?.name || "AthlyticAI Player",
+          skill_level: card?.skill_level,
+          play_style: card?.play_style,
+          sport: card?.active_sport?.replace("_", " "),
+          badges_count: badgesData?.total_earned || 0,
+        },
+      });
+      setShareOpen(true);
     }
   };
 
   if (loading) return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+      {/* Skeleton loader */}
+      <div className="w-full max-w-md px-4 space-y-4">
+        <div className="h-8 bg-zinc-800 rounded-xl animate-pulse w-48 mx-auto" />
+        <div className="h-4 bg-zinc-800 rounded animate-pulse w-64 mx-auto" />
+        <div className="h-96 bg-zinc-800/50 rounded-2xl animate-pulse" />
+        <div className="h-12 bg-zinc-800 rounded-full animate-pulse" />
+      </div>
     </div>
   );
 
@@ -43,6 +74,9 @@ export default function PlayerCardPage() {
     </div>
   );
 
+  const earnedBadges = badgesData?.all_badges?.filter(b => b.earned) || [];
+  const streakWeeks = badgesData?.current_upload_streak || 0;
+
   return (
     <div className="min-h-screen bg-zinc-950 py-8 flex flex-col items-center" data-testid="player-card-page">
       <div className="container mx-auto px-4 max-w-md">
@@ -50,7 +84,7 @@ export default function PlayerCardPage() {
           <h1 className="font-heading font-bold text-3xl uppercase tracking-tight text-white mb-2" data-testid="card-page-title">
             Player Card
           </h1>
-          <p className="text-zinc-400 text-sm">Your badminton identity. Share it with the world.</p>
+          <p className="text-zinc-400 text-sm">Your sports identity. Share it with the world.</p>
         </motion.div>
 
         {/* Card */}
@@ -63,7 +97,7 @@ export default function PlayerCardPage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-lime-400/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="flex items-center gap-3 mb-4">
               <Zap className="w-6 h-6 text-lime-400" />
-              <span className="font-heading font-bold text-sm uppercase tracking-wider text-lime-400">PlaySmart</span>
+              <span className="font-heading font-bold text-sm uppercase tracking-wider text-lime-400">AthlyticAI</span>
             </div>
 
             <div className="flex items-center justify-between">
@@ -74,7 +108,7 @@ export default function PlayerCardPage() {
                 </h2>
               </div>
               <div className="w-16 h-16 rounded-full bg-lime-400/10 border-2 border-lime-400/30 flex items-center justify-center">
-                <Star className="w-7 h-7 text-lime-400" />
+                <span className="text-3xl">{{"badminton":"🏸","tennis":"🎾","table_tennis":"🏓","pickleball":"⚡","cricket":"🏏","football":"⚽","swimming":"🏊"}[card.active_sport] || "🎯"}</span>
               </div>
             </div>
           </div>
@@ -103,11 +137,44 @@ export default function PlayerCardPage() {
             </div>
           </div>
 
-          {/* Recommended Racket */}
+          {/* Badges Section */}
+          {earnedBadges.length > 0 && (
+            <div className="px-6 pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-zinc-500 uppercase tracking-wide flex items-center gap-1">
+                  <Award className="w-3 h-3 text-amber-400" /> Badges Earned
+                </p>
+                <Badge className="bg-amber-400/10 text-amber-400 border-amber-400/20 text-[10px]">
+                  {earnedBadges.length}/{badgesData?.total_available || 0}
+                </Badge>
+              </div>
+              <BadgeStrip badges={badgesData?.all_badges || []} maxShow={5} />
+            </div>
+          )}
+
+          {/* Upload Streak */}
+          {streakWeeks > 0 && (
+            <div className="px-6 pb-4">
+              <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg p-3 flex items-center gap-3">
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Flame className="w-6 h-6 text-amber-400" />
+                </motion.div>
+                <div>
+                  <p className="text-sm font-bold text-white">{streakWeeks} Week Streak</p>
+                  <p className="text-[10px] text-zinc-500">Uploading videos consistently</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recommended Equipment */}
           {card.recommended_racket && (
             <div className="px-6 pb-4">
               <div className="bg-lime-400/10 border border-lime-400/20 rounded-lg p-3">
-                <p className="text-xs text-lime-400 uppercase tracking-wide font-medium mb-0.5">Recommended Racket</p>
+                <p className="text-xs text-lime-400 uppercase tracking-wide font-medium mb-0.5">Recommended Equipment</p>
                 <p className="font-heading font-bold text-white tracking-tight" data-testid="card-racket">{card.recommended_racket}</p>
               </div>
             </div>
@@ -137,17 +204,25 @@ export default function PlayerCardPage() {
         {/* Share Buttons */}
         <div className="flex gap-3 mt-6">
           <Button onClick={handleShare}
-            className="flex-1 bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide rounded-full h-12 shadow-[0_0_15px_rgba(190,242,100,0.2)]"
+            className="flex-1 bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide rounded-full h-12 min-h-[44px] shadow-[0_0_15px_rgba(190,242,100,0.2)]"
             data-testid="share-card-btn">
             <Share2 className="w-4 h-4 mr-2" /> Share Card
           </Button>
           <Button variant="outline" onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success("Link copied!"); }}
-            className="border-zinc-700 text-zinc-400 hover:border-lime-400 hover:text-lime-400 rounded-full h-12 px-4"
+            className="border-zinc-700 text-zinc-400 hover:border-lime-400 hover:text-lime-400 rounded-full h-12 min-h-[44px] px-4"
             data-testid="copy-link-btn">
             <Copy className="w-4 h-4" />
           </Button>
         </div>
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        shareData={shareData}
+        cardType="player"
+      />
     </div>
   );
 }
