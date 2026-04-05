@@ -3,8 +3,9 @@ Vercel serverless entry point for AthlyticAI API.
 """
 import sys
 import os
+from fastapi import FastAPI
 
-# On Vercel, __file__ is /var/task/api/index.py
+# On Vercel, project root is parent of api/
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 backend_dir = os.path.join(project_root, "backend")
 
@@ -12,35 +13,29 @@ backend_dir = os.path.join(project_root, "backend")
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-# Set environment defaults for serverless
+# Set environment defaults
 os.environ.setdefault("ENVIRONMENT", "production")
 os.environ.setdefault("VERCEL", "1")
 os.environ.setdefault("DB_NAME", "athlyticai")
 
-# Try to import the main app, with detailed error reporting
+# Default app in case import fails
+app = FastAPI(title="AthlyticAI API")
+
 try:
     if os.path.isdir(backend_dir):
         os.chdir(backend_dir)
-    from server import app
+    from server import app  # noqa: F811 - intentional override
 except Exception as e:
-    # If server import fails, create a minimal debug app
-    from fastapi import FastAPI
-    app = FastAPI()
-
-    error_info = {
-        "error": f"{type(e).__name__}: {str(e)}",
+    # If server import fails, serve debug info
+    _error = f"{type(e).__name__}: {str(e)}"
+    _info = {
+        "error": _error,
         "backend_dir": backend_dir,
         "backend_exists": os.path.isdir(backend_dir),
-        "backend_files": os.listdir(backend_dir) if os.path.isdir(backend_dir) else [],
-        "env_vars": {k: ("set" if v else "NOT SET") for k, v in {
-            "MONGO_URL": os.environ.get("MONGO_URL"),
-            "DB_NAME": os.environ.get("DB_NAME"),
-            "JWT_SECRET": os.environ.get("JWT_SECRET"),
-        }.items()},
-        "sys_path": sys.path[:5],
-        "cwd": os.getcwd(),
+        "env_mongo": "set" if os.environ.get("MONGO_URL") else "NOT SET",
+        "env_db": os.environ.get("DB_NAME", "NOT SET"),
     }
 
     @app.get("/api/{path:path}")
-    def debug(path: str):
-        return error_info
+    def fallback(path: str):
+        return _info
