@@ -2,9 +2,14 @@ app/
 *.h5
 *.pb
 *.tflite
-node_modules/
-frontend/src/
-frontend/public/
+frontend/node_modules/
 __pycache__/
 *.pyc
 temp_uploads/
+*.key
+*.key.pub
+ssh-key-*
+deploy/
+*.mp4
+*.avi
+*.mov
