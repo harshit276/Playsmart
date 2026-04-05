@@ -1,14 +1,29 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install --legacy-peer-deps && CI=false npm run build",
-  "outputDirectory": "frontend/build",
-  "functions": {
-    "api/index.py": {
-      "runtime": "@vercel/python@4.5.0"
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build",
+        "buildCommand": "CI=false npm run build"
+      }
     }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/((?!api|static|icons|manifest|service-worker|robots|sitemap).*)", "destination": "/index.html" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/static/(.*)", "dest": "/frontend/static/$1" },
+    { "src": "/icons/(.*)", "dest": "/frontend/icons/$1" },
+    { "src": "/manifest.json", "dest": "/frontend/manifest.json" },
+    { "src": "/service-worker.js", "dest": "/frontend/service-worker.js" },
+    { "src": "/robots.txt", "dest": "/frontend/robots.txt" },
+    { "src": "/sitemap.xml", "dest": "/frontend/sitemap.xml" },
+    { "src": "/_headers", "dest": "/frontend/_headers" },
+    { "src": "/_redirects", "dest": "/frontend/_redirects" },
+    { "src": "/(.*)", "dest": "/frontend/index.html" }
   ]
 }
