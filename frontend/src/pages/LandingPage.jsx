@@ -58,8 +58,7 @@ export default function LandingPage() {
 
   const handleCTA = () => {
     if (isAuthenticated && profile) navigate("/dashboard");
-    else if (isAuthenticated) navigate("/assessment");
-    else navigate("/auth");
+    else navigate("/assessment");
   };
 
   return (

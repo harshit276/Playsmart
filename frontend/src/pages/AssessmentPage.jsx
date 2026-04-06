@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -6,12 +6,13 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, Zap, Feather, CircleDot, Target, Check,
   Waves, Trophy, Sparkles, Swords, Users, Heart, Smile, Shield,
-  Flame, Dumbbell, Star, GraduationCap
+  Flame, Dumbbell, Star, GraduationCap, Phone, X, Clock, RefreshCw
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -198,6 +199,23 @@ const SHARED_STEPS = [
     ]},
 ];
 
+const OTP_EXPIRY_SECONDS = 300;
+
+const normalizePhone = (raw) => {
+  const digits = raw.replace(/[^0-9+]/g, "");
+  if (/^\d{10}$/.test(digits)) return "+91" + digits;
+  if (/^91\d{10}$/.test(digits)) return "+" + digits;
+  if (digits.startsWith("+")) return digits;
+  return digits;
+};
+
+const isValidPhone = (phone) => {
+  const normalized = normalizePhone(phone);
+  if (/^\+91\d{10}$/.test(normalized)) return true;
+  if (/^\+\d{7,15}$/.test(normalized)) return true;
+  return false;
+};
+
 const slideVariants = {
   enter: (direction) => ({ x: direction > 0 ? 300 : -300, opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -229,7 +247,16 @@ export default function AssessmentPage() {
   const [loading, setLoading] = useState(false);
   const [loadingSports, setLoadingSports] = useState(true);
   const [direction, setDirection] = useState(1);
-  const { refreshProfile } = useAuth();
+  // Login modal state (for unauthenticated users after quiz)
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginStep, setLoginStep] = useState("phone"); // phone | otp
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginOtp, setLoginOtp] = useState("");
+  const [loginOtpHint, setLoginOtpHint] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginSecondsLeft, setLoginSecondsLeft] = useState(0);
+  const otpRefs = useRef([]);
+  const { refreshProfile, isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
   // Fetch sport configs
@@ -249,6 +276,136 @@ export default function AssessmentPage() {
       setLoadingSports(false);
     });
   }, []);
+
+  // Login modal countdown timer
+  useEffect(() => {
+    if (loginSecondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      setLoginSecondsLeft((prev) => {
+        if (prev <= 1) { clearInterval(timer); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [loginSecondsLeft]);
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Build the profile payload (reusable)
+  const buildProfilePayload = () => {
+    const playStylePersonality = derivePlayStyle(quizAnswers);
+    return {
+      selected_sports: selectedSports,
+      sports_profiles: sportsProfiles,
+      goals: selectedGoals,
+      play_style_personality: playStylePersonality,
+      quiz_answers: quizAnswers,
+      ...sharedAnswers,
+    };
+  };
+
+  // Save profile and navigate to dashboard
+  const saveProfileAndRedirect = async () => {
+    setLoading(true);
+    try {
+      await api.post("/profile", buildProfilePayload());
+      await refreshProfile();
+      toast.success("Profile created! Let's see your recommendations.");
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to create profile");
+    }
+    setLoading(false);
+  };
+
+  // Login modal handlers
+  const handleLoginSendOTP = async (e) => {
+    e.preventDefault();
+    if (!isValidPhone(loginPhone)) {
+      toast.error("Enter a valid mobile number");
+      return;
+    }
+    setLoginLoading(true);
+    try {
+      const normalized = normalizePhone(loginPhone.trim());
+      const { data } = await api.post("/auth/send-otp", { phone: normalized });
+      setLoginOtpHint(data.otp_hint || "");
+      setLoginSecondsLeft(data.expires_in || OTP_EXPIRY_SECONDS);
+      setLoginStep("otp");
+      toast.success("OTP sent!");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to send OTP");
+    }
+    setLoginLoading(false);
+  };
+
+  const handleLoginResendOTP = async () => {
+    setLoginLoading(true);
+    setLoginOtp("");
+    try {
+      const normalized = normalizePhone(loginPhone.trim());
+      const { data } = await api.post("/auth/send-otp", { phone: normalized });
+      setLoginOtpHint(data.otp_hint || "");
+      setLoginSecondsLeft(data.expires_in || OTP_EXPIRY_SECONDS);
+      toast.success("New OTP sent!");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to resend OTP");
+    }
+    setLoginLoading(false);
+  };
+
+  const handleLoginVerifyOTP = async (otpValue) => {
+    const code = otpValue || loginOtp;
+    if (code.length !== 6) { toast.error("Enter 6-digit OTP"); return; }
+    setLoginLoading(true);
+    try {
+      const normalized = normalizePhone(loginPhone.trim());
+      const { data } = await api.post("/auth/verify-otp", { phone: normalized, otp: code });
+      login(data.token, data.user, data.has_profile);
+      toast.success("Logged in! Saving your profile...");
+      setShowLoginModal(false);
+      // Now save profile and redirect
+      await api.post("/profile", buildProfilePayload());
+      await refreshProfile();
+      toast.success("Profile created! Let's see your recommendations.");
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Invalid OTP");
+    }
+    setLoginLoading(false);
+  };
+
+  const handleLoginOtpDigit = (index, value) => {
+    if (!/^\d?$/.test(value)) return;
+    const digits = loginOtp.split("");
+    while (digits.length < 6) digits.push("");
+    digits[index] = value;
+    const newOtp = digits.join("");
+    setLoginOtp(newOtp);
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+    if (newOtp.length === 6 && /^\d{6}$/.test(newOtp)) {
+      handleLoginVerifyOTP(newOtp);
+    }
+  };
+
+  const handleLoginOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !loginOtp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleLoginOtpPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    setLoginOtp(pasted);
+    if (pasted.length === 6) handleLoginVerifyOTP(pasted);
+  };
 
   // Total steps for progress bar
   const perSportSteps = selectedSports.length * 2;
@@ -343,23 +500,17 @@ export default function AssessmentPage() {
     }
 
     if (phase === "summary") {
-      setLoading(true);
-      try {
-        const playStylePersonality = derivePlayStyle(quizAnswers);
-        await api.post("/profile", {
-          selected_sports: selectedSports,
-          sports_profiles: sportsProfiles,
-          goals: selectedGoals,
-          play_style_personality: playStylePersonality,
-          quiz_answers: quizAnswers,
-          ...sharedAnswers,
-        });
-        await refreshProfile();
-        toast.success("Profile created! Let's see your recommendations.");
-        navigate("/dashboard");
-      } catch (err) {
-        toast.error(err.response?.data?.detail || "Failed to create profile");
+      if (!isAuthenticated) {
+        // Show login modal for unauthenticated users
+        setShowLoginModal(true);
+        setLoginStep("phone");
+        setLoginPhone("");
+        setLoginOtp("");
+        setLoginOtpHint("");
+        return;
       }
+      // Authenticated user - save directly
+      await saveProfileAndRedirect();
       setLoading(false);
     }
   };
@@ -890,6 +1041,152 @@ export default function AssessmentPage() {
           </Button>
         </motion.div>
       </div>
+
+      {/* Login Modal for unauthenticated users */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowLoginModal(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm relative"
+            >
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2 mb-6">
+                <Zap className="w-6 h-6 text-lime-400" />
+                <span className="font-heading font-bold text-lg uppercase tracking-tight text-white">Save Your Results</span>
+              </div>
+
+              <AnimatePresence mode="wait">
+                {loginStep === "phone" ? (
+                  <motion.div
+                    key="login-phone"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <p className="text-zinc-400 text-sm mb-4">
+                      Enter your mobile number to save your assessment and get personalized recommendations.
+                    </p>
+                    <form onSubmit={handleLoginSendOTP} className="space-y-4">
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                        <Input
+                          type="tel"
+                          inputMode="numeric"
+                          placeholder="+91 9876543210"
+                          value={loginPhone}
+                          onChange={(e) => setLoginPhone(e.target.value)}
+                          className="pl-10 bg-zinc-950 border-zinc-800 focus:border-lime-400 focus:ring-lime-400 h-12 text-white"
+                          autoComplete="tel"
+                          autoFocus
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={loginLoading}
+                        className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide h-12 rounded-full shadow-[0_0_15px_rgba(190,242,100,0.2)]"
+                      >
+                        {loginLoading ? "Sending..." : "Send OTP"}
+                      </Button>
+                    </form>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="login-otp"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <p className="text-zinc-400 text-sm mb-4">
+                      Enter the 6-digit code sent to <span className="text-lime-400">{normalizePhone(loginPhone)}</span>
+                    </p>
+
+                    {loginOtpHint && (
+                      <div className="bg-lime-400/10 border border-lime-400/20 rounded-lg p-3 text-center mb-4">
+                        <p className="text-xs text-zinc-400 mb-1">Demo OTP (dev mode)</p>
+                        <p className="text-lime-400 font-mono text-xl font-bold tracking-[0.3em]">{loginOtpHint}</p>
+                      </div>
+                    )}
+
+                    {/* Timer */}
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      <Clock className={`w-4 h-4 ${loginSecondsLeft <= 0 ? "text-red-400" : "text-zinc-400"}`} />
+                      {loginSecondsLeft <= 0 ? (
+                        <span className="text-red-400 text-sm font-medium">OTP expired</span>
+                      ) : (
+                        <span className="text-zinc-400 text-sm font-mono">
+                          Expires in <span className={`font-bold ${loginSecondsLeft <= 60 ? "text-orange-400" : "text-lime-400"}`}>{formatTime(loginSecondsLeft)}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex justify-center gap-2 mb-4" onPaste={handleLoginOtpPaste}>
+                      {[0, 1, 2, 3, 4, 5].map(i => (
+                        <input
+                          key={i}
+                          ref={el => otpRefs.current[i] = el}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={loginOtp[i] || ""}
+                          onChange={e => handleLoginOtpDigit(i, e.target.value)}
+                          onKeyDown={e => handleLoginOtpKeyDown(i, e)}
+                          disabled={loginSecondsLeft <= 0}
+                          className="w-11 h-12 text-center text-lg font-mono font-bold rounded-md bg-zinc-950 border border-zinc-700 text-white focus:border-lime-400 focus:ring-1 focus:ring-lime-400 focus:outline-none disabled:opacity-50 transition-all"
+                          autoFocus={i === 0}
+                        />
+                      ))}
+                    </div>
+
+                    <Button
+                      onClick={() => handleLoginVerifyOTP()}
+                      disabled={loginLoading || loginOtp.length !== 6 || loginSecondsLeft <= 0}
+                      className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide h-12 rounded-full shadow-[0_0_15px_rgba(190,242,100,0.2)] mb-3"
+                    >
+                      {loginLoading ? "Verifying..." : "Verify & Save Results"}
+                    </Button>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        onClick={() => { setLoginStep("phone"); setLoginOtp(""); setLoginSecondsLeft(0); }}
+                        className="flex-1 text-zinc-500 hover:text-zinc-300 text-sm"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Change
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={handleLoginResendOTP}
+                        disabled={loginLoading}
+                        className="flex-1 text-zinc-500 hover:text-zinc-300 text-sm"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-1" /> Resend
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

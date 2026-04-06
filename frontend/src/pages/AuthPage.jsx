@@ -127,9 +127,8 @@ export default function AuthPage() {
       otpRefs.current[index + 1]?.focus();
     }
     // Auto-submit when all 6 digits entered
-    if (newOtp.length === 6 && !newOtp.includes("")) {
-      const clean = newOtp.replace(/\s/g, "");
-      if (clean.length === 6) handleVerifyOTP(clean);
+    if (newOtp.length === 6 && !/\s/.test(newOtp) && /^\d{6}$/.test(newOtp)) {
+      handleVerifyOTP(newOtp);
     }
   };
 

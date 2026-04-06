@@ -93,7 +93,7 @@ function AppRoutes() {
       <Route path="/blog" element={<BlogListPage />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/auth" element={<AuthPage />} />
-      <Route path="/assessment" element={<ProtectedRoute><AssessmentPage /></ProtectedRoute>} />
+      <Route path="/assessment" element={<AssessmentPage />} />
       <Route path="/dashboard" element={<RequireProfile><DashboardPage /></RequireProfile>} />
       <Route path="/equipment" element={<RequireProfile><EquipmentPage /></RequireProfile>} />
       <Route path="/training" element={<RequireProfile><TrainingPage /></RequireProfile>} />
