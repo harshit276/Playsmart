@@ -202,6 +202,31 @@ export default function AuthPage() {
                 <Button variant="ghost" onClick={() => navigate("/")} className="w-full text-zinc-500 hover:text-zinc-300" data-testid="back-to-home">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
                 </Button>
+
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800" /></div>
+                  <span className="relative bg-zinc-950 px-3 text-xs text-zinc-600 uppercase tracking-wider">or</span>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    localStorage.setItem("guest_mode", "true");
+                    navigate("/dashboard");
+                  }}
+                  className="w-full border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 h-11 rounded-full"
+                  data-testid="guest-mode-btn"
+                >
+                  Explore as Guest
+                </Button>
+
+                <p className="text-center text-xs text-zinc-600 mt-2">
+                  By continuing, you agree to our{" "}
+                  <button type="button" onClick={() => navigate("/privacy")} className="text-zinc-400 hover:text-lime-400 underline underline-offset-2 transition-colors">
+                    Privacy Policy
+                  </button>
+                </p>
               </form>
             </motion.div>
           ) : (

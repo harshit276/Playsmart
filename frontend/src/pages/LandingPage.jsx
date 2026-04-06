@@ -396,13 +396,17 @@ export default function LandingPage() {
                 <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Sign Up</Link></li>
                 <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Login</Link></li>
                 <li><Link to="/community" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Community</Link></li>
+                <li><Link to="/privacy" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
 
           {/* Bottom bar */}
           <div className="pt-8 border-t border-zinc-800/50 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-zinc-600 text-xs">&copy; {new Date().getFullYear()} AthlyticAI. All rights reserved.</p>
+            <div className="flex items-center gap-3">
+              <p className="text-zinc-600 text-xs">&copy; {new Date().getFullYear()} AthlyticAI. All rights reserved.</p>
+              <Link to="/privacy" className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">Privacy Policy</Link>
+            </div>
             <div className="flex items-center gap-1">
               {SPORTS.map(s => (
                 <span key={s.key} className="text-lg" title={s.label}>{s.emoji}</span>

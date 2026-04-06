@@ -17,6 +17,7 @@ import CommunityPage from "@/pages/CommunityPage";
 import HighlightsPage from "@/pages/HighlightsPage";
 import BlogListPage from "@/pages/BlogListPage";
 import BlogPostPage from "@/pages/BlogPostPage";
+import PrivacyPage from "@/pages/PrivacyPage";
 import InstallPrompt from "@/components/InstallPrompt";
 
 const AuthContext = createContext(null);
@@ -42,12 +43,14 @@ function AuthProvider({ children }) {
 
   const login = (token, userData, hasProfile) => {
     localStorage.setItem("playsmart_token", token);
+    localStorage.removeItem("guest_mode");
     setUser(userData);
     if (hasProfile) fetchMe();
   };
 
   const logout = () => {
     localStorage.removeItem("playsmart_token");
+    localStorage.removeItem("guest_mode");
     setUser(null);
     setProfile(null);
   };
@@ -60,6 +63,8 @@ function AuthProvider({ children }) {
     } catch {}
   };
 
+  const isGuest = !user && localStorage.getItem("guest_mode") === "true";
+
   if (loading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
@@ -67,7 +72,7 @@ function AuthProvider({ children }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, profile, login, logout, refreshProfile, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, profile, login, logout, refreshProfile, isAuthenticated: !!user, isGuest }}>
       {children}
     </AuthContext.Provider>
   );
@@ -86,6 +91,14 @@ function RequireProfile({ children }) {
   return children;
 }
 
+function GuestAllowed({ children }) {
+  const { isAuthenticated, profile, isGuest } = useAuth();
+  if (isAuthenticated && profile) return children;
+  if (isAuthenticated && !profile) return <Navigate to="/assessment" replace />;
+  if (isGuest) return children;
+  return <Navigate to="/auth" replace />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -93,13 +106,14 @@ function AppRoutes() {
       <Route path="/blog" element={<BlogListPage />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/assessment" element={<AssessmentPage />} />
-      <Route path="/dashboard" element={<RequireProfile><DashboardPage /></RequireProfile>} />
-      <Route path="/equipment" element={<RequireProfile><EquipmentPage /></RequireProfile>} />
-      <Route path="/training" element={<RequireProfile><TrainingPage /></RequireProfile>} />
-      <Route path="/progress" element={<RequireProfile><ProgressPage /></RequireProfile>} />
-      <Route path="/analyze" element={<RequireProfile><AnalyzePage /></RequireProfile>} />
-      <Route path="/highlights" element={<RequireProfile><HighlightsPage /></RequireProfile>} />
+      <Route path="/dashboard" element={<GuestAllowed><DashboardPage /></GuestAllowed>} />
+      <Route path="/equipment" element={<GuestAllowed><EquipmentPage /></GuestAllowed>} />
+      <Route path="/training" element={<GuestAllowed><TrainingPage /></GuestAllowed>} />
+      <Route path="/progress" element={<GuestAllowed><ProgressPage /></GuestAllowed>} />
+      <Route path="/analyze" element={<GuestAllowed><AnalyzePage /></GuestAllowed>} />
+      <Route path="/highlights" element={<GuestAllowed><HighlightsPage /></GuestAllowed>} />
       <Route path="/community" element={<RequireProfile><CommunityPage /></RequireProfile>} />
       <Route path="/card" element={<RequireProfile><PlayerCardPage /></RequireProfile>} />
       <Route path="*" element={<Navigate to="/" replace />} />

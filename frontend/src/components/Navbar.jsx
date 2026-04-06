@@ -81,7 +81,10 @@ export default function Navbar() {
     setMoreOpen(false);
   }, [location.pathname]);
 
-  if (location.pathname === "/" || location.pathname === "/auth") return null;
+  const isGuest = !isAuthenticated && localStorage.getItem("guest_mode") === "true";
+  const showNav = isAuthenticated || isGuest;
+
+  if (location.pathname === "/" || location.pathname === "/auth" || location.pathname === "/privacy") return null;
 
   const activeSport = profile?.active_sport || "badminton";
   const accentKey = SPORT_ACCENT[activeSport] || "lime";
@@ -104,7 +107,10 @@ export default function Navbar() {
 
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1">
-            {isAuthenticated && NAV_ITEMS.map(({ path, label, icon: Icon }) => (
+            {showNav && NAV_ITEMS.filter(item => {
+              if (isGuest && (item.path === "/community" || item.path === "/card")) return false;
+              return true;
+            }).map(({ path, label, icon: Icon }) => (
               <Link key={path} to={path} data-testid={`nav-${label.toLowerCase()}`}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                   location.pathname === path ? accent.active : `text-zinc-400 ${accent.hover}`
@@ -130,6 +136,18 @@ export default function Navbar() {
                 <Flame className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-xs font-bold text-amber-400">{streak}</span>
               </div>
+            )}
+
+            {/* Sign In button for guests */}
+            {isGuest && (
+              <Button size="sm" onClick={() => {
+                localStorage.removeItem("guest_mode");
+                navigate("/auth");
+              }}
+                className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs sm:text-sm"
+                data-testid="nav-signin-btn">
+                Sign In
+              </Button>
             )}
 
             {/* User menu */}
@@ -180,7 +198,7 @@ export default function Navbar() {
       </nav>
 
       {/* ── Mobile Bottom Navigation Bar ── */}
-      {isAuthenticated && (
+      {showNav && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-bottom-nav" data-testid="mobile-bottom-nav">
           <div className="flex items-center justify-around h-16 px-1">
             {MOBILE_NAV_PRIMARY.map(({ path, label, icon: Icon }) => {
