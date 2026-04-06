@@ -11,7 +11,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Target, Star, ExternalLink, ChevronDown, ChevronUp, Sparkles,
-  ShoppingCart, Footprints, Package, IndianRupee, Filter, Tag,
+  ShoppingCart, Footprints, Package, IndianRupee,
   CheckCircle2, ClipboardList, ArrowRight, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
@@ -161,22 +161,77 @@ function isIndianBrand(brand) {
   return INDIAN_BRANDS.some(b => lower.includes(b)) || lower.includes("india");
 }
 
-function RecCard({ rec, i, expanded, setExpanded, showShoeSpecs, budgetRange }) {
+// ─── Premium Placeholder Image ───
+const CATEGORY_PLACEHOLDER = {
+  // Rackets / Paddles / Blades
+  racket: { emoji: "\uD83C\uDFF8", gradient: "from-emerald-600 to-teal-900" },
+  tennis_racket: { emoji: "\uD83C\uDFBE", gradient: "from-yellow-600 to-lime-900" },
+  tt_blade: { emoji: "\uD83C\uDFD3", gradient: "from-red-600 to-rose-900" },
+  pb_paddle: { emoji: "\uD83C\uDFD3", gradient: "from-blue-600 to-indigo-900" },
+  cricket_bat: { emoji: "\uD83C\uDFCF", gradient: "from-amber-600 to-yellow-900" },
+  // Shoes
+  shoes: { emoji: "\uD83D\uDC5F", gradient: "from-sky-600 to-blue-900" },
+  tennis_shoes: { emoji: "\uD83D\uDC5F", gradient: "from-sky-600 to-blue-900" },
+  tt_rubber: { emoji: "\uD83E\uDDF1", gradient: "from-rose-600 to-red-900" },
+  pb_shoes: { emoji: "\uD83D\uDC5F", gradient: "from-violet-600 to-purple-900" },
+  cricket_shoes: { emoji: "\uD83D\uDC5F", gradient: "from-amber-600 to-orange-900" },
+  football_boots: { emoji: "\u26BD", gradient: "from-green-600 to-emerald-900" },
+  // Accessories / Gear
+  shuttlecock: { emoji: "\uD83C\uDFF8", gradient: "from-zinc-500 to-zinc-800" },
+  string: { emoji: "\uD83E\uDDF5", gradient: "from-purple-600 to-violet-900" },
+  tennis_string: { emoji: "\uD83E\uDDF5", gradient: "from-purple-600 to-violet-900" },
+  grip: { emoji: "\u270A", gradient: "from-orange-600 to-amber-900" },
+  bag: { emoji: "\uD83C\uDFD2", gradient: "from-zinc-600 to-zinc-900" },
+  goggles: { emoji: "\uD83E\uDD3D", gradient: "from-cyan-600 to-teal-900" },
+  swimsuit: { emoji: "\uD83E\uDE72", gradient: "from-blue-500 to-cyan-900" },
+};
+const DEFAULT_PLACEHOLDER = { emoji: "\u26A1", gradient: "from-zinc-600 to-zinc-900" };
+
+function PlaceholderImage({ category, name, size = 80 }) {
+  const cfg = CATEGORY_PLACEHOLDER[category] || DEFAULT_PLACEHOLDER;
+  return (
+    <div
+      className={`w-full h-full bg-gradient-to-br ${cfg.gradient} flex flex-col items-center justify-center gap-0.5 select-none`}
+      style={{ width: size, height: size }}
+    >
+      <span className="leading-none" style={{ fontSize: size * 0.38 }}>{cfg.emoji}</span>
+      {name && <span className="text-white/70 font-bold text-center leading-tight px-1 truncate w-full" style={{ fontSize: Math.max(8, size * 0.11) }}>{name}</span>}
+    </div>
+  );
+}
+
+function ProductImage({ src, alt, category, name, size = 80 }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <PlaceholderImage category={category} name={name} size={size} />;
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+function RecCard({ rec, i, showShoeSpecs, budgetRange, detailsTab, setDetailsTab }) {
   const eq = rec.equipment;
   const sc = rec.score;
-  const isExpanded = expanded === `${showShoeSpecs ? 's' : 'r'}-${i}`;
   const toggleKey = `${showShoeSpecs ? 's' : 'r'}-${i}`;
   const lowestPrice = rec.prices?.length > 0 ? Math.min(...rec.prices.map(p => p.price)) : null;
   const budgetMax = BUDGET_RANGES[budgetRange]?.max || 999999;
   const isAboveBudget = lowestPrice && lowestPrice > budgetMax;
+  const showingDetails = detailsTab === toggleKey;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: i * 0.08 }}
-      className={`bg-zinc-900/80 border rounded-2xl overflow-hidden transition-all ${
-        isExpanded ? "border-lime-400/30" : isAboveBudget ? "border-zinc-800/50 opacity-80" : "border-zinc-800"
+      whileHover={{ scale: 1.005 }}
+      className={`bg-zinc-900/80 border rounded-2xl overflow-hidden transition-all hover:shadow-lg hover:shadow-lime-400/5 ${
+        isAboveBudget ? "border-zinc-800/50 opacity-80" : "border-zinc-800 hover:border-lime-400/30"
       }`}
       data-testid={`recommendation-card-${showShoeSpecs ? 'shoe' : 'racket'}-${i}`}
     >
@@ -193,10 +248,13 @@ function RecCard({ rec, i, expanded, setExpanded, showShoeSpecs, budgetRange }) 
             <span className="font-heading font-bold text-lime-400 text-sm">#{i + 1}</span>
           </div>
           <div className="w-20 h-20 rounded-xl bg-zinc-800 overflow-hidden shrink-0 flex items-center justify-center">
-            <img src={eq.image_url || eq.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(eq.name || eq.model || eq.brand || 'E')}&background=27272a&color=a3e635&size=80&bold=true&format=svg`}
+            <ProductImage
+              src={eq.image_url || eq.image}
               alt={eq.name || eq.model}
-              className="w-full h-full object-cover"
-              onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent((eq.brand || 'E').substring(0,2))}&background=27272a&color=a3e635&size=80&bold=true&format=svg`; }} />
+              category={eq.category}
+              name={eq.brand || eq.name || eq.model}
+              size={80}
+            />
           </div>
         </div>
 
@@ -212,33 +270,55 @@ function RecCard({ rec, i, expanded, setExpanded, showShoeSpecs, budgetRange }) 
                 )}
               </div>
               <h3 className="font-heading font-bold text-xl text-white tracking-tight">{eq.name || eq.model || "Equipment"}</h3>
-              {/* Price range from research data */}
-              {eq.price_ranges?.INR && (
-                <p className="text-sm text-lime-400 font-semibold mt-0.5">
-                  ₹{eq.price_ranges.INR.min?.toLocaleString("en-IN")} - ₹{eq.price_ranges.INR.max?.toLocaleString("en-IN")}
+              {/* Price - prominent display */}
+              {lowestPrice ? (
+                <p className="text-lg text-lime-400 font-bold mt-0.5">
+                  {lowestPrice.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+                  {rec.prices?.length > 1 && <span className="text-xs text-zinc-500 font-normal ml-1.5">lowest of {rec.prices.length} stores</span>}
                 </p>
-              )}
-              {eq.description && !eq.model && (
+              ) : eq.price_ranges?.INR ? (
+                <p className="text-lg text-lime-400 font-bold mt-0.5">
+                  {"\u20B9"}{eq.price_ranges.INR.min?.toLocaleString("en-IN")} - {"\u20B9"}{eq.price_ranges.INR.max?.toLocaleString("en-IN")}
+                </p>
+              ) : eq.price_range_value ? (
+                <p className="text-lg text-lime-400 font-bold mt-0.5">
+                  {"\u20B9"}{eq.price_range_value?.toLocaleString("en-IN")}
+                </p>
+              ) : null}
+              {eq.description && (
                 <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{eq.description}</p>
               )}
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {showShoeSpecs ? (
                   <>
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.weight_grams}g</Badge>
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.cushioning}</Badge>
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.ankle_support} Cut</Badge>
+                    {eq.weight_grams && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.weight_grams}g</Badge>}
+                    {eq.cushioning && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.cushioning}</Badge>}
+                    {eq.ankle_support && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.ankle_support} Cut</Badge>}
                   </>
                 ) : (
                   <>
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.weight_category}</Badge>
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.balance_type}</Badge>
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.shaft_flexibility}</Badge>
+                    {eq.weight_category && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.weight_category}</Badge>}
+                    {eq.balance_type && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.balance_type}</Badge>}
+                    {eq.shaft_flexibility && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.shaft_flexibility}</Badge>}
+                    {eq.blade_type && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.blade_type}</Badge>}
+                    {eq.rubber_type && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.rubber_type}</Badge>}
+                    {eq.shape && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.shape}</Badge>}
+                    {eq.string_pattern && <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px]">{eq.string_pattern}</Badge>}
                   </>
                 )}
+                {eq.price_range && <Badge className="bg-zinc-800 text-zinc-400 text-[10px]">{eq.price_range}</Badge>}
               </div>
             </div>
             <ScoreCircle score={sc.total} />
           </div>
+
+          {/* "Why This?" - always visible */}
+          {rec.explanation && (
+            <div className="mt-3 flex gap-2 items-start bg-lime-400/5 border border-lime-400/10 rounded-xl p-3">
+              <Sparkles className="w-4 h-4 text-lime-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-zinc-300 leading-relaxed" data-testid={`explanation-${toggleKey}`}>{rec.explanation}</p>
+            </div>
+          )}
 
           <div className="mt-3 space-y-1.5">
             <ScoreBar label="Skill" value={sc.skill_match} max={40} />
@@ -251,15 +331,16 @@ function RecCard({ rec, i, expanded, setExpanded, showShoeSpecs, budgetRange }) 
         </div>
       </div>
 
+      {/* Expandable details: Specs + Buy Now */}
       <div className="px-5 pb-2">
-        <Button variant="ghost" onClick={() => setExpanded(isExpanded ? null : toggleKey)}
+        <Button variant="ghost" onClick={() => setDetailsTab(showingDetails ? null : toggleKey)}
           className="w-full text-zinc-500 hover:text-lime-400 text-xs uppercase tracking-wide" data-testid={`expand-${toggleKey}`}>
-          {isExpanded ? <><ChevronUp className="w-3 h-3 mr-1" /> Less Details</> : <><ChevronDown className="w-3 h-3 mr-1" /> View Details</>}
+          {showingDetails ? <><ChevronUp className="w-3 h-3 mr-1" /> Less Details</> : <><ChevronDown className="w-3 h-3 mr-1" /> Specs & Buy Options</>}
         </Button>
       </div>
 
       <AnimatePresence>
-        {isExpanded && (
+        {showingDetails && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -267,28 +348,45 @@ function RecCard({ rec, i, expanded, setExpanded, showShoeSpecs, budgetRange }) 
             className="px-5 pb-5"
           >
             <Separator className="bg-zinc-800 mb-4" />
-            <Tabs defaultValue="why" className="w-full">
-              <TabsList className="bg-zinc-800 border-zinc-700 mb-4 w-full grid grid-cols-3">
-                <TabsTrigger value="why" className="text-xs data-[state=active]:bg-lime-400 data-[state=active]:text-black">Why This?</TabsTrigger>
+            <Tabs defaultValue="specs" className="w-full">
+              <TabsList className="bg-zinc-800 border-zinc-700 mb-4 w-full grid grid-cols-2">
                 <TabsTrigger value="specs" className="text-xs data-[state=active]:bg-lime-400 data-[state=active]:text-black">Specs</TabsTrigger>
                 <TabsTrigger value="prices" className="text-xs data-[state=active]:bg-lime-400 data-[state=active]:text-black">Buy Now</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="why">
-                <div className="flex gap-2 items-start">
-                  <Sparkles className="w-4 h-4 text-lime-400 shrink-0 mt-0.5" />
-                  <p className="text-sm text-zinc-300 leading-relaxed" data-testid={`explanation-${toggleKey}`}>{rec.explanation}</p>
-                </div>
-              </TabsContent>
-
               <TabsContent value="specs">
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   {showShoeSpecs ? (
-                    [["Weight", `${eq.weight_grams}g`], ["Cushioning", eq.cushioning], ["Sole", eq.sole_type], ["Ankle Support", eq.ankle_support], ["Breathability", `${eq.breathability}/10`], ["Durability", `${eq.durability}/10`]].map(([k, v]) => (
+                    [["Weight", `${eq.weight_grams}g`], ["Cushioning", eq.cushioning], ["Sole", eq.sole_type], ["Ankle Support", eq.ankle_support], ["Breathability", `${eq.breathability}/10`], ["Durability", `${eq.durability}/10`]].filter(([, v]) => v != null && v !== "undefined" && v !== "undefined/10").map(([k, v]) => (
                       <div key={k} className="flex justify-between p-2 bg-zinc-800/50 rounded-xl"><span className="text-zinc-500">{k}</span><span className="text-zinc-200 font-medium">{v}</span></div>
                     ))
                   ) : (
-                    [["Weight", eq.weight_category + ` (${eq.actual_weight_grams}g)`], ["Balance", eq.balance_type + ` (${eq.balance_point_mm}mm)`], ["Shaft", eq.shaft_flexibility], ["Frame", eq.frame_material], ["Max Tension", eq.max_string_tension_lbs + " lbs"], ["Grip", eq.grip_size], ["Attack", `${eq.attack_score}/10`], ["Control", `${eq.control_score}/10`], ["Speed", `${eq.speed_score}/10`], ["Forgiveness", `${eq.forgiveness_score}/10`]].map(([k, v]) => (
+                    [
+                      eq.weight_category && ["Weight", eq.weight_category + (eq.actual_weight_grams ? ` (${eq.actual_weight_grams}g)` : eq.weight_grams ? ` (${eq.weight_grams}g)` : "")],
+                      eq.balance_type && ["Balance", eq.balance_type + (eq.balance_point_mm ? ` (${eq.balance_point_mm}mm)` : "")],
+                      eq.balance && ["Balance", eq.balance],
+                      eq.shaft_flexibility && ["Shaft", eq.shaft_flexibility],
+                      eq.frame_material && ["Frame", eq.frame_material],
+                      eq.max_string_tension_lbs && ["Max Tension", eq.max_string_tension_lbs + " lbs"],
+                      eq.grip_size && ["Grip", eq.grip_size],
+                      eq.plies && ["Plies", eq.plies],
+                      eq.blade_type && ["Blade Type", eq.blade_type],
+                      eq.handle_type && ["Handle", eq.handle_type],
+                      eq.head_size && ["Head Size", eq.head_size + " sq in"],
+                      eq.stiffness && ["Stiffness", eq.stiffness],
+                      eq.core && ["Core", eq.core],
+                      eq.face && ["Face", eq.face],
+                      eq.shape && ["Shape", eq.shape],
+                      eq.rubber_type && ["Rubber Type", eq.rubber_type],
+                      eq.sponge_thickness && ["Sponge", eq.sponge_thickness],
+                      eq.speed != null && ["Speed", `${eq.speed}/10`],
+                      eq.control != null && ["Control", `${eq.control}/10`],
+                      eq.spin != null && ["Spin", `${eq.spin}/10`],
+                      eq.attack_score != null && ["Attack", `${eq.attack_score}/10`],
+                      eq.control_score != null && ["Control", `${eq.control_score}/10`],
+                      eq.speed_score != null && ["Speed", `${eq.speed_score}/10`],
+                      eq.forgiveness_score != null && ["Forgiveness", `${eq.forgiveness_score}/10`],
+                    ].filter(Boolean).map(([k, v]) => (
                       <div key={k} className="flex justify-between p-2 bg-zinc-800/50 rounded-xl"><span className="text-zinc-500">{k}</span><span className="text-zinc-200 font-medium">{v}</span></div>
                     ))
                   )}
@@ -308,18 +406,22 @@ function RecCard({ rec, i, expanded, setExpanded, showShoeSpecs, budgetRange }) 
 
 function GearCard({ item, prices, reason }) {
   const eq = item;
+  const lowestPrice = prices?.length > 0 ? Math.min(...prices.map(p => p.price)) : null;
   return (
     <motion.div
-      whileHover={{ y: -2 }}
-      className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 transition-all"
+      whileHover={{ y: -2, scale: 1.01 }}
+      className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 hover:shadow-lg hover:shadow-lime-400/5 transition-all"
       data-testid={`gear-card-${eq.id}`}
     >
       <div className="flex gap-4 items-start">
         <div className="w-16 h-16 rounded-xl bg-zinc-800 overflow-hidden shrink-0 flex items-center justify-center">
-          <img src={eq.image_url || eq.image || `https://ui-avatars.com/api/?name=${encodeURIComponent((eq.brand || 'E').substring(0,2))}&background=27272a&color=a3e635&size=64&bold=true&format=svg`}
+          <ProductImage
+            src={eq.image_url || eq.image}
             alt={eq.name || eq.model}
-            className="w-full h-full object-cover"
-            onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent((eq.brand || 'E').substring(0,2))}&background=27272a&color=a3e635&size=64&bold=true&format=svg`; }} />
+            category={eq.category}
+            name={eq.brand || eq.name || eq.model}
+            size={64}
+          />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -330,9 +432,19 @@ function GearCard({ item, prices, reason }) {
               </Badge>
             )}
           </div>
-          <h4 className="font-heading font-bold text-base text-white tracking-tight">{eq.model}</h4>
+          <h4 className="font-heading font-bold text-base text-white tracking-tight">{eq.model || eq.name}</h4>
+          {lowestPrice && (
+            <p className="text-base text-lime-400 font-bold mt-0.5">
+              {lowestPrice.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
+            </p>
+          )}
           <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{eq.description}</p>
-          {reason && <p className="text-xs text-lime-400/80 italic mt-1.5">{reason}</p>}
+          {reason && (
+            <div className="flex gap-1.5 items-start mt-1.5 bg-lime-400/5 border border-lime-400/10 rounded-lg p-2">
+              <Sparkles className="w-3 h-3 text-lime-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-lime-400/80 italic">{reason}</p>
+            </div>
+          )}
         </div>
       </div>
       {prices?.length > 0 && (
@@ -596,9 +708,11 @@ export default function EquipmentPage() {
   const [shoeData, setShoeData] = useState(null);
   const [gearData, setGearData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState("r-0");
+  const [detailsTab, setDetailsTab] = useState(null);
+
+  // Set page title
+  useEffect(() => { document.title = "Equipment | AthlyticAI"; }, []);
   const [activeTab, setActiveTab] = useState("rackets");
-  const [showAboveBudget, setShowAboveBudget] = useState(false);
 
   // All sports from backend
   const [allSports, setAllSports] = useState([]);
@@ -659,7 +773,7 @@ export default function EquipmentPage() {
       setSelectedSport(sportKey);
       setSearchParams(sportKey === profile?.active_sport ? {} : { sport: sportKey });
       setActiveTab("rackets");
-      setExpanded("r-0");
+      setDetailsTab(null);
       setShowAboveBudget(false);
     } else {
       // Not configured - show the quiz first
@@ -686,7 +800,7 @@ export default function EquipmentPage() {
       setSelectedSport(quizSport);
       setSearchParams(quizSport === profile?.active_sport ? {} : { sport: quizSport });
       setActiveTab("rackets");
-      setExpanded("r-0");
+      setDetailsTab(null);
       setShowAboveBudget(false);
       // Fetch after a tick so profile state has updated
       setTimeout(() => fetchData(quizSport), 100);
@@ -794,38 +908,37 @@ export default function EquipmentPage() {
             {/* Rackets */}
             <TabsContent value="rackets">
               <div className="space-y-4">
+                {racketFiltered.inBudget.length > 0 && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="w-4 h-4 text-lime-400" />
+                    <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide">
+                      Recommended for Your Budget ({budgetRange === "Low" ? "Under \u20B93,000" : budgetRange === "Medium" ? "\u20B93,000-\u20B98,000" : budgetRange === "High" ? "\u20B98,000-\u20B915,000" : "\u20B915,000+"})
+                    </h3>
+                  </div>
+                )}
                 {racketFiltered.inBudget.map((rec, i) => (
-                  <RecCard key={rec.equipment.id} rec={rec} i={i} expanded={expanded} setExpanded={setExpanded} showShoeSpecs={false} budgetRange={budgetRange} />
+                  <RecCard key={rec.equipment.id} rec={rec} i={i} showShoeSpecs={false} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
                 ))}
                 {racketFiltered.inBudget.length === 0 && racketFiltered.aboveBudget.length === 0 && (
                   <p className="text-zinc-500 text-center py-8">No {(SPORT_TAB_LABELS[activeSportForLabels]?.primary || "equipment").toLowerCase()} recommendations found.</p>
                 )}
 
-                {/* Above budget section */}
+                {/* Above budget section - "You Might Also Like" */}
                 {racketFiltered.aboveBudget.length > 0 && (
-                  <div className="mt-6">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowAboveBudget(!showAboveBudget)}
-                      className="w-full text-zinc-500 hover:text-zinc-300 border border-zinc-800 rounded-2xl py-3 text-xs uppercase tracking-wide"
-                    >
-                      {showAboveBudget ? <ChevronUp className="w-3 h-3 mr-1" /> : <ChevronDown className="w-3 h-3 mr-1" />}
-                      {racketFiltered.aboveBudget.length} options above your budget
-                    </Button>
-                    <AnimatePresence>
-                      {showAboveBudget && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="space-y-4 mt-4"
-                        >
-                          {racketFiltered.aboveBudget.map((rec, i) => (
-                            <RecCard key={rec.equipment.id} rec={rec} i={i + racketFiltered.inBudget.length} expanded={expanded} setExpanded={setExpanded} showShoeSpecs={false} budgetRange={budgetRange} />
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                  <div className="mt-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star className="w-4 h-4 text-amber-400" />
+                      <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
+                        You Might Also Like
+                      </h3>
+                      <span className="text-xs text-zinc-600">({racketFiltered.aboveBudget.length} above budget)</span>
+                    </div>
+                    <Separator className="bg-zinc-800 mb-4" />
+                    <div className="space-y-4">
+                      {racketFiltered.aboveBudget.map((rec, i) => (
+                        <RecCard key={rec.equipment.id} rec={rec} i={i + racketFiltered.inBudget.length} showShoeSpecs={false} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -834,37 +947,37 @@ export default function EquipmentPage() {
             {/* Shoes */}
             <TabsContent value="shoes">
               <div className="space-y-4">
+                {shoeFiltered.inBudget.length > 0 && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="w-4 h-4 text-lime-400" />
+                    <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide">
+                      Recommended for Your Budget ({budgetRange === "Low" ? "Under \u20B93,000" : budgetRange === "Medium" ? "\u20B93,000-\u20B98,000" : budgetRange === "High" ? "\u20B98,000-\u20B915,000" : "\u20B915,000+"})
+                    </h3>
+                  </div>
+                )}
                 {shoeFiltered.inBudget.map((rec, i) => (
-                  <RecCard key={rec.equipment.id} rec={rec} i={i} expanded={expanded} setExpanded={setExpanded} showShoeSpecs={true} budgetRange={budgetRange} />
+                  <RecCard key={rec.equipment.id} rec={rec} i={i} showShoeSpecs={true} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
                 ))}
                 {shoeFiltered.inBudget.length === 0 && shoeFiltered.aboveBudget.length === 0 && (
                   <p className="text-zinc-500 text-center py-8">No shoe recommendations found.</p>
                 )}
 
+                {/* Above budget section - "You Might Also Like" */}
                 {shoeFiltered.aboveBudget.length > 0 && (
-                  <div className="mt-6">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowAboveBudget(!showAboveBudget)}
-                      className="w-full text-zinc-500 hover:text-zinc-300 border border-zinc-800 rounded-2xl py-3 text-xs uppercase tracking-wide"
-                    >
-                      {showAboveBudget ? <ChevronUp className="w-3 h-3 mr-1" /> : <ChevronDown className="w-3 h-3 mr-1" />}
-                      {shoeFiltered.aboveBudget.length} options above your budget
-                    </Button>
-                    <AnimatePresence>
-                      {showAboveBudget && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="space-y-4 mt-4"
-                        >
-                          {shoeFiltered.aboveBudget.map((rec, i) => (
-                            <RecCard key={rec.equipment.id} rec={rec} i={i + shoeFiltered.inBudget.length} expanded={expanded} setExpanded={setExpanded} showShoeSpecs={true} budgetRange={budgetRange} />
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                  <div className="mt-8">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star className="w-4 h-4 text-amber-400" />
+                      <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
+                        You Might Also Like
+                      </h3>
+                      <span className="text-xs text-zinc-600">({shoeFiltered.aboveBudget.length} above budget)</span>
+                    </div>
+                    <Separator className="bg-zinc-800 mb-4" />
+                    <div className="space-y-4">
+                      {shoeFiltered.aboveBudget.map((rec, i) => (
+                        <RecCard key={rec.equipment.id} rec={rec} i={i + shoeFiltered.inBudget.length} showShoeSpecs={true} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

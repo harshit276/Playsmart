@@ -21,29 +21,29 @@ export const SUPPORTED_SPORTS = {
     name: "Badminton",
     videoAnalysis: true,
     targetFps: 8,
-    targetFrames: 50,
-    quickFrames: 20,
+    targetFrames: 30,
+    quickFrames: 15,
   },
   table_tennis: {
     name: "Table Tennis",
     videoAnalysis: true,
     targetFps: 10,
-    targetFrames: 50,
-    quickFrames: 20,
+    targetFrames: 30,
+    quickFrames: 15,
   },
   tennis: {
     name: "Tennis",
     videoAnalysis: true,
     targetFps: 8,
-    targetFrames: 50,
-    quickFrames: 20,
+    targetFrames: 30,
+    quickFrames: 15,
   },
   pickleball: {
     name: "Pickleball",
     videoAnalysis: true,
     targetFps: 8,
-    targetFrames: 50,
-    quickFrames: 20,
+    targetFrames: 30,
+    quickFrames: 15,
   },
 };
 
@@ -163,8 +163,11 @@ export const SEGMENT_MERGE_GAP = 2;
 
 // ─── Model Configuration ────────────────────────────────────────────────────
 
-/** MoveNet input resolution. */
+/** MoveNet input resolution (full mode). */
 export const MODEL_INPUT_SIZE = 256;
+
+/** Smaller input resolution for quick mode (faster processing). */
+export const QUICK_MODEL_INPUT_SIZE = 192;
 
 /** Minimum keypoint confidence for visibility. */
 export const MIN_KEYPOINT_SCORE = 0.3;

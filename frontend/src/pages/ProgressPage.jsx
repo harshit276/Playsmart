@@ -20,7 +20,7 @@ import { BadgeGrid } from "@/components/BadgeDisplay";
 import ShareModal from "@/components/ShareModal";
 
 export default function ProgressPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [data, setData] = useState(null);
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +45,11 @@ export default function ProgressPage() {
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Set page title
+  useEffect(() => {
+    document.title = "Progress | AthlyticAI";
+  }, []);
 
   if (loading) return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">

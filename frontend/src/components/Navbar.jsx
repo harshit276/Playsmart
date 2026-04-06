@@ -1,16 +1,17 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import {
-  Zap, Menu, User, LogOut, BarChart3, Dumbbell, Target, CreditCard,
-  Video, Users, X, Flame, Film, BookOpen
+  Zap, LogOut, BarChart3, Dumbbell, Target, CreditCard,
+  Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getSportEmoji, getSportLabel } from "@/lib/sportConfig";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Desktop nav items (shown in top bar)
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/analyze", label: "Analyze", icon: Video },
@@ -20,6 +21,23 @@ const NAV_ITEMS = [
   { path: "/community", label: "Community", icon: Users },
   { path: "/progress", label: "Progress", icon: BarChart3 },
   { path: "/card", label: "My Card", icon: CreditCard },
+];
+
+// Mobile bottom nav - 5 key items (like Instagram/YouTube)
+const MOBILE_NAV_PRIMARY = [
+  { path: "/dashboard", label: "Home", icon: Home },
+  { path: "/analyze", label: "Analyze", icon: Video },
+  { path: "/training", label: "Training", icon: Dumbbell },
+  { path: "/equipment", label: "Equipment", icon: Target },
+];
+
+// "More" menu items on mobile
+const MOBILE_NAV_MORE = [
+  { path: "/highlights", label: "Highlights", icon: Film },
+  { path: "/community", label: "Community", icon: Users },
+  { path: "/progress", label: "Progress", icon: BarChart3 },
+  { path: "/card", label: "My Card", icon: CreditCard },
+  { path: "/blog", label: "Blog", icon: BookOpen },
 ];
 
 const SPORT_ACCENT = {
@@ -33,24 +51,34 @@ const SPORT_ACCENT = {
 };
 
 const ACCENT_CLASSES = {
-  lime: { active: "text-lime-400 bg-lime-400/10", hover: "hover:text-lime-400 hover:bg-lime-400/5", logo: "text-lime-400", border: "border-lime-400/20" },
-  sky: { active: "text-sky-400 bg-sky-400/10", hover: "hover:text-sky-400 hover:bg-sky-400/5", logo: "text-sky-400", border: "border-sky-400/20" },
-  blue: { active: "text-blue-400 bg-blue-400/10", hover: "hover:text-blue-400 hover:bg-blue-400/5", logo: "text-blue-400", border: "border-blue-400/20" },
-  green: { active: "text-green-400 bg-green-400/10", hover: "hover:text-green-400 hover:bg-green-400/5", logo: "text-green-400", border: "border-green-400/20" },
-  emerald: { active: "text-emerald-400 bg-emerald-400/10", hover: "hover:text-emerald-400 hover:bg-emerald-400/5", logo: "text-emerald-400", border: "border-emerald-400/20" },
-  orange: { active: "text-orange-400 bg-orange-400/10", hover: "hover:text-orange-400 hover:bg-orange-400/5", logo: "text-orange-400", border: "border-orange-400/20" },
-  amber: { active: "text-amber-400 bg-amber-400/10", hover: "hover:text-amber-400 hover:bg-amber-400/5", logo: "text-amber-400", border: "border-amber-400/20" },
+  lime: { active: "text-lime-400 bg-lime-400/10", hover: "hover:text-lime-400 hover:bg-lime-400/5", logo: "text-lime-400", border: "border-lime-400/20", dot: "bg-lime-400" },
+  sky: { active: "text-sky-400 bg-sky-400/10", hover: "hover:text-sky-400 hover:bg-sky-400/5", logo: "text-sky-400", border: "border-sky-400/20", dot: "bg-sky-400" },
+  blue: { active: "text-blue-400 bg-blue-400/10", hover: "hover:text-blue-400 hover:bg-blue-400/5", logo: "text-blue-400", border: "border-blue-400/20", dot: "bg-blue-400" },
+  green: { active: "text-green-400 bg-green-400/10", hover: "hover:text-green-400 hover:bg-green-400/5", logo: "text-green-400", border: "border-green-400/20", dot: "bg-green-400" },
+  emerald: { active: "text-emerald-400 bg-emerald-400/10", hover: "hover:text-emerald-400 hover:bg-emerald-400/5", logo: "text-emerald-400", border: "border-emerald-400/20", dot: "bg-emerald-400" },
+  orange: { active: "text-orange-400 bg-orange-400/10", hover: "hover:text-orange-400 hover:bg-orange-400/5", logo: "text-orange-400", border: "border-orange-400/20", dot: "bg-orange-400" },
+  amber: { active: "text-amber-400 bg-amber-400/10", hover: "hover:text-amber-400 hover:bg-amber-400/5", logo: "text-amber-400", border: "border-amber-400/20", dot: "bg-amber-400" },
 };
+
+function UserAvatar({ user, accent, size = "sm" }) {
+  const initial = user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || user?.phone?.slice(-2) || "U";
+  const sizeClasses = size === "sm" ? "h-8 w-8 text-xs" : "h-9 w-9 text-sm";
+  return (
+    <div className={`${sizeClasses} rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-white`}>
+      {initial}
+    </div>
+  );
+}
 
 export default function Navbar() {
   const { isAuthenticated, user, profile, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  // Close mobile menu on navigation
+  // Close more menu on navigation
   useEffect(() => {
-    setMobileOpen(false);
+    setMoreOpen(false);
   }, [location.pathname]);
 
   if (location.pathname === "/" || location.pathname === "/auth") return null;
@@ -58,18 +86,23 @@ export default function Navbar() {
   const activeSport = profile?.active_sport || "badminton";
   const accentKey = SPORT_ACCENT[activeSport] || "lime";
   const accent = ACCENT_CLASSES[accentKey];
-  const streak = 0; // Will be populated from profile if available
+  const streak = 0;
+
+  // Check if current path matches a mobile "more" item
+  const isMoreActive = MOBILE_NAV_MORE.some(item => location.pathname === item.path || location.pathname.startsWith(item.path + "/"));
 
   return (
     <>
+      {/* ── Top Navigation Bar ── */}
       <nav className="sticky top-0 z-50 glass" data-testid="navbar">
         <div className="container mx-auto px-4 max-w-7xl flex items-center justify-between h-14 sm:h-16">
+          {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-2 group" data-testid="nav-logo">
             <Zap className={`w-5 h-5 sm:w-6 sm:h-6 ${accent.logo}`} strokeWidth={2.5} />
             <span className="font-heading font-bold text-lg sm:text-xl tracking-tight uppercase text-white">AthlyticAI</span>
           </Link>
 
-          {/* Desktop nav */}
+          {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1">
             {isAuthenticated && NAV_ITEMS.map(({ path, label, icon: Icon }) => (
               <Link key={path} to={path} data-testid={`nav-${label.toLowerCase()}`}
@@ -89,8 +122,9 @@ export default function Navbar() {
             </Link>
           </div>
 
+          {/* Right side: streak + user menu */}
           <div className="flex items-center gap-2">
-            {/* Streak badge (desktop) */}
+            {/* Streak badge */}
             {isAuthenticated && profile && (
               <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-amber-400/10 rounded-full">
                 <Flame className="w-3.5 h-3.5 text-amber-400" />
@@ -98,19 +132,35 @@ export default function Navbar() {
               </div>
             )}
 
+            {/* User menu */}
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon"
-                    className={`rounded-full border border-zinc-800 hover:${accent.border} h-8 w-8 sm:h-9 sm:w-9`}
-                    data-testid="user-menu-btn">
-                    <User className="w-4 h-4 text-zinc-400" />
-                  </Button>
+                  <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-zinc-700" data-testid="user-menu-btn">
+                    <UserAvatar user={user} accent={accent} />
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800">
-                  <DropdownMenuItem className="text-zinc-400 text-xs focus:bg-zinc-800">{user?.email}</DropdownMenuItem>
+                <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 w-56">
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-medium text-white">{user?.name || "Player"}</p>
+                    <p className="text-xs text-zinc-500">{user?.phone}</p>
+                  </div>
+                  <DropdownMenuSeparator className="bg-zinc-800" />
                   <DropdownMenuItem
                     className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
+                    onClick={() => navigate("/card")}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" /> My Card
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
+                    onClick={() => navigate("/progress")}
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" /> Progress
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-zinc-800" />
+                  <DropdownMenuItem
+                    className="text-red-400 focus:bg-zinc-800 cursor-pointer"
                     onClick={() => { logout(); navigate("/"); }}
                     data-testid="logout-btn"
                   >
@@ -125,125 +175,116 @@ export default function Navbar() {
                 Login
               </Button>
             )}
-
-            {/* Mobile hamburger */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden text-zinc-400 h-8 w-8"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              data-testid="mobile-menu-btn"
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile slide-in drawer */}
+      {/* ── Mobile Bottom Navigation Bar ── */}
+      {isAuthenticated && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-bottom-nav" data-testid="mobile-bottom-nav">
+          <div className="flex items-center justify-around h-16 px-1">
+            {MOBILE_NAV_PRIMARY.map(({ path, label, icon: Icon }) => {
+              const isActive = location.pathname === path;
+              return (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 rounded-xl transition-colors min-h-[44px] ${
+                    isActive ? accent.active : "text-zinc-500"
+                  }`}
+                  data-testid={`mobile-nav-${label.toLowerCase()}`}
+                >
+                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2 : 1.5} />
+                  <span className={`text-[10px] font-medium ${isActive ? "" : "text-zinc-500"}`}>{label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="mobile-nav-indicator"
+                      className={`absolute bottom-1 w-5 h-0.5 rounded-full ${accent.dot}`}
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              );
+            })}
+
+            {/* More button */}
+            <button
+              onClick={() => setMoreOpen(!moreOpen)}
+              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 rounded-xl transition-colors min-h-[44px] ${
+                isMoreActive || moreOpen ? accent.active : "text-zinc-500"
+              }`}
+              data-testid="mobile-nav-more"
+            >
+              <MoreHorizontal className="w-5 h-5" strokeWidth={(isMoreActive || moreOpen) ? 2 : 1.5} />
+              <span className={`text-[10px] font-medium ${(isMoreActive || moreOpen) ? "" : "text-zinc-500"}`}>More</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile "More" Slide-up Sheet ── */}
       <AnimatePresence>
-        {mobileOpen && (
+        {moreOpen && (
           <>
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setMobileOpen(false)}
+              onClick={() => setMoreOpen(false)}
               className="fixed inset-0 bg-black/60 z-40 md:hidden"
             />
 
-            {/* Drawer */}
+            {/* Sheet */}
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed top-0 right-0 bottom-0 w-72 bg-zinc-950 border-l border-zinc-800 z-50 md:hidden overflow-y-auto"
+              className="fixed bottom-16 left-0 right-0 md:hidden" style={{ zIndex: 45 }}
             >
-              <div className="p-4">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <Zap className={`w-5 h-5 ${accent.logo}`} strokeWidth={2.5} />
-                    <span className="font-heading font-bold text-lg tracking-tight uppercase text-white">Menu</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-zinc-400 h-8 w-8"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
+              <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-2xl overflow-hidden shadow-2xl">
+                {/* Handle bar */}
+                <div className="flex justify-center py-2">
+                  <div className="w-10 h-1 bg-zinc-700 rounded-full" />
                 </div>
 
-                {/* Streak display */}
-                {profile && (
-                  <div className="flex items-center gap-2 mb-6 bg-amber-400/5 rounded-xl p-3">
-                    <Flame className="w-5 h-5 text-amber-400" />
-                    <div>
-                      <p className="text-sm font-bold text-white">{streak} Day Streak</p>
-                      <p className="text-[10px] text-zinc-500">Keep it going!</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Nav items */}
-                <div className="space-y-1">
-                  {isAuthenticated && NAV_ITEMS.map(({ path, label, icon: Icon }) => (
-                    <Link
-                      key={path}
-                      to={path}
-                      onClick={() => setMobileOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                        location.pathname === path
-                          ? accent.active
-                          : "text-zinc-400 hover:text-white hover:bg-zinc-900"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" strokeWidth={1.5} />
-                      {label}
-                    </Link>
-                  ))}
-                  <Link
-                    to="/blog"
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                      location.pathname.startsWith("/blog")
-                        ? accent.active
-                        : "text-zinc-400 hover:text-white hover:bg-zinc-900"
-                    }`}
-                  >
-                    <BookOpen className="w-5 h-5" strokeWidth={1.5} />
-                    Blog
-                  </Link>
-                </div>
-
-                {/* Sport info */}
-                {profile && (
-                  <div className="mt-6 pt-6 border-t border-zinc-800">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-wide mb-2 px-4">Active Sport</p>
-                    <div className="px-4 flex items-center gap-2">
+                <div className="px-4 pb-4 pt-1">
+                  {/* Active sport indicator */}
+                  {profile && (
+                    <div className="flex items-center gap-2 mb-3 px-1">
                       <Badge className={`${accent.active} text-xs`}>
                         {getSportEmoji(profile.active_sport)} {getSportLabel(profile.active_sport)}
                       </Badge>
+                      {streak > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-400/10 rounded-full">
+                          <Flame className="w-3 h-3 text-amber-400" />
+                          <span className="text-[10px] font-bold text-amber-400">{streak}</span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Logout */}
-                {isAuthenticated && (
-                  <div className="mt-6 pt-6 border-t border-zinc-800">
-                    <button
-                      onClick={() => { logout(); navigate("/"); setMobileOpen(false); }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:text-red-400 hover:bg-red-400/5 transition-colors w-full"
-                    >
-                      <LogOut className="w-5 h-5" />
-                      Logout
-                    </button>
+                  {/* More nav items */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {MOBILE_NAV_MORE.map(({ path, label, icon: Icon }) => {
+                      const isActive = location.pathname === path || location.pathname.startsWith(path + "/");
+                      return (
+                        <Link
+                          key={path}
+                          to={path}
+                          onClick={() => setMoreOpen(false)}
+                          className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-colors min-h-[64px] ${
+                            isActive ? accent.active : "text-zinc-400 hover:bg-zinc-800"
+                          }`}
+                        >
+                          <Icon className="w-5 h-5" strokeWidth={1.5} />
+                          <span className="text-xs font-medium">{label}</span>
+                        </Link>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
               </div>
             </motion.div>
           </>

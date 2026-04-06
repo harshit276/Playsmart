@@ -92,25 +92,37 @@ export async function initModel() {
   _errorMessage = null;
 
   _loadingPromise = (async () => {
-    try {
-      // Ensure the WebGL backend is initialised (falls back to WASM/CPU automatically).
-      await tf.ready();
+    const MAX_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        // Prefer WebGL backend for faster inference, fall back to WASM/CPU.
+        try {
+          await tf.setBackend("webgl");
+        } catch {
+          // WebGL unavailable — tf.ready() below will pick the best fallback.
+        }
+        await tf.ready();
 
-      const model = poseDetection.SupportedModels.MoveNet;
-      const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-        enableSmoothing: true,
-        // Use default model URL from TFJS CDN
-      };
+        const model = poseDetection.SupportedModels.MoveNet;
+        const detectorConfig = {
+          modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+          enableSmoothing: true,
+        };
 
-      _detector = await poseDetection.createDetector(model, detectorConfig);
-      _state = "ready";
-      return _detector;
-    } catch (err) {
-      _state = "error";
-      _errorMessage = err?.message ?? "Unknown error loading MoveNet model";
-      _loadingPromise = null;
-      throw err;
+        _detector = await poseDetection.createDetector(model, detectorConfig);
+        _state = "ready";
+        return _detector;
+      } catch (err) {
+        if (attempt < MAX_RETRIES) {
+          // Brief pause before retry
+          await new Promise((r) => setTimeout(r, 1000));
+          continue;
+        }
+        _state = "error";
+        _errorMessage = err?.message ?? "Unknown error loading MoveNet model";
+        _loadingPromise = null;
+        throw err;
+      }
     }
   })();
 

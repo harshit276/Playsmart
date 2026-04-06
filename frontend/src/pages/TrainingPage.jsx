@@ -19,6 +19,12 @@ const SPORT_EMOJI = {
   pickleball: "\u26A1", cricket: "\u{1F3CF}", football: "\u26BD", swimming: "\u{1F3CA}",
 };
 
+/* ─── Exercise emoji for placeholders ─── */
+const EXERCISE_EMOJI = [
+  "\u{1F3CB}\uFE0F", "\u{1F4AA}", "\u{1F3C3}", "\u26A1", "\u{1F525}",
+  "\u{1F3AF}", "\u{1F94A}", "\u{1F9D8}", "\u{1F3C6}", "\u{1F680}",
+];
+
 /* ─── Skill focus icons ─── */
 const FOCUS_ICON = {
   "Footwork": Footprints, "Court Movement": Footprints,
@@ -45,17 +51,39 @@ const DIFF_STYLE = {
   advanced:     "bg-rose-400/10 text-rose-400 border-rose-400/20",
 };
 
-/* ─── Fix broken YouTube thumbnail URLs ─── */
-function fixThumbnail(url) {
+/* ─── Extract YouTube video ID from any YouTube URL ─── */
+function extractYouTubeId(url) {
   if (!url) return null;
-  if (url.includes("/vi/default/")) return null;
-  return url;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
 }
 
-/* ─── Fix broken YouTube video URLs ─── */
-function fixVideoUrl(url) {
-  if (!url) return null;
-  return url;
+/* ─── Get the best thumbnail for a drill ─── */
+function getDrillThumbnail(drillVideos) {
+  if (!drillVideos || drillVideos.length === 0) return null;
+  const v = drillVideos[0];
+  // Try explicit thumbnail first
+  const thumb = v.thumbnail_url || v.thumbnail;
+  if (thumb && !thumb.includes("/vi/default/")) return thumb;
+  // Extract from YouTube URL
+  const videoUrl = v.youtube_url || v.url;
+  const videoId = extractYouTubeId(videoUrl);
+  if (videoId) return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  return null;
+}
+
+/* ─── Get video URL for a drill ─── */
+function getDrillVideoUrl(drillVideos) {
+  if (!drillVideos || drillVideos.length === 0) return null;
+  const v = drillVideos[0];
+  return v.youtube_url || v.url || null;
 }
 
 /* ─── Generate a YouTube search URL for a drill ─── */
@@ -66,13 +94,13 @@ function getDrillSearchUrl(drillName, sport) {
 
 /* ─── Sport-appropriate gradient for placeholder thumbnails ─── */
 const SPORT_GRADIENT = {
-  badminton:    "from-lime-600/30 to-emerald-900/40",
-  tennis:       "from-yellow-600/30 to-green-900/40",
-  table_tennis: "from-red-600/30 to-orange-900/40",
-  pickleball:   "from-cyan-600/30 to-blue-900/40",
-  cricket:      "from-green-600/30 to-emerald-900/40",
-  football:     "from-green-600/30 to-lime-900/40",
-  swimming:     "from-blue-600/30 to-cyan-900/40",
+  badminton:    "from-lime-600/40 to-emerald-900/60",
+  tennis:       "from-yellow-600/40 to-green-900/60",
+  table_tennis: "from-red-600/40 to-orange-900/60",
+  pickleball:   "from-cyan-600/40 to-blue-900/60",
+  cricket:      "from-green-600/40 to-emerald-900/60",
+  football:     "from-green-600/40 to-lime-900/60",
+  swimming:     "from-blue-600/40 to-cyan-900/60",
 };
 
 
@@ -82,7 +110,10 @@ export default function TrainingPage() {
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(null);
-  const [openWeeks, setOpenWeeks] = useState({});
+
+  // Set page title
+  useEffect(() => { document.title = "Training | AthlyticAI"; }, []);
+  const [activeWeek, setActiveWeek] = useState(0);
   const [difficultyFilter, setDifficultyFilter] = useState("All");
   const [focusFilter, setFocusFilter] = useState("All");
   const [expandedDrill, setExpandedDrill] = useState(null);
@@ -110,7 +141,7 @@ export default function TrainingPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  /* Auto-open the current week */
+  /* Auto-select current week */
   useEffect(() => {
     if (!planData?.plan?.weeks) return;
     const allD = planData.plan.weeks.flatMap(w => w.days);
@@ -119,7 +150,7 @@ export default function TrainingPage() {
       const weekIdx = planData.plan.weeks.findIndex(w =>
         w.days.some(d => d.day === firstIncomplete.day)
       );
-      if (weekIdx >= 0) setOpenWeeks(prev => ({ ...prev, [weekIdx]: true }));
+      if (weekIdx >= 0) setActiveWeek(weekIdx);
     }
   }, [planData, progress]);
 
@@ -188,341 +219,301 @@ export default function TrainingPage() {
     </div>
   );
 
+  const currentWeek = plan.weeks?.[activeWeek];
+
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="training-page">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-5xl">
 
-        {/* ═══ HEADER ═══ */}
+        {/* ═══ COMPACT HEADER ═══ */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <h1 className="font-heading font-bold text-2xl sm:text-3xl md:text-4xl uppercase tracking-tight text-white mb-1" data-testid="training-title">
-            <span className="mr-2">{SPORT_EMOJI[sport] || "\u{1F3AF}"}</span>
-            {plan.name || "Training Plan"}
-          </h1>
-          <p className="text-zinc-400 text-sm sm:text-base mb-4">{plan.description}</p>
-
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            {plan.level && <Badge className={DIFF_STYLE[plan.level] || "bg-zinc-800 text-zinc-400"}>{plan.level}</Badge>}
-            <Badge variant="secondary" className="bg-zinc-800 text-zinc-400 border-zinc-700">
-              {plan.duration_days || 30} Days
-            </Badge>
-            <div className="flex items-center gap-1 text-amber-400">
-              <Flame className="w-4 h-4" />
-              <span className="text-sm font-bold">{completedCount}</span>
-              <span className="text-xs text-zinc-500">days done</span>
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+            <h1 className="font-heading font-bold text-2xl sm:text-3xl uppercase tracking-tight text-white" data-testid="training-title">
+              <span className="mr-2">{SPORT_EMOJI[sport] || "\u{1F3AF}"}</span>
+              {plan.name || "Training Plan"}
+            </h1>
+            <div className="flex items-center gap-3">
+              {plan.level && <Badge className={DIFF_STYLE[plan.level] || "bg-zinc-800 text-zinc-400"}>{plan.level}</Badge>}
+              <div className="flex items-center gap-1 text-amber-400">
+                <Flame className="w-4 h-4" />
+                <span className="text-sm font-bold">{completedCount}/{totalTrainingDays}</span>
+              </div>
             </div>
           </div>
 
           {/* Overall Progress Bar */}
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-zinc-400 font-medium uppercase tracking-wide">Overall Progress</span>
-              <span className="text-sm font-bold text-lime-400">{overallProgress}%</span>
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 flex items-center gap-4">
+            <div className="flex-1">
+              <Progress value={overallProgress} className="h-2 bg-zinc-800" />
             </div>
-            <Progress value={overallProgress} className="h-2.5 bg-zinc-800" />
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-[11px] text-zinc-600">{completedCount} of {totalTrainingDays} training days completed</span>
-              {overallProgress >= 100 && (
-                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px]">
-                  <Trophy className="w-3 h-3 mr-1" /> Plan Complete!
-                </Badge>
-              )}
-            </div>
+            <span className="text-sm font-bold text-lime-400 shrink-0">{overallProgress}%</span>
+            {overallProgress >= 100 && (
+              <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px] shrink-0">
+                <Trophy className="w-3 h-3 mr-1" /> Complete!
+              </Badge>
+            )}
           </div>
         </motion.div>
 
-        {/* ═══ TODAY'S FOCUS ═══ */}
+        {/* ═══ TODAY'S WORKOUT - Prominent thumbnail grid ═══ */}
         {todayDrill && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-zinc-900/80 border border-lime-400/20 rounded-2xl p-5 mb-6 relative overflow-hidden"
+            className="mb-8"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-transparent pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-xs uppercase">
-                  <Sparkles className="w-3 h-3 mr-1" /> Start Here - Today&apos;s Workout
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-xs uppercase px-3 py-1">
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Today&apos;s Workout
                 </Badge>
-                <Badge variant="outline" className="border-zinc-700 text-zinc-500 text-[10px]">
-                  <Clock className="w-2.5 h-2.5 mr-1" /> Day {todayDrill.day}
-                  {todayDrill.duration_minutes > 0 && <> &middot; {todayDrill.duration_minutes}min</>}
-                </Badge>
+                <span className="text-zinc-500 text-sm">Day {todayDrill.day}
+                  {todayDrill.duration_minutes > 0 && <> - {todayDrill.duration_minutes}min</>}
+                </span>
               </div>
-
-              <h3 className="font-heading font-bold text-lg text-white uppercase tracking-tight mb-1">
-                {todayDrill.focus_area || todayDrill.title || "Training Session"}
-              </h3>
-              {todayDrill.focus && (
-                <p className="text-xs text-zinc-500 mb-3">{todayDrill.focus}</p>
-              )}
-
-              <div className="space-y-2 mb-4">
-                {todayDrills.map((drill, idx) => (
-                  <DrillCard
-                    key={drill.id}
-                    drill={drill}
-                    videos={videos[drill.id] || []}
-                    sport={sport}
-                    index={idx}
-                    expanded={expandedDrill === `today-${drill.id}`}
-                    onToggleExpand={() => setExpandedDrill(
-                      expandedDrill === `today-${drill.id}` ? null : `today-${drill.id}`
-                    )}
-                    highlight
-                  />
-                ))}
-                {todayDrills.length === 0 && (
-                  <p className="text-xs text-zinc-500 italic">Training session - follow the plan guidelines above.</p>
-                )}
-              </div>
-
               <Button
                 size="sm"
                 onClick={() => toggleDay(plan.id, todayDrill.day)}
                 disabled={toggling === todayDrill.day}
-                className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-6"
+                className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-5"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                {toggling === todayDrill.day ? "Saving..." : `Complete Day ${todayDrill.day}`}
+                {toggling === todayDrill.day ? "Saving..." : "Complete"}
               </Button>
             </div>
+
+            {todayDrill.focus_area && (
+              <h3 className="font-heading font-bold text-base text-zinc-300 uppercase tracking-tight mb-3">
+                {todayDrill.focus_area}
+              </h3>
+            )}
+
+            {/* Drill cards grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {todayDrills.map((drill, idx) => (
+                <DrillCard
+                  key={drill.id}
+                  drill={drill}
+                  videos={videos[drill.id] || []}
+                  sport={sport}
+                  index={idx}
+                  expanded={expandedDrill === `today-${drill.id}`}
+                  onToggleExpand={() => setExpandedDrill(
+                    expandedDrill === `today-${drill.id}` ? null : `today-${drill.id}`
+                  )}
+                  highlight
+                />
+              ))}
+            </div>
+            {todayDrills.length === 0 && (
+              <p className="text-sm text-zinc-500 italic bg-zinc-900/50 rounded-xl p-4 text-center">
+                Training session - follow the plan guidelines.
+              </p>
+            )}
           </motion.div>
         )}
 
-        {/* ═══ FILTERS ═══ */}
-        {(allFocusAreas.length > 2 || allDifficulties.length > 2) && (
+        {/* ═══ WEEK TABS ═══ */}
+        {plan.weeks && plan.weeks.length > 1 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.15 }}
             className="mb-4"
           >
-            <div className="flex items-center gap-2 mb-2 text-zinc-500">
-              <Filter className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium uppercase tracking-wide">Filter Drills</span>
-              {(difficultyFilter !== "All" || focusFilter !== "All") && (
-                <button
-                  onClick={() => { setDifficultyFilter("All"); setFocusFilter("All"); }}
-                  className="text-[10px] text-zinc-600 hover:text-lime-400 ml-1 flex items-center gap-0.5"
-                >
-                  <X className="w-3 h-3" /> Clear
-                </button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {allDifficulties.length > 2 && allDifficulties.map(d => (
-                <Button key={`diff-${d}`} size="sm" variant="outline"
-                  onClick={() => setDifficultyFilter(d)}
-                  className={`rounded-full text-[11px] h-7 px-3 ${
-                    difficultyFilter === d
-                      ? "bg-lime-400 text-black border-lime-400 hover:bg-lime-500"
-                      : "border-zinc-700 text-zinc-500 hover:border-zinc-500"
-                  }`}
-                >
-                  {d}
-                </Button>
-              ))}
-              {allDifficulties.length > 2 && allFocusAreas.length > 2 && (
-                <div className="w-px bg-zinc-800 mx-1" />
-              )}
-              {allFocusAreas.length > 2 && allFocusAreas.map(f => {
-                const FIcon = getFocusIcon(f);
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {plan.weeks.map((week, idx) => {
+                const weekDays = week.days || [];
+                const weekTrainingDays = weekDays.filter(d => d.type !== "rest");
+                const weekCompleted = weekDays.filter(d => progress[d.day]).length;
+                const weekTotal = weekTrainingDays.length;
+                const isFullyComplete = weekCompleted >= weekTotal && weekTotal > 0;
+                const isActive = activeWeek === idx;
+
                 return (
-                  <Button key={`focus-${f}`} size="sm" variant="outline"
-                    onClick={() => setFocusFilter(f)}
-                    className={`rounded-full text-[11px] h-7 px-3 ${
-                      focusFilter === f
-                        ? "bg-lime-400 text-black border-lime-400 hover:bg-lime-500"
-                        : "border-zinc-700 text-zinc-500 hover:border-zinc-500"
+                  <button
+                    key={idx}
+                    onClick={() => setActiveWeek(idx)}
+                    className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                      isActive
+                        ? "bg-lime-400 text-black"
+                        : isFullyComplete
+                          ? "bg-lime-400/10 text-lime-400 border border-lime-400/20 hover:bg-lime-400/20"
+                          : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
                     }`}
                   >
-                    {f !== "All" && <FIcon className="w-3 h-3 mr-1" />}
-                    {f}
-                  </Button>
+                    {isFullyComplete && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    Week {week.week}
+                    <span className={`text-xs ${isActive ? "text-black/60" : "text-zinc-600"}`}>
+                      {weekCompleted}/{weekTotal}
+                    </span>
+                  </button>
                 );
               })}
             </div>
           </motion.div>
         )}
 
-        {/* ═══ WEEKLY PLAN (collapsible sections) ═══ */}
-        <div className="space-y-4">
-          {plan.weeks?.map((week, weekIdx) => {
-            const weekDays = week.days || [];
-            const weekTrainingDays = weekDays.filter(d => d.type !== "rest");
-            const weekCompleted = weekDays.filter(d => progress[d.day]).length;
-            const weekTotal = weekTrainingDays.length;
-            const weekProgress = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0;
-            const isOpen = openWeeks[weekIdx] ?? false;
-            const isFullyComplete = weekCompleted >= weekTotal && weekTotal > 0;
+        {/* ═══ FILTERS (compact) ═══ */}
+        {(allFocusAreas.length > 2 || allDifficulties.length > 2) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="mb-5"
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="w-3.5 h-3.5 text-zinc-600" />
+              {allDifficulties.length > 2 && allDifficulties.map(d => (
+                <button key={`diff-${d}`}
+                  onClick={() => setDifficultyFilter(d)}
+                  className={`rounded-full text-xs px-3 py-1 transition-all ${
+                    difficultyFilter === d
+                      ? "bg-lime-400 text-black font-medium"
+                      : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:border-zinc-600"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+              {allDifficulties.length > 2 && allFocusAreas.length > 2 && (
+                <div className="w-px h-5 bg-zinc-800 mx-1" />
+              )}
+              {allFocusAreas.length > 2 && allFocusAreas.map(f => (
+                <button key={`focus-${f}`}
+                  onClick={() => setFocusFilter(f)}
+                  className={`rounded-full text-xs px-3 py-1 transition-all ${
+                    focusFilter === f
+                      ? "bg-lime-400 text-black font-medium"
+                      : "bg-zinc-900 text-zinc-500 border border-zinc-800 hover:border-zinc-600"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+              {(difficultyFilter !== "All" || focusFilter !== "All") && (
+                <button
+                  onClick={() => { setDifficultyFilter("All"); setFocusFilter("All"); }}
+                  className="text-xs text-zinc-600 hover:text-lime-400 flex items-center gap-0.5 ml-1"
+                >
+                  <X className="w-3 h-3" /> Clear
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
 
-            const filteredDays = weekDays.map(day => {
-              if (day.type === "rest") return day;
-              const dayDrills = (day.drills || []).map(id => drills[id]).filter(Boolean);
-              const filtered = dayDrills.filter(drill => {
-                if (difficultyFilter !== "All" && drill.difficulty !== difficultyFilter) return false;
-                if (focusFilter !== "All" && drill.skill_focus !== focusFilter) return false;
-                return true;
-              });
-              if ((difficultyFilter !== "All" || focusFilter !== "All") && filtered.length === 0) return null;
-              return { ...day, _filteredDrills: filtered };
-            }).filter(Boolean);
+        {/* ═══ ACTIVE WEEK CONTENT ═══ */}
+        {currentWeek && (
+          <motion.div
+            key={activeWeek}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {currentWeek.theme && (
+              <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wide">{currentWeek.theme}</p>
+            )}
 
-            if (filteredDays.length === 0) return null;
+            <div className="space-y-6">
+              {(currentWeek.days || []).map((day, dayIdx) => {
+                const isCompleted = !!progress[day.day];
+                const isRest = day.type === "rest";
+                const dayDrillList = (day.drills || []).map(id => drills[id]).filter(Boolean);
+                const filteredDayDrills = dayDrillList.filter(drill => {
+                  if (difficultyFilter !== "All" && drill.difficulty !== difficultyFilter) return false;
+                  if (focusFilter !== "All" && drill.skill_focus !== focusFilter) return false;
+                  return true;
+                });
 
-            return (
-              <motion.div
-                key={week.week}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: weekIdx * 0.05 }}
-              >
-                <Collapsible open={isOpen} onOpenChange={val => setOpenWeeks(p => ({ ...p, [weekIdx]: val }))}>
-                  <CollapsibleTrigger asChild>
-                    <button className={`w-full rounded-xl border p-4 transition-all text-left hover:border-zinc-600 ${
-                      isFullyComplete
-                        ? "border-lime-400/30 bg-lime-400/5"
-                        : "border-zinc-800 bg-zinc-900/80"
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {isOpen
-                            ? <ChevronDown className="w-4 h-4 text-zinc-500 shrink-0" />
-                            : <ChevronRight className="w-4 h-4 text-zinc-500 shrink-0" />
-                          }
-                          <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="font-heading font-bold text-sm sm:text-base text-white uppercase">
-                                Week {week.week}
-                              </span>
-                              {isFullyComplete && <CheckCircle2 className="w-4 h-4 text-lime-400" />}
-                            </div>
-                            {week.theme && (
-                              <span className="text-xs text-zinc-500">{week.theme}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-zinc-500 hidden sm:inline">{weekCompleted}/{weekTotal} days</span>
-                          <div className="w-16 sm:w-24">
-                            <Progress value={weekProgress} className="h-1.5 bg-zinc-800" />
-                          </div>
-                          <span className="text-xs font-medium text-lime-400 w-8 text-right">{weekProgress}%</span>
+                if ((difficultyFilter !== "All" || focusFilter !== "All") && !isRest && filteredDayDrills.length === 0) return null;
+
+                if (isRest) {
+                  return (
+                    <motion.div
+                      key={day.day}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: dayIdx * 0.03 }}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900/30 border border-zinc-800/40"
+                    >
+                      <BedDouble className="w-5 h-5 text-zinc-700" />
+                      <span className="text-sm text-zinc-600">Day {day.day} - Rest & Recovery</span>
+                    </motion.div>
+                  );
+                }
+
+                return (
+                  <motion.div
+                    key={day.day}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: dayIdx * 0.04 }}
+                    data-testid={`day-card-${day.day}`}
+                  >
+                    {/* Day header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => toggleDay(plan.id, day.day)}
+                          disabled={toggling === day.day}
+                          className="shrink-0"
+                          data-testid={`complete-day-${day.day}`}
+                        >
+                          {isCompleted ? (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
+                              <CheckCircle2 className="w-6 h-6 text-lime-400" />
+                            </motion.div>
+                          ) : (
+                            <Circle className="w-6 h-6 text-zinc-600 hover:text-lime-400 transition-colors" />
+                          )}
+                        </button>
+                        <div>
+                          <span className="font-heading font-bold text-sm text-white uppercase">
+                            Day {day.day}
+                          </span>
+                          {(day.focus_area || day.title) && (
+                            <span className="text-zinc-500 text-xs ml-2">{day.focus_area || day.title}</span>
+                          )}
                         </div>
                       </div>
-                    </button>
-                  </CollapsibleTrigger>
-
-                  <CollapsibleContent>
-                    <div className="mt-2 space-y-2 pl-2 sm:pl-4">
-                      {filteredDays.map((day, dayIdx) => {
-                        const isCompleted = !!progress[day.day];
-                        const isRest = day.type === "rest";
-                        const dayDrills = day._filteredDrills
-                          || (day.drills || []).map(id => drills[id]).filter(Boolean);
-
-                        return (
-                          <motion.div
-                            key={day.day}
-                            initial={{ opacity: 0, x: -5 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: dayIdx * 0.03 }}
-                            className={`rounded-xl border p-4 transition-all ${
-                              isCompleted ? "border-lime-400/20 bg-lime-400/5" :
-                              isRest ? "border-zinc-800/40 bg-zinc-900/40" :
-                              "border-zinc-800 bg-zinc-900/60"
-                            }`}
-                            data-testid={`day-card-${day.day}`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                {isRest ? (
-                                  <BedDouble className="w-5 h-5 text-zinc-600 shrink-0" />
-                                ) : isCompleted ? (
-                                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring" }}>
-                                    <CheckCircle2 className="w-5 h-5 text-lime-400 shrink-0" />
-                                  </motion.div>
-                                ) : (
-                                  <Circle className="w-5 h-5 text-zinc-600 shrink-0" />
-                                )}
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-heading font-semibold text-sm text-white">Day {day.day}</span>
-                                    {!isRest && (day.focus_area || day.title) && (
-                                      <span className="text-zinc-400 text-xs hidden sm:inline">
-                                        {day.focus_area || day.title}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {!isRest && (day.focus_area || day.title) && (
-                                    <span className="text-zinc-500 text-xs sm:hidden">
-                                      {day.focus_area || day.title}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                {!isRest && day.duration_minutes > 0 && (
-                                  <Badge variant="outline" className="border-zinc-700 text-zinc-500 text-[10px] hidden sm:flex">
-                                    <Clock className="w-2.5 h-2.5 mr-1" /> {day.duration_minutes}min
-                                  </Badge>
-                                )}
-                                {!isRest && (
-                                  <Button size="sm" variant={isCompleted ? "default" : "outline"}
-                                    onClick={() => toggleDay(plan.id, day.day)}
-                                    disabled={toggling === day.day}
-                                    className={`text-[11px] h-7 px-3 rounded-full ${
-                                      isCompleted
-                                        ? "bg-lime-400 text-black hover:bg-lime-500"
-                                        : "border-zinc-700 text-zinc-400 hover:border-lime-400 hover:text-lime-400"
-                                    }`}
-                                    data-testid={`complete-day-${day.day}`}
-                                  >
-                                    {isCompleted ? (
-                                      <><CheckCircle2 className="w-3 h-3 mr-1" /> Done</>
-                                    ) : (
-                                      toggling === day.day ? "..." : "Mark Done"
-                                    )}
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-
-                            {isRest && (
-                              <p className="ml-8 mt-1 text-xs text-zinc-600 italic">
-                                Rest & Recovery - Let your body heal and come back stronger
-                              </p>
-                            )}
-
-                            {!isRest && dayDrills.length > 0 && (
-                              <div className="ml-8 mt-3 space-y-2">
-                                {dayDrills.map((drill, idx) => (
-                                  <DrillCard
-                                    key={drill.id}
-                                    drill={drill}
-                                    videos={videos[drill.id] || []}
-                                    sport={sport}
-                                    index={idx}
-                                    expanded={expandedDrill === `${day.day}-${drill.id}`}
-                                    onToggleExpand={() => setExpandedDrill(
-                                      expandedDrill === `${day.day}-${drill.id}` ? null : `${day.day}-${drill.id}`
-                                    )}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </motion.div>
-                        );
-                      })}
+                      <div className="flex items-center gap-2">
+                        {day.duration_minutes > 0 && (
+                          <span className="text-xs text-zinc-600 flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {day.duration_minutes}min
+                          </span>
+                        )}
+                        {isCompleted && (
+                          <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px]">Done</Badge>
+                        )}
+                      </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </motion.div>
-            );
-          })}
-        </div>
+
+                    {/* Drill cards grid */}
+                    {filteredDayDrills.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-9">
+                        {filteredDayDrills.map((drill, idx) => (
+                          <DrillCard
+                            key={drill.id}
+                            drill={drill}
+                            videos={videos[drill.id] || []}
+                            sport={sport}
+                            index={idx}
+                            expanded={expandedDrill === `${day.day}-${drill.id}`}
+                            onToggleExpand={() => setExpandedDrill(
+                              expandedDrill === `${day.day}-${drill.id}` ? null : `${day.day}-${drill.id}`
+                            )}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
 
         {/* ═══ COMPLETION CELEBRATION ═══ */}
         {overallProgress >= 100 && (
@@ -542,72 +533,103 @@ export default function TrainingPage() {
 }
 
 
-/* ═══════════════ DRILL CARD COMPONENT ═══════════════ */
-function DrillCard({ drill, videos, sport, expanded, onToggleExpand, highlight }) {
+/* ═══════════════ DRILL CARD - Large thumbnail, clean layout ═══════════════ */
+function DrillCard({ drill, videos: drillVideos, sport, index, expanded, onToggleExpand, highlight }) {
   const Icon = getFocusIcon(drill.skill_focus);
   const diffStyle = DIFF_STYLE[drill.difficulty] || "bg-zinc-800 text-zinc-400 border-zinc-700";
-  const drillVideos = videos || [];
+  const vids = drillVideos || [];
+  const thumbnailUrl = getDrillThumbnail(vids);
+  const videoUrl = getDrillVideoUrl(vids);
+  const placeholderEmoji = EXERCISE_EMOJI[(drill.name || "").length % EXERCISE_EMOJI.length];
 
-  const thumbnailUrl = drillVideos.length > 0
-    ? fixThumbnail(drillVideos[0].thumbnail_url || drillVideos[0].thumbnail)
-    : null;
+  const handleThumbnailClick = (e) => {
+    if (videoUrl) {
+      e.stopPropagation();
+      window.open(videoUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   return (
-    <div className={`rounded-xl border transition-all ${
-      highlight
-        ? "border-lime-400/10 bg-zinc-800/60"
-        : "border-zinc-800/60 bg-zinc-800/30"
-    }`}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className={`rounded-xl border overflow-hidden transition-all group ${
+        highlight
+          ? "border-lime-400/20 bg-zinc-900/80 hover:border-lime-400/40"
+          : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-600"
+      } ${expanded ? "ring-1 ring-lime-400/20" : ""}`}
+    >
+      {/* LARGE THUMBNAIL */}
+      <div
+        className={`relative w-full aspect-video overflow-hidden ${videoUrl ? "cursor-pointer" : ""}`}
+        onClick={handleThumbnailClick}
+      >
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={drill.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => { e.target.style.display = "none"; if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = "flex"; }}
+          />
+        ) : null}
+        <div className={`${thumbnailUrl ? "hidden" : "flex"} absolute inset-0 bg-gradient-to-br ${
+          SPORT_GRADIENT[sport] || "from-zinc-700 to-zinc-900"
+        } items-center justify-center`}>
+          <span className="text-4xl opacity-60 select-none">{placeholderEmoji}</span>
+        </div>
+        {/* Play overlay */}
+        {videoUrl && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border border-white/10">
+              <Play className="w-5 h-5 text-white ml-0.5" />
+            </div>
+          </div>
+        )}
+        {/* Difficulty badge on thumbnail */}
+        {drill.difficulty && (
+          <div className="absolute top-2 right-2">
+            <Badge className={`${diffStyle} text-[10px] px-2 py-0.5 backdrop-blur-sm`}>{drill.difficulty}</Badge>
+          </div>
+        )}
+      </div>
+
+      {/* CARD BODY - minimal info */}
       <button
         onClick={onToggleExpand}
-        className="w-full p-3 text-left flex items-start gap-3"
+        className="w-full text-left p-3"
       >
-        {/* Thumbnail / Icon */}
-        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden shrink-0 border border-zinc-700/50">
-          {thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt={drill.name}
-              className="w-full h-full object-cover"
-              onError={(e) => { e.target.style.display = "none"; if (e.target.nextSibling) e.target.nextSibling.style.display = "flex"; }}
-            />
-          ) : null}
-          <div className={`${thumbnailUrl ? "hidden" : "flex"} w-full h-full bg-gradient-to-br ${
-            SPORT_GRADIENT[sport] || "from-zinc-700 to-zinc-900"
-          } items-center justify-center`}>
-            <Icon className="w-5 h-5 text-white/50" />
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h4 className="text-sm font-semibold text-white leading-tight truncate">{drill.name}</h4>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {drill.duration_minutes > 0 && (
+                <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {drill.duration_minutes}min
+                </span>
+              )}
+              {(drill.sets || drill.reps || drill.repetitions) && (
+                <span className="text-[11px] text-zinc-500">
+                  {drill.sets && `${drill.sets}x`}{drill.reps || drill.repetitions || ""}
+                </span>
+              )}
+              {drill.skill_focus && (
+                <span className="text-[11px] text-zinc-600 flex items-center gap-1">
+                  <Icon className="w-3 h-3" /> {drill.skill_focus}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-
-        {/* Drill info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <span className="text-sm font-medium text-white">{drill.name}</span>
+          <div className="shrink-0 pt-0.5">
+            {expanded
+              ? <ChevronDown className="w-4 h-4 text-zinc-500" />
+              : <ChevronRight className="w-4 h-4 text-zinc-700" />
+            }
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {drill.difficulty && (
-              <Badge className={`${diffStyle} text-[9px] px-1.5 py-0`}>{drill.difficulty}</Badge>
-            )}
-            {drill.duration_minutes > 0 && (
-              <span className="text-[10px] text-zinc-500 flex items-center gap-0.5">
-                <Clock className="w-2.5 h-2.5" /> {drill.duration_minutes}min
-              </span>
-            )}
-            {drill.skill_focus && (
-              <span className="text-[10px] text-zinc-600">{drill.skill_focus}</span>
-            )}
-          </div>
-        </div>
-
-        <div className="shrink-0 pt-1">
-          {expanded
-            ? <ChevronDown className="w-4 h-4 text-zinc-500" />
-            : <ChevronRight className="w-4 h-4 text-zinc-600" />
-          }
         </div>
       </button>
 
-      {/* Expanded content */}
+      {/* EXPANDED DETAILS */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -617,15 +639,15 @@ function DrillCard({ drill, videos, sport, expanded, onToggleExpand, highlight }
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-3 space-y-2">
+            <div className="px-3 pb-3 space-y-2 border-t border-zinc-800/50 pt-2">
               {drill.description && (
                 <p className="text-xs text-zinc-400 leading-relaxed">{drill.description}</p>
               )}
 
               {drill.coaching_tip && (
-                <div className="bg-lime-400/5 border border-lime-400/10 rounded-lg p-2">
+                <div className="bg-lime-400/5 border border-lime-400/10 rounded-lg p-2.5">
                   <p className="text-xs text-lime-400/90">
-                    <span className="font-medium">Pro Tip:</span> {drill.coaching_tip}
+                    <span className="font-semibold">Pro Tip:</span> {drill.coaching_tip}
                   </p>
                 </div>
               )}
@@ -637,41 +659,37 @@ function DrillCard({ drill, videos, sport, expanded, onToggleExpand, highlight }
                 </div>
               )}
 
-              {drillVideos.length > 0 ? (
-                <div className="space-y-1">
-                  <span className="text-[10px] text-zinc-600 uppercase tracking-wide font-medium">Tutorial Videos</span>
-                  <div className="flex flex-wrap gap-2">
-                    {drillVideos.map((v, vi) => {
-                      const url = fixVideoUrl(v.youtube_url || v.url);
-                      if (!url) return null;
-                      return (
-                        <a key={vi} href={url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-[11px] bg-zinc-700/40 text-zinc-300 hover:text-lime-400 hover:bg-zinc-700/60 px-2.5 py-1.5 rounded-lg transition-colors"
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <Play className="w-3 h-3 text-red-400" />
-                          <span className="truncate max-w-[150px]">{v.channel_name || v.channel || v.title || "Watch Tutorial"}</span>
-                        </a>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <a
-                  href={getDrillSearchUrl(drill.name, sport)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[11px] bg-zinc-700/40 text-zinc-300 hover:text-lime-400 hover:bg-zinc-700/60 px-2.5 py-1.5 rounded-lg transition-colors"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <Play className="w-3 h-3 text-red-400" />
-                  Find tutorials on YouTube
-                </a>
-              )}
+              {/* Video links */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {vids.length > 0 ? vids.map((v, vi) => {
+                  const url = v.youtube_url || v.url;
+                  if (!url) return null;
+                  return (
+                    <a key={vi} href={url} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[11px] bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3 py-1.5 rounded-lg transition-colors"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <Play className="w-3 h-3" />
+                      <span className="truncate max-w-[140px]">{v.channel_name || v.channel || v.title || "Watch"}</span>
+                    </a>
+                  );
+                }) : (
+                  <a
+                    href={getDrillSearchUrl(drill.name, sport)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[11px] bg-zinc-800 text-zinc-400 hover:text-lime-400 hover:bg-zinc-700 px-3 py-1.5 rounded-lg transition-colors"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <Play className="w-3 h-3" />
+                    Find on YouTube
+                  </a>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

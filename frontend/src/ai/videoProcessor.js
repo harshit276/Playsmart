@@ -18,6 +18,7 @@ import {
   MIN_SEGMENT_FRAMES,
   SEGMENT_MERGE_GAP,
   MODEL_INPUT_SIZE,
+  QUICK_MODEL_INPUT_SIZE,
   MIN_KEYPOINT_SCORE,
 } from "./constants.js";
 
@@ -67,7 +68,7 @@ function getCropRegion(videoWidth, videoHeight, targetPlayer) {
  * @returns {Promise<{ frames: ImageData[], timestamps: number[], duration: number,
  *   fps: number, width: number, height: number }>}
  */
-async function extractFrames(videoFile, targetFrameCount = 50, targetPlayer = "auto") {
+async function extractFrames(videoFile, targetFrameCount = 30, targetPlayer = "auto", canvasSize = MODEL_INPUT_SIZE) {
   const video = document.createElement("video");
   const objectUrl = URL.createObjectURL(videoFile);
   video.src = objectUrl;
@@ -92,10 +93,10 @@ async function extractFrames(videoFile, targetFrameCount = 50, targetPlayer = "a
   const interval = duration / targetFrameCount;
   const crop = getCropRegion(videoWidth, videoHeight, targetPlayer);
 
-  // Canvas sized to model input
+  // Canvas sized to model input (smaller for quick mode = faster)
   const canvas = document.createElement("canvas");
-  canvas.width = MODEL_INPUT_SIZE;
-  canvas.height = MODEL_INPUT_SIZE;
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
   const ctx = canvas.getContext("2d");
 
   const frames = [];
@@ -108,8 +109,8 @@ async function extractFrames(videoFile, targetFrameCount = 50, targetPlayer = "a
       video.onseeked = resolve;
     });
 
-    ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
-    const imageData = ctx.getImageData(0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+    ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, canvasSize, canvasSize);
+    const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
     frames.push(imageData);
     timestamps.push(time);
   }
@@ -697,37 +698,56 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // We get metadata as part of frame extraction, but report it as a step
 
     // ── Step 3: Extract frames ───────────────────────────────────────────
+    const canvasSize = mode === "quick" ? QUICK_MODEL_INPUT_SIZE : MODEL_INPUT_SIZE;
     progress("extraction", 25, `Extracting ${targetFrameCount} frames...`);
     const { frames, timestamps, duration, fps, width, height } = await extractFrames(
       videoFile,
       targetFrameCount,
-      targetPlayer
+      targetPlayer,
+      canvasSize
     );
 
     const videoInfo = { duration, fps, width, height, frame_count: frames.length };
 
-    // ── Step 4: Detect poses ─────────────────────────────────────────────
-    progress("pose", 45, "Detecting poses...");
-    const allKeypoints = [];
-    for (let i = 0; i < frames.length; i++) {
-      const kps = await detectPose(frames[i]);
-      allKeypoints.push(kps);
-
-      // Sub-progress within pose detection (45% -> 60%)
-      const subPercent = 45 + Math.round(((i + 1) / frames.length) * 15);
-      progress("pose", subPercent, `Detecting poses... (${i + 1}/${frames.length})`);
-    }
-
-    // ── Step 5: Classify technique ───────────────────────────────────────
-    progress("classify", 60, "Classifying technique...");
-    const { shotType, shotName, confidence } = classifyShot(allKeypoints, sport);
-
-    // ── Step 6: Analyze segments (motion detection) ──────────────────────
-    progress("segments", 70, "Analyzing segments...");
+    // ── Step 3b: Compute motion scores early to skip static frames ──────
+    progress("motion", 35, "Detecting motion...");
     const motionScores = [];
     for (let i = 1; i < frames.length; i++) {
       motionScores.push(computeMotionScore(frames[i - 1], frames[i]));
     }
+    // First frame has no predecessor — assume active
+    const isActiveFrame = [true, ...motionScores.map((s) => s > MOTION_ACTIVE_THRESHOLD * 0.5)];
+
+    // ── Step 4: Detect poses (skip static frames) ────────────────────────
+    progress("pose", 45, "Detecting poses...");
+    const allKeypoints = [];
+    const emptyPose = Array.from({ length: 17 }, (_, i) => ({ name: "", x: 0, y: 0, score: 0 }));
+    let poseCount = 0;
+    const totalActive = isActiveFrame.filter(Boolean).length;
+    for (let i = 0; i < frames.length; i++) {
+      if (isActiveFrame[i]) {
+        const kps = await detectPose(frames[i]);
+        allKeypoints.push(kps);
+        poseCount++;
+        const subPercent = 45 + Math.round((poseCount / totalActive) * 15);
+        progress("pose", subPercent, `Detecting poses... (${poseCount}/${totalActive})`);
+      } else {
+        // Skip pose detection on static frames — reuse empty placeholder
+        allKeypoints.push(emptyPose);
+      }
+    }
+
+    // ── Step 5: Classify technique ───────────────────────────────────────
+    progress("classify", 60, "Classifying technique...");
+    // Only use active-frame keypoints for classification
+    const activeKeypoints = allKeypoints.filter((_, i) => isActiveFrame[i]);
+    const { shotType, shotName, confidence } = classifyShot(
+      activeKeypoints.length > 0 ? activeKeypoints : allKeypoints,
+      sport
+    );
+
+    // ── Step 6: Analyze segments (motion detection) ──────────────────────
+    progress("segments", 70, "Analyzing segments...");
     const segmentData = detectSegments(motionScores, timestamps);
 
     // Release frame data to free memory

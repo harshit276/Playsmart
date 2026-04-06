@@ -42,6 +42,9 @@ export default function HighlightsPage() {
   const [selectedSport, setSelectedSport] = useState(null);
   const [highlightType, setHighlightType] = useState("auto");
   const [maxDuration, setMaxDuration] = useState(30);
+
+  // Set page title
+  useEffect(() => { document.title = "Highlights | AthlyticAI"; }, []);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState("");
@@ -166,7 +169,7 @@ export default function HighlightsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 max-w-4xl py-6 sm:py-10">
+    <div className="min-h-screen bg-zinc-950 container mx-auto px-4 max-w-4xl py-6 sm:py-10" data-testid="highlights-page">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="mb-8">
@@ -183,13 +186,11 @@ export default function HighlightsPage() {
 
       {/* Info Banner */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
-        <Info className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
-        <div className="text-xs text-zinc-400">
-          <p className="text-purple-300 font-medium mb-1">Upload a match video to auto-generate highlights</p>
-          <p>Max file size: <span className="text-white font-medium">500 MB</span> | Max duration: <span className="text-white font-medium">30 minutes</span> | Supported: MP4, AVI, MOV, MKV, WEBM</p>
-          <p className="mt-1 text-zinc-500">Videos are processed on-the-fly and never stored permanently.</p>
-        </div>
+        className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-6 flex items-center gap-3">
+        <Info className="w-4 h-4 text-purple-400 shrink-0" />
+        <p className="text-xs text-zinc-400">
+          Upload a match video (MP4, MOV, etc.) up to <span className="text-white font-medium">500 MB</span> to auto-generate highlights.
+        </p>
       </motion.div>
 
       {/* Upload + Settings Section */}
@@ -612,30 +613,6 @@ export default function HighlightsPage() {
             )}
           </div>
 
-          {/* Tips Card */}
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
-            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-              <Zap className="w-3 h-3 text-purple-400" /> Tips for Better Highlights
-            </p>
-            <ul className="space-y-2 text-xs text-zinc-400">
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400 mt-0.5">1.</span>
-                <span>Record full matches (10-30 min) for the best highlight reels</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400 mt-0.5">2.</span>
-                <span>Keep the camera steady and focused on the action</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400 mt-0.5">3.</span>
-                <span>Use "Power Moments" mode for the most exciting clips</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-purple-400 mt-0.5">4.</span>
-                <span>Want detailed technique feedback? Use the Analyze page instead</span>
-              </li>
-            </ul>
-          </div>
         </motion.div>
       )}
     </div>

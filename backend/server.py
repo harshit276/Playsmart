@@ -37,8 +37,15 @@ else:
 import certifi
 
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url, tlsCAFile=certifi.where())
-db = client[os.environ['DB_NAME']]
+client = AsyncIOMotorClient(
+    mongo_url,
+    tlsCAFile=certifi.where(),
+    serverSelectionTimeoutMS=5000,
+    connectTimeoutMS=5000,
+    socketTimeoutMS=10000,
+    maxPoolSize=5 if IS_SERVERLESS else 50,
+)
+db = client[os.environ.get('DB_NAME', 'athlyticai').strip()]
 
 JWT_SECRET = os.environ.get('JWT_SECRET', 'playsmart_default_secret')
 JWT_ALGORITHM = "HS256"
@@ -86,10 +93,10 @@ logger = logging.getLogger(__name__)
 # ─── Pydantic Models ───
 
 class SendOTPRequest(BaseModel):
-    email: str
+    phone: str
 
 class VerifyOTPRequest(BaseModel):
-    email: str
+    phone: str
     otp: str
 
 class SportProfile(BaseModel):
@@ -113,10 +120,10 @@ class ProgressUpdate(BaseModel):
 
 # ─── Auth Helpers ───
 
-def create_token(user_id: str, email: str) -> str:
+def create_token(user_id: str, phone: str) -> str:
     payload = {
         "user_id": user_id,
-        "email": email,
+        "phone": phone,
         "exp": datetime.now(timezone.utc) + timedelta(days=30),
         "iat": datetime.now(timezone.utc),
     }
@@ -144,56 +151,57 @@ async def get_current_user(authorization: str = Header(None)):
 @api_router.post("/auth/send-otp")
 async def send_otp(req: SendOTPRequest):
     import re
-    email = req.email.strip().lower()
-    if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
-        raise HTTPException(status_code=400, detail="Invalid email address")
+    phone = req.phone.strip()
+    # Validate: +91 followed by 10 digits (India) or + followed by 7-15 digits (international)
+    if not re.match(r'^\+\d{7,15}$', phone):
+        raise HTTPException(status_code=400, detail="Invalid phone number. Use format: +919876543210")
 
     otp = str(random.randint(100000, 999999))
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
-    await db.otp_codes.delete_many({"email": email})
+    await db.otp_codes.delete_many({"phone": phone})
     await db.otp_codes.insert_one({
-        "email": email,
+        "phone": phone,
         "otp": otp,
         "expires_at": expires_at.isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat(),
     })
 
-    logger.info(f"OTP for {email}: {otp}")
-    # In production, send via email (SMTP / SendGrid / Resend). For MVP, return in response.
-    return {"message": "OTP sent to your email", "otp_hint": otp, "expires_in": 300}
+    logger.info(f"OTP for {phone}: {otp}")
+    # In production, send via SMS (Twilio / MSG91). For MVP, return in response.
+    return {"message": "OTP sent to your mobile number", "otp_hint": otp, "expires_in": 300}
 
 
 @api_router.post("/auth/verify-otp")
 async def verify_otp(req: VerifyOTPRequest):
-    email = req.email.strip().lower()
-    otp_record = await db.otp_codes.find_one({"email": email, "otp": req.otp}, {"_id": 0})
+    phone = req.phone.strip()
+    otp_record = await db.otp_codes.find_one({"phone": phone, "otp": req.otp}, {"_id": 0})
     if not otp_record:
         raise HTTPException(status_code=400, detail="Invalid OTP")
 
     expires = datetime.fromisoformat(otp_record["expires_at"])
     if datetime.now(timezone.utc) > expires:
-        await db.otp_codes.delete_many({"email": email})
+        await db.otp_codes.delete_many({"phone": phone})
         raise HTTPException(status_code=400, detail="OTP expired. Please request a new one.")
 
-    await db.otp_codes.delete_many({"email": email})
+    await db.otp_codes.delete_many({"phone": phone})
 
-    user = await db.users.find_one({"email": email}, {"_id": 0})
+    user = await db.users.find_one({"phone": phone}, {"_id": 0})
     if not user:
         user = {
             "id": str(uuid.uuid4()),
-            "email": email,
+            "phone": phone,
             "name": "",
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         await db.users.insert_one(user)
         user.pop("_id", None)
 
-    token = create_token(user["id"], email)
+    token = create_token(user["id"], phone)
     profile = await db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
 
     return {
         "token": token,
-        "user": {"id": user["id"], "email": user["email"], "name": user.get("name", "")},
+        "user": {"id": user["id"], "phone": user["phone"], "name": user.get("name", "")},
         "has_profile": profile is not None,
     }
 

@@ -54,6 +54,10 @@ export default function AnalyzePage() {
   const [file, setFile] = useState(null);
   const [analysisMode, setAnalysisMode] = useState(searchParams.get("mode") || null);
   const [selectedSport, setSelectedSport] = useState(null);
+
+  // Set page title
+  useEffect(() => { document.title = "Analyze | AthlyticAI"; }, []);
+
   const [targetPlayer, setTargetPlayer] = useState("auto");
   const [playerSelectorOpen, setPlayerSelectorOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -171,60 +175,101 @@ export default function AnalyzePage() {
       }, 2000);
 
       try {
-        const { analyzeVideo } = await import("@/ai/videoProcessor");
-        const clientResult = await analyzeVideo(file, sportToAnalyze, {
-          mode: analysisMode,
-          targetPlayer,
-          onProgress: (pct, msg) => {
-            setProgress(pct);
-            if (msg) setLoadingText(msg);
-          },
-        });
-
-        // Send client results to backend for coaching enrichment
-        setProgress(92);
-        setLoadingText("Getting coaching feedback...");
-        const { data } = await api.post("/analyze-client-results", {
-          sport: sportToAnalyze,
-          shot_type: clientResult.shot_type || "unknown",
-          confidence: clientResult.confidence || 0,
-          metrics: clientResult.metrics || {},
-          speed: clientResult.speed || {},
-          skill_level: clientResult.skill_level || "Beginner",
-          shot_grade: clientResult.shot_grade || "C",
-          segments: clientResult.segments || [],
-          video_info: clientResult.video_info || {},
-          player_preview: clientResult.player_preview || null,
-          weaknesses: clientResult.weaknesses || [],
-        }, { timeout: 60000 });
-
-        clearInterval(interval);
-        setProgress(100);
-        setLoadingText("Complete!");
-
-        if (data.success) {
-          data._processingMode = "client";
-          setResult(data);
-          setViewingHistorical(false);
-          setActiveTab("results");
-          refreshProfile();
-          loadHistory();
-          toast.success("Analysis complete!");
-          if (data.new_badges?.length > 0) {
-            setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
-          }
-        } else {
-          throw new Error("Analysis returned unsuccessful");
-        }
-      } catch (err) {
-        clearInterval(interval);
-        // If videoProcessor module not available, fall back to server mode
-        if (err.message?.includes("Failed to fetch dynamically imported module") || err.message?.includes("Cannot find module")) {
-          toast.error("Client-side AI not available yet. Switching to server mode...");
+        let analyzeVideo;
+        try {
+          const mod = await import("@/ai/videoProcessor");
+          analyzeVideo = mod.analyzeVideo;
+        } catch (importErr) {
+          toast.error("On-device AI not available. Switching to server mode...");
+          clearInterval(interval);
           setProcessingMode("server");
           setAnalyzing(false);
           return;
         }
+
+        const clientResult = await analyzeVideo(file, sportToAnalyze, {
+          mode: analysisMode,
+          targetPlayer,
+          onProgress: (info) => {
+            // videoProcessor sends { step, percent, message }
+            const pct = typeof info === "number" ? info : info?.percent;
+            const msg = typeof info === "string" ? info : info?.message;
+            if (pct != null) setProgress(pct);
+            if (msg) setLoadingText(msg);
+          },
+        });
+
+        if (!clientResult || clientResult.error) {
+          throw new Error(clientResult?.error || "Analysis returned no results");
+        }
+
+        // Send client results to backend for coaching enrichment
+        setProgress(92);
+        setLoadingText("Getting coaching feedback...");
+        try {
+          const { data } = await api.post("/analyze-client-results", {
+            sport: sportToAnalyze,
+            shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
+            confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
+            metrics: clientResult.metrics || {},
+            speed: clientResult.speed || clientResult.speed_analysis || {},
+            skill_level: clientResult.skill_level || "Beginner",
+            shot_grade: clientResult.shot_grade || "C",
+            segments: clientResult.segments || [],
+            video_info: clientResult.video_info || {},
+            player_preview: clientResult.player_preview || null,
+            weaknesses: clientResult.weaknesses || [],
+          }, { timeout: 30000 });
+
+          clearInterval(interval);
+          setProgress(100);
+          setLoadingText("Complete!");
+
+          if (data.success !== false) {
+            data._processingMode = "client";
+            setResult(data);
+            setViewingHistorical(false);
+            setActiveTab("results");
+            refreshProfile();
+            loadHistory();
+            toast.success("Analysis complete!");
+            if (data.new_badges?.length > 0) {
+              setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
+            }
+          } else {
+            throw new Error("Server enrichment failed");
+          }
+        } catch (serverErr) {
+          // Server enrichment failed — still show client-side results
+          clearInterval(interval);
+          setProgress(100);
+          setLoadingText("Complete!");
+
+          const fallbackResult = {
+            success: true,
+            _processingMode: "client",
+            shot_analysis: {
+              shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
+              confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
+            },
+            speed_analysis: clientResult.speed || clientResult.speed_analysis || {},
+            metrics: clientResult.metrics || {},
+            video_info: clientResult.video_info || {},
+            player_preview: clientResult.player_preview || null,
+            coach_feedback: {
+              summary: "Analysis completed on your device. Coaching feedback unavailable (server connection issue).",
+              tips: clientResult.weaknesses?.map(w => w.fix) || ["Keep practicing!"],
+            },
+            skill_level: clientResult.skill_level || "Beginner",
+            shot_grade: clientResult.shot_grade || "C",
+          };
+          setResult(fallbackResult);
+          setViewingHistorical(false);
+          setActiveTab("results");
+          toast.info("Analysis done on device. Coaching feedback unavailable offline.");
+        }
+      } catch (err) {
+        clearInterval(interval);
         const msg = err.response?.data?.detail || err.message || "Analysis failed";
         setError(msg);
         toast.error(msg);
@@ -648,10 +693,18 @@ export default function AnalyzePage() {
           className="mt-6 bg-zinc-900/80 border border-red-500/30 rounded-2xl p-5 text-center">
           <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-3" strokeWidth={1.5} />
           <p className="text-red-400 font-medium text-sm mb-1">Analysis Failed</p>
-          <p className="text-zinc-500 text-xs">{error}</p>
-          <Button size="sm" onClick={clearFile} className="mt-3 text-xs border-zinc-700 text-zinc-400 hover:text-lime-400" variant="outline">
-            <RefreshCw className="w-3 h-3 mr-1" /> Try Again
-          </Button>
+          <p className="text-zinc-500 text-xs mb-4">{error}</p>
+          <div className="flex items-center justify-center gap-3">
+            <Button size="sm" onClick={clearFile} className="text-xs border-zinc-700 text-zinc-400 hover:text-lime-400" variant="outline">
+              <RefreshCw className="w-3 h-3 mr-1" /> Try Again
+            </Button>
+            {processingMode === "client" && (
+              <Button size="sm" onClick={() => { setError(null); setProcessingMode("server"); toast.info("Switched to Server mode. Try analyzing again."); }}
+                className="text-xs bg-sky-500 hover:bg-sky-600 text-white">
+                <Cloud className="w-3 h-3 mr-1" /> Try Server Mode
+              </Button>
+            )}
+          </div>
         </motion.div>
       )}
 
@@ -712,50 +765,115 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── (a) AI Coach Summary ── */}
+        {/* ── HERO: Grade + Shot + Speed ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-zinc-900/80 border border-lime-400/20 rounded-2xl p-6 relative overflow-hidden"
+          className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-transparent" />
-          <div className="relative flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center shrink-0">
-              <Bot className="w-6 h-6 text-lime-400" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <p className="font-heading font-bold text-lg text-white uppercase tracking-tight">Your Coach Says</p>
-                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-lg px-4 py-1 font-heading font-bold uppercase">
-                  {result.skill_level || "Unknown"}
-                </Badge>
-                {result._processingMode && (
-                  <Badge className={`text-[10px] px-2 py-0.5 ${
-                    result._processingMode === "client"
-                      ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
-                      : "bg-sky-400/10 text-sky-400 border-sky-400/20"
-                  }`}>
-                    {result._processingMode === "client" ? (
-                      <><Cpu className="w-2.5 h-2.5 mr-1 inline" /> On Device</>
-                    ) : (
-                      <><Cloud className="w-2.5 h-2.5 mr-1 inline" /> On Server</>
-                    )}
+          <div className="relative">
+            {/* Grade + Shot row */}
+            <div className="flex items-center gap-5 mb-4">
+              {/* Big Grade */}
+              {shot.grade && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+                  className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center shrink-0 ${
+                    shot.grade === "A" ? "bg-lime-400 text-black" :
+                    shot.grade === "B" ? "bg-sky-400 text-black" :
+                    shot.grade === "C" ? "bg-amber-400 text-black" :
+                    "bg-red-500 text-white"
+                  }`}
+                >
+                  <span className="font-heading font-black text-4xl leading-none">{shot.grade}</span>
+                  {shot.score != null && <span className="text-[10px] font-bold opacity-80">{shot.score}/100</span>}
+                </motion.div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  {(shot.shot_type && shot.shot_type !== "unknown") && (
+                    <h3 className="font-heading font-bold text-xl text-white uppercase tracking-tight">{shot.shot_name || shot.shot_type}</h3>
+                  )}
+                  <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-xs px-2 py-0.5 font-bold uppercase">
+                    {result.skill_level || "Unknown"}
                   </Badge>
+                  {result._processingMode && (
+                    <Badge className={`text-[10px] px-2 py-0.5 ${
+                      result._processingMode === "client"
+                        ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
+                        : "bg-sky-400/10 text-sky-400 border-sky-400/20"
+                    }`}>
+                      {result._processingMode === "client" ? (
+                        <><Cpu className="w-2.5 h-2.5 mr-1 inline" /> On Device</>
+                      ) : (
+                        <><Cloud className="w-2.5 h-2.5 mr-1 inline" /> Server</>
+                      )}
+                    </Badge>
+                  )}
+                </div>
+                {(shot.confidence != null && shot.confidence > 0) && (
+                  <p className="text-zinc-500 text-xs">Confidence: {Math.round(shot.confidence * 100)}%</p>
+                )}
+                {/* Speed inline */}
+                {result.speed_analysis?.estimated_speed_kmh > 0 && (
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <Zap className="w-3 h-3 text-amber-400" />
+                    <span className="font-heading font-bold text-lg text-white">{Math.round(result.speed_analysis.estimated_speed_kmh)} km/h</span>
+                    <Badge className={`text-[10px] font-bold uppercase ${
+                      result.speed_analysis.speed_class === "Elite" ? "bg-amber-400/10 text-amber-400 border-amber-400/20" :
+                      result.speed_analysis.speed_class === "Advanced" ? "bg-sky-400/10 text-sky-400 border-sky-400/20" :
+                      "bg-zinc-800 text-zinc-300 border-zinc-700"
+                    }`}>{result.speed_analysis.speed_class}</Badge>
+                  </div>
                 )}
               </div>
-              <p className="text-sm text-zinc-300 leading-relaxed">
-                {coachFeedback.summary || result.comprehensive_coaching?.general_feedback || result.quick_summary || coaching?.header?.summary || "Great effort! Here's what I noticed in your game..."}
-              </p>
-              {coachFeedback.encouragement && (
-                <p className="text-sm text-lime-400/80 mt-2 italic">{coachFeedback.encouragement}</p>
-              )}
+            </div>
+            {/* Coach summary */}
+            <div className="flex items-start gap-3 pt-3 border-t border-zinc-800/50">
+              <Bot className="w-5 h-5 text-lime-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-zinc-300 leading-relaxed">
+                  {coachFeedback.summary || result.comprehensive_coaching?.general_feedback || result.quick_summary || coaching?.header?.summary || "Great effort! Here's what I noticed in your game..."}
+                </p>
+                {coachFeedback.encouragement && (
+                  <p className="text-xs text-lime-400/80 mt-1 italic">{coachFeedback.encouragement}</p>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
 
-        {/* ── (b) Performance Scores ── */}
-        {perfScores.dimension_list?.length > 0 && (
+        {/* ── Score Comparison with Previous ── */}
+        {scoreComparison?.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+            className="bg-zinc-900/80 border border-sky-400/20 rounded-2xl p-5">
+            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-sky-400" /> Progress Since Last Analysis
+            </p>
+            <div className="space-y-2">
+              {scoreComparison.map((cmp, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-sm text-zinc-300">{cmp.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500">{cmp.previous}/10</span>
+                    <ArrowRight className="w-3 h-3 text-zinc-600" />
+                    <span className={`text-sm font-bold ${cmp.improved ? "text-lime-400" : "text-red-400"}`}>{cmp.current}/10</span>
+                    <Badge className={`text-[10px] px-1.5 py-0 ${cmp.improved ? "bg-lime-400/10 text-lime-400 border-lime-400/20" : "bg-red-400/10 text-red-400 border-red-400/20"}`}>
+                      {cmp.change > 0 ? "+" : ""}{cmp.change}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Performance Scores ── */}
+        {perfScores.dimension_list?.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-4 flex items-center gap-1">
               <BarChart3 className="w-3 h-3 text-sky-400" /> Performance Scores
@@ -801,130 +919,27 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── Score Comparison with Previous ── */}
-        {scoreComparison?.length > 0 && (
+        {/* ── Player Preview (if available) ── */}
+        {result.analyzed_player_preview && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            className="bg-zinc-900/80 border border-sky-400/20 rounded-2xl p-5">
+            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3 text-sky-400" /> Progress Since Last Analysis
+              <Video className="w-3 h-3" /> Player Detected
             </p>
-            <div className="space-y-2">
-              {scoreComparison.map((cmp, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm text-zinc-300">{cmp.label}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-500">{cmp.previous}/10</span>
-                    <ArrowRight className="w-3 h-3 text-zinc-600" />
-                    <span className={`text-sm font-bold ${cmp.improved ? "text-lime-400" : "text-red-400"}`}>{cmp.current}/10</span>
-                    <Badge className={`text-[10px] px-1.5 py-0 ${cmp.improved ? "bg-lime-400/10 text-lime-400 border-lime-400/20" : "bg-red-400/10 text-red-400 border-red-400/20"}`}>
-                      {cmp.change > 0 ? "+" : ""}{cmp.change}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── Shot Detection + Grade ── */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-          {result.analyzed_player_preview && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="md:col-span-5 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
-              <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-                <Video className="w-3 h-3" /> Player Detected
-              </p>
-              <div className="rounded-xl overflow-hidden bg-zinc-800">
-                <img src={result.analyzed_player_preview} alt="Detected player" className="w-full h-auto" />
-              </div>
-            </motion.div>
-          )}
-
-          {shot.shot_type && shot.shot_type !== "unknown" && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className={`${result.analyzed_player_preview ? "md:col-span-7" : "md:col-span-12"} bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5`}
-              data-testid="shot-result-card">
-              <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-                <Target className="w-3 h-3" /> Shot Detected
-              </p>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-heading font-bold text-2xl text-white uppercase tracking-tight">{shot.shot_name || shot.shot_type}</h3>
-                  <p className="text-zinc-500 text-xs mt-1">Confidence: {Math.round((shot.confidence || 0) * 100)}%</p>
-                </div>
-                {shot.grade && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, delay: 0.3 }}
-                    className="text-center"
-                  >
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-heading font-bold text-2xl ${
-                      shot.grade === "A" ? "bg-lime-400 text-black" :
-                      shot.grade === "B" ? "bg-sky-400 text-black" :
-                      shot.grade === "C" ? "bg-amber-400 text-black" :
-                      "bg-red-500 text-white"
-                    }`}>
-                      {shot.grade}
-                    </div>
-                    {shot.score != null && <p className="text-zinc-500 text-xs mt-1">{shot.score}/100</p>}
-                  </motion.div>
-                )}
-              </div>
-              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.round((shot.confidence || 0) * 100)}%` }}
-                  transition={{ duration: 1, delay: 0.4 }}
-                  className="h-full bg-lime-400 rounded-full"
-                />
-              </div>
-            </motion.div>
-          )}
-        </div>
-
-        {/* ── Speed Analysis ── */}
-        {result.speed_analysis?.estimated_speed_kmh && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5" data-testid="speed-card">
-            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-              <Zap className="w-3 h-3 text-amber-400" /> Swing Speed Estimate
-            </p>
-            <div className="flex items-center gap-6">
-              <div className="text-center">
-                <motion.p
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", delay: 0.3 }}
-                  className="font-heading font-black text-4xl text-white"
-                >
-                  {Math.round(result.speed_analysis.estimated_speed_kmh)}
-                </motion.p>
-                <p className="text-zinc-500 text-xs">km/h</p>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className={`text-xs font-bold uppercase ${
-                    result.speed_analysis.speed_class === "Elite" ? "bg-amber-400/10 text-amber-400 border-amber-400/20" :
-                    result.speed_analysis.speed_class === "Advanced" ? "bg-sky-400/10 text-sky-400 border-sky-400/20" :
-                    result.speed_analysis.speed_class === "Intermediate" ? "bg-lime-400/10 text-lime-400 border-lime-400/20" :
-                    "bg-zinc-800 text-zinc-300 border-zinc-700"
-                  }`}>{result.speed_analysis.speed_class}</Badge>
-                </div>
-                <p className="text-zinc-500 text-xs">{result.speed_analysis.note}</p>
-              </div>
+            <div className="rounded-xl overflow-hidden bg-zinc-800 max-h-48">
+              <img src={result.analyzed_player_preview} alt="Detected player" className="w-full h-auto object-cover" />
             </div>
           </motion.div>
         )}
 
         {/* ── Top Issues (Coach Style) ── */}
-        {shot.weaknesses?.length > 0 && (
+        {(shot.weaknesses?.length > 0 || coachFeedback.top_issues?.length > 0) && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="space-y-3" data-testid="weaknesses-card">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3 text-amber-400" /> Top Issues to Fix
+              <AlertTriangle className="w-3 h-3 text-amber-400" /> Top 3 Things to Improve
             </p>
-            {shot.weaknesses.slice(0, 3).map((w, i) => (
+            {(shot.weaknesses || coachFeedback.top_issues || []).slice(0, 3).map((w, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, x: -20 }}
@@ -958,7 +973,7 @@ export default function AnalyzePage() {
                       {expandedIssue === i ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </Button>
                   </div>
-                  <p className="text-xs text-zinc-400">{w.issue}</p>
+                  <p className="text-xs text-zinc-400">{w.coach_says || w.issue}</p>
                 </div>
 
                 <AnimatePresence>
@@ -1021,44 +1036,27 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── Pro Comparison ── */}
-        {pro.overall_score != null && (
+        {/* ── Pro Tips + Player Match ── */}
+        {(pro.pro_tips?.length > 0 || pro.player_match?.player) && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5" data-testid="pro-comparison-card">
-            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-              <Star className="w-3 h-3 text-amber-400" /> Pro Comparison
-            </p>
-            <div className="flex items-center gap-4 mb-3">
-              <Badge className={`text-sm font-bold uppercase px-3 py-1 ${
-                pro.level === "Elite" ? "bg-amber-400/10 text-amber-400 border-amber-400/20" :
-                pro.level === "Advanced" ? "bg-sky-400/10 text-sky-400 border-sky-400/20" :
-                "bg-zinc-800 text-zinc-300 border-zinc-700"
-              }`}>{pro.level || "Developing"}</Badge>
-              <span className="font-heading font-bold text-2xl text-white">{Math.round(pro.overall_score)}%</span>
-              <span className="text-zinc-500 text-xs">of elite level</span>
-            </div>
-            <div className="h-2.5 bg-zinc-800 rounded-full overflow-hidden mb-3">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${pro.overall_score}%` }}
-                transition={{ duration: 1.2, delay: 0.4 }}
-                className="h-full rounded-full"
-                style={{ background: "linear-gradient(90deg, #cd7f32, #c0c0c0, #ffd700)" }}
-              />
-            </div>
-            {pro.message && <p className="text-zinc-400 text-sm">{pro.message}</p>}
             {pro.pro_tips?.length > 0 && (
-              <div className="mt-3 space-y-1">
-                {pro.pro_tips.map((tip, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs text-zinc-400">
-                    <ChevronRight className="w-3 h-3 text-lime-400 shrink-0 mt-0.5" />
-                    <span>{tip}</span>
-                  </div>
-                ))}
-              </div>
+              <>
+                <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
+                  <Star className="w-3 h-3 text-amber-400" /> Pro Tips
+                </p>
+                <div className="space-y-1.5">
+                  {pro.pro_tips.slice(0, 3).map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-zinc-400">
+                      <ChevronRight className="w-3 h-3 text-lime-400 shrink-0 mt-0.5" />
+                      <span>{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
             {pro.player_match?.player && (
-              <div className="mt-4 pt-3 border-t border-zinc-800">
+              <div className={`${pro.pro_tips?.length > 0 ? "mt-4 pt-3 border-t border-zinc-800" : ""}`}>
                 <p className="text-xs text-zinc-500 mb-2">You play most like:</p>
                 <div className="flex items-center gap-3 bg-zinc-800/50 rounded-xl p-3">
                   <span className="font-heading font-bold text-white">{pro.player_match.player}</span>
@@ -1430,25 +1428,6 @@ export default function AnalyzePage() {
             </div>
           </motion.div>
         )}
-
-        {/* ── Stats Bar ── */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-          className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="font-heading font-bold text-2xl text-lime-400">{result.frames_analyzed || 0}</p>
-              <p className="text-zinc-500 text-xs uppercase tracking-wide">Frames</p>
-            </div>
-            <div>
-              <p className="font-heading font-bold text-2xl text-sky-400">{shot.weaknesses?.length || 0}</p>
-              <p className="text-zinc-500 text-xs uppercase tracking-wide">Issues</p>
-            </div>
-            <div>
-              <p className="font-heading font-bold text-2xl text-purple-400">{coaching?.action_plan?.drills?.length || 0}</p>
-              <p className="text-zinc-500 text-xs uppercase tracking-wide">Drills</p>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Share + Analyze another */}
         <div className="flex gap-3">

@@ -122,7 +122,38 @@ export default function DashboardPage() {
     return map;
   }, [analysisHistory, activeSport]);
 
-  if (!profile) return null;
+  // Set page title
+  useEffect(() => {
+    document.title = "Dashboard | AthlyticAI";
+  }, []);
+
+  if (!profile) return (
+    <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="dashboard-page">
+      <div className="container mx-auto px-4 max-w-7xl">
+        {/* Header skeleton */}
+        <div className="mb-6">
+          <div className="h-10 bg-zinc-800 rounded-xl animate-pulse w-64 mb-2" />
+          <div className="h-4 bg-zinc-800/60 rounded animate-pulse w-48" />
+        </div>
+        {/* Sport cards skeleton */}
+        <div className="mb-6">
+          <div className="h-4 bg-zinc-800/60 rounded animate-pulse w-24 mb-3" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[1, 2].map(i => (
+              <div key={i} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-40 animate-pulse" />
+            ))}
+          </div>
+        </div>
+        {/* Bento grid skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div className="md:col-span-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-52 animate-pulse" />
+          <div className="md:col-span-8 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-52 animate-pulse" />
+          <div className="md:col-span-6 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-48 animate-pulse" />
+          <div className="md:col-span-6 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-48 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
 
   const sportProfile = profile.sports_profiles?.[activeSport] || {};
   const skillLevel = sportProfile.skill_level || profile.skill_level || "Unknown";

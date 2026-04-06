@@ -127,14 +127,28 @@ export default function CommunityPage() {
 
   const friendIds = new Set(friends.map(f => f.user_id));
 
+  // Set page title
+  useEffect(() => {
+    document.title = "Community | AthlyticAI";
+  }, []);
+
   if (loading) return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="community-page">
+      <div className="container mx-auto px-4 max-w-4xl">
+        <div className="h-10 bg-zinc-800 rounded-xl animate-pulse w-48 mb-2" />
+        <div className="h-4 bg-zinc-800/60 rounded animate-pulse w-72 mb-6" />
+        <div className="h-10 bg-zinc-800 rounded-xl animate-pulse w-full mb-6" />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 h-28 animate-pulse" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950 py-8" data-testid="community-page">
+    <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="community-page">
       <div className="container mx-auto px-4 max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h1 className="font-heading font-bold text-3xl md:text-5xl uppercase tracking-tight text-white mb-2">
@@ -264,9 +278,10 @@ export default function CommunityPage() {
               <div>
                 <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3">Open Games</p>
                 {games.filter(g => !g.players?.includes(user?.id)).length === 0 ? (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
+                  <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-8 text-center">
                     <Swords className="w-10 h-10 text-zinc-600 mx-auto mb-3" strokeWidth={1.5} />
-                    <p className="text-zinc-500 text-sm">No open games yet. Be the first to host one!</p>
+                    <p className="text-zinc-400 text-sm font-medium mb-1">No open games yet</p>
+                    <p className="text-zinc-600 text-xs">Be the first to host a game and find players nearby.</p>
                   </div>
                 ) : (
                   games.filter(g => !g.players?.includes(user?.id)).map((g, i) => (
@@ -319,9 +334,10 @@ export default function CommunityPage() {
                   Friends ({friends.length})
                 </p>
                 {friends.length === 0 ? (
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
+                  <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-8 text-center">
                     <Users className="w-10 h-10 text-zinc-600 mx-auto mb-3" strokeWidth={1.5} />
-                    <p className="text-zinc-500 text-sm">No friends yet. Discover players and send requests!</p>
+                    <p className="text-zinc-400 text-sm font-medium mb-1">No friends yet</p>
+                    <p className="text-zinc-600 text-xs">Head to the Discover tab to find players and send requests.</p>
                   </div>
                 ) : (
                   friends.map((f, i) => (
@@ -350,9 +366,10 @@ export default function CommunityPage() {
           <TabsContent value="discover">
             <div className="space-y-3">
               {players.length === 0 ? (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
+                <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-8 text-center">
                   <Search className="w-10 h-10 text-zinc-600 mx-auto mb-3" strokeWidth={1.5} />
-                  <p className="text-zinc-500 text-sm">No other players found yet. Share AthlyticAI with friends!</p>
+                  <p className="text-zinc-400 text-sm font-medium mb-1">No other players found yet</p>
+                  <p className="text-zinc-600 text-xs">Share AthlyticAI with friends to grow the community.</p>
                 </div>
               ) : (
                 players.map((p, i) => (

@@ -18,6 +18,11 @@ export default function PlayerCardPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareData, setShareData] = useState(null);
 
+  // Set page title
+  useEffect(() => {
+    document.title = "Player Card | AthlyticAI";
+  }, []);
+
   useEffect(() => {
     if (user?.id) {
       Promise.allSettled([
