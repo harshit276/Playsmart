@@ -1286,142 +1286,81 @@ export default function AssessmentPage() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 mb-4">
                 <Zap className="w-6 h-6 text-lime-400" />
                 <span className="font-heading font-bold text-lg uppercase tracking-tight text-white">Save Your Results</span>
               </div>
 
-              <AnimatePresence mode="wait">
-                {loginStep === "phone" ? (
-                  <motion.div
-                    key="login-phone"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <p className="text-zinc-400 text-sm mb-4">
-                      Enter your mobile number to save your assessment and get personalized recommendations.
-                    </p>
-                    <form onSubmit={handleLoginSendOTP} className="space-y-4">
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                        <Input
-                          type="tel"
-                          inputMode="numeric"
-                          placeholder="+91 9876543210"
-                          value={loginPhone}
-                          onChange={(e) => setLoginPhone(e.target.value.replace(/[^0-9+\s-]/g, ""))}
-                          className="pl-10 bg-zinc-950 border-zinc-800 focus:border-lime-400 focus:ring-lime-400 h-12 text-white"
-                          autoComplete="tel"
-                          autoFocus
-                        />
-                      </div>
-                      <Button
-                        type="submit"
-                        disabled={loginLoading}
-                        className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide h-12 rounded-full shadow-[0_0_15px_rgba(190,242,100,0.2)]"
-                      >
-                        {loginLoading ? "Sending..." : "Send OTP"}
-                      </Button>
-                    </form>
-                    <div className="mt-4 text-center">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="flex-1 h-px bg-zinc-800" />
-                        <span className="text-xs text-zinc-500">or</span>
-                        <div className="flex-1 h-px bg-zinc-800" />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          localStorage.setItem("guest_mode", "true");
-                          setShowLoginModal(false);
-                          navigate("/dashboard");
-                        }}
-                        className="w-full text-zinc-400 hover:text-zinc-200 text-sm"
-                      >
-                        Skip, explore as guest
-                      </Button>
-                      <p className="text-[10px] text-zinc-600 mt-1">Your quiz results won't be saved</p>
-                    </div>
-                  </motion.div>
+              <p className="text-zinc-400 text-sm mb-6">
+                Sign in to save your personalized profile and get recommendations tailored just for you.
+              </p>
+
+              {/* Google Login */}
+              <Button
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const { signInWithPopup } = await import("firebase/auth");
+                    const { auth, googleProvider } = await import("@/lib/firebase");
+                    const result = await signInWithPopup(auth, googleProvider);
+                    const firebaseUser = result.user;
+                    const idToken = await firebaseUser.getIdToken();
+                    const { data } = await api.post("/auth/firebase", {
+                      firebase_token: idToken,
+                      name: firebaseUser.displayName || "",
+                      email: firebaseUser.email || "",
+                      photo: firebaseUser.photoURL || "",
+                    });
+                    login(data.token, data.user, data.has_profile);
+                    toast.success("Signed in! Saving your profile...");
+                    setShowLoginModal(false);
+                    await api.post("/profile", buildProfilePayload());
+                    await refreshProfile();
+                    toast.success("Profile created! Let's see your recommendations.");
+                    navigate("/dashboard");
+                  } catch (err) {
+                    if (err.code !== "auth/popup-closed-by-user") {
+                      toast.error("Login failed. Please try again.");
+                    }
+                  }
+                  setLoading(false);
+                }}
+                disabled={loading}
+                className="w-full h-14 bg-white text-black hover:bg-zinc-100 font-medium text-base rounded-xl shadow-lg flex items-center justify-center gap-3 mb-4"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <motion.div
-                    key="login-otp"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <p className="text-zinc-400 text-sm mb-4">
-                      Enter the 6-digit code sent to <span className="text-lime-400">{normalizePhone(loginPhone)}</span>
-                    </p>
-
-                    {loginOtpHint && (
-                      <div className="bg-lime-400/10 border border-lime-400/20 rounded-lg p-3 text-center mb-4">
-                        <p className="text-xs text-zinc-400 mb-1">Demo OTP (dev mode)</p>
-                        <p className="text-lime-400 font-mono text-xl font-bold tracking-[0.3em]">{loginOtpHint}</p>
-                      </div>
-                    )}
-
-                    {/* Timer */}
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                      <Clock className={`w-4 h-4 ${loginSecondsLeft <= 0 ? "text-red-400" : "text-zinc-400"}`} />
-                      {loginSecondsLeft <= 0 ? (
-                        <span className="text-red-400 text-sm font-medium">OTP expired</span>
-                      ) : (
-                        <span className="text-zinc-400 text-sm font-mono">
-                          Expires in <span className={`font-bold ${loginSecondsLeft <= 60 ? "text-orange-400" : "text-lime-400"}`}>{formatTime(loginSecondsLeft)}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex justify-center gap-2 mb-4" onPaste={handleLoginOtpPaste}>
-                      {[0, 1, 2, 3, 4, 5].map(i => (
-                        <input
-                          key={i}
-                          ref={el => otpRefs.current[i] = el}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={loginOtp[i] || ""}
-                          onChange={e => handleLoginOtpDigit(i, e.target.value)}
-                          onKeyDown={e => handleLoginOtpKeyDown(i, e)}
-                          disabled={loginSecondsLeft <= 0}
-                          className="w-11 h-12 text-center text-lg font-mono font-bold rounded-md bg-zinc-950 border border-zinc-700 text-white focus:border-lime-400 focus:ring-1 focus:ring-lime-400 focus:outline-none disabled:opacity-50 transition-all"
-                          autoFocus={i === 0}
-                        />
-                      ))}
-                    </div>
-
-                    <Button
-                      onClick={() => handleLoginVerifyOTP()}
-                      disabled={loginLoading || loginOtp.length !== 6 || loginSecondsLeft <= 0}
-                      className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide h-12 rounded-full shadow-[0_0_15px_rgba(190,242,100,0.2)] mb-3"
-                    >
-                      {loginLoading ? "Verifying..." : "Verify & Save Results"}
-                    </Button>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        onClick={() => { setLoginStep("phone"); setLoginOtp(""); setLoginSecondsLeft(0); }}
-                        className="flex-1 text-zinc-500 hover:text-zinc-300 text-sm"
-                      >
-                        <ChevronLeft className="w-4 h-4 mr-1" /> Change
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={handleLoginResendOTP}
-                        disabled={loginLoading}
-                        className="flex-1 text-zinc-500 hover:text-zinc-300 text-sm"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-1" /> Resend
-                      </Button>
-                    </div>
-                  </motion.div>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
                 )}
-              </AnimatePresence>
+                {loading ? "Signing in..." : "Continue with Google"}
+              </Button>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px bg-zinc-800" />
+                <span className="text-xs text-zinc-500">or</span>
+                <div className="flex-1 h-px bg-zinc-800" />
+              </div>
+
+              {/* Skip */}
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  localStorage.setItem("guest_mode", "true");
+                  setShowLoginModal(false);
+                  navigate("/dashboard");
+                }}
+                className="w-full text-zinc-400 hover:text-zinc-200 text-sm"
+              >
+                Skip, explore as guest
+              </Button>
+              <p className="text-[10px] text-zinc-600 mt-2 text-center">Your quiz results won't be saved</p>
             </motion.div>
           </motion.div>
         )}

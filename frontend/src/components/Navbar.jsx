@@ -161,7 +161,7 @@ export default function Navbar() {
                 <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 w-56">
                   <div className="px-3 py-2">
                     <p className="text-sm font-medium text-white">{user?.name || "Player"}</p>
-                    <p className="text-xs text-zinc-500">{user?.phone}</p>
+                    <p className="text-xs text-zinc-500">{user?.email || user?.phone}</p>
                   </div>
                   <DropdownMenuSeparator className="bg-zinc-800" />
                   <DropdownMenuItem
