@@ -13,3 +13,4 @@ deploy/
 *.mp4
 *.avi
 *.mov
+frontend/.env
