@@ -63,16 +63,16 @@ _cors_origins_raw = os.environ.get('CORS_ORIGINS', '')
 if _cors_origins_raw:
     _cors_origins = [o.strip() for o in _cors_origins_raw.split(',') if o.strip()]
 else:
-    _cors_origins = ["*"] if not IS_PRODUCTION else []
-# On Vercel, allow the deployment's own origin
+    # Always allow all origins — frontend and API are on the same domain
+    _cors_origins = ["*"]
+# On Vercel, always allow the deployment's own origin
 if IS_SERVERLESS:
     _vercel_url = os.environ.get("VERCEL_URL")
-    if _vercel_url:
+    if _vercel_url and f"https://{_vercel_url}" not in _cors_origins:
         _cors_origins.append(f"https://{_vercel_url}")
-    # Also allow common Vercel preview/production patterns
-    _cors_origins.append("https://*.vercel.app")
-if IS_PRODUCTION and not _cors_origins:
-    logging.getLogger(__name__).warning("CORS_ORIGINS not set in production — no origins will be allowed")
+    if "*" not in _cors_origins:
+        _cors_origins.append("https://athlyticai.com")
+        _cors_origins.append("https://athlyticai.vercel.app")
 
 app.add_middleware(
     CORSMiddleware,
