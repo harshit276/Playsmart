@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Zap, ArrowLeft, LogIn } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import api from "@/lib/api";
 
 export default function AuthPage() {
@@ -14,31 +14,65 @@ export default function AuthPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Handle redirect result (for mobile where popup may not work)
+  useState(() => {
+    getRedirectResult(auth).then(async (result) => {
+      if (!result) return;
+      try {
+        const firebaseUser = result.user;
+        const idToken = await firebaseUser.getIdToken();
+        const { data } = await api.post("/auth/firebase", {
+          firebase_token: idToken,
+          name: firebaseUser.displayName || "",
+          email: firebaseUser.email || "",
+          photo: firebaseUser.photoURL || "",
+        });
+        login(data.token, data.user, data.has_profile);
+        toast.success(`Welcome${data.user.name ? ", " + data.user.name : ""}!`);
+        navigate(data.has_profile ? "/dashboard" : "/assessment");
+      } catch (err) {
+        console.error("Redirect login error:", err);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const processFirebaseUser = async (firebaseUser) => {
+    const idToken = await firebaseUser.getIdToken();
+    const { data } = await api.post("/auth/firebase", {
+      firebase_token: idToken,
+      name: firebaseUser.displayName || "",
+      email: firebaseUser.email || "",
+      photo: firebaseUser.photoURL || "",
+    });
+    login(data.token, data.user, data.has_profile);
+    toast.success(`Welcome${data.user.name ? ", " + data.user.name : ""}!`);
+    navigate(data.has_profile ? "/dashboard" : "/assessment");
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      // Try popup first (works on desktop)
       const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
-
-      // Send Firebase token to our backend to create/find user + get JWT
-      const idToken = await firebaseUser.getIdToken();
-      const { data } = await api.post("/auth/firebase", {
-        firebase_token: idToken,
-        name: firebaseUser.displayName || "",
-        email: firebaseUser.email || "",
-        photo: firebaseUser.photoURL || "",
-      });
-
-      login(data.token, data.user, data.has_profile);
-      toast.success(`Welcome${data.user.name ? ", " + data.user.name : ""}!`);
-      navigate(data.has_profile ? "/dashboard" : "/assessment");
+      await processFirebaseUser(result.user);
     } catch (err) {
-      if (err.code === "auth/popup-closed-by-user") {
-        // User closed the popup, not an error
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        setLoading(false);
         return;
       }
+      // If popup fails (mobile, blocked, etc.), try redirect
+      if (err.code === "auth/popup-blocked" || err.code === "auth/unauthorized-domain" ||
+          err.code === "auth/internal-error" || err.code === "auth/operation-not-supported-in-this-environment") {
+        console.log("Popup failed, trying redirect...", err.code);
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return; // Page will reload, getRedirectResult handles it
+        } catch (redirectErr) {
+          console.error("Redirect also failed:", redirectErr);
+        }
+      }
       console.error("Google login error:", err);
-      toast.error("Login failed. Please try again.");
+      toast.error(err.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
