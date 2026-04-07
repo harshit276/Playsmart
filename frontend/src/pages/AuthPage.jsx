@@ -37,13 +37,25 @@ export default function AuthPage() {
   }, []);
 
   const processFirebaseUser = async (firebaseUser) => {
-    const idToken = await firebaseUser.getIdToken();
+    console.log("[Auth] Firebase user obtained:", firebaseUser.email);
+
+    let idToken = "";
+    try {
+      idToken = await firebaseUser.getIdToken();
+      console.log("[Auth] Got Firebase ID token");
+    } catch (tokenErr) {
+      console.warn("[Auth] Failed to get ID token, continuing without it:", tokenErr);
+    }
+
+    console.log("[Auth] Calling /api/auth/firebase...");
     const { data } = await api.post("/auth/firebase", {
       firebase_token: idToken,
       name: firebaseUser.displayName || "",
       email: firebaseUser.email || "",
       photo: firebaseUser.photoURL || "",
     });
+    console.log("[Auth] Backend response:", data);
+
     login(data.token, data.user, data.has_profile);
     toast.success(`Welcome${data.user.name ? ", " + data.user.name : ""}!`);
     navigate(data.has_profile ? "/dashboard" : "/assessment");
@@ -72,7 +84,9 @@ export default function AuthPage() {
         }
       }
       console.error("Google login error:", err);
-      toast.error(err.message || "Login failed. Please try again.");
+      console.error("Error details:", { code: err.code, message: err.message, response: err.response?.status, url: err.config?.url });
+      const detail = err.response ? `API ${err.config?.url} returned ${err.response.status}` : (err.message || "Unknown error");
+      toast.error(`Login failed: ${detail}`);
     } finally {
       setLoading(false);
     }
