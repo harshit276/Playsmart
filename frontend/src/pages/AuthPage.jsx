@@ -44,22 +44,23 @@ export default function AuthPage() {
     const name = firebaseUser.displayName || "";
     const photo = firebaseUser.photoURL || "";
 
-    // Get Firebase ID token (optional - our backend trusts the user info)
     let idToken = "";
-    try {
-      idToken = await firebaseUser.getIdToken();
-    } catch {
-      // Continue without token
-    }
+    try { idToken = await firebaseUser.getIdToken(); } catch {}
 
-    // Call our backend
-    const { data } = await api.post("/auth/firebase", {
-      firebase_token: idToken,
-      name,
-      email,
-      photo,
+    // Use fetch directly to avoid any axios interceptor issues
+    const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+    const resp = await fetch(`${baseUrl}/api/auth/firebase`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ firebase_token: idToken, name, email, photo }),
     });
 
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(`Server returned ${resp.status}: ${errText}`);
+    }
+
+    const data = await resp.json();
     login(data.token, data.user, data.has_profile);
     toast.success(`Welcome${name ? ", " + name : ""}!`);
     navigate(data.has_profile ? "/dashboard" : "/assessment");
