@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -6,95 +6,94 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Zap, ArrowLeft, LogIn } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { signInWithPopup, getRedirectResult } from "firebase/auth";
 import api from "@/lib/api";
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Handle redirect result (for mobile where popup may not work)
-  useState(() => {
+  // If already logged in, redirect
+  useEffect(() => {
+    if (isAuthenticated) navigate("/dashboard", { replace: true });
+  }, [isAuthenticated, navigate]);
+
+  // Handle redirect result on page load
+  useEffect(() => {
     getRedirectResult(auth).then(async (result) => {
       if (!result) return;
+      setLoading(true);
       try {
-        const firebaseUser = result.user;
-        const idToken = await firebaseUser.getIdToken();
-        const { data } = await api.post("/auth/firebase", {
-          firebase_token: idToken,
-          name: firebaseUser.displayName || "",
-          email: firebaseUser.email || "",
-          photo: firebaseUser.photoURL || "",
-        });
-        login(data.token, data.user, data.has_profile);
-        toast.success(`Welcome${data.user.name ? ", " + data.user.name : ""}!`);
-        navigate(data.has_profile ? "/dashboard" : "/assessment");
+        await processFirebaseUser(result.user);
       } catch (err) {
-        console.error("Redirect login error:", err);
+        console.error("Redirect auth error:", err);
+        toast.error("Login failed after redirect. Please try again.");
       }
-    }).catch(() => {});
+      setLoading(false);
+    }).catch((err) => {
+      if (err.code !== "auth/popup-closed-by-user") {
+        console.error("Redirect result error:", err);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const processFirebaseUser = async (firebaseUser) => {
-    console.log("[Auth] Firebase user obtained:", firebaseUser.email);
+    const email = firebaseUser.email || "";
+    const name = firebaseUser.displayName || "";
+    const photo = firebaseUser.photoURL || "";
 
+    // Get Firebase ID token (optional - our backend trusts the user info)
     let idToken = "";
     try {
       idToken = await firebaseUser.getIdToken();
-      console.log("[Auth] Got Firebase ID token");
-    } catch (tokenErr) {
-      console.warn("[Auth] Failed to get ID token, continuing without it:", tokenErr);
+    } catch {
+      // Continue without token
     }
 
-    console.log("[Auth] Calling /api/auth/firebase...");
+    // Call our backend
     const { data } = await api.post("/auth/firebase", {
       firebase_token: idToken,
-      name: firebaseUser.displayName || "",
-      email: firebaseUser.email || "",
-      photo: firebaseUser.photoURL || "",
+      name,
+      email,
+      photo,
     });
-    console.log("[Auth] Backend response:", data);
 
     login(data.token, data.user, data.has_profile);
-    toast.success(`Welcome${data.user.name ? ", " + data.user.name : ""}!`);
+    toast.success(`Welcome${name ? ", " + name : ""}!`);
     navigate(data.has_profile ? "/dashboard" : "/assessment");
   };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      // Try popup first (works on desktop)
       const result = await signInWithPopup(auth, googleProvider);
       await processFirebaseUser(result.user);
     } catch (err) {
+      // Ignore user-cancelled
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
         setLoading(false);
         return;
       }
-      // If popup fails (mobile, blocked, etc.), try redirect
-      if (err.code === "auth/popup-blocked" || err.code === "auth/unauthorized-domain" ||
-          err.code === "auth/internal-error" || err.code === "auth/operation-not-supported-in-this-environment") {
-        console.log("Popup failed, trying redirect...", err.code);
-        try {
-          await signInWithRedirect(auth, googleProvider);
-          return; // Page will reload, getRedirectResult handles it
-        } catch (redirectErr) {
-          console.error("Redirect also failed:", redirectErr);
-        }
-      }
-      console.error("Google login error:", err);
-      console.error("Error details:", { code: err.code, message: err.message, response: err.response?.status, url: err.config?.url });
-      const detail = err.response ? `API ${err.config?.url} returned ${err.response.status}` : (err.message || "Unknown error");
-      toast.error(`Login failed: ${detail}`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleGuestExplore = () => {
-    localStorage.setItem("guest_mode", "true");
-    navigate("/dashboard");
+      console.error("Login error:", err.code, err.message);
+
+      // Show specific error
+      if (err.response?.status === 405) {
+        // 405 from our API — shouldn't happen but handle it
+        toast.error("Server error (405). Please try again in a moment.");
+      } else if (err.code?.startsWith("auth/")) {
+        // Firebase error
+        toast.error(`Firebase: ${err.message}`);
+      } else if (err.response) {
+        // API error
+        toast.error(`Server error: ${err.response.status}`);
+      } else {
+        toast.error(err.message || "Login failed. Please try again.");
+      }
+    }
+    setLoading(false);
   };
 
   return (
@@ -132,15 +131,13 @@ export default function AuthPage() {
 
           <div className="space-y-6">
             <div>
-              <h1 className="font-heading font-bold text-3xl uppercase tracking-tight mb-2">
-                Get Started
-              </h1>
+              <h1 className="font-heading font-bold text-3xl uppercase tracking-tight mb-2">Get Started</h1>
               <p className="text-zinc-400 text-sm">
                 Sign in to save your progress, get personalized recommendations, and track your improvement.
               </p>
             </div>
 
-            {/* Google Login - Primary */}
+            {/* Google Login */}
             <Button
               onClick={handleGoogleLogin}
               disabled={loading}
@@ -169,7 +166,10 @@ export default function AuthPage() {
             {/* Guest Mode */}
             <Button
               variant="outline"
-              onClick={handleGuestExplore}
+              onClick={() => {
+                localStorage.setItem("guest_mode", "true");
+                navigate("/dashboard");
+              }}
               className="w-full h-12 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-xl"
             >
               <LogIn className="w-4 h-4 mr-2" />
@@ -181,7 +181,6 @@ export default function AuthPage() {
               <a href="/privacy" className="text-zinc-500 hover:text-zinc-400 underline">Privacy Policy</a>
             </p>
 
-            {/* Back */}
             <Button variant="ghost" onClick={() => navigate("/")}
               className="w-full text-zinc-500 hover:text-zinc-300">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
