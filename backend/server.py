@@ -332,6 +332,14 @@ async def create_or_update_profile(data: PlayerProfileCreate, authorization: str
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
+    # Build personalization analysis from the full profile
+    try:
+        from recommendation_engine import build_player_profile_analysis
+        personalization = build_player_profile_analysis(profile)
+        profile["personalization"] = personalization
+    except Exception as e:
+        logger.warning(f"Recommendation engine error (non-fatal): {e}")
+
     await db.player_profiles.update_one(
         {"user_id": user["id"]},
         {"$set": profile},
@@ -524,6 +532,15 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
                 "why_this_fits": why_this_fits,
                 "buy_links": buy_links,
             })
+
+        # Re-score equipment using the full personalization engine
+        try:
+            from recommendation_engine import personalize_equipment_scores
+            profile_analysis = profile.get("personalization")
+            if profile_analysis:
+                results = personalize_equipment_scores(results, profile_analysis)
+        except Exception as e:
+            logger.warning(f"Equipment personalization error (non-fatal): {e}")
 
         # Filter by budget — show items whose minimum price is within the user's max budget
         # We use item_min <= bmax (not overlap) because budget is total spend capacity,
@@ -896,6 +913,15 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
         for v in all_videos[:10]:
             for sa in v.get("skill_areas", []):
                 videos_map.setdefault(sa, []).append(v)
+
+    # Personalize the training plan using the recommendation engine
+    try:
+        from recommendation_engine import personalize_training_plan
+        profile_analysis = profile.get("personalization")
+        if profile_analysis:
+            plan = personalize_training_plan(plan, profile_analysis)
+    except Exception as e:
+        logger.warning(f"Training personalization error (non-fatal): {e}")
 
     return {
         "plan": plan,
@@ -1715,6 +1741,15 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "strengths": strengths,
         "encouragement": encouragement,
     }
+
+    # Personalize coaching feedback using the recommendation engine
+    try:
+        from recommendation_engine import personalize_coaching_feedback
+        profile_analysis = (profile or {}).get("personalization")
+        if profile_analysis:
+            coach_feedback = personalize_coaching_feedback(coach_feedback, profile_analysis)
+    except Exception as e:
+        logger.warning(f"Coaching personalization error (non-fatal): {e}")
 
     # Build improvement plan
     this_week_tasks = []

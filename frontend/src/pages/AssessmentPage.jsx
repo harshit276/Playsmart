@@ -12,7 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, Zap, Feather, CircleDot, Target, Check,
   Waves, Trophy, Sparkles, Swords, Users, Heart, Smile, Shield,
-  Flame, Dumbbell, Star, GraduationCap, Phone, X, Clock, RefreshCw
+  Flame, Dumbbell, Star, GraduationCap, Phone, X, Clock, RefreshCw,
+  Brain, BookOpen, Crosshair, BarChart3, User
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -158,10 +159,31 @@ const QUIZ_QUESTIONS = [
     ],
   },
   {
-    question: "Singles or doubles?",
+    question: "What do you struggle with most?",
     options: [
-      { value: "singles", label: "Singles", desc: "I prefer individual play", icon: Star },
-      { value: "doubles", label: "Doubles", desc: "I love team dynamics", icon: Users },
+      { value: "footwork", label: "Footwork", desc: "Movement and court coverage", icon: Zap },
+      { value: "power", label: "Power", desc: "Not enough pace on my shots", icon: Flame },
+      { value: "consistency", label: "Consistency", desc: "Too many unforced errors", icon: Target },
+      { value: "strategy", label: "Strategy", desc: "Reading the game and tactics", icon: Brain },
+      { value: "fitness", label: "Fitness", desc: "Stamina and endurance", icon: Dumbbell },
+    ],
+  },
+  {
+    question: "How do you prefer to train?",
+    options: [
+      { value: "structured", label: "Structured Plans", desc: "Follow a program step by step", icon: BookOpen },
+      { value: "free_practice", label: "Free Practice", desc: "Hit around and figure it out", icon: Sparkles },
+      { value: "with_coach", label: "With a Coach", desc: "Guided sessions and feedback", icon: GraduationCap },
+      { value: "solo_drills", label: "Solo Drills", desc: "Independent focused practice", icon: User },
+    ],
+  },
+  {
+    question: "Do you play in tournaments?",
+    options: [
+      { value: "no", label: "No", desc: "Just recreational play", icon: Smile },
+      { value: "local", label: "Local", desc: "Club and local events", icon: Star },
+      { value: "district", label: "District", desc: "District-level competitions", icon: Trophy },
+      { value: "state_plus", label: "State+", desc: "State, national, or higher", icon: Flame },
     ],
   },
 ];
@@ -223,7 +245,7 @@ const slideVariants = {
 };
 
 function derivePlayStyle(quizAnswers) {
-  const { q0, q1, q2 } = quizAnswers;
+  const { q0, q1 } = quizAnswers;
   if (q0 === "power" && q1 === "attack") return "Aggressive Attacker";
   if (q0 === "power" && q1 === "counter") return "Power Counter-Puncher";
   if (q0 === "finesse" && q1 === "attack") return "Crafty Attacker";
@@ -234,7 +256,7 @@ function derivePlayStyle(quizAnswers) {
 export default function AssessmentPage() {
   const [sports, setSports] = useState([]);
   const [selectedSports, setSelectedSports] = useState([]);
-  // phases: "sports" | "per_sport" | "goals" | "quiz" | "shared" | "summary"
+  // phases: "sports" | "per_sport" | "intro" | "goals" | "quiz" | "shared" | "summary"
   const [phase, setPhase] = useState("sports");
   const [currentSportIdx, setCurrentSportIdx] = useState(0);
   const [currentSharedStep, setCurrentSharedStep] = useState(0);
@@ -407,15 +429,16 @@ export default function AssessmentPage() {
     if (pasted.length === 6) handleLoginVerifyOTP(pasted);
   };
 
-  // Total steps for progress bar
-  const perSportSteps = selectedSports.length * 2;
-  const totalSteps = 1 + perSportSteps + 1 + QUIZ_QUESTIONS.length + SHARED_STEPS.length + 1;
+  // Total steps for progress bar (3 per sport: skill_level, play_style, play_format)
+  const perSportSteps = selectedSports.length * 3;
+  const totalSteps = 1 + perSportSteps + 1 + 1 + QUIZ_QUESTIONS.length + SHARED_STEPS.length + 1; // sports + per_sport + intro + goals + quiz + shared + summary
   const currentStepNum =
     phase === "sports" ? 1 :
-    phase === "per_sport" ? 2 + (currentSportIdx * 2) + perSportStep :
-    phase === "goals" ? 2 + perSportSteps :
-    phase === "quiz" ? 3 + perSportSteps + currentQuizQ :
-    phase === "shared" ? 3 + perSportSteps + QUIZ_QUESTIONS.length + currentSharedStep :
+    phase === "per_sport" ? 2 + (currentSportIdx * 3) + perSportStep :
+    phase === "intro" ? 2 + perSportSteps :
+    phase === "goals" ? 3 + perSportSteps :
+    phase === "quiz" ? 4 + perSportSteps + currentQuizQ :
+    phase === "shared" ? 4 + perSportSteps + QUIZ_QUESTIONS.length + currentSharedStep :
     totalSteps;
   const progressPct = (currentStepNum / totalSteps) * 100;
 
@@ -456,17 +479,23 @@ export default function AssessmentPage() {
       const current = sportsProfiles[sportKey] || {};
       if (perSportStep === 0 && !current.skill_level) { toast.error("Select your level"); return; }
       if (perSportStep === 1 && !current.play_style) { toast.error("Select your style"); return; }
+      if (perSportStep === 2 && !current.play_format) { toast.error("Select your play format"); return; }
 
-      if (perSportStep === 0) {
-        setPerSportStep(1);
+      if (perSportStep < 2) {
+        setPerSportStep(perSportStep + 1);
       } else {
         if (currentSportIdx < selectedSports.length - 1) {
           setCurrentSportIdx(currentSportIdx + 1);
           setPerSportStep(0);
         } else {
-          setPhase("goals");
+          setPhase("intro");
         }
       }
+      return;
+    }
+
+    if (phase === "intro") {
+      setPhase("goals");
       return;
     }
 
@@ -530,14 +559,16 @@ export default function AssessmentPage() {
     } else if (phase === "quiz" && currentQuizQ === 0) {
       setPhase("goals");
     } else if (phase === "goals") {
+      setPhase("intro");
+    } else if (phase === "intro") {
       setPhase("per_sport");
       setCurrentSportIdx(selectedSports.length - 1);
-      setPerSportStep(1);
+      setPerSportStep(2);
     } else if (phase === "per_sport" && perSportStep > 0) {
-      setPerSportStep(0);
+      setPerSportStep(perSportStep - 1);
     } else if (phase === "per_sport" && currentSportIdx > 0) {
       setCurrentSportIdx(currentSportIdx - 1);
-      setPerSportStep(1);
+      setPerSportStep(2);
     } else if (phase === "per_sport" && currentSportIdx === 0 && perSportStep === 0) {
       setPhase("sports");
     }
@@ -630,12 +661,86 @@ export default function AssessmentPage() {
     </motion.div>
   );
 
+  const PLAY_FORMAT_OPTIONS = [
+    { value: "singles", label: "Singles", desc: "I mostly play one-on-one", icon: User },
+    { value: "doubles", label: "Doubles", desc: "I mostly play with a partner", icon: Users },
+    { value: "mixed", label: "Both / Mixed", desc: "I play singles and doubles equally", icon: Crosshair },
+  ];
+
   const renderPerSportStep = () => {
     const sportConfig = getCurrentSportConfig();
     if (!sportConfig) return null;
     const sportKey = selectedSports[currentSportIdx];
     const current = sportsProfiles[sportKey] || {};
     const textClass = SPORT_TEXT[sportConfig.color] || "text-lime-400";
+
+    // Step 0: skill level, Step 1: play style, Step 2: play format (singles/doubles)
+    if (perSportStep === 2) {
+      // Play format step
+      return (
+        <motion.div
+          key={`${sportKey}-format`}
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          <div className="mb-8">
+            <Badge className={`mb-3 ${textClass} bg-zinc-800 border-zinc-700 text-xs uppercase`}>
+              {sportConfig.name} {currentSportIdx + 1}/{selectedSports.length}
+            </Badge>
+            <h1 className="font-heading font-bold text-3xl md:text-4xl uppercase tracking-tight text-white mb-2">
+              Singles, Doubles, or Both?
+            </h1>
+            <p className="text-zinc-400">
+              This shapes your training plan and equipment recommendations.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {PLAY_FORMAT_OPTIONS.map((opt, idx) => {
+              const selected = current.play_format === opt.value;
+              const OptIcon = opt.icon;
+              return (
+                <motion.button
+                  key={opt.value}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.08 }}
+                  whileHover={{ scale: 1.03, y: -3 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setSportsProfiles(prev => ({
+                    ...prev,
+                    [sportKey]: { ...prev[sportKey], play_format: opt.value }
+                  }))}
+                  className={`relative p-6 rounded-2xl border-2 text-center transition-all ${
+                    selected
+                      ? "border-lime-400/50 bg-lime-400/5 shadow-[0_0_20px_rgba(190,242,100,0.15)]"
+                      : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+                  }`}
+                >
+                  {selected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-3 right-3 w-6 h-6 rounded-full ring-2 ring-lime-400 bg-zinc-900 flex items-center justify-center"
+                    >
+                      <Check className="w-3.5 h-3.5 text-lime-400" />
+                    </motion.div>
+                  )}
+                  <OptIcon className={`w-10 h-10 mx-auto mb-3 ${selected ? "text-lime-400" : "text-zinc-500"}`} strokeWidth={1.5} />
+                  <p className="font-heading font-bold text-lg text-white uppercase tracking-tight mb-1">{opt.label}</p>
+                  <p className="text-zinc-500 text-sm">{opt.desc}</p>
+                </motion.button>
+              );
+            })}
+          </div>
+        </motion.div>
+      );
+    }
+
     const isSkillStep = perSportStep === 0;
     const options = isSkillStep ? sportConfig.skill_levels : sportConfig.play_styles;
     const value = isSkillStep ? current.skill_level : current.play_style;
@@ -761,6 +866,78 @@ export default function AssessmentPage() {
     </motion.div>
   );
 
+  const renderIntroStep = () => (
+    <motion.div
+      key="intro"
+      custom={direction}
+      variants={slideVariants}
+      initial="enter"
+      animate="center"
+      exit="exit"
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+    >
+      <div className="flex flex-col items-center text-center py-6">
+        <motion.div
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-lime-400/20 to-amber-400/10 border border-lime-400/20 flex items-center justify-center mb-8"
+        >
+          <Brain className="w-10 h-10 text-lime-400" />
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="font-heading font-bold text-3xl md:text-4xl uppercase tracking-tight text-white mb-4"
+        >
+          Your answers shape everything
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-zinc-400 text-lg mb-8 max-w-md"
+        >
+          The next few questions help us build your personalized experience.
+        </motion.p>
+
+        <div className="space-y-3 text-left max-w-sm w-full">
+          {[
+            { icon: Target, text: "Training plan tailored to your goals", delay: 0.35 },
+            { icon: Sparkles, text: "Equipment recommendations for your play style", delay: 0.4 },
+            { icon: GraduationCap, text: "Coaching feedback in your language", delay: 0.45 },
+            { icon: BarChart3, text: "Progress tracking aligned to what matters to you", delay: 0.5 },
+          ].map(({ icon: Icon, text, delay }) => (
+            <motion.div
+              key={text}
+              initial={{ opacity: 0, x: -15 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay }}
+              className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/50"
+            >
+              <div className="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-lime-400" />
+              </div>
+              <p className="text-sm text-zinc-300">{text}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="text-zinc-500 text-sm mt-8 italic"
+        >
+          Take your time. Answer honestly. There are no wrong answers.
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+
   const renderQuizStep = () => {
     const q = QUIZ_QUESTIONS[currentQuizQ];
     return (
@@ -783,41 +960,83 @@ export default function AssessmentPage() {
           <p className="text-zinc-400">This helps us understand your play personality.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {q.options.map((opt, idx) => {
-            const selected = quizAnswers[`q${currentQuizQ}`] === opt.value;
-            const OptIcon = opt.icon;
-            return (
-              <motion.button
-                key={opt.value}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.1 }}
-                whileHover={{ scale: 1.03, y: -3 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setQuizAnswers(prev => ({ ...prev, [`q${currentQuizQ}`]: opt.value }))}
-                className={`relative p-8 rounded-2xl border-2 text-center transition-all ${
-                  selected
-                    ? "border-amber-400/50 bg-amber-400/5 shadow-[0_0_20px_rgba(251,191,36,0.15)]"
-                    : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
-                }`}
-              >
-                {selected && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute top-3 right-3 w-6 h-6 rounded-full ring-2 ring-amber-400 bg-zinc-900 flex items-center justify-center"
-                  >
-                    <Check className="w-3.5 h-3.5 text-amber-400" />
-                  </motion.div>
-                )}
-                <OptIcon className={`w-12 h-12 mx-auto mb-4 ${selected ? "text-amber-400" : "text-zinc-500"}`} strokeWidth={1.5} />
-                <p className="font-heading font-bold text-xl text-white uppercase tracking-tight mb-1">{opt.label}</p>
-                <p className="text-zinc-500 text-sm">{opt.desc}</p>
-              </motion.button>
-            );
-          })}
-        </div>
+        {q.options.length <= 2 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {q.options.map((opt, idx) => {
+              const selected = quizAnswers[`q${currentQuizQ}`] === opt.value;
+              const OptIcon = opt.icon;
+              return (
+                <motion.button
+                  key={opt.value}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.1 }}
+                  whileHover={{ scale: 1.03, y: -3 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setQuizAnswers(prev => ({ ...prev, [`q${currentQuizQ}`]: opt.value }))}
+                  className={`relative p-8 rounded-2xl border-2 text-center transition-all ${
+                    selected
+                      ? "border-amber-400/50 bg-amber-400/5 shadow-[0_0_20px_rgba(251,191,36,0.15)]"
+                      : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+                  }`}
+                >
+                  {selected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-3 right-3 w-6 h-6 rounded-full ring-2 ring-amber-400 bg-zinc-900 flex items-center justify-center"
+                    >
+                      <Check className="w-3.5 h-3.5 text-amber-400" />
+                    </motion.div>
+                  )}
+                  <OptIcon className={`w-12 h-12 mx-auto mb-4 ${selected ? "text-amber-400" : "text-zinc-500"}`} strokeWidth={1.5} />
+                  <p className="font-heading font-bold text-xl text-white uppercase tracking-tight mb-1">{opt.label}</p>
+                  <p className="text-zinc-500 text-sm">{opt.desc}</p>
+                </motion.button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {q.options.map((opt, idx) => {
+              const selected = quizAnswers[`q${currentQuizQ}`] === opt.value;
+              const OptIcon = opt.icon;
+              return (
+                <motion.button
+                  key={opt.value}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => setQuizAnswers(prev => ({ ...prev, [`q${currentQuizQ}`]: opt.value }))}
+                  className={`relative w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all ${
+                    selected
+                      ? "border-amber-400/50 bg-amber-400/5 shadow-[0_0_15px_rgba(251,191,36,0.1)]"
+                      : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+                  }`}
+                >
+                  {selected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-3 right-3 w-5 h-5 rounded-full ring-2 ring-amber-400 bg-zinc-900 flex items-center justify-center"
+                    >
+                      <Check className="w-3 h-3 text-amber-400" />
+                    </motion.div>
+                  )}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${selected ? "bg-amber-400/10" : "bg-zinc-800"}`}>
+                    <OptIcon className={`w-5 h-5 ${selected ? "text-amber-400" : "text-zinc-500"}`} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm">{opt.label}</p>
+                    <p className="text-zinc-500 text-xs mt-0.5">{opt.desc}</p>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
     );
   };
@@ -916,7 +1135,7 @@ export default function AssessmentPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-white">{sc?.name || sk}</p>
-                      <p className="text-xs text-zinc-500">{sp.skill_level} / {sp.play_style}</p>
+                      <p className="text-xs text-zinc-500">{sp.skill_level} / {sp.play_style}{sp.play_format ? ` / ${sp.play_format}` : ""}</p>
                     </div>
                   </div>
                 );
@@ -1009,6 +1228,7 @@ export default function AssessmentPage() {
         <AnimatePresence mode="wait" custom={direction}>
           {phase === "sports" && renderSportSelection()}
           {phase === "per_sport" && renderPerSportStep()}
+          {phase === "intro" && renderIntroStep()}
           {phase === "goals" && renderGoalsStep()}
           {phase === "quiz" && renderQuizStep()}
           {phase === "shared" && renderSharedStep()}

@@ -89,14 +89,13 @@ export default function LandingPage() {
 
           <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={fadeUp}
             className="font-heading font-black text-5xl md:text-7xl lg:text-8xl tracking-tighter uppercase leading-[0.9] mb-6" data-testid="hero-heading">
-            <span className="text-white">Your AI Coach.</span><br />
-            <span className="neon-glow text-lime-400">Every Sport.</span><br />
-            <span className="text-white">Every Level.</span>
+            <span className="text-white">Your</span> <span className="neon-glow text-lime-400">AI</span><br />
+            <span className="text-white">Sports Coach</span>
           </motion.h1>
 
           <motion.p initial="hidden" animate="visible" custom={0.3} variants={fadeUp}
             className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="hero-subtitle">
-            AI video analysis, personalized training plans, smart equipment picks, and progress tracking — across Badminton, Tennis, Cricket, and more.
+            Upload a video. Get instant technique analysis, personalized training plans, and smart gear recommendations — like having a pro coach in your pocket.
           </motion.p>
 
           {/* Sport pills */}
