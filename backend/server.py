@@ -106,10 +106,13 @@ class SportProfile(BaseModel):
 class PlayerProfileCreate(BaseModel):
     selected_sports: List[str] = ["badminton"]
     sports_profiles: Optional[dict] = None  # {sport_key: {skill_level, play_style}}
-    playing_frequency: str
-    budget_range: str
+    playing_frequency: str = "1-2 days/week"
+    budget_range: str = "Medium"
     injury_history: str = "none"
-    primary_goal: str
+    primary_goal: str = "Improve technique"
+    goals: Optional[List[str]] = None  # User's selected goals from quiz
+    quiz_answers: Optional[dict] = None  # Quiz responses for personalization
+    play_style_personality: Optional[str] = None  # Derived personality type
     # Legacy single-sport fields (backward compat)
     skill_level: Optional[str] = None
     play_style: Optional[str] = None
@@ -281,6 +284,34 @@ async def create_or_update_profile(data: PlayerProfileCreate, authorization: str
     else:
         focus_areas.append("Increase training frequency")
 
+    # Use goals to enhance focus areas
+    if data.goals:
+        goal_to_focus = {
+            "Improve technique": "Shot technique refinement",
+            "Win more matches": "Match strategy and tactics",
+            "Get fitter": "Physical conditioning",
+            "Learn new shots": "Shot variety expansion",
+            "Play competitively": "Tournament preparation",
+            "Have fun": "Enjoy the game",
+        }
+        for goal in data.goals[:3]:
+            mapped = goal_to_focus.get(goal)
+            if mapped and mapped not in focus_areas:
+                focus_areas.append(mapped)
+
+    # Use quiz personality to refine strengths
+    if data.play_style_personality:
+        personality_strengths = {
+            "Aggressive Attacker": "Strong attacking instinct",
+            "Strategic Player": "Excellent game reading",
+            "Defensive Wall": "Solid defensive foundation",
+            "All-Rounder": "Versatile playing ability",
+            "Creative Player": "Unpredictable shot selection",
+        }
+        ps = personality_strengths.get(data.play_style_personality)
+        if ps and ps not in strengths:
+            strengths.append(ps)
+
     profile = {
         "user_id": user["id"],
         "selected_sports": selected_sports,
@@ -292,6 +323,9 @@ async def create_or_update_profile(data: PlayerProfileCreate, authorization: str
         "budget_range": data.budget_range,
         "injury_history": data.injury_history,
         "primary_goal": data.primary_goal,
+        "goals": data.goals or [],
+        "quiz_answers": data.quiz_answers or {},
+        "play_style_personality": data.play_style_personality,
         "strengths": strengths,
         "focus_areas": focus_areas,
         "created_at": datetime.now(timezone.utc).isoformat(),

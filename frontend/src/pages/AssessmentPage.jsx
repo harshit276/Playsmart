@@ -1091,7 +1091,7 @@ export default function AssessmentPage() {
                           inputMode="numeric"
                           placeholder="+91 9876543210"
                           value={loginPhone}
-                          onChange={(e) => setLoginPhone(e.target.value)}
+                          onChange={(e) => setLoginPhone(e.target.value.replace(/[^0-9+\s-]/g, ""))}
                           className="pl-10 bg-zinc-950 border-zinc-800 focus:border-lime-400 focus:ring-lime-400 h-12 text-white"
                           autoComplete="tel"
                           autoFocus
@@ -1105,6 +1105,25 @@ export default function AssessmentPage() {
                         {loginLoading ? "Sending..." : "Send OTP"}
                       </Button>
                     </form>
+                    <div className="mt-4 text-center">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex-1 h-px bg-zinc-800" />
+                        <span className="text-xs text-zinc-500">or</span>
+                        <div className="flex-1 h-px bg-zinc-800" />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          localStorage.setItem("guest_mode", "true");
+                          setShowLoginModal(false);
+                          navigate("/dashboard");
+                        }}
+                        className="w-full text-zinc-400 hover:text-zinc-200 text-sm"
+                      >
+                        Skip, explore as guest
+                      </Button>
+                      <p className="text-[10px] text-zinc-600 mt-1">Your quiz results won't be saved</p>
+                    </div>
                   </motion.div>
                 ) : (
                   <motion.div
