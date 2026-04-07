@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Query, Request
+from fastapi.responses import Response as FastAPIResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -4517,6 +4518,15 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+
+# ─── Explicit OPTIONS preflight handler (fixes CORS 405 on preflight) ───
+@app.options("/api/{rest_of_path:path}")
+async def preflight_handler(rest_of_path: str):
+    return FastAPIResponse(status_code=200, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    })
 
 # Include router
 app.include_router(api_router)
