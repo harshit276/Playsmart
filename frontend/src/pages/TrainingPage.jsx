@@ -121,12 +121,15 @@ export default function TrainingPage() {
   const sport = profile?.active_sport || "badminton";
 
   /* ─── Load data ─── */
+  const [fetchError, setFetchError] = useState(false);
+
   const loadData = useCallback(async () => {
     if (!user?.id) { setLoading(false); return; }
+    setFetchError(false);
     try {
       const results = await Promise.allSettled([
-        api.get(`/recommendations/training/${user.id}`),
-        api.get(`/progress/${user.id}`),
+        api.get(`/recommendations/training/${user.id}`, { timeout: 15000 }),
+        api.get(`/progress/${user.id}`, { timeout: 15000 }),
       ]);
 
       if (results[0].status === "fulfilled") setPlanData(results[0].value.data);
@@ -135,7 +138,12 @@ export default function TrainingPage() {
         (results[1].value.data.entries || []).forEach(e => { map[e.day] = true; });
         setProgress(map);
       }
-    } catch { /* handled by allSettled */ }
+      if (results[0].status !== "fulfilled" && results[1].status !== "fulfilled") {
+        setFetchError(true);
+      }
+    } catch {
+      setFetchError(true);
+    }
     setLoading(false);
   }, [user?.id]);
 
@@ -205,6 +213,17 @@ export default function TrainingPage() {
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
         <p className="text-zinc-500 text-sm">Loading your training plan...</p>
+      </div>
+    </div>
+  );
+
+  if (fetchError) return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="text-center">
+        <Dumbbell className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+        <p className="text-zinc-400 text-lg font-medium mb-1">Could not load training plan</p>
+        <p className="text-zinc-600 text-sm mb-4">Server is taking too long. Please try again.</p>
+        <button onClick={loadData} className="text-sm font-medium text-lime-400 hover:text-lime-300">Retry &rarr;</button>
       </div>
     </div>
   );

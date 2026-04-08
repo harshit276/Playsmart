@@ -15,9 +15,15 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
+      const hadToken = !!localStorage.getItem('playsmart_token');
       localStorage.removeItem('playsmart_token');
       localStorage.removeItem('playsmart_user');
-      if (window.location.pathname !== '/' && window.location.pathname !== '/auth') {
+      // Only redirect if user was previously logged in (token expired)
+      // and not on pages that work for guests
+      const guestPages = ['/', '/auth', '/analyze', '/highlights', '/equipment', '/training'];
+      const currentPath = window.location.pathname;
+      const isGuestPage = guestPages.some(p => currentPath === p || currentPath.startsWith(p + '/'));
+      if (hadToken && !isGuestPage) {
         window.location.href = '/auth';
       }
     }

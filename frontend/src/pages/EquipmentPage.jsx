@@ -735,22 +735,33 @@ export default function EquipmentPage() {
     }).catch(() => {});
   }, []);
 
+  const [fetchError, setFetchError] = useState(false);
+
   const fetchData = useCallback(async (sport) => {
     if (!user?.id) return;
     setLoading(true);
+    setFetchError(false);
     setRacketData(null);
     setShoeData(null);
     setGearData(null);
     const sportParam = sport ? `&sport=${sport}` : '';
     const sportQuery = sport ? `?sport=${sport}` : '';
-    const [racketRes, shoeRes, gearRes] = await Promise.allSettled([
-      api.get(`/recommendations/equipment/${user.id}?category=racket${sportParam}`),
-      api.get(`/recommendations/equipment/${user.id}?category=shoes${sportParam}`),
-      api.get(`/recommendations/gear/${user.id}${sportQuery}`),
-    ]);
-    if (racketRes.status === "fulfilled") setRacketData(racketRes.value.data);
-    if (shoeRes.status === "fulfilled") setShoeData(shoeRes.value.data);
-    if (gearRes.status === "fulfilled") setGearData(gearRes.value.data);
+    try {
+      const [racketRes, shoeRes, gearRes] = await Promise.allSettled([
+        api.get(`/recommendations/equipment/${user.id}?category=racket${sportParam}`),
+        api.get(`/recommendations/equipment/${user.id}?category=shoes${sportParam}`),
+        api.get(`/recommendations/gear/${user.id}${sportQuery}`),
+      ]);
+      if (racketRes.status === "fulfilled") setRacketData(racketRes.value.data);
+      if (shoeRes.status === "fulfilled") setShoeData(shoeRes.value.data);
+      if (gearRes.status === "fulfilled") setGearData(gearRes.value.data);
+      // If all failed, show error
+      if (racketRes.status !== "fulfilled" && shoeRes.status !== "fulfilled" && gearRes.status !== "fulfilled") {
+        setFetchError(true);
+      }
+    } catch {
+      setFetchError(true);
+    }
     setLoading(false);
   }, [user?.id]);
 
@@ -786,15 +797,22 @@ export default function EquipmentPage() {
 
   const handleQuizComplete = async (answers) => {
     try {
-      await api.post("/profile/sport-quiz", {
-        sport: quizSport,
-        skill_level: answers.skill_level,
-        play_style: answers.play_style,
-        playing_frequency: answers.playing_frequency,
-        budget_range: answers.budget_range,
-      });
-      // Refresh the profile so configuredSports updates
-      await refreshProfile();
+      // For logged-in users, save quiz to server
+      if (user?.id) {
+        try {
+          await api.post("/profile/sport-quiz", {
+            sport: quizSport,
+            skill_level: answers.skill_level,
+            play_style: answers.play_style,
+            playing_frequency: answers.playing_frequency,
+            budget_range: answers.budget_range,
+          });
+          // Refresh the profile so configuredSports updates
+          await refreshProfile();
+        } catch (err) {
+          console.warn("Quiz save failed, continuing with local state:", err);
+        }
+      }
       setQuizOpen(false);
       // Now switch to that sport and fetch equipment
       setSelectedSport(quizSport);
@@ -803,7 +821,11 @@ export default function EquipmentPage() {
       setDetailsTab(null);
       setShowAboveBudget(false);
       // Fetch after a tick so profile state has updated
-      setTimeout(() => fetchData(quizSport), 100);
+      if (user?.id) {
+        setTimeout(() => fetchData(quizSport), 100);
+      } else {
+        setLoading(false);
+      }
     } catch (err) {
       console.error("Quiz submission failed:", err);
     }
@@ -890,6 +912,15 @@ export default function EquipmentPage() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : fetchError ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Package className="w-12 h-12 text-zinc-700 mb-3" />
+            <p className="text-zinc-400 text-lg font-medium mb-1">Could not load equipment</p>
+            <p className="text-zinc-600 text-sm mb-4">Server is taking too long. Please try again.</p>
+            <Button onClick={() => fetchData(selectedSport)} className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6">
+              Retry
+            </Button>
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

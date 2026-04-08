@@ -203,49 +203,80 @@ export default function AnalyzePage() {
           throw new Error(clientResult?.error || "Analysis returned no results");
         }
 
-        // Send client results to backend for coaching enrichment
-        setProgress(92);
-        setLoadingText("Getting coaching feedback...");
-        try {
-          const { data } = await api.post("/analyze-client-results", {
-            sport: sportToAnalyze,
-            shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
-            confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
-            metrics: clientResult.metrics || {},
-            speed: clientResult.speed || clientResult.speed_analysis || {},
-            skill_level: clientResult.skill_level || "Beginner",
-            shot_grade: clientResult.shot_grade || "C",
-            segments: clientResult.segments || [],
-            video_info: clientResult.video_info || {},
-            player_preview: clientResult.player_preview || null,
-            weaknesses: clientResult.weaknesses || [],
-          }, { timeout: 30000 });
+        // Send client results to backend for coaching enrichment (only if logged in)
+        const hasToken = !!localStorage.getItem('playsmart_token');
+        if (hasToken) {
+          setProgress(92);
+          setLoadingText("Getting coaching feedback...");
+          try {
+            const { data } = await api.post("/analyze-client-results", {
+              sport: sportToAnalyze,
+              shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
+              confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
+              metrics: clientResult.metrics || {},
+              speed: clientResult.speed || clientResult.speed_analysis || {},
+              skill_level: clientResult.skill_level || "Beginner",
+              shot_grade: clientResult.shot_grade || "C",
+              segments: clientResult.segments || [],
+              video_info: clientResult.video_info || {},
+              player_preview: clientResult.player_preview || null,
+              weaknesses: clientResult.weaknesses || [],
+            }, { timeout: 30000 });
 
-          clearInterval(interval);
-          setProgress(100);
-          setLoadingText("Complete!");
+            clearInterval(interval);
+            setProgress(100);
+            setLoadingText("Complete!");
 
-          if (data.success !== false) {
-            data._processingMode = "client";
-            setResult(data);
+            if (data.success !== false) {
+              data._processingMode = "client";
+              setResult(data);
+              setViewingHistorical(false);
+              setActiveTab("results");
+              refreshProfile();
+              loadHistory();
+              toast.success("Analysis complete!");
+              if (data.new_badges?.length > 0) {
+                setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
+              }
+            } else {
+              throw new Error("Server enrichment failed");
+            }
+          } catch (serverErr) {
+            // Server enrichment failed — still show client-side results
+            clearInterval(interval);
+            setProgress(100);
+            setLoadingText("Complete!");
+
+            const fallbackResult = {
+              success: true,
+              _processingMode: "client",
+              shot_analysis: {
+                shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
+                confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
+              },
+              speed_analysis: clientResult.speed || clientResult.speed_analysis || {},
+              metrics: clientResult.metrics || {},
+              video_info: clientResult.video_info || {},
+              player_preview: clientResult.player_preview || null,
+              coach_feedback: {
+                summary: "Analysis completed on your device. Coaching feedback unavailable (server connection issue).",
+                tips: clientResult.weaknesses?.map(w => w.fix) || ["Keep practicing!"],
+              },
+              skill_level: clientResult.skill_level || "Beginner",
+              shot_grade: clientResult.shot_grade || "C",
+            };
+            setResult(fallbackResult);
             setViewingHistorical(false);
             setActiveTab("results");
-            refreshProfile();
-            loadHistory();
-            toast.success("Analysis complete!");
-            if (data.new_badges?.length > 0) {
-              setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
-            }
-          } else {
-            throw new Error("Server enrichment failed");
+            toast.info("Analysis done on device. Coaching feedback unavailable offline.");
           }
-        } catch (serverErr) {
-          // Server enrichment failed — still show client-side results
+        } else {
+          // Guest user - show client-side results directly without server enrichment
           clearInterval(interval);
           setProgress(100);
           setLoadingText("Complete!");
 
-          const fallbackResult = {
+          const guestResult = {
             success: true,
             _processingMode: "client",
             shot_analysis: {
@@ -257,16 +288,16 @@ export default function AnalyzePage() {
             video_info: clientResult.video_info || {},
             player_preview: clientResult.player_preview || null,
             coach_feedback: {
-              summary: "Analysis completed on your device. Coaching feedback unavailable (server connection issue).",
+              summary: "Analysis completed on your device. Sign in for personalized coaching feedback!",
               tips: clientResult.weaknesses?.map(w => w.fix) || ["Keep practicing!"],
             },
             skill_level: clientResult.skill_level || "Beginner",
             shot_grade: clientResult.shot_grade || "C",
           };
-          setResult(fallbackResult);
+          setResult(guestResult);
           setViewingHistorical(false);
           setActiveTab("results");
-          toast.info("Analysis done on device. Coaching feedback unavailable offline.");
+          toast.success("Analysis complete!");
         }
       } catch (err) {
         clearInterval(interval);

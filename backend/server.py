@@ -150,7 +150,12 @@ async def get_current_user_or_none(authorization: str = Header(None)):
     token = authorization.split(" ")[1]
     try:
         payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+        try:
+            user = await asyncio.wait_for(db.users.find_one({"id": payload["user_id"]}, {"_id": 0}), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            user = None
+        if not user:
+            user = {"id": payload["user_id"], "email": payload.get("phone", ""), "name": "", "photo": ""}
         return user
     except Exception:
         return None
@@ -174,9 +179,13 @@ async def get_current_user(authorization: str = Header(None)):
     token = authorization.split(" ")[1]
     try:
         payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+        try:
+            user = await asyncio.wait_for(db.users.find_one({"id": payload["user_id"]}, {"_id": 0}), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            user = None
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            # User may not be in DB yet (background save pending) - construct from token
+            user = {"id": payload["user_id"], "email": payload.get("phone", ""), "name": "", "photo": ""}
         return user
     except pyjwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -196,76 +205,46 @@ class FirebaseAuthRequest(BaseModel):
 @api_router.post("/auth/firebase")
 async def firebase_auth(req: FirebaseAuthRequest):
     """Authenticate via Firebase (Google Login). Creates user if new."""
-    import httpx
-
-    # Verify Firebase token with Google's API
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-                f"https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={req.firebase_token}",
-                timeout=10.0,
-            )
-            if resp.status_code != 200:
-                # Fallback: trust the token from Firebase SDK (it's already verified client-side)
-                # In production, use Firebase Admin SDK for server-side verification
-                pass
-    except Exception:
-        pass  # Continue - Firebase SDK already verified the token client-side
-
-    # Find or create user by email
     email = req.email.strip().lower()
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
 
-    try:
-        user = await asyncio.wait_for(db.users.find_one({"email": email}, {"_id": 0}), timeout=5.0)
-    except (Exception, asyncio.TimeoutError):
-        user = None  # Continue without DB
+    # Generate user ID deterministically from email (no DB needed)
+    user_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{email}"))
+    token = create_token(user_id, email)
 
-    if not user:
-        user = {
-            "id": str(uuid.uuid4()),
-            "email": email,
-            "name": req.name,
-            "photo": req.photo,
-            "auth_provider": "google",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        try:
-            await asyncio.wait_for(db.users.insert_one(user), timeout=5.0)
-            user.pop("_id", None)
-        except (Exception, asyncio.TimeoutError):
-            user.pop("_id", None)  # Continue even if DB write fails
-    else:
-        # Update name/photo if changed
-        try:
-            updates = {}
-            if req.name and not user.get("name"):
-                updates["name"] = req.name
-            if req.photo and not user.get("photo"):
-                updates["photo"] = req.photo
-            if updates:
-                await asyncio.wait_for(db.users.update_one({"email": email}, {"$set": updates}), timeout=5.0)
-                user.update(updates)
-        except (Exception, asyncio.TimeoutError):
-            pass  # Continue even if update fails
-
-    token = create_token(user["id"], email)
+    # Check profile in background (non-blocking, with short timeout)
+    has_profile = False
     try:
-        profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}), timeout=5.0)
-    except (Exception, asyncio.TimeoutError):
-        profile = None
+        profile = await asyncio.wait_for(
+            db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}),
+            timeout=3.0
+        )
+        has_profile = profile is not None
+    except Exception:
+        pass
+
+    # Save/update user in background (don't wait)
+    asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
 
     return {
         "token": token,
-        "user": {
-            "id": user["id"],
-            "email": user.get("email", ""),
-            "name": user.get("name", ""),
-            "photo": user.get("photo", ""),
-        },
-        "has_profile": profile is not None,
+        "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
+        "has_profile": has_profile,
     }
+
+
+async def _save_user_background(user_id, email, name, photo):
+    """Save or update user document in background - does not block login response."""
+    try:
+        await asyncio.wait_for(db.users.update_one(
+            {"email": email},
+            {"$setOnInsert": {"id": user_id, "email": email, "created_at": datetime.now(timezone.utc).isoformat()},
+             "$set": {"name": name, "photo": photo}},
+            upsert=True,
+        ), timeout=5.0)
+    except Exception:
+        pass
 
 
 # In-memory OTP store (works on serverless without MongoDB writes)
@@ -521,7 +500,7 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
     from research_loader import get_equipment_by_budget, get_all_equipment_categories
 
     try:
-        profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
+        profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
         if not profile:
             raise HTTPException(status_code=404, detail="Profile not found. Complete assessment first.")
 
@@ -529,9 +508,12 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
         if sport:
             active_sport = sport
         else:
-            latest_analysis_for_sport = await db.video_analyses.find_one(
-                {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
-            )
+            try:
+                latest_analysis_for_sport = await asyncio.wait_for(db.video_analyses.find_one(
+                    {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
+                ), timeout=5.0)
+            except (Exception, asyncio.TimeoutError):
+                latest_analysis_for_sport = None
             active_sport = (latest_analysis_for_sport or {}).get("sport") or profile.get("active_sport", "badminton")
 
         # Sport-specific category mapping
@@ -548,7 +530,10 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
 
         if category == "shoes":
             db_category = cat_map.get("shoes", "shoes")
-            items = await db.equipment.find({"category": db_category}, {"_id": 0}).to_list(100)
+            try:
+                items = await asyncio.wait_for(db.equipment.find({"category": db_category}, {"_id": 0}).to_list(100), timeout=5.0)
+            except (Exception, asyncio.TimeoutError):
+                items = []
             if active_sport == "badminton" and items:
                 top_recs = get_top_shoe_recommendations(profile, items, top_n=3)
             elif items:
@@ -557,7 +542,10 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
                 top_recs = []
         else:
             db_category = cat_map.get("primary", "racket")
-            items = await db.equipment.find({"category": db_category}, {"_id": 0}).to_list(100)
+            try:
+                items = await asyncio.wait_for(db.equipment.find({"category": db_category}, {"_id": 0}).to_list(100), timeout=5.0)
+            except (Exception, asyncio.TimeoutError):
+                items = []
             if active_sport == "badminton" and items:
                 top_recs = get_top_recommendations(profile, items, top_n=3)
             elif items:
@@ -602,10 +590,13 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
         )
 
         # Get latest analysis weaknesses for personalized "why_this_fits"
-        latest_analysis = await db.video_analyses.find_one(
-            {"user_id": user_id}, {"_id": 0, "shot_analysis": 1, "coach_feedback": 1},
-            sort=[("date", -1)]
-        )
+        try:
+            latest_analysis = await asyncio.wait_for(db.video_analyses.find_one(
+                {"user_id": user_id}, {"_id": 0, "shot_analysis": 1, "coach_feedback": 1},
+                sort=[("date", -1)]
+            ), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            latest_analysis = None
         detected_weaknesses = []
         if latest_analysis:
             sa = latest_analysis.get("shot_analysis") or {}
@@ -937,7 +928,10 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
         return {"plan": None, "drills": {}, "videos": {}, "skills": [], "training_videos": []}
     from research_loader import get_all_skills, get_all_videos
 
-    profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
+    try:
+        profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        profile = None
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
@@ -947,21 +941,30 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
     if sport:
         active_sport = sport
     else:
-        latest_analysis_sport = await db.video_analyses.find_one(
-            {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
-        )
+        try:
+            latest_analysis_sport = await asyncio.wait_for(db.video_analyses.find_one(
+                {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
+            ), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            latest_analysis_sport = None
         active_sport = (latest_analysis_sport or {}).get("sport") or profile.get("active_sport", "badminton")
 
     # Get all drills from database (may be empty for non-badminton sports)
-    all_drills = await db.drills.find({}, {"_id": 0}).to_list(100)
+    try:
+        all_drills = await asyncio.wait_for(db.drills.find({}, {"_id": 0}).to_list(100), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        all_drills = []
 
     # Get AI-detected weaknesses if any previous analysis exists
     weaknesses = None
-    latest_analysis = await db.video_analyses.find_one(
-        {"user_id": user_id},
-        {"_id": 0, "shot_analysis": 1},
-        sort=[("date", -1)]
-    )
+    try:
+        latest_analysis = await asyncio.wait_for(db.video_analyses.find_one(
+            {"user_id": user_id},
+            {"_id": 0, "shot_analysis": 1},
+            sort=[("date", -1)]
+        ), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        latest_analysis = None
     if latest_analysis:
         weaknesses = (latest_analysis.get("shot_analysis") or {}).get("weaknesses") or []
 
@@ -978,9 +981,9 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
                 for day in week.get("days", []):
                     drill_ids.update(day.get("drills", []))
             drills_map = {d["id"]: d for d in all_drills if d["id"] in drill_ids}
-            video_list = await db.drill_videos.find(
+            video_list = await asyncio.wait_for(db.drill_videos.find(
                 {"drill_id": {"$in": list(drill_ids)}}, {"_id": 0}
-            ).to_list(300)
+            ).to_list(300), timeout=5.0)
             for v in video_list:
                 videos_map.setdefault(v["drill_id"], []).append(v)
     except Exception as e:
@@ -1721,7 +1724,10 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
     )
 
     user = await get_current_user(authorization)
-    profile = await db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    try:
+        profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        profile = None
     body = await request.json()
 
     sport = body.get("sport", (profile or {}).get("active_sport", "badminton"))
@@ -1937,9 +1943,9 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
     earned_badges = []
     try:
         from coach_engine import calculate_badges
-        past_analyses = await db.video_analyses.find(
+        past_analyses = await asyncio.wait_for(db.video_analyses.find(
             {"user_id": user["id"]}, {"_id": 0, "shot_analysis": 1, "sport": 1, "date": 1}
-        ).sort("date", 1).to_list(100)
+        ).sort("date", 1).to_list(100), timeout=5.0)
         current_for_badges = {
             "shot_analysis": ai_result.get("shot_analysis"),
             "sport": sport,
@@ -1954,17 +1960,17 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
     score_comparison = None
     try:
         from scoring_engine import compare_scores
-        prev_analysis = await db.video_analyses.find_one(
+        prev_analysis = await asyncio.wait_for(db.video_analyses.find_one(
             {"user_id": user["id"], "performance_scores": {"$exists": True}},
             {"_id": 0, "performance_scores": 1},
             sort=[("date", -1)]
-        )
+        ), timeout=5.0)
         if prev_analysis and prev_analysis.get("performance_scores") and performance_scores:
             score_comparison = compare_scores(performance_scores, prev_analysis["performance_scores"])
     except Exception as cmp_err:
         logger.warning(f"Score comparison error (non-fatal): {cmp_err}")
 
-    # ─── Save to database ───
+    # ─── Save to database (with timeout, non-fatal) ───
     analysis_record = {
         "id": file_id,
         "user_id": user["id"],
@@ -1984,47 +1990,58 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "highlights": None,
         "segments_summary": ai_result.get("segments"),
     }
-    await db.video_analyses.insert_one(analysis_record)
-    analysis_record.pop("_id", None)
+    try:
+        await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=5.0)
+        analysis_record.pop("_id", None)
+    except (Exception, asyncio.TimeoutError):
+        analysis_record.pop("_id", None)
+        logger.warning("Failed to save analysis to DB (timeout or error)")
 
-    # Update player profile with detected skill data
+    # Update player profile with detected skill data (non-fatal)
     if profile:
-        updates = {}
-        shot_data = ai_result.get("shot_analysis", {})
+        try:
+            updates = {}
+            shot_data = ai_result.get("shot_analysis", {})
 
-        ai_strengths = []
-        ai_focus = []
+            ai_strengths = []
+            ai_focus = []
 
-        if shot_data.get("grade") in ["A", "B"]:
-            ai_strengths.append(f"Strong {shot_name} technique")
-        elif shot_data.get("grade") in ["D", "F"]:
-            ai_focus.append(f"Improve {shot_name} form")
+            if shot_data.get("grade") in ["A", "B"]:
+                ai_strengths.append(f"Strong {shot_name} technique")
+            elif shot_data.get("grade") in ["D", "F"]:
+                ai_focus.append(f"Improve {shot_name} form")
 
-        for w in weaknesses_raw[:3]:
-            if isinstance(w, dict):
-                ai_focus.append(w.get("issue", w.get("area", "")))
+            for w in weaknesses_raw[:3]:
+                if isinstance(w, dict):
+                    ai_focus.append(w.get("issue", w.get("area", "")))
 
-        if ai_strengths or ai_focus:
-            existing_s = profile.get("strengths", [])
-            existing_f = profile.get("focus_areas", [])
-            merged_strengths = list(dict.fromkeys(existing_s + ai_strengths))[:6]
-            merged_focus = list(dict.fromkeys(existing_f + ai_focus))[:6]
-            updates["strengths"] = merged_strengths
-            updates["focus_areas"] = merged_focus
+            if ai_strengths or ai_focus:
+                existing_s = profile.get("strengths", [])
+                existing_f = profile.get("focus_areas", [])
+                merged_strengths = list(dict.fromkeys(existing_s + ai_strengths))[:6]
+                merged_focus = list(dict.fromkeys(existing_f + ai_focus))[:6]
+                updates["strengths"] = merged_strengths
+                updates["focus_areas"] = merged_focus
 
-        updates["ai_skill_level"] = detected_skill_level
-        updates["last_analysis_date"] = datetime.now(timezone.utc).isoformat()
-        updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+            updates["ai_skill_level"] = detected_skill_level
+            updates["last_analysis_date"] = datetime.now(timezone.utc).isoformat()
+            updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
-        if updates:
-            await db.player_profiles.update_one(
-                {"user_id": user["id"]},
-                {"$set": updates}
-            )
+            if updates:
+                await asyncio.wait_for(db.player_profiles.update_one(
+                    {"user_id": user["id"]},
+                    {"$set": updates}
+                ), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            logger.warning("Failed to update profile after analysis (timeout or error)")
 
-    # ─── Gamification ───
-    new_badges = await check_and_award_badges(user["id"], analysis_record)
-    await update_upload_streak(user["id"])
+    # ─── Gamification (non-fatal) ───
+    new_badges = []
+    try:
+        new_badges = await asyncio.wait_for(check_and_award_badges(user["id"], analysis_record), timeout=5.0)
+        await asyncio.wait_for(update_upload_streak(user["id"]), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        logger.warning("Gamification update failed (timeout or error)")
 
     # Return full enriched result (same format as /analyze-video)
     return {
