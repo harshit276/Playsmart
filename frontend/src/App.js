@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import api from "@/lib/api";
 import Navbar from "@/components/Navbar";
@@ -78,26 +78,8 @@ function AuthProvider({ children }) {
   );
 }
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/auth" replace />;
-  return children;
-}
-
-function RequireProfile({ children }) {
-  const { isAuthenticated, profile } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/auth" replace />;
-  if (!profile) return <Navigate to="/assessment" replace />;
-  return children;
-}
-
-function GuestAllowed({ children }) {
-  const { isAuthenticated, profile, isGuest } = useAuth();
-  if (isAuthenticated && profile) return children;
-  if (isAuthenticated && !profile) return <Navigate to="/assessment" replace />;
-  if (isGuest) return children;
-  return <Navigate to="/auth" replace />;
-}
+// All routes are public - guests can browse everything
+// Auth is only needed for saving/writing data
 
 function AppRoutes() {
   return (
@@ -108,14 +90,14 @@ function AppRoutes() {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/assessment" element={<AssessmentPage />} />
-      <Route path="/dashboard" element={<GuestAllowed><DashboardPage /></GuestAllowed>} />
-      <Route path="/equipment" element={<GuestAllowed><EquipmentPage /></GuestAllowed>} />
-      <Route path="/training" element={<GuestAllowed><TrainingPage /></GuestAllowed>} />
-      <Route path="/progress" element={<GuestAllowed><ProgressPage /></GuestAllowed>} />
-      <Route path="/analyze" element={<GuestAllowed><AnalyzePage /></GuestAllowed>} />
-      <Route path="/highlights" element={<GuestAllowed><HighlightsPage /></GuestAllowed>} />
-      <Route path="/community" element={<RequireProfile><CommunityPage /></RequireProfile>} />
-      <Route path="/card" element={<RequireProfile><PlayerCardPage /></RequireProfile>} />
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/equipment" element={<EquipmentPage />} />
+      <Route path="/training" element={<TrainingPage />} />
+      <Route path="/progress" element={<ProgressPage />} />
+      <Route path="/analyze" element={<AnalyzePage />} />
+      <Route path="/highlights" element={<HighlightsPage />} />
+      <Route path="/community" element={<CommunityPage />} />
+      <Route path="/card" element={<PlayerCardPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

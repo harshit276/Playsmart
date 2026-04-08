@@ -81,8 +81,8 @@ export default function Navbar() {
     setMoreOpen(false);
   }, [location.pathname]);
 
-  const isGuest = !isAuthenticated && localStorage.getItem("guest_mode") === "true";
-  const showNav = isAuthenticated || isGuest;
+  const isGuest = !isAuthenticated;
+  const showNav = true; // Always show navbar on app pages
 
   if (location.pathname === "/" || location.pathname === "/auth" || location.pathname === "/privacy") return null;
 

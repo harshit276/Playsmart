@@ -32,6 +32,8 @@ export default function PlayerCardPage() {
         if (cardRes.status === "fulfilled") setCard(cardRes.value.data.card);
         if (badgesRes.status === "fulfilled") setBadgesData(badgesRes.value.data);
       }).finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [user?.id]);
 
@@ -75,7 +77,11 @@ export default function PlayerCardPage() {
 
   if (!card) return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <p className="text-zinc-500">No player card data found.</p>
+      <div className="text-center">
+        <p className="text-zinc-400 text-lg font-medium mb-2">No player card yet</p>
+        <p className="text-zinc-600 text-sm mb-4">{user ? "Complete your assessment to generate your player card." : "Sign in and complete your assessment to get your player card."}</p>
+        {!user && <a href="/auth" className="text-sm font-medium text-lime-400 hover:text-lime-300">Sign In &rarr;</a>}
+      </div>
     </div>
   );
 

@@ -83,8 +83,10 @@ export default function DashboardPage() {
   const selectedSports = profile?.selected_sports || ["badminton"];
   const activeSport = profile?.active_sport || selectedSports[0];
 
+  const userId = user?.id || "guest";
+
   const loadData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) return; // Guests get default empty state
     const results = await Promise.allSettled([
       api.get(`/progress/${user.id}`),
       api.get(`/analysis-history/${user.id}`),
@@ -127,40 +129,15 @@ export default function DashboardPage() {
     document.title = "Dashboard | AthlyticAI";
   }, []);
 
-  if (!profile) return (
-    <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="dashboard-page">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Header skeleton */}
-        <div className="mb-6">
-          <div className="h-10 bg-zinc-800 rounded-xl animate-pulse w-64 mb-2" />
-          <div className="h-4 bg-zinc-800/60 rounded animate-pulse w-48" />
-        </div>
-        {/* Sport cards skeleton */}
-        <div className="mb-6">
-          <div className="h-4 bg-zinc-800/60 rounded animate-pulse w-24 mb-3" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[1, 2].map(i => (
-              <div key={i} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-40 animate-pulse" />
-            ))}
-          </div>
-        </div>
-        {/* Bento grid skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-          <div className="md:col-span-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-52 animate-pulse" />
-          <div className="md:col-span-8 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-52 animate-pulse" />
-          <div className="md:col-span-6 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-48 animate-pulse" />
-          <div className="md:col-span-6 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 h-48 animate-pulse" />
-        </div>
-      </div>
-    </div>
-  );
+  // Use defaults for guests / users without profile
+  const isGuestMode = !user;
 
-  const sportProfile = profile.sports_profiles?.[activeSport] || {};
-  const skillLevel = sportProfile.skill_level || profile.skill_level || "Unknown";
+  const sportProfile = profile?.sports_profiles?.[activeSport] || {};
+  const skillLevel = sportProfile.skill_level || profile?.skill_level || "Beginner";
   const sportHasVideoAnalysis = hasVideoAnalysis(activeSport);
 
   const switchAndNavigate = async (sport, path) => {
-    if (sport !== activeSport) {
+    if (sport !== activeSport && user) {
       setSwitching(true);
       try {
         await api.post(`/profile/switch-sport?sport=${sport}`);
@@ -201,10 +178,21 @@ export default function DashboardPage() {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h1 className="font-heading font-bold text-2xl sm:text-3xl md:text-5xl uppercase tracking-tight text-white mb-1" data-testid="dashboard-title">
-            Welcome Back{user?.name ? `, ${user.name.split(" ")[0]}` : ""}
+            {isGuestMode ? "Welcome to AthlyticAI" : `Welcome Back${user?.name ? `, ${user.name.split(" ")[0]}` : ""}`}
           </h1>
-          <p className="text-zinc-400 text-sm sm:text-base">Here's your AthlyticAI overview.</p>
+          <p className="text-zinc-400 text-sm sm:text-base">
+            {isGuestMode ? "Explore what AthlyticAI can do for your game." : "Here's your AthlyticAI overview."}
+          </p>
         </motion.div>
+
+        {isGuestMode && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+            <div className="bg-lime-400/10 border border-lime-400/30 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+              <p className="text-sm text-zinc-300"><Zap className="w-4 h-4 inline mr-1 text-lime-400" />Sign in to save your progress and get personalized recommendations.</p>
+              <Link to="/auth" className="text-sm font-medium text-lime-400 hover:text-lime-300 shrink-0">Sign In &rarr;</Link>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── My Sports Cards ── */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
@@ -215,9 +203,9 @@ export default function DashboardPage() {
             {selectedSports.map((sport, idx) => {
               const acc = SPORT_ACCENT[sport] || SPORT_ACCENT.badminton;
               const emoji = SPORT_EMOJIS[sport] || "🎯";
-              const sp = profile.sports_profiles?.[sport] || {};
-              const sLevel = sp.skill_level || profile.skill_level || "Beginner";
-              const sStyle = sp.play_style || profile.play_style || "All-round";
+              const sp = profile?.sports_profiles?.[sport] || {};
+              const sLevel = sp.skill_level || profile?.skill_level || "Beginner";
+              const sStyle = sp.play_style || profile?.play_style || "All-round";
               const analysisCount = sportAnalysisCounts[sport] || 0;
               const latestA = latestAnalysisBySport[sport];
               const isActive = sport === activeSport;

@@ -122,6 +122,40 @@ class ProgressUpdate(BaseModel):
     plan_id: str
     day: int
 
+# ─── Guest Default Data ───
+
+def _guest_default_profile():
+    """Return a default profile for guest/unauthenticated users."""
+    return {
+        "user_id": "guest",
+        "selected_sports": ["badminton"],
+        "sports_profiles": {"badminton": {"skill_level": "Beginner", "play_style": "All-Round"}},
+        "active_sport": "badminton",
+        "skill_level": "Beginner",
+        "play_style": "All-Round",
+        "playing_frequency": "1-2 days/week",
+        "budget_range": "Medium",
+        "injury_history": "none",
+        "primary_goal": "Improve technique",
+        "goals": ["Improve technique", "Have fun"],
+        "strengths": ["Versatile play style"],
+        "focus_areas": ["Footwork fundamentals", "Shot consistency"],
+    }
+
+
+async def get_current_user_or_none(authorization: str = Header(None)):
+    """Like get_current_user but returns None instead of raising for guests."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ")[1]
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+        return user
+    except Exception:
+        return None
+
+
 # ─── Auth Helpers ───
 
 def create_token(user_id: str, phone: str) -> str:
@@ -184,9 +218,9 @@ async def firebase_auth(req: FirebaseAuthRequest):
         raise HTTPException(status_code=400, detail="Email is required")
 
     try:
-        user = await db.users.find_one({"email": email}, {"_id": 0})
-    except Exception:
-        user = None
+        user = await asyncio.wait_for(db.users.find_one({"email": email}, {"_id": 0}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        user = None  # Continue without DB
 
     if not user:
         user = {
@@ -198,10 +232,10 @@ async def firebase_auth(req: FirebaseAuthRequest):
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         try:
-            await db.users.insert_one(user)
+            await asyncio.wait_for(db.users.insert_one(user), timeout=5.0)
             user.pop("_id", None)
-        except Exception:
-            user.pop("_id", None)
+        except (Exception, asyncio.TimeoutError):
+            user.pop("_id", None)  # Continue even if DB write fails
     else:
         # Update name/photo if changed
         try:
@@ -211,15 +245,15 @@ async def firebase_auth(req: FirebaseAuthRequest):
             if req.photo and not user.get("photo"):
                 updates["photo"] = req.photo
             if updates:
-                await db.users.update_one({"email": email}, {"$set": updates})
+                await asyncio.wait_for(db.users.update_one({"email": email}, {"$set": updates}), timeout=5.0)
                 user.update(updates)
-        except Exception:
-            pass
+        except (Exception, asyncio.TimeoutError):
+            pass  # Continue even if update fails
 
     token = create_token(user["id"], email)
     try:
-        profile = await db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
-    except Exception:
+        profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
         profile = None
 
     return {
@@ -423,17 +457,26 @@ async def create_or_update_profile(data: PlayerProfileCreate, authorization: str
     except Exception as e:
         logger.warning(f"Recommendation engine error (non-fatal): {e}")
 
-    await db.player_profiles.update_one(
-        {"user_id": user["id"]},
-        {"$set": profile},
-        upsert=True,
-    )
+    try:
+        await asyncio.wait_for(
+            db.player_profiles.update_one(
+                {"user_id": user["id"]},
+                {"$set": profile},
+                upsert=True,
+            ),
+            timeout=8.0,
+        )
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"Profile save timeout/error (non-fatal): {e}")
+        # Return the profile anyway so frontend can proceed
     profile.pop("_id", None)
     return {"profile": profile}
 
 
 @api_router.get("/profile/{user_id}")
 async def get_profile(user_id: str):
+    if user_id == "guest":
+        return {"profile": _guest_default_profile()}
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -466,6 +509,8 @@ async def get_equipment(equipment_id: str):
 
 @api_router.get("/recommendations/equipment/{user_id}")
 async def get_equipment_recommendations(user_id: str, category: str = "racket", sport: Optional[str] = None):
+    if user_id == "guest":
+        return {"recommendations": [], "sport": sport or "badminton", "category": category}
     try:
         from rule_engine import get_top_recommendations, get_top_shoe_recommendations
         from explainer import generate_explanation
@@ -768,6 +813,8 @@ def _score_research_item(item: dict, profile: dict, bmin: float, bmax: float) ->
 
 @api_router.get("/recommendations/gear/{user_id}")
 async def get_gear_recommendations(user_id: str, sport: Optional[str] = None):
+    if user_id == "guest":
+        return {"gear": [], "sport": sport or "badminton"}
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -883,7 +930,11 @@ def _build_why_this_fits_research(equipment: dict, profile: dict, weaknesses: li
 
 @api_router.get("/recommendations/training/{user_id}")
 async def get_training_recommendation(user_id: str, sport: Optional[str] = None, authorization: str = Header(None)):
-    await get_current_user(authorization)
+    if user_id == "guest":
+        return {"plan": None, "drills": {}, "videos": {}, "skills": [], "training_videos": []}
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return {"plan": None, "drills": {}, "videos": {}, "skills": [], "training_videos": []}
     from research_loader import get_all_skills, get_all_videos
 
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
@@ -1065,6 +1116,8 @@ async def get_training_plan(level: str):
 
 @api_router.get("/progress/{user_id}")
 async def get_progress(user_id: str):
+    if user_id == "guest":
+        return {"completed_days": 0, "total_days": 30, "progress_percentage": 0, "current_streak": 0, "entries": []}
     entries = await db.training_progress.find({"user_id": user_id}, {"_id": 0}).to_list(100)
 
     completed_days = len(entries)
@@ -1124,6 +1177,8 @@ async def update_progress(data: ProgressUpdate, authorization: str = Header(None
 
 @api_router.get("/player-card/{user_id}")
 async def get_player_card(user_id: str):
+    if user_id == "guest":
+        return {"card": None}
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -2368,7 +2423,11 @@ async def get_standalone_highlight_reel(
 @api_router.get("/analysis-history/{user_id}")
 async def get_analysis_history(user_id: str, authorization: str = Header(None)):
     """Get past video analysis results for tracking improvement."""
-    await get_current_user(authorization)
+    if user_id == "guest":
+        return {"analyses": [], "total": 0}
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return {"analyses": [], "total": 0}
 
     analyses = await db.video_analyses.find(
         {"user_id": user_id},
@@ -2381,7 +2440,9 @@ async def get_analysis_history(user_id: str, authorization: str = Header(None)):
 @api_router.get("/analysis/{analysis_id}")
 async def get_analysis_detail(analysis_id: str, authorization: str = Header(None)):
     """Get full details for a single analysis by its ID."""
-    user = await get_current_user(authorization)
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Sign in to view analysis details")
 
     analysis = await db.video_analyses.find_one(
         {"id": analysis_id, "user_id": user["id"]},
@@ -2823,12 +2884,16 @@ async def get_training_video_recommendations(user_id: str, sport: Optional[str] 
     Return curated training videos based on user profile + latest video analysis.
     Prioritizes Hindi/Indian channels, Shorts for quick learning, and skill-level matching.
     """
+    if user_id == "guest":
+        return {"videos": [], "weekly_plan": None, "skill_drills": []}
     from research_loader import (
         get_videos_for_issues, get_all_videos,
         build_weekly_plan_from_skills, get_drills_for_issues,
     )
 
-    await get_current_user(authorization)
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return {"videos": [], "weekly_plan": None, "skill_drills": []}
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -2917,7 +2982,11 @@ async def get_analysis_history_progression(user_id: str, authorization: str = He
     Return all past video analyses with improvement tracking.
     Calculates improvement percentage between consecutive analyses and shows trends.
     """
-    await get_current_user(authorization)
+    if user_id == "guest":
+        return {"analyses": [], "total": 0, "trends": {}, "improvement_summary": None}
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return {"analyses": [], "total": 0, "trends": {}, "improvement_summary": None}
 
     analyses = await db.video_analyses.find(
         {"user_id": user_id},
@@ -3589,7 +3658,11 @@ async def update_upload_streak(user_id: str):
 @api_router.get("/badges/{user_id}")
 async def get_badges(user_id: str, authorization: str = Header(None)):
     """Get earned badges for a user."""
-    await get_current_user(authorization)
+    if user_id == "guest":
+        return {"earned_badges": [], "all_badges": [], "total_earned": 0, "total_available": 0, "current_upload_streak": 0, "longest_upload_streak": 0}
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return {"earned_badges": [], "all_badges": [], "total_earned": 0, "total_available": 0, "current_upload_streak": 0, "longest_upload_streak": 0}
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -3625,7 +3698,9 @@ async def get_badges(user_id: str, authorization: str = Header(None)):
 @api_router.get("/share/generate-card/{analysis_id}")
 async def generate_share_card(analysis_id: str, authorization: str = Header(None)):
     """Generate a shareable analysis summary card data."""
-    user = await get_current_user(authorization)
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Sign in to share analysis")
 
     analysis = await db.video_analyses.find_one(
         {"id": analysis_id, "user_id": user["id"]}, {"_id": 0}
@@ -3685,7 +3760,11 @@ async def generate_share_card(analysis_id: str, authorization: str = Header(None
 @api_router.get("/share/player-card/{user_id}")
 async def generate_player_share_card(user_id: str, authorization: str = Header(None)):
     """Generate shareable player card data."""
-    await get_current_user(authorization)
+    if user_id == "guest":
+        return {"card": None, "share_text": "Check out AthlyticAI!"}
+    user_obj = await get_current_user_or_none(authorization)
+    if not user_obj:
+        return {"card": None, "share_text": "Check out AthlyticAI!"}
 
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:

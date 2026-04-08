@@ -30,7 +30,7 @@ export default function ProgressPage() {
   const [progressionData, setProgressionData] = useState(null);
 
   const loadData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) { setLoading(false); return; }
     const results = await Promise.allSettled([
       api.get(`/progress/${user.id}`),
       api.get(`/analysis-history/${user.id}`),

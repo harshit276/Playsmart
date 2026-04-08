@@ -334,13 +334,14 @@ export default function AssessmentPage() {
   const saveProfileAndRedirect = async () => {
     setLoading(true);
     try {
-      await api.post("/profile", buildProfilePayload());
+      await api.post("/profile", buildProfilePayload(), { timeout: 10000 });
       await refreshProfile();
       toast.success("Profile created! Let's see your recommendations.");
-      navigate("/dashboard");
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Failed to create profile");
+      console.warn("Profile save failed, continuing anyway:", err);
+      toast.info("Profile will sync later. Enjoy exploring!");
     }
+    navigate("/dashboard");
     setLoading(false);
   };
 
@@ -391,9 +392,14 @@ export default function AssessmentPage() {
       toast.success("Logged in! Saving your profile...");
       setShowLoginModal(false);
       // Now save profile and redirect
-      await api.post("/profile", buildProfilePayload());
-      await refreshProfile();
-      toast.success("Profile created! Let's see your recommendations.");
+      try {
+        await api.post("/profile", buildProfilePayload(), { timeout: 10000 });
+        await refreshProfile();
+        toast.success("Profile created! Let's see your recommendations.");
+      } catch (profileErr) {
+        console.warn("Profile save failed, continuing:", profileErr);
+        toast.info("Profile will sync later. Enjoy exploring!");
+      }
       navigate("/dashboard");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Invalid OTP");
@@ -1314,9 +1320,14 @@ export default function AssessmentPage() {
                     login(data.token, data.user, data.has_profile);
                     toast.success("Signed in! Saving your profile...");
                     setShowLoginModal(false);
-                    await api.post("/profile", buildProfilePayload());
-                    await refreshProfile();
-                    toast.success("Profile created! Let's see your recommendations.");
+                    try {
+                      await api.post("/profile", buildProfilePayload(), { timeout: 10000 });
+                      await refreshProfile();
+                      toast.success("Profile created! Let's see your recommendations.");
+                    } catch (profileErr) {
+                      console.warn("Profile save failed, continuing:", profileErr);
+                      toast.info("Profile will sync later. Enjoy exploring!");
+                    }
                     navigate("/dashboard");
                   } catch (err) {
                     if (err.code !== "auth/popup-closed-by-user") {

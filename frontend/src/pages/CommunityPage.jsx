@@ -49,7 +49,7 @@ export default function CommunityPage() {
   });
 
   const loadData = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) { setLoading(false); return; }
     const results = await Promise.allSettled([
       api.get("/community/players"),
       api.get("/friends"),
