@@ -18,10 +18,10 @@ import api from "@/lib/api";
 import { getSportEmoji, getSportLabel, SPORT_LABEL } from "@/lib/sportConfig";
 
 const BUDGET_RANGES = {
-  Low: { label: "Budget", max: 3000 },
-  Medium: { label: "Mid Range", max: 8000 },
-  High: { label: "Performance", max: 15000 },
-  Premium: { label: "Premium", max: 999999 },
+  Low: { label: "Budget", min: 0, max: 3000 },
+  Medium: { label: "Mid Range", min: 3000, max: 8000 },
+  High: { label: "Performance", min: 8000, max: 15000 },
+  Premium: { label: "Premium", min: 15000, max: 50000 },
 };
 
 function ScoreCircle({ score, size = 64 }) {
@@ -726,7 +726,16 @@ export default function EquipmentPage() {
 
   // Determine the budget for the currently viewed sport
   const sportSpecificBudget = sportsProfiles[selectedSport]?.budget_range;
-  const budgetRange = sportSpecificBudget || profile?.budget_range || "Medium";
+  const defaultBudget = sportSpecificBudget || profile?.budget_range || "Medium";
+  const [selectedBudget, setSelectedBudget] = useState(defaultBudget);
+  const budgetRange = selectedBudget;
+
+  // Sync selectedBudget when sport or profile changes
+  useEffect(() => {
+    const newDefault = sportsProfiles[selectedSport]?.budget_range || profile?.budget_range || "Medium";
+    setSelectedBudget(newDefault);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSport, profile?.budget_range, sportSpecificBudget]);
 
   // Fetch all available sports on mount
   useEffect(() => {
@@ -737,7 +746,7 @@ export default function EquipmentPage() {
 
   const [fetchError, setFetchError] = useState(false);
 
-  const fetchData = useCallback(async (sport) => {
+  const fetchData = useCallback(async (sport, budget) => {
     const userId = user?.id || "guest";
     setLoading(true);
     setFetchError(false);
@@ -746,10 +755,13 @@ export default function EquipmentPage() {
     setGearData(null);
     const sportParam = sport ? `&sport=${sport}` : '';
     const sportQuery = sport ? `?sport=${sport}` : '';
+    const budgetKey = budget || selectedBudget || "Medium";
+    const bRange = BUDGET_RANGES[budgetKey];
+    const budgetParam = bRange ? `&budget_min=${bRange.min}&budget_max=${bRange.max}` : '';
     try {
       const [racketRes, shoeRes, gearRes] = await Promise.allSettled([
-        api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}`, { timeout: 15000 }),
-        api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}`, { timeout: 15000 }),
+        api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`, { timeout: 15000 }),
+        api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`, { timeout: 15000 }),
         api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 15000 }),
       ]);
       if (racketRes.status === "fulfilled") setRacketData(racketRes.value.data);
@@ -762,16 +774,16 @@ export default function EquipmentPage() {
       setFetchError(true);
     }
     setLoading(false);
-  }, [user?.id]);
+  }, [user?.id, selectedBudget]);
 
-  // Fetch equipment when selectedSport changes
+  // Fetch equipment when selectedSport or budget changes
   useEffect(() => {
     const isConfigured = configuredSports.includes(selectedSport) || selectedSport === profile?.active_sport;
     if (isConfigured || !user?.id) {
       // Fetch for configured sports, or for guests (always fetch)
-      fetchData(selectedSport);
+      fetchData(selectedSport, selectedBudget);
     }
-  }, [selectedSport, fetchData, profile?.active_sport, user?.id]);
+  }, [selectedSport, selectedBudget, fetchData, profile?.active_sport, user?.id]);
 
   const handleSelectSport = (sportKey) => {
     const isConfigured = configuredSports.includes(sportKey) ||
@@ -783,7 +795,7 @@ export default function EquipmentPage() {
       setSearchParams(sportKey === profile?.active_sport ? {} : { sport: sportKey });
       setActiveTab("rackets");
       setDetailsTab(null);
-      setShowAboveBudget(false);
+
     } else {
       // Not configured - show the quiz first
       const sportCfg = allSports.find(s => s.key === sportKey);
@@ -817,10 +829,10 @@ export default function EquipmentPage() {
       setSearchParams(quizSport === profile?.active_sport ? {} : { sport: quizSport });
       setActiveTab("rackets");
       setDetailsTab(null);
-      setShowAboveBudget(false);
+
       // Fetch after a tick so profile state has updated
       if (user?.id) {
-        setTimeout(() => fetchData(quizSport), 100);
+        setTimeout(() => fetchData(quizSport, selectedBudget), 100);
       } else {
         setLoading(false);
       }
@@ -829,22 +841,15 @@ export default function EquipmentPage() {
     }
   };
 
-  // Separate in-budget and above-budget items
-  const budgetMax = BUDGET_RANGES[budgetRange]?.max || 999999;
-  const filterByBudget = (recs) => {
-    if (!recs) return { inBudget: [], aboveBudget: [] };
-    const inBudget = [];
-    const aboveBudget = [];
-    recs.forEach(rec => {
-      const lowest = rec.prices?.length > 0 ? Math.min(...rec.prices.map(p => p.price)) : 0;
-      if (lowest > budgetMax) aboveBudget.push(rec);
-      else inBudget.push(rec);
-    });
-    return { inBudget, aboveBudget };
+  // Use backend-separated in-budget (recommendations) and out-of-budget (also_explore) lists
+  const racketFiltered = {
+    inBudget: racketData?.recommendations || [],
+    aboveBudget: racketData?.also_explore || [],
   };
-
-  const racketFiltered = filterByBudget(racketData?.recommendations);
-  const shoeFiltered = filterByBudget(shoeData?.recommendations);
+  const shoeFiltered = {
+    inBudget: shoeData?.recommendations || [],
+    aboveBudget: shoeData?.also_explore || [],
+  };
 
   const activeSportForLabels = selectedSport || profile?.active_sport;
 
@@ -878,32 +883,44 @@ export default function EquipmentPage() {
             )}
           </div>
 
-          {/* Budget Display */}
+          {/* Budget Selector */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 mb-6 flex items-center justify-between"
+            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 mb-6"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center">
                 <IndianRupee className="w-5 h-5 text-lime-400" />
               </div>
               <div>
                 <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium">Your Budget</p>
                 <p className="text-sm font-bold text-white">
-                  {budgetRange === "Low" ? "Under Rs.3,000"
-                    : budgetRange === "Medium" ? "Rs.3,000 - Rs.8,000"
-                    : budgetRange === "High" ? "Rs.8,000 - Rs.15,000"
-                    : budgetRange === "Premium" ? "Rs.15,000+"
-                    : budgetRange?.includes("-") ? `Rs.${budgetRange.split("-").map(v => parseInt(v).toLocaleString("en-IN")).join(" - Rs.")}`
+                  {budgetRange === "Low" ? "Under \u20B93,000"
+                    : budgetRange === "Medium" ? "\u20B93,000 - \u20B98,000"
+                    : budgetRange === "High" ? "\u20B98,000 - \u20B915,000"
+                    : budgetRange === "Premium" ? "\u20B915,000+"
                     : budgetRange}
                 </p>
               </div>
             </div>
-            <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-xs uppercase">
-              {BUDGET_RANGES[budgetRange]?.label || budgetRange}
-            </Badge>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(BUDGET_RANGES).map(([key, { label }]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedBudget(key)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    selectedBudget === key
+                      ? "bg-lime-400/20 text-lime-400 border-lime-400/40"
+                      : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {key === "Low" ? "Under \u20B93k" : key === "Medium" ? "\u20B93k-8k" : key === "High" ? "\u20B98k-15k" : "\u20B915k+"}
+                  <span className="ml-1 text-[10px] opacity-70">{label}</span>
+                </button>
+              ))}
+            </div>
           </motion.div>
         </motion.div>
 
@@ -916,7 +933,7 @@ export default function EquipmentPage() {
             <Package className="w-12 h-12 text-zinc-700 mb-3" />
             <p className="text-zinc-400 text-lg font-medium mb-1">Could not load equipment</p>
             <p className="text-zinc-600 text-sm mb-4">Server is taking too long. Please try again.</p>
-            <Button onClick={() => fetchData(selectedSport)} className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6">
+            <Button onClick={() => fetchData(selectedSport, selectedBudget)} className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6">
               Retry
             </Button>
           </div>

@@ -810,6 +810,11 @@ export default function AnalyzePage() {
                       )}
                     </Badge>
                   )}
+                  {result.target_player && result.target_player !== "auto" && (
+                    <Badge className="text-[10px] px-2 py-0.5 bg-violet-400/10 text-violet-400 border-violet-400/20">
+                      <Target className="w-2.5 h-2.5 mr-1 inline" /> Analyzed: {result.target_player.replace("-", " ")} player
+                    </Badge>
+                  )}
                 </div>
                 {(shot.confidence != null && shot.confidence > 0) && (
                   <p className="text-zinc-500 text-xs">Confidence: {Math.round(shot.confidence * 100)}%</p>

@@ -18,6 +18,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import shutil
 import asyncio
+import time as _time
+
+# ─── Simple in-memory cache for equipment data ───
+_equipment_cache: dict = {}
+_EQUIPMENT_CACHE_TTL = 300  # 5 minutes
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -487,7 +492,13 @@ async def get_equipment(equipment_id: str):
 # ─── Recommendation Routes ───
 
 @api_router.get("/recommendations/equipment/{user_id}")
-async def get_equipment_recommendations(user_id: str, category: str = "racket", sport: Optional[str] = None):
+async def get_equipment_recommendations(
+    user_id: str,
+    category: str = "racket",
+    sport: Optional[str] = None,
+    budget_min: Optional[int] = None,
+    budget_max: Optional[int] = None,
+):
     try:
         from rule_engine import get_top_recommendations, get_top_shoe_recommendations
         from explainer import generate_explanation
@@ -534,12 +545,22 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
         }
         cat_map = sport_categories.get(active_sport, sport_categories["badminton"])
 
+        # Helper to fetch DB equipment with caching
+        async def _get_db_items(db_cat):
+            db_cache_key = f"db_{db_cat}"
+            cached_db = _equipment_cache.get(db_cache_key)
+            if cached_db and (_time.time() - cached_db["ts"]) < _EQUIPMENT_CACHE_TTL:
+                return cached_db["data"]
+            try:
+                fetched = await asyncio.wait_for(db.equipment.find({"category": db_cat}, {"_id": 0}).to_list(100), timeout=5.0)
+            except (Exception, asyncio.TimeoutError):
+                fetched = []
+            _equipment_cache[db_cache_key] = {"data": fetched, "ts": _time.time()}
+            return fetched
+
         if category == "shoes":
             db_category = cat_map.get("shoes", "shoes")
-            try:
-                items = await asyncio.wait_for(db.equipment.find({"category": db_category}, {"_id": 0}).to_list(100), timeout=5.0)
-            except (Exception, asyncio.TimeoutError):
-                items = []
+            items = await _get_db_items(db_category)
             if active_sport == "badminton" and items:
                 top_recs = get_top_shoe_recommendations(profile, items, top_n=3)
             elif items:
@@ -548,10 +569,7 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
                 top_recs = []
         else:
             db_category = cat_map.get("primary", "racket")
-            try:
-                items = await asyncio.wait_for(db.equipment.find({"category": db_category}, {"_id": 0}).to_list(100), timeout=5.0)
-            except (Exception, asyncio.TimeoutError):
-                items = []
+            items = await _get_db_items(db_category)
             if active_sport == "badminton" and items:
                 top_recs = get_top_recommendations(profile, items, top_n=3)
             elif items:
@@ -561,16 +579,26 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
 
         # ─── Merge research equipment data ───
         budget_range = profile.get("budget_range", "Medium")
-        budget_limits = {"Low": (0, 3000), "Medium": (0, 8000), "High": (0, 15000), "Premium": (0, 50000)}
-        # Support numeric budget ranges like "5000-10000" from profiles
-        if "-" in str(budget_range) and any(c.isdigit() for c in str(budget_range)):
+        budget_limits = {"Low": (0, 3000), "Medium": (3000, 8000), "High": (8000, 15000), "Premium": (15000, 50000)}
+        # Use explicit query params if provided, otherwise fall back to profile
+        if budget_min is not None and budget_max is not None:
+            bmin, bmax = budget_min, budget_max
+            # Determine budget_range label from query params for response
+            for label, (lo, hi) in budget_limits.items():
+                if lo == bmin and hi == bmax:
+                    budget_range = label
+                    break
+            else:
+                budget_range = f"{bmin}-{bmax}"
+        elif "-" in str(budget_range) and any(c.isdigit() for c in str(budget_range)):
+            # Support numeric budget ranges like "5000-10000" from profiles
             parts = str(budget_range).split("-")
             try:
                 bmin, bmax = int(parts[0].strip()), int(parts[1].strip())
             except (ValueError, IndexError):
-                bmin, bmax = budget_limits.get(budget_range, (0, 8000))
+                bmin, bmax = budget_limits.get(budget_range, (3000, 8000))
         else:
-            bmin, bmax = budget_limits.get(budget_range, (0, 8000))
+            bmin, bmax = budget_limits.get(budget_range, (3000, 8000))
         skill_level = profile.get("skill_level", "Beginner")
 
         # Map DB category to research category name
@@ -591,9 +619,26 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
         research_category = research_cat_map.get(db_category, db_category)
         # Don't filter research equipment by level — show all budget-appropriate items
         # (an advanced player can still use beginner-friendly equipment)
-        research_items = get_equipment_by_budget(
-            active_sport, research_category, bmin, bmax, level=None
-        )
+        # Use in-memory cache for research equipment (static data)
+        cache_key = f"{active_sport}_{research_category}_{bmin}_{bmax}"
+        cached = _equipment_cache.get(cache_key)
+        if cached and (_time.time() - cached["ts"]) < _EQUIPMENT_CACHE_TTL:
+            research_items = cached["data"]
+        else:
+            research_items = get_equipment_by_budget(
+                active_sport, research_category, bmin, bmax, level=None
+            )
+            _equipment_cache[cache_key] = {"data": research_items, "ts": _time.time()}
+        # Also fetch ALL research items (no budget filter) for "also_explore" section
+        all_cache_key = f"{active_sport}_{research_category}_all"
+        cached_all = _equipment_cache.get(all_cache_key)
+        if cached_all and (_time.time() - cached_all["ts"]) < _EQUIPMENT_CACHE_TTL:
+            all_research_items = cached_all["data"]
+        else:
+            all_research_items = get_equipment_by_budget(
+                active_sport, research_category, 0, 999999, level=None
+            )
+            _equipment_cache[all_cache_key] = {"data": all_research_items, "ts": _time.time()}
 
         # Get latest analysis weaknesses for personalized "why_this_fits"
         try:
@@ -631,32 +676,43 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
                 "buy_links": {p.get("marketplace", "store"): p.get("listing_url", "") for p in prices if p.get("listing_url")},
             })
 
-        # Add research-sourced equipment — ALWAYS score properly
-        existing_ids = {r["equipment"].get("id") for r in results}
-        for r_item in research_items:
-            if r_item["id"] in existing_ids:
-                continue
+        # Helper to build a research item result dict
+        def _build_research_result(r_item, score_bmin, score_bmax):
             buy_links_raw = r_item.get("buy_links", {})
             if isinstance(buy_links_raw, dict) and "amazon" in buy_links_raw:
                 buy_links = buy_links_raw
             else:
                 buy_links = buy_links_raw.get("india", buy_links_raw)
-
-            r_score = _score_research_item(r_item, profile, bmin, bmax)
-
-            why_this_fits = _build_why_this_fits_research(r_item, profile, detected_weaknesses)
-            # Ensure image_url is set from research image field for frontend compatibility
+            r_score = _score_research_item(r_item, profile, score_bmin, score_bmax)
+            why = _build_why_this_fits_research(r_item, profile, detected_weaknesses)
             eq_data = {**r_item, "buy_links": buy_links}
             if r_item.get("image") and not r_item.get("image_url"):
                 eq_data["image_url"] = r_item["image"]
-            results.append({
+            return {
                 "equipment": eq_data,
                 "score": r_score,
                 "explanation": r_item.get("description", ""),
                 "prices": [],
-                "why_this_fits": why_this_fits,
+                "why_this_fits": why,
                 "buy_links": buy_links,
-            })
+            }
+
+        # Add in-budget research-sourced equipment
+        existing_ids = {r["equipment"].get("id") for r in results}
+        for r_item in research_items:
+            if r_item["id"] in existing_ids:
+                continue
+            results.append(_build_research_result(r_item, bmin, bmax))
+            existing_ids.add(r_item["id"])
+
+        # Build also_explore from out-of-budget research items
+        also_explore_results = []
+        in_budget_ids = {r_item["id"] for r_item in research_items}
+        for r_item in all_research_items:
+            if r_item["id"] in existing_ids:
+                continue
+            also_explore_results.append(_build_research_result(r_item, bmin, bmax))
+            existing_ids.add(r_item["id"])
 
         # Re-score equipment using the full personalization engine
         try:
@@ -664,38 +720,44 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
             profile_analysis = profile.get("personalization")
             if profile_analysis:
                 results = personalize_equipment_scores(results, profile_analysis)
+                if also_explore_results:
+                    also_explore_results = personalize_equipment_scores(also_explore_results, profile_analysis)
         except Exception as e:
             logger.warning(f"Equipment personalization error (non-fatal): {e}")
 
-        # Filter by budget — show items whose minimum price is within the user's max budget
-        # We use item_min <= bmax (not overlap) because budget is total spend capacity,
-        # not a strict min-max range per item. A swimmer with 5000-10000 budget still wants goggles at 300.
-        filtered_results = []
-        for r in results:
+        # Filter main results by budget — keep items whose minimum price is within budget
+        def _item_in_budget(r):
             eq = r["equipment"]
             price_range = eq.get("price_ranges", {}).get("INR", {})
             price_val = eq.get("price_range_value", 0)
             item_min = price_range.get("min", 0)
-
             if price_val:
-                if price_val <= bmax:
-                    filtered_results.append(r)
+                return price_val <= bmax
             elif item_min:
-                if item_min <= bmax:
-                    filtered_results.append(r)
-            else:
-                filtered_results.append(r)
+                return item_min <= bmax
+            return True
+
+        filtered_results = [r for r in results if _item_in_budget(r)]
+        # Move any out-of-budget DB items to also_explore
+        for r in results:
+            if not _item_in_budget(r):
+                also_explore_results.append(r)
 
         # Sort by score descending so best matches appear first
         filtered_results.sort(key=lambda r: r["score"].get("total", 0), reverse=True)
+        also_explore_results.sort(key=lambda r: r["score"].get("total", 0), reverse=True)
 
-        return {"recommendations": filtered_results, "profile_summary": {
-            "skill_level": skill_level,
-            "play_style": profile.get("play_style"),
-            "budget_range": budget_range,
-            "primary_goal": profile.get("primary_goal"),
-            "active_sport": active_sport,
-        }}
+        return {
+            "recommendations": filtered_results,
+            "also_explore": also_explore_results[:6],
+            "profile_summary": {
+                "skill_level": skill_level,
+                "play_style": profile.get("play_style"),
+                "budget_range": budget_range,
+                "primary_goal": profile.get("primary_goal"),
+                "active_sport": active_sport,
+            },
+        }
     except HTTPException:
         raise
     except Exception as e:

@@ -173,6 +173,8 @@ def get_equipment_by_budget(
             "paddle": "paddles", "paddles": "paddle",
             "bat": "bats", "bats": "bat",
             "accessory": "accessories", "accessories": "accessory",
+            "ready_made_racket": "ready_made_rackets", "ready_made_rackets": "ready_made_racket",
+            "premade_racket": "ready_made_rackets", "premade_rackets": "ready_made_rackets",
         }
         alt = variants.get(category)
         if alt:

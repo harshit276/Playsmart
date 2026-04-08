@@ -215,8 +215,113 @@ function detectSegments(motionScores, timestamps) {
 // ─── Shot Classification ────────────────────────────────────────────────────
 
 /**
+ * Determine which arm is the dominant (racket) arm based on range of motion.
+ * The arm that moves more across frames is likely holding the racket.
+ *
+ * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
+ * @returns {"right"|"left"}
+ */
+function detectDominantArm(allKeypoints) {
+  let rightMotion = 0;
+  let leftMotion = 0;
+
+  for (let i = 1; i < allKeypoints.length; i++) {
+    const prevRW = getKeypointByName(allKeypoints[i - 1], "right_wrist");
+    const currRW = getKeypointByName(allKeypoints[i], "right_wrist");
+    const prevLW = getKeypointByName(allKeypoints[i - 1], "left_wrist");
+    const currLW = getKeypointByName(allKeypoints[i], "left_wrist");
+
+    if (prevRW && currRW) {
+      rightMotion += Math.sqrt((currRW.x - prevRW.x) ** 2 + (currRW.y - prevRW.y) ** 2);
+    }
+    if (prevLW && currLW) {
+      leftMotion += Math.sqrt((currLW.x - prevLW.x) ** 2 + (currLW.y - prevLW.y) ** 2);
+    }
+  }
+
+  return rightMotion >= leftMotion ? "right" : "left";
+}
+
+/**
+ * Extract per-frame motion features for the dominant arm, normalised by torso length.
+ *
+ * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
+ * @param {"right"|"left"} arm
+ * @returns {{ wristRelHeights: number[], wristVelocitiesY: number[], wristVelocitiesX: number[],
+ *   wristSpeeds: number[], elbowAngles: number[], hipRelHeights: number[],
+ *   bodyCenterXs: number[], wristXs: number[] }}
+ */
+function extractArmFeatures(allKeypoints, arm) {
+  const prefix = arm === "right" ? "right" : "left";
+  const otherPrefix = arm === "right" ? "left" : "right";
+
+  const wristRelHeights = []; // wrist.y - shoulder.y, normalised by torso length (negative = above shoulder)
+  const wristVelocitiesY = []; // frame-to-frame vertical velocity (negative = moving up)
+  const wristVelocitiesX = []; // frame-to-frame horizontal velocity
+  const wristSpeeds = []; // absolute speed normalised by torso
+  const elbowAngles = [];
+  const hipRelHeights = []; // wrist.y - hip.y, normalised (negative = above hip)
+  const bodyCenterXs = []; // x-centre of the body
+  const wristXs = []; // wrist x positions
+
+  let prevWristX = null;
+  let prevWristY = null;
+
+  for (const kps of allKeypoints) {
+    const shoulder = getKeypointByName(kps, `${prefix}_shoulder`);
+    const elbow = getKeypointByName(kps, `${prefix}_elbow`);
+    const wrist = getKeypointByName(kps, `${prefix}_wrist`);
+    const hip = getKeypointByName(kps, `${prefix}_hip`);
+    const otherShoulder = getKeypointByName(kps, `${otherPrefix}_shoulder`);
+    const otherHip = getKeypointByName(kps, `${otherPrefix}_hip`);
+
+    // Torso length for normalisation (shoulder to hip)
+    let torso = 1; // fallback
+    if (shoulder && hip) {
+      const t = Math.sqrt((shoulder.x - hip.x) ** 2 + (shoulder.y - hip.y) ** 2);
+      if (t > 5) torso = t; // guard against degenerate poses
+    }
+
+    if (wrist && shoulder) {
+      wristRelHeights.push((wrist.y - shoulder.y) / torso);
+    }
+
+    if (wrist && hip) {
+      hipRelHeights.push((wrist.y - hip.y) / torso);
+    }
+
+    if (shoulder && elbow && wrist) {
+      elbowAngles.push(calculateAngle(shoulder, elbow, wrist));
+    }
+
+    // Body centre X
+    if (shoulder && otherShoulder) {
+      bodyCenterXs.push((shoulder.x + otherShoulder.x) / 2);
+    }
+
+    if (wrist) {
+      wristXs.push(wrist.x);
+
+      if (prevWristX !== null && prevWristY !== null) {
+        const dx = (wrist.x - prevWristX) / torso;
+        const dy = (wrist.y - prevWristY) / torso;
+        wristVelocitiesX.push(dx);
+        wristVelocitiesY.push(dy);
+        wristSpeeds.push(Math.sqrt(dx * dx + dy * dy));
+      }
+
+      prevWristX = wrist.x;
+      prevWristY = wrist.y;
+    }
+  }
+
+  return { wristRelHeights, wristVelocitiesY, wristVelocitiesX, wristSpeeds, elbowAngles, hipRelHeights, bodyCenterXs, wristXs };
+}
+
+/**
  * Classify the dominant shot type from pose keypoints across frames.
- * Uses heuristics based on arm angles, wrist positions, and body posture.
+ * Uses motion direction, wrist position relative to body, and speed
+ * for accurate multi-factor classification.
  *
  * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints - Keypoints for each frame
  * @param {string} sport - Sport key
@@ -225,96 +330,169 @@ function detectSegments(motionScores, timestamps) {
 function classifyShot(allKeypoints, sport) {
   const shotTypes = SHOT_TYPES[sport] || SHOT_TYPES.badminton;
 
-  // Gather aggregate features across all frames
-  const elbowAngles = [];
-  const wristHeights = []; // relative to shoulder
-  const shoulderWidths = [];
-
-  for (const kps of allKeypoints) {
-    const rShoulder = getKeypointByName(kps, "right_shoulder");
-    const rElbow = getKeypointByName(kps, "right_elbow");
-    const rWrist = getKeypointByName(kps, "right_wrist");
-    const lShoulder = getKeypointByName(kps, "left_shoulder");
-    const lElbow = getKeypointByName(kps, "left_elbow");
-    const lWrist = getKeypointByName(kps, "left_wrist");
-
-    // Right arm elbow angle
-    if (rShoulder && rElbow && rWrist) {
-      elbowAngles.push(calculateAngle(rShoulder, rElbow, rWrist));
-    }
-    // Left arm as fallback
-    if (lShoulder && lElbow && lWrist && elbowAngles.length === 0) {
-      elbowAngles.push(calculateAngle(lShoulder, lElbow, lWrist));
-    }
-
-    // Wrist height relative to shoulder (negative = above shoulder)
-    const wrist = rWrist || lWrist;
-    const shoulder = rShoulder || lShoulder;
-    if (wrist && shoulder) {
-      wristHeights.push(wrist.y - shoulder.y);
-    }
-
-    if (rShoulder && lShoulder) {
-      shoulderWidths.push(Math.abs(rShoulder.x - lShoulder.x));
-    }
+  if (allKeypoints.length < 2) {
+    const shotType = shotTypes[0] || "unknown";
+    const shotName = shotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return { shotType, shotName, confidence: 0.3 };
   }
 
-  const avgElbow = elbowAngles.length > 0 ? elbowAngles.reduce((a, b) => a + b, 0) / elbowAngles.length : 90;
-  const minWristHeight = wristHeights.length > 0 ? Math.min(...wristHeights) : 0;
-  const avgWristHeight = wristHeights.length > 0 ? wristHeights.reduce((a, b) => a + b, 0) / wristHeights.length : 0;
+  const arm = detectDominantArm(allKeypoints);
+  const feat = extractArmFeatures(allKeypoints, arm);
 
-  // Simple heuristic classification
+  // Helpers
+  const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const max = (arr) => arr.length > 0 ? Math.max(...arr) : 0;
+  const min = (arr) => arr.length > 0 ? Math.min(...arr) : 0;
+
+  const avgWristRelHeight = avg(feat.wristRelHeights);
+  const minWristRelHeight = min(feat.wristRelHeights); // most negative = highest above shoulder
+  const maxWristRelHeight = max(feat.wristRelHeights);
+  const peakWristSpeed = max(feat.wristSpeeds);
+  const avgWristSpeed = avg(feat.wristSpeeds);
+
+  // Net vertical velocity: negative = overall upward motion, positive = downward
+  const avgVelY = avg(feat.wristVelocitiesY);
+  // Look at the fastest portion — find peak downward and upward velocities
+  const peakDownVelY = max(feat.wristVelocitiesY); // most positive = fastest downward
+  const peakUpVelY = min(feat.wristVelocitiesY);    // most negative = fastest upward
+
+  // Whether wrist was ever above shoulder (relHeight < -0.2 means well above)
+  const wristWentAboveShoulder = minWristRelHeight < -0.15;
+  // Whether wrist was near or below hip
+  const wristNearHip = avg(feat.hipRelHeights) > -0.3;
+  const wristBelowHip = max(feat.hipRelHeights) > 0.1;
+
+  // Whether the wrist is on the same side as the arm or crossed to opposite side
+  const avgBodyCenterX = avg(feat.bodyCenterXs);
+  const avgWristX = avg(feat.wristXs);
+  const wristOnNaturalSide = arm === "right" ? (avgWristX > avgBodyCenterX) : (avgWristX < avgBodyCenterX);
+
   let shotType;
   let confidence;
 
   if (sport === "badminton") {
-    if (minWristHeight < -30 && avgElbow > 120) {
+    if (wristWentAboveShoulder && peakWristSpeed > 0.4 && peakDownVelY > 0.2) {
+      // High position + fast + downward motion = smash
       shotType = "smash";
-      confidence = 0.75;
-    } else if (minWristHeight < -20) {
+      confidence = 0.80;
+    } else if (wristWentAboveShoulder && peakUpVelY < -0.15) {
+      // High position + upward trajectory = clear
       shotType = "clear";
-      confidence = 0.65;
-    } else if (avgElbow < 60) {
-      shotType = "net_shot";
-      confidence = 0.55;
-    } else if (avgWristHeight > 20) {
+      confidence = 0.72;
+    } else if (wristWentAboveShoulder && peakWristSpeed < 0.25) {
+      // High position + slow speed = drop shot (deceptive)
       shotType = "drop";
+      confidence = 0.65;
+    } else if (!wristWentAboveShoulder && Math.abs(avgWristRelHeight) < 0.3 && peakWristSpeed > 0.25) {
+      // Arm roughly horizontal + fast horizontal movement = drive
+      shotType = "drive";
+      confidence = 0.68;
+    } else if (!wristWentAboveShoulder && avgWristRelHeight > 0.2 && avgWristSpeed < 0.15) {
+      // Wrist below shoulder, slow controlled = net shot
+      shotType = "net_shot";
+      confidence = 0.62;
+    } else if (wristBelowHip && peakUpVelY < -0.1) {
+      // Low start + upward motion = lift/lob
+      shotType = "lift";
+      confidence = 0.58;
+    } else if (wristBelowHip && avgWristSpeed < 0.2) {
+      // Low position, underhand, slow = serve
+      shotType = "serve";
+      confidence = 0.60;
+    } else if (wristWentAboveShoulder) {
+      // Fallback for high shots we couldn't differentiate
+      shotType = peakWristSpeed > 0.3 ? "smash" : "clear";
       confidence = 0.50;
     } else {
       shotType = "drive";
       confidence = 0.45;
     }
   } else if (sport === "table_tennis") {
-    if (avgElbow > 130) {
-      shotType = "forehand_loop";
+    // Table tennis: shorter motions, distinguish forehand/backhand by arm side
+    const isForehand = wristOnNaturalSide;
+
+    if (peakWristSpeed > 0.5 && !wristWentAboveShoulder) {
+      // Very fast, flat = smash
+      shotType = "smash";
+      confidence = 0.72;
+    } else if (peakUpVelY < -0.15 && avgWristSpeed > 0.2) {
+      // Upward brush motion = loop/topspin
+      shotType = isForehand ? "forehand_loop" : "backhand_loop";
+      confidence = 0.70;
+    } else if (peakDownVelY > 0.15 && avgWristSpeed > 0.15) {
+      // Downward motion = chop
+      shotType = "chop";
       confidence = 0.65;
-    } else if (avgElbow < 70) {
-      shotType = "push";
+    } else if (avgWristSpeed > 0.15) {
+      // Moderate speed forward motion = drive
+      shotType = isForehand ? "forehand_drive" : "backhand_drive";
+      confidence = 0.62;
+    } else if (wristNearHip && avgWristSpeed < 0.12) {
+      // Low, compact, slow = serve
+      shotType = "serve";
+      confidence = 0.60;
+    } else if (avgWristSpeed < 0.1) {
+      // Very slow = push/block
+      shotType = peakWristSpeed < 0.08 ? "block" : "push";
       confidence = 0.55;
     } else {
-      shotType = "forehand_drive";
-      confidence = 0.50;
+      shotType = isForehand ? "forehand_drive" : "backhand_drive";
+      confidence = 0.45;
     }
   } else if (sport === "tennis") {
-    if (minWristHeight < -40 && avgElbow > 140) {
+    const isForehand = wristOnNaturalSide;
+
+    if (wristWentAboveShoulder && minWristRelHeight < -0.5 && peakWristSpeed > 0.4) {
       shotType = "serve";
-      confidence = 0.70;
-    } else if (avgElbow > 110) {
-      shotType = "forehand";
+      confidence = 0.75;
+    } else if (wristWentAboveShoulder && peakDownVelY > 0.2) {
+      shotType = "overhead";
+      confidence = 0.68;
+    } else if (peakDownVelY > 0.15 && avgWristSpeed < 0.2) {
+      shotType = "slice";
       confidence = 0.60;
-    } else {
-      shotType = "backhand";
-      confidence = 0.50;
-    }
-  } else if (sport === "pickleball") {
-    if (avgWristHeight > 10 && avgElbow < 80) {
-      shotType = "dink";
-      confidence = 0.60;
-    } else if (avgElbow > 120) {
-      shotType = "drive";
+    } else if (!wristWentAboveShoulder && avgWristSpeed < 0.1) {
+      shotType = "drop_shot";
+      confidence = 0.55;
+    } else if (peakUpVelY < -0.2 && !wristWentAboveShoulder) {
+      shotType = "lob";
+      confidence = 0.58;
+    } else if (avgWristSpeed > 0.12 && !wristWentAboveShoulder) {
+      shotType = isForehand ? "forehand" : "backhand";
+      confidence = 0.65;
+    } else if (wristNearHip && avgWristSpeed < 0.15) {
+      shotType = "volley";
       confidence = 0.55;
     } else {
+      shotType = isForehand ? "forehand" : "backhand";
+      confidence = 0.48;
+    }
+  } else if (sport === "pickleball") {
+    const isForehand = wristOnNaturalSide;
+
+    if (wristWentAboveShoulder && peakDownVelY > 0.15) {
+      shotType = "overhead";
+      confidence = 0.68;
+    } else if (wristNearHip && avgWristSpeed < 0.08) {
+      shotType = "dink";
+      confidence = 0.65;
+    } else if (wristBelowHip && avgWristSpeed < 0.15) {
+      shotType = "serve";
+      confidence = 0.62;
+    } else if (avgWristSpeed > 0.2) {
+      shotType = "drive";
+      confidence = 0.60;
+    } else if (peakUpVelY < -0.15) {
+      shotType = "lob";
+      confidence = 0.55;
+    } else if (avgWristSpeed < 0.12 && !wristWentAboveShoulder) {
       shotType = "third_shot_drop";
+      confidence = 0.55;
+    } else if (!wristWentAboveShoulder && avgWristSpeed < 0.15) {
+      shotType = "volley";
+      confidence = 0.52;
+    } else {
+      shotType = "drop";
       confidence = 0.45;
     }
   } else {
@@ -584,8 +762,32 @@ function detectWeaknesses(metrics, shotName) {
 // ─── Speed Estimation ───────────────────────────────────────────────────────
 
 /**
- * Estimate swing speed from wrist movement across frames.
- * This is a rough heuristic — not a true physics measurement.
+ * Sport-specific calibration factors to convert body-relative wrist speed
+ * to approximate real-world shot speed in km/h.
+ *
+ * Rationale: average torso length is ~0.5m. Wrist speed relative to torso is
+ * a dimensionless ratio. We multiply by a sport-specific factor calibrated
+ * against known amateur speed ranges.
+ *
+ * The factor accounts for:
+ * - Racket/paddle extension beyond the wrist
+ * - Typical amateur vs pro speed ranges
+ * - The fact that wrist speed != shuttle/ball speed (transfer ratio)
+ */
+const SPEED_CALIBRATION = {
+  badminton:    { factor: 280, minPlausible: 30, maxPlausible: 450 },
+  table_tennis: { factor: 100, minPlausible: 10, maxPlausible: 130 },
+  tennis:       { factor: 240, minPlausible: 30, maxPlausible: 260 },
+  pickleball:   { factor: 110, minPlausible: 15, maxPlausible: 100 },
+};
+
+/**
+ * Estimate swing speed from wrist movement relative to torso size.
+ *
+ * Instead of converting pixels to meters (which depends on camera distance),
+ * we normalise wrist displacement by torso length (shoulder-to-hip distance)
+ * then apply a sport-specific calibration factor to produce a plausible km/h
+ * estimate.
  *
  * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
  * @param {number[]} timestamps
@@ -594,41 +796,62 @@ function detectWeaknesses(metrics, shotName) {
  * @returns {{ estimated_speed_kmh: number, speed_class: string, note: string }}
  */
 function estimateSpeed(allKeypoints, timestamps, sport, videoInfo) {
-  const wristSpeeds = [];
+  const arm = detectDominantArm(allKeypoints);
+  const wristName = `${arm}_wrist`;
+  const shoulderName = `${arm}_shoulder`;
+  const hipName = `${arm}_hip`;
+
+  const normalisedSpeeds = []; // wrist displacement / torso length per second
 
   for (let i = 1; i < allKeypoints.length; i++) {
-    const prevWrist = getKeypointByName(allKeypoints[i - 1], "right_wrist") ||
+    const prevWrist = getKeypointByName(allKeypoints[i - 1], wristName) ||
+                      getKeypointByName(allKeypoints[i - 1], "right_wrist") ||
                       getKeypointByName(allKeypoints[i - 1], "left_wrist");
-    const currWrist = getKeypointByName(allKeypoints[i], "right_wrist") ||
+    const currWrist = getKeypointByName(allKeypoints[i], wristName) ||
+                      getKeypointByName(allKeypoints[i], "right_wrist") ||
                       getKeypointByName(allKeypoints[i], "left_wrist");
 
-    if (prevWrist && currWrist) {
-      const dt = timestamps[i] - timestamps[i - 1];
-      if (dt > 0) {
-        // Pixel distance normalized by frame size, then scaled to approximate real-world speed
-        const pixelDist = Math.sqrt((currWrist.x - prevWrist.x) ** 2 + (currWrist.y - prevWrist.y) ** 2);
-        // Rough conversion: assume MODEL_INPUT_SIZE pixels ~ 1.5m of real-world court space
-        const realDist = (pixelDist / MODEL_INPUT_SIZE) * 1.5;
-        const speedMs = realDist / dt;
-        const speedKmh = speedMs * 3.6;
-        wristSpeeds.push(speedKmh);
+    if (!prevWrist || !currWrist) continue;
+
+    const dt = timestamps[i] - timestamps[i - 1];
+    if (dt <= 0) continue;
+
+    // Compute torso length as scale reference (average of both frames)
+    let torso = 0;
+    let torsoCount = 0;
+    for (const kps of [allKeypoints[i - 1], allKeypoints[i]]) {
+      const sh = getKeypointByName(kps, shoulderName) || getKeypointByName(kps, "right_shoulder") || getKeypointByName(kps, "left_shoulder");
+      const hp = getKeypointByName(kps, hipName) || getKeypointByName(kps, "right_hip") || getKeypointByName(kps, "left_hip");
+      if (sh && hp) {
+        const t = Math.sqrt((sh.x - hp.x) ** 2 + (sh.y - hp.y) ** 2);
+        if (t > 5) { torso += t; torsoCount++; }
       }
     }
+
+    if (torsoCount === 0) continue;
+    const avgTorso = torso / torsoCount;
+
+    const pixelDist = Math.sqrt((currWrist.x - prevWrist.x) ** 2 + (currWrist.y - prevWrist.y) ** 2);
+    const relativeSpeed = (pixelDist / avgTorso) / dt; // torso-lengths per second
+
+    normalisedSpeeds.push(relativeSpeed);
   }
 
-  if (wristSpeeds.length === 0) {
+  if (normalisedSpeeds.length === 0) {
     return { estimated_speed_kmh: 0, speed_class: "Unknown", note: "Could not estimate speed — wrist not visible." };
   }
 
-  // Peak speed is more interesting than average for racket sports
-  wristSpeeds.sort((a, b) => b - a);
-  const peakSpeed = Math.round(wristSpeeds[0]);
-  const avgTop5 = Math.round(
-    wristSpeeds.slice(0, Math.min(5, wristSpeeds.length)).reduce((a, b) => a + b, 0) /
-      Math.min(5, wristSpeeds.length)
-  );
+  // Use the average of the top 3-5 fastest frames (peak swing phase)
+  normalisedSpeeds.sort((a, b) => b - a);
+  const topN = Math.min(5, Math.max(3, Math.floor(normalisedSpeeds.length * 0.15)));
+  const peakRelativeSpeed = normalisedSpeeds.slice(0, topN).reduce((a, b) => a + b, 0) / topN;
 
-  const estimatedSpeed = Math.round((peakSpeed + avgTop5) / 2);
+  // Convert to km/h using sport-specific calibration
+  const cal = SPEED_CALIBRATION[sport] || SPEED_CALIBRATION.badminton;
+  let estimatedSpeed = Math.round(peakRelativeSpeed * cal.factor);
+
+  // Clamp to plausible range for the sport
+  estimatedSpeed = Math.max(cal.minPlausible, Math.min(cal.maxPlausible, estimatedSpeed));
 
   // Classify speed
   const thresholds = SPEED_THRESHOLDS[sport] || SPEED_THRESHOLDS.badminton;
@@ -646,7 +869,7 @@ function estimateSpeed(allKeypoints, timestamps, sport, videoInfo) {
   return {
     estimated_speed_kmh: estimatedSpeed,
     speed_class: speedClass,
-    note: `Estimated from wrist tracking across ${allKeypoints.length} frames. Actual shuttle/ball speed may differ.`,
+    note: `Estimated from wrist tracking (body-relative) across ${allKeypoints.length} frames. Actual shuttle/ball speed may differ.`,
   };
 }
 

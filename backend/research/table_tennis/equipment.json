@@ -317,6 +317,205 @@
           "description": "Official WTT match ball. The highest quality ball for professional play."
         }
       ]
+    },
+    {
+      "category": "ready_made_rackets",
+      "items": [
+        {
+          "id": "tt_rm01",
+          "name": "JOOLA Team School",
+          "brand": "JOOLA",
+          "model": "Team School",
+          "type": "Ready-Made Racket",
+          "level": "beginner",
+          "skill_levels": ["Beginner"],
+          "play_styles": ["All-round"],
+          "specs": {
+            "weight": "170g",
+            "blade_type": "5-ply wood",
+            "rubber_type": "JOOLA Samba pimple-in, 1.5mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 2,
+            "speed_rating": 4.0,
+            "spin_rating": 4.5,
+            "control_rating": 9.0
+          },
+          "price_ranges": {"INR": {"min": 500, "max": 1000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=JOOLA+Team+School+table+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=joola+team+school+table+tennis"
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=JOOLA+Team+School+table+tennis+racket", "price": "~₹700"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=joola+team+school+table+tennis", "price": "~₹650"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/61XB8YJ3OuL._SL1500_.jpg",
+          "why_good": "The cheapest quality racket from a reputable brand. Perfect for schools, clubs, and absolute beginners who want a proper ITTF-spec racket without investing in custom setup.",
+          "description": "Budget-friendly JOOLA ready-made with decent rubber for learning basic strokes. Ideal for recreational and school use."
+        },
+        {
+          "id": "tt_rm02",
+          "name": "Butterfly Stayer 1200",
+          "brand": "Butterfly",
+          "model": "Stayer 1200",
+          "type": "Ready-Made Racket",
+          "level": "beginner",
+          "skill_levels": ["Beginner"],
+          "play_styles": ["All-round"],
+          "specs": {
+            "weight": "175g",
+            "blade_type": "5-ply wood",
+            "rubber_type": "Butterfly Yuki pimple-in, 1.5mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 2,
+            "speed_rating": 4.5,
+            "spin_rating": 5.0,
+            "control_rating": 8.5
+          },
+          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Stayer+1200+table+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+stayer+1200"
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Butterfly+Stayer+1200+table+tennis", "price": "~₹1100"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=butterfly+stayer+1200", "price": "~₹1000"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/61yB8YJ3OuL._SL1500_.jpg",
+          "why_good": "Entry-level Butterfly quality. The Yuki rubber provides good control for learning proper technique. A reliable first racket from the world's top TT brand.",
+          "description": "Affordable Butterfly ready-made for beginners. Good control and feel to build fundamental strokes."
+        },
+        {
+          "id": "tt_rm03",
+          "name": "Butterfly Timo Boll 1000",
+          "brand": "Butterfly",
+          "model": "Timo Boll 1000",
+          "type": "Ready-Made Racket",
+          "level": "beginner",
+          "skill_levels": ["Beginner", "Beginner+"],
+          "play_styles": ["All-round"],
+          "specs": {
+            "weight": "180g",
+            "blade_type": "5-ply wood",
+            "rubber_type": "Butterfly Addoy pimple-in, 1.7mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 3,
+            "speed_rating": 5.5,
+            "spin_rating": 6.0,
+            "control_rating": 8.0
+          },
+          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Timo+Boll+1000",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+timo+boll+1000"
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Butterfly+Timo+Boll+1000", "price": "~₹1800"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=butterfly+timo+boll+1000", "price": "~₹1700"},
+            {"name": "TableTennisStore", "url": "https://www.tabletennisstore.in/search?q=timo+boll+1000", "price": "~₹1900"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/71XB8YJ3OuL._SL1500_.jpg",
+          "why_good": "Endorsed by Timo Boll, one of Europe's greatest players. Addoy rubber offers noticeably better spin than cheaper models while keeping control forgiving. Best value in the Butterfly ready-made lineup.",
+          "description": "Mid-range Butterfly ready-made with Addoy rubber. Good balance of speed, spin, and control for progressing beginners."
+        },
+        {
+          "id": "tt_rm04",
+          "name": "DHS Hurricane Wang",
+          "brand": "DHS (Double Happiness)",
+          "model": "Hurricane Wang",
+          "type": "Ready-Made Racket",
+          "level": "intermediate",
+          "skill_levels": ["Beginner+", "Intermediate"],
+          "play_styles": ["Offensive"],
+          "specs": {
+            "weight": "185g",
+            "blade_type": "7-ply wood",
+            "rubber_type": "DHS Hurricane pimple-in, 2.0mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 4,
+            "speed_rating": 7.0,
+            "spin_rating": 8.0,
+            "control_rating": 6.5
+          },
+          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+Wang+table+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+wang"
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=DHS+Hurricane+Wang+table+tennis", "price": "~₹2500"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=dhs+hurricane+wang", "price": "~₹2400"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "why_good": "Features DHS Hurricane rubber known for incredible spin. 7-ply blade gives more power than 5-ply beginner rackets. The best ready-made for players who want to develop an attacking Chinese-style game.",
+          "description": "Offensive-oriented DHS ready-made with Hurricane rubber. Excellent spin potential for intermediate players transitioning to aggressive play."
+        },
+        {
+          "id": "tt_rm05",
+          "name": "Stiga Torch",
+          "brand": "Stiga",
+          "model": "Torch",
+          "type": "Ready-Made Racket",
+          "level": "intermediate",
+          "skill_levels": ["Beginner+", "Intermediate"],
+          "play_styles": ["All-round", "Offensive"],
+          "specs": {
+            "weight": "178g",
+            "blade_type": "5+2 ply (wood + carbon)",
+            "rubber_type": "Stiga Triumph pimple-in, 2.0mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 4,
+            "speed_rating": 7.5,
+            "spin_rating": 7.0,
+            "control_rating": 7.0
+          },
+          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Stiga+Torch+table+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=stiga+torch+table+tennis"
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Stiga+Torch+table+tennis+racket", "price": "~₹3200"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=stiga+torch+table+tennis", "price": "~₹3000"},
+            {"name": "TableTennisStore", "url": "https://www.tabletennisstore.in/search?q=stiga+torch", "price": "~₹3100"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/71XB8YJ3OuL._SL1500_.jpg",
+          "why_good": "One of the few ready-made rackets with carbon layers in the blade. Offers noticeably more speed and a crisper feel than pure wood rackets. Great stepping stone before investing in a custom setup.",
+          "description": "Carbon-enhanced Stiga ready-made with Triumph rubber. Faster than pure wood rackets, suitable for advancing players."
+        },
+        {
+          "id": "tt_rm06",
+          "name": "Nittaku Shake 1000",
+          "brand": "Nittaku",
+          "model": "Shake 1000",
+          "type": "Ready-Made Racket",
+          "level": "intermediate",
+          "skill_levels": ["Intermediate"],
+          "play_styles": ["All-round"],
+          "specs": {
+            "weight": "180g",
+            "blade_type": "5-ply wood (Japanese Hinoki outer)",
+            "rubber_type": "Nittaku Jammin pimple-in, 2.0mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 4,
+            "speed_rating": 6.5,
+            "spin_rating": 7.5,
+            "control_rating": 7.5
+          },
+          "price_ranges": {"INR": {"min": 3000, "max": 5000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nittaku+Shake+1000+table+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=nittaku+shake+1000"
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Nittaku+Shake+1000+table+tennis", "price": "~₹3800"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=nittaku+shake+1000", "price": "~₹3600"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/71XB8YJ3OuL._SL1500_.jpg",
+          "why_good": "Premium Japanese craftsmanship from Nittaku. Hinoki outer ply gives a distinctive soft, tactile feel that helps with touch and placement shots. The best ready-made for players who value feel and control.",
+          "description": "Japanese-made Nittaku ready-made with Hinoki wood and Jammin rubber. Excellent feel and touch for all-round play."
+        }
+      ]
     }
   ]
 }

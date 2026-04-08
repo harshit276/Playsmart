@@ -228,13 +228,136 @@ export default function TrainingPage() {
     </div>
   );
 
+  /* ─── Guest / No-plan view ─── */
+  const trainingVideos = planData?.training_videos || [];
+  const skillAreas = planData?.skills?.skill_areas || [];
+
   if (!plan) return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <div className="text-center">
-        <Dumbbell className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-        <p className="text-zinc-400 text-lg font-medium mb-1">No training plan yet</p>
-        <p className="text-zinc-600 text-sm mb-4">{user ? "Complete your profile assessment to get a personalized plan." : "Sign in and complete your assessment to get a personalized training plan."}</p>
-        {!user && <a href="/auth" className="text-sm font-medium text-lime-400 hover:text-lime-300">Sign In &rarr;</a>}
+    <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="training-page">
+      <div className="container mx-auto px-4 max-w-5xl">
+
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <h1 className="font-heading font-bold text-2xl sm:text-3xl uppercase tracking-tight text-white mb-2">
+            <span className="mr-2">{SPORT_EMOJI[sport] || "\u{1F3AF}"}</span>
+            {sport.replace("_", " ")} Training
+          </h1>
+          {!user && (
+            <div className="bg-lime-400/5 border border-lime-400/20 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-lime-400 shrink-0" />
+                <p className="text-sm text-zinc-300">Sign in to get a personalized weekly plan</p>
+              </div>
+              <a href="/auth" className="text-sm font-bold text-lime-400 hover:text-lime-300 shrink-0">Sign In &rarr;</a>
+            </div>
+          )}
+          {user && (
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4">
+              <p className="text-sm text-zinc-400">Complete your profile assessment to get a personalized weekly training plan.</p>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Skill Areas */}
+        {skillAreas.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
+            <h2 className="font-heading font-bold text-lg text-white uppercase tracking-tight mb-4 flex items-center gap-2">
+              <Target className="w-5 h-5 text-lime-400" /> Skill Areas
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {skillAreas.map((skill, idx) => {
+                const Icon = getFocusIcon(skill.name);
+                return (
+                  <motion.div
+                    key={skill.id || idx}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.04 }}
+                    className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 hover:border-zinc-600 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-4.5 h-4.5 text-lime-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-semibold text-white leading-tight">{skill.name}</h3>
+                        {skill.level && (
+                          <Badge className={`${DIFF_STYLE[skill.level] || "bg-zinc-800 text-zinc-400"} text-[10px] mt-1`}>{skill.level}</Badge>
+                        )}
+                        {skill.description && (
+                          <p className="text-xs text-zinc-500 mt-1.5 line-clamp-2">{skill.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Training Videos */}
+        {trainingVideos.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
+            <h2 className="font-heading font-bold text-lg text-white uppercase tracking-tight mb-4 flex items-center gap-2">
+              <Play className="w-5 h-5 text-red-400" /> Training Videos
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {trainingVideos.map((video, idx) => {
+                const videoId = extractYouTubeId(video.url || video.youtube_url);
+                const thumb = video.thumbnail_url || video.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null);
+                const url = video.url || video.youtube_url;
+                return (
+                  <motion.a
+                    key={video.id || idx}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="rounded-xl border border-zinc-800 bg-zinc-900/60 overflow-hidden hover:border-zinc-600 transition-all group"
+                  >
+                    <div className="relative w-full aspect-video overflow-hidden">
+                      {thumb ? (
+                        <img src={thumb} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className={`flex w-full h-full bg-gradient-to-br ${SPORT_GRADIENT[sport] || "from-zinc-700 to-zinc-900"} items-center justify-center`}>
+                          <Play className="w-10 h-10 text-white/40" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border border-white/10">
+                          <Play className="w-5 h-5 text-white ml-0.5" />
+                        </div>
+                      </div>
+                      {video.level && (
+                        <div className="absolute top-2 right-2">
+                          <Badge className={`${DIFF_STYLE[video.level] || "bg-zinc-800 text-zinc-400"} text-[10px] px-2 py-0.5 backdrop-blur-sm`}>{video.level}</Badge>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h4 className="text-sm font-semibold text-white leading-tight line-clamp-2">{video.title}</h4>
+                      {(video.channel || video.channel_name) && (
+                        <p className="text-[11px] text-zinc-500 mt-1">{video.channel || video.channel_name}</p>
+                      )}
+                    </div>
+                  </motion.a>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Empty state if nothing at all */}
+        {trainingVideos.length === 0 && skillAreas.length === 0 && (
+          <div className="text-center py-16">
+            <Dumbbell className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
+            <p className="text-zinc-400 text-lg font-medium mb-1">No training content yet</p>
+            <p className="text-zinc-600 text-sm">Training content for {sport.replace("_", " ")} is coming soon.</p>
+          </div>
+        )}
       </div>
     </div>
   );
