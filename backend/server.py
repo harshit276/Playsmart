@@ -213,19 +213,19 @@ async def firebase_auth(req: FirebaseAuthRequest):
     user_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{email}"))
     token = create_token(user_id, email)
 
-    # Check profile in background (non-blocking, with short timeout)
+    # Save/update user in background (don't wait for it)
+    asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
+
+    # Quick profile check (1s timeout — if DB is slow, assume no profile)
     has_profile = False
     try:
         profile = await asyncio.wait_for(
-            db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}),
-            timeout=3.0
+            db.player_profiles.find_one({"user_id": user_id}, {"_id": 0, "user_id": 1}),
+            timeout=1.0
         )
         has_profile = profile is not None
     except Exception:
-        pass
-
-    # Save/update user in background (don't wait)
-    asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
+        pass  # DB slow — frontend will check via /auth/me later
 
     return {
         "token": token,
@@ -488,8 +488,6 @@ async def get_equipment(equipment_id: str):
 
 @api_router.get("/recommendations/equipment/{user_id}")
 async def get_equipment_recommendations(user_id: str, category: str = "racket", sport: Optional[str] = None):
-    if user_id == "guest":
-        return {"recommendations": [], "sport": sport or "badminton", "category": category}
     try:
         from rule_engine import get_top_recommendations, get_top_shoe_recommendations
         from explainer import generate_explanation
@@ -499,11 +497,19 @@ async def get_equipment_recommendations(user_id: str, category: str = "racket", 
 
     from research_loader import get_equipment_by_budget, get_all_equipment_categories
 
-    try:
-        profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
+    if user_id == "guest":
+        profile = _guest_default_profile()
+        if sport:
+            profile["active_sport"] = sport
+    else:
+        try:
+            profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            profile = _guest_default_profile()
         if not profile:
-            raise HTTPException(status_code=404, detail="Profile not found. Complete assessment first.")
+            profile = _guest_default_profile()
 
+    try:
         # Use explicit sport param first, then latest analysis sport, then profile active_sport
         if sport:
             active_sport = sport
@@ -921,12 +927,19 @@ def _build_why_this_fits_research(equipment: dict, profile: dict, weaknesses: li
 
 @api_router.get("/recommendations/training/{user_id}")
 async def get_training_recommendation(user_id: str, sport: Optional[str] = None, authorization: str = Header(None)):
+    from research_loader import get_all_skills, get_all_videos
     if user_id == "guest":
-        return {"plan": None, "drills": {}, "videos": {}, "skills": [], "training_videos": []}
+        # Return default training data for guests
+        active_sport = sport or "badminton"
+        skills = get_all_skills(active_sport)
+        videos = get_all_videos(active_sport)
+        return {"plan": None, "drills": {}, "videos": videos, "skills": skills, "training_videos": list(videos.values())[:10] if isinstance(videos, dict) else videos[:10] if isinstance(videos, list) else []}
     user = await get_current_user_or_none(authorization)
     if not user:
-        return {"plan": None, "drills": {}, "videos": {}, "skills": [], "training_videos": []}
-    from research_loader import get_all_skills, get_all_videos
+        active_sport = sport or "badminton"
+        skills = get_all_skills(active_sport)
+        videos = get_all_videos(active_sport)
+        return {"plan": None, "drills": {}, "videos": videos, "skills": skills, "training_videos": list(videos.values())[:10] if isinstance(videos, dict) else videos[:10] if isinstance(videos, list) else []}
 
     try:
         profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
