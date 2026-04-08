@@ -1,0 +1,93 @@
+{
+  "sport": "tennis",
+  "skill_areas": [
+    {
+      "id": "tn_forehand",
+      "name": "Forehand Groundstroke",
+      "level": "beginner",
+      "description": "The most common shot in tennis. Master the unit turn, contact point, and follow-through for a reliable forehand.",
+      "personality_tags": ["aggressive", "baseline_player"],
+      "progression_path": ["tn_forehand", "tn_backhand", "tn_serve", "tn_volley"],
+      "pain_points": ["No unit turn", "Late contact point", "Wrist too floppy at contact", "Short follow-through"],
+      "common_mistakes": ["Arming the ball without body rotation", "Hitting behind the body", "Grip too tight", "Dropping the racket head"],
+      "drills": ["Cross-court forehand rally", "Inside-out forehand target practice", "Shadow swing with unit turn", "Forehand approach shot drill"]
+    },
+    {
+      "id": "tn_backhand",
+      "name": "Backhand Groundstroke",
+      "level": "beginner",
+      "description": "Build a reliable one-handed or two-handed backhand with proper shoulder turn and contact in front.",
+      "personality_tags": ["defensive", "all_court"],
+      "progression_path": ["tn_forehand", "tn_backhand", "tn_serve"],
+      "pain_points": ["Weak backhand under pressure", "Slice only, no drive", "Late preparation"],
+      "common_mistakes": ["Not turning shoulders", "Hitting off the back foot", "Elbow leading instead of racket"],
+      "drills": ["Backhand cross-court rally", "Two-handed wall drill", "Backhand down-the-line", "Approach backhand to volley"]
+    },
+    {
+      "id": "tn_serve",
+      "name": "Tennis Serve",
+      "level": "intermediate",
+      "description": "The only shot you fully control. Master flat, slice, and kick serves with consistent toss and full extension.",
+      "personality_tags": ["aggressive", "serve_volley"],
+      "progression_path": ["tn_forehand", "tn_backhand", "tn_serve", "tn_return"],
+      "pain_points": ["Inconsistent toss", "Double faults", "No power", "Can't hit kick serve"],
+      "common_mistakes": ["Tossing too far in front or behind", "Bent arm at contact", "No pronation on flat serve", "Rushing the motion"],
+      "drills": ["Toss consistency drill (no hit)", "Serving to targets", "Kick serve practice", "Serve and first volley"]
+    },
+    {
+      "id": "tn_volley",
+      "name": "Volley & Net Play",
+      "level": "intermediate",
+      "description": "Finish points at the net with crisp volleys, overheads, and approach shots.",
+      "personality_tags": ["serve_volley", "aggressive"],
+      "progression_path": ["tn_serve", "tn_volley", "tn_overhead"],
+      "pain_points": ["Big backswing on volleys", "Afraid of the net", "Can't handle pace"],
+      "common_mistakes": ["Swinging instead of punching", "Flat feet at the net", "No split step"],
+      "drills": ["Volley-volley drill at net", "Approach shot to volley", "Overhead smash drill", "Reflex volley with partner"]
+    },
+    {
+      "id": "tn_return",
+      "name": "Return of Serve",
+      "level": "intermediate",
+      "description": "Neutralize or attack the serve with an effective return using split step and compact swing.",
+      "personality_tags": ["counter_puncher", "defensive"],
+      "progression_path": ["tn_forehand", "tn_backhand", "tn_return"],
+      "pain_points": ["Late reaction", "Can't handle pace", "Mis-reading serve direction"],
+      "common_mistakes": ["Standing too close or too far", "No split step", "Big backswing on fast serves"],
+      "drills": ["Return and rally drill", "Block return practice", "Chip return approach", "Split step timing drill"]
+    },
+    {
+      "id": "tn_footwork",
+      "name": "Court Movement & Footwork",
+      "level": "beginner",
+      "description": "Efficient movement around the court including split steps, recovery, and lateral slides.",
+      "personality_tags": ["all_court", "defensive"],
+      "progression_path": ["tn_footwork", "tn_forehand", "tn_backhand"],
+      "pain_points": ["Slow recovery to center", "Flat-footed between shots", "Can't reach wide balls"],
+      "common_mistakes": ["Not doing split step", "Crossing feet instead of sliding", "Running through the shot"],
+      "drills": ["Spider drill (6 cones)", "Split step reaction drill", "Lateral slide practice", "Recovery footwork shadowing"]
+    },
+    {
+      "id": "tn_strategy",
+      "name": "Match Strategy & Tactics",
+      "level": "advanced",
+      "description": "Build and execute game plans, construct points, and adapt to opponents.",
+      "personality_tags": ["tactical", "all_court"],
+      "progression_path": ["tn_forehand", "tn_backhand", "tn_serve", "tn_strategy"],
+      "pain_points": ["No game plan", "Always hitting to same spot", "Can't close out sets"],
+      "common_mistakes": ["Going for too much too early", "Not adjusting to opponent", "Playing opponent's game"],
+      "drills": ["Point construction drill", "Serve+1 pattern practice", "Cross-court to down-the-line drill", "Situational match play"]
+    }
+  ],
+  "player_profiles": {
+    "beginner": {"focus": ["Forehand", "Backhand", "Serve basics"], "priority": "Develop consistent groundstrokes"},
+    "intermediate": {"focus": ["Serve power", "Net play", "Footwork"], "priority": "Add weapons and court coverage"},
+    "advanced": {"focus": ["Match strategy", "Mental game", "Shot selection"], "priority": "Optimize for competition"}
+  },
+  "personality_profiles": {
+    "aggressive": {"name": "Aggressive Baseliner", "description": "Loves to dictate with powerful groundstrokes"},
+    "defensive": {"name": "Counter-Puncher", "description": "Retrieves everything, waits for opponent errors"},
+    "serve_volley": {"name": "Serve & Volleyer", "description": "Attacks the net after big serves"},
+    "all_court": {"name": "All-Court Player", "description": "Comfortable in any position, adapts to opponent"}
+  }
+}

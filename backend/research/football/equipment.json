@@ -1,0 +1,402 @@
+{
+  "sport": "football",
+  "last_updated": "2026-03-24",
+  "currency_note": "INR prices reflect March 2026 Indian market.",
+  "equipment_categories": [
+    {
+      "category": "footballs",
+      "items": [
+        {
+          "id": "fb_bl01",
+          "name": "Vector X Street Soccer Football",
+          "brand": "Vector X",
+          "type": "Street Ball",
+          "level": "beginner",
+          "specs": {"size": "5", "panels": "32 panels", "material": "Rubberized PVC", "bladder": "Rubber"},
+          "price_ranges": {"INR": {"min": 300, "max": 550}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Vector+X+Street+Soccer+Football",
+            "flipkart": "https://www.flipkart.com/search?q=vector+x+street+soccer+football"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Budget rubberized football for street and park play. Very durable."
+        },
+        {
+          "id": "fb_bl02",
+          "name": "Nivia Shining Star Football",
+          "brand": "Nivia",
+          "type": "Training Ball",
+          "level": "beginner",
+          "specs": {"size": "5", "panels": "32 panels", "material": "PVC", "bladder": "Rubber"},
+          "price_ranges": {"INR": {"min": 350, "max": 650}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Shining+Star+Football",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+shining+star+football"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "India's most popular budget football. Durable PVC construction for street and park play."
+        },
+        {
+          "id": "fb_bl03",
+          "name": "Cosco Milano Football",
+          "brand": "Cosco",
+          "type": "Training Ball",
+          "level": "beginner",
+          "specs": {"size": "5", "panels": "32 panels", "material": "PVC with nylon wound", "bladder": "Butyl"},
+          "price_ranges": {"INR": {"min": 400, "max": 750}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Milano+Football",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+milano+football"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Trusted Indian brand training ball. Nylon wound for better shape retention."
+        },
+        {
+          "id": "fb_bl04",
+          "name": "Nivia Vega Football",
+          "brand": "Nivia",
+          "type": "Match Ball",
+          "level": "intermediate",
+          "specs": {"size": "5", "panels": "32 panels", "material": "PU", "bladder": "Butyl"},
+          "price_ranges": {"INR": {"min": 700, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Vega+Football",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+vega+football"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "PU match ball used in Indian tournaments. Good touch and flight."
+        },
+        {
+          "id": "fb_bl05",
+          "name": "Adidas Starlancer Club Football",
+          "brand": "Adidas",
+          "type": "Training Ball",
+          "level": "intermediate",
+          "specs": {"size": "5", "panels": "32 panels", "material": "TPU", "bladder": "Butyl"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Starlancer+Club+Football",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+starlancer+club+football"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Adidas club-level training ball. Machine-stitched with good durability."
+        },
+        {
+          "id": "fb_bl06",
+          "name": "Nike Flight Premier League Ball",
+          "brand": "Nike",
+          "type": "Match Ball",
+          "level": "advanced",
+          "specs": {"size": "5", "panels": "4 panels", "material": "Premium PU", "bladder": "Latex", "FIFA_quality": "Pro"},
+          "price_ranges": {"INR": {"min": 4000, "max": 7000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Flight+Premier+League+Football",
+            "flipkart": "https://www.flipkart.com/search?q=nike+flight+premier+league+football"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Official Premier League match ball. AerowSculpt technology for consistent flight."
+        },
+        {
+          "id": "fb_bl07",
+          "name": "Adidas Al Rihla Pro Match Ball",
+          "brand": "Adidas",
+          "type": "Match Ball",
+          "level": "advanced",
+          "specs": {"size": "5", "panels": "20 panels", "material": "Textured PU", "bladder": "Latex", "FIFA_quality": "Pro"},
+          "price_ranges": {"INR": {"min": 5000, "max": 9000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Al+Rihla+Pro+Match+Ball",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+al+rihla+pro+match+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "FIFA World Cup match ball. Premium quality with thermal bonding."
+        }
+      ]
+    },
+    {
+      "category": "boots",
+      "items": [
+        {
+          "id": "fb_bt01",
+          "name": "Nivia Dominator Football Shoes",
+          "brand": "Nivia",
+          "type": "Turf Shoes",
+          "level": "beginner",
+          "specs": {"surface": "Turf/Hard Ground", "upper": "PU", "studs": "Rubber moulded"},
+          "price_ranges": {"INR": {"min": 600, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Dominator+Football+Shoes",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+dominator+football+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "India's most popular budget football shoes. Great for gully and turf football."
+        },
+        {
+          "id": "fb_bt02",
+          "name": "Vector X Chaser Football Shoes",
+          "brand": "Vector X",
+          "type": "Firm Ground",
+          "level": "beginner",
+          "specs": {"surface": "Firm Ground", "upper": "PU", "studs": "Moulded"},
+          "price_ranges": {"INR": {"min": 500, "max": 1000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Vector+X+Chaser+Football+Shoes",
+            "flipkart": "https://www.flipkart.com/search?q=vector+x+chaser+football+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Budget Indian brand boots. Moulded studs for firm ground play."
+        },
+        {
+          "id": "fb_bt03",
+          "name": "Cosco Brusco Football Shoes",
+          "brand": "Cosco",
+          "type": "Firm Ground",
+          "level": "beginner",
+          "specs": {"surface": "Firm/Hard Ground", "upper": "Synthetic PU", "studs": "Moulded"},
+          "price_ranges": {"INR": {"min": 700, "max": 1300}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Brusco+Football+Shoes",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+brusco+football+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Affordable Cosco football boots. Good for school and recreational football."
+        },
+        {
+          "id": "fb_bt04",
+          "name": "Adidas Predator Club FG",
+          "brand": "Adidas",
+          "type": "Firm Ground",
+          "level": "intermediate",
+          "specs": {"surface": "Firm Ground", "upper": "Synthetic", "studs": "FG moulded"},
+          "price_ranges": {"INR": {"min": 3000, "max": 5000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Club+FG+football",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+predator+club+fg"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Entry-level Predator boots. Textured upper for improved ball control."
+        },
+        {
+          "id": "fb_bt05",
+          "name": "Nike Mercurial Vapor 15 Club",
+          "brand": "Nike",
+          "type": "Multi Ground",
+          "level": "intermediate",
+          "specs": {"surface": "Multi Ground", "upper": "Synthetic", "studs": "MG moulded"},
+          "price_ranges": {"INR": {"min": 3500, "max": 5500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Mercurial+Vapor+15+Club",
+            "flipkart": "https://www.flipkart.com/search?q=nike+mercurial+vapor+15+club"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Nike speed boot at an accessible price. Lightweight and responsive."
+        },
+        {
+          "id": "fb_bt06",
+          "name": "Adidas Predator Edge.1 FG",
+          "brand": "Adidas",
+          "type": "Firm Ground",
+          "level": "advanced",
+          "specs": {"surface": "Firm Ground", "upper": "Primeknit", "studs": "FG"},
+          "price_ranges": {"INR": {"min": 12000, "max": 18000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Edge+1+FG",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+predator+edge+1+fg"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Professional-grade Predator boots. Zone Skin technology for ultimate control."
+        },
+        {
+          "id": "fb_bt07",
+          "name": "Nike Phantom GX Elite FG",
+          "brand": "Nike",
+          "type": "Firm Ground",
+          "level": "advanced",
+          "specs": {"surface": "Firm Ground", "upper": "Flyknit + Gripknit", "studs": "FG"},
+          "price_ranges": {"INR": {"min": 15000, "max": 22000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Phantom+GX+Elite+FG",
+            "flipkart": "https://www.flipkart.com/search?q=nike+phantom+gx+elite+fg"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Top-tier Nike boot. Gripknit for enhanced touch and control at pace."
+        }
+      ]
+    },
+    {
+      "category": "shin_guards",
+      "items": [
+        {
+          "id": "fb_sg01",
+          "name": "Nivia Classic Shin Guard",
+          "brand": "Nivia",
+          "type": "Shin Guard",
+          "level": "beginner",
+          "specs": {"material": "PP Shell", "padding": "EVA foam", "ankle_protection": false},
+          "price_ranges": {"INR": {"min": 150, "max": 350}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Classic+Shin+Guard",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+classic+shin+guard"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Budget Indian shin guards. Basic protection for casual games."
+        },
+        {
+          "id": "fb_sg02",
+          "name": "Cosco Football Shin Guards",
+          "brand": "Cosco",
+          "type": "Shin Guard",
+          "level": "beginner",
+          "specs": {"material": "PP Shell", "padding": "EVA foam", "ankle_protection": false},
+          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+football+shin+guards",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+football+shin+guards"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Basic shin guards from Cosco. Lightweight and functional."
+        },
+        {
+          "id": "fb_sg03",
+          "name": "Decathlon Kipsta F140",
+          "brand": "Kipsta (Decathlon)",
+          "type": "Shin Guard",
+          "level": "beginner",
+          "specs": {"material": "PP Shell", "padding": "EVA + ankle guard", "ankle_protection": true},
+          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Kipsta+F140+shin+guard",
+            "flipkart": "https://www.flipkart.com/search?q=kipsta+f140+shin+guard"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Decathlon shin guards with ankle protection. Good value for beginners."
+        },
+        {
+          "id": "fb_sg04",
+          "name": "Nike Charge Shin Guard",
+          "brand": "Nike",
+          "type": "Shin Guard",
+          "level": "intermediate",
+          "specs": {"material": "Hard shell", "padding": "Low-profile foam", "ankle_protection": false},
+          "price_ranges": {"INR": {"min": 600, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Charge+Shin+Guard",
+            "flipkart": "https://www.flipkart.com/search?q=nike+charge+shin+guard"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Sleek Nike shin guards. Lightweight and comfortable under socks."
+        },
+        {
+          "id": "fb_sg05",
+          "name": "Adidas X Pro Shin Guard",
+          "brand": "Adidas",
+          "type": "Shin Guard",
+          "level": "advanced",
+          "specs": {"material": "EVA backed shield", "padding": "Anatomical fit", "ankle_protection": false},
+          "price_ranges": {"INR": {"min": 1000, "max": 2000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+X+Pro+Shin+Guard",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+x+pro+shin+guard"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Pro-level shin guards. Anatomical design for optimal protection."
+        }
+      ]
+    },
+    {
+      "category": "goalkeeper_gloves",
+      "items": [
+        {
+          "id": "fb_gk01",
+          "name": "Nivia Web Goalkeeper Gloves",
+          "brand": "Nivia",
+          "type": "Training Gloves",
+          "level": "beginner",
+          "specs": {"palm": "Latex (3mm)", "cut": "Flat cut", "closure": "Velcro"},
+          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Web+Goalkeeper+Gloves",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+web+goalkeeper+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Budget goalkeeper gloves from India's popular sports brand."
+        },
+        {
+          "id": "fb_gk02",
+          "name": "Cosco Defender Goalkeeper Gloves",
+          "brand": "Cosco",
+          "type": "Training Gloves",
+          "level": "beginner",
+          "specs": {"palm": "Latex (3mm)", "cut": "Flat cut", "closure": "Velcro"},
+          "price_ranges": {"INR": {"min": 350, "max": 700}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Defender+Goalkeeper+Gloves",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+defender+goalkeeper+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Affordable training gloves for recreational goalkeepers."
+        },
+        {
+          "id": "fb_gk03",
+          "name": "Decathlon Kipsta F500 GK Gloves",
+          "brand": "Kipsta (Decathlon)",
+          "type": "Training Gloves",
+          "level": "beginner",
+          "specs": {"palm": "Latex (3.5mm)", "cut": "Negative cut", "closure": "Velcro strap"},
+          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Kipsta+F500+goalkeeper+gloves",
+            "flipkart": "https://www.flipkart.com/search?q=kipsta+f500+goalkeeper+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Good value Decathlon GK gloves with negative cut for better feel."
+        },
+        {
+          "id": "fb_gk04",
+          "name": "Nike Match Goalkeeper Gloves",
+          "brand": "Nike",
+          "type": "Match Gloves",
+          "level": "intermediate",
+          "specs": {"palm": "Latex (3.5mm)", "cut": "Flat palm", "closure": "Adjustable cuff"},
+          "price_ranges": {"INR": {"min": 1500, "max": 3000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Match+Goalkeeper+Gloves",
+            "flipkart": "https://www.flipkart.com/search?q=nike+match+goalkeeper+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Nike branded GK gloves. Good grip and comfort for regular play."
+        },
+        {
+          "id": "fb_gk05",
+          "name": "Adidas Predator Pro Goalkeeper Gloves",
+          "brand": "Adidas",
+          "type": "Professional Gloves",
+          "level": "advanced",
+          "specs": {"palm": "URG 2.0 Latex (4mm)", "cut": "Negative cut", "closure": "Bandage strap"},
+          "price_ranges": {"INR": {"min": 5000, "max": 9000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Pro+Goalkeeper+Gloves",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+predator+pro+goalkeeper+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Professional-grade GK gloves. URG 2.0 latex for exceptional grip."
+        },
+        {
+          "id": "fb_gk06",
+          "name": "Reusch Attrakt Gold X Evolution",
+          "brand": "Reusch",
+          "type": "Professional Gloves",
+          "level": "advanced",
+          "specs": {"palm": "Gold X (4mm)", "cut": "Evolution Negative", "closure": "Full latex backhand"},
+          "price_ranges": {"INR": {"min": 7000, "max": 12000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Reusch+Attrakt+Gold+X+goalkeeper",
+            "flipkart": "https://www.flipkart.com/search?q=reusch+attrakt+gold+x"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Elite GK gloves. Premium palm foam for maximum grip in all conditions."
+        }
+      ]
+    }
+  ]
+}

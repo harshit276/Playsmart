@@ -1,0 +1,277 @@
+{
+  "sport": "pickleball",
+  "last_updated": "2026-03-24",
+  "currency_note": "INR prices reflect March 2026 Indian market.",
+  "equipment_categories": [
+    {
+      "category": "paddles",
+      "items": [
+        {
+          "id": "pk_pad01",
+          "name": "Nivia Paddle Pro",
+          "brand": "Nivia",
+          "type": "Beginner Paddle",
+          "level": "beginner",
+          "specs": {"weight": "200-220g", "face_material": "Fiberglass", "core": "Polymer honeycomb (13mm)", "grip_size": "4.0 inch", "shape": "Standard"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Pickleball+Paddle",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+pickleball+paddle"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Affordable Indian brand paddle for beginners. Lightweight and forgiving."
+        },
+        {
+          "id": "pk_pad02",
+          "name": "Cosco Pickleball Paddle",
+          "brand": "Cosco",
+          "type": "Beginner Paddle",
+          "level": "beginner",
+          "specs": {"weight": "210-230g", "face_material": "Fiberglass", "core": "Polymer honeycomb (13mm)", "grip_size": "4.0 inch", "shape": "Standard"},
+          "price_ranges": {"INR": {"min": 1000, "max": 2200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Pickleball+Paddle",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+pickleball+paddle"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Budget-friendly Indian sports brand. Widely available across India."
+        },
+        {
+          "id": "pk_pad03",
+          "name": "Vector X Pickleball Paddle",
+          "brand": "Vector X",
+          "type": "Beginner Paddle",
+          "level": "beginner",
+          "specs": {"weight": "205-225g", "face_material": "Fiberglass", "core": "Polymer (13mm)", "grip_size": "4.0 inch", "shape": "Standard"},
+          "price_ranges": {"INR": {"min": 1100, "max": 2000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Vector+X+Pickleball+Paddle",
+            "flipkart": "https://www.flipkart.com/search?q=vector+x+pickleball+paddle"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Indian brand paddle at an attractive price point. Good for casual recreational play."
+        },
+        {
+          "id": "pk_pad04",
+          "name": "Head Radical Elite",
+          "brand": "Head",
+          "type": "Intermediate Paddle",
+          "level": "intermediate",
+          "specs": {"weight": "215-230g", "face_material": "Fiberglass/Carbon", "core": "Polymer honeycomb (14mm)", "grip_size": "4.25 inch", "shape": "Wide"},
+          "price_ranges": {"INR": {"min": 5000, "max": 8000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Head+Radical+Elite+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=head+radical+elite+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Well-known tennis brand's entry into pickleball. Good balance of power and control."
+        },
+        {
+          "id": "pk_pad05",
+          "name": "Selkirk AMPED S2",
+          "brand": "Selkirk",
+          "type": "Intermediate Paddle",
+          "level": "intermediate",
+          "specs": {"weight": "220-235g", "face_material": "FiberFlex Fiberglass", "core": "Polymer X5 (16mm)", "grip_size": "4.25 inch", "shape": "Elongated"},
+          "price_ranges": {"INR": {"min": 8000, "max": 12000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Selkirk+AMPED+S2+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=selkirk+amped+s2+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Premium intermediate paddle with excellent sweet spot and control."
+        },
+        {
+          "id": "pk_pad06",
+          "name": "JOOLA Ben Johns Hyperion CFS 16",
+          "brand": "JOOLA",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "specs": {"weight": "220-240g", "face_material": "Carbon Friction Surface", "core": "Reactive Polymer (16mm)", "grip_size": "4.25 inch", "shape": "Elongated"},
+          "price_ranges": {"INR": {"min": 14000, "max": 20000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Hyperion+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=joola+ben+johns+hyperion+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Ben Johns' signature paddle. Maximum spin and power for competitive play."
+        },
+        {
+          "id": "pk_pad07",
+          "name": "Selkirk Vanguard Power Air Invikta",
+          "brand": "Selkirk",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "specs": {"weight": "220-240g", "face_material": "ProSpin+ Micro Air", "core": "Polymer X5 (14mm)", "grip_size": "4.25 inch", "shape": "Elongated"},
+          "price_ranges": {"INR": {"min": 18000, "max": 25000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Selkirk+Vanguard+Power+Air+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=selkirk+vanguard+power+air+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Top-tier professional paddle. Air Dynamic Throat for maximum power and spin."
+        }
+      ]
+    },
+    {
+      "category": "balls",
+      "items": [
+        {
+          "id": "pk_ba01",
+          "name": "Nivia Pickleball (Pack of 6)",
+          "brand": "Nivia",
+          "type": "Indoor Ball",
+          "level": "beginner",
+          "specs": {"holes": 26, "material": "Plastic", "diameter": "74mm", "weight": "22-24g"},
+          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Pickleball+balls",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+pickleball+balls"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Budget Indian brand pickleball for indoor play. Good for practice and recreation."
+        },
+        {
+          "id": "pk_ba02",
+          "name": "Onix Fuse Indoor (Pack of 6)",
+          "brand": "Onix",
+          "type": "Indoor Ball",
+          "level": "intermediate",
+          "specs": {"holes": 26, "material": "Premium Plastic", "diameter": "74mm", "weight": "22.5g", "USAPA_approved": true},
+          "price_ranges": {"INR": {"min": 800, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Onix+Fuse+Indoor+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=onix+fuse+indoor+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "USAPA approved indoor ball. Consistent flight and bounce for competitive play."
+        },
+        {
+          "id": "pk_ba03",
+          "name": "Franklin X-40 Outdoor (Pack of 6)",
+          "brand": "Franklin",
+          "type": "Outdoor Ball",
+          "level": "intermediate",
+          "specs": {"holes": 40, "material": "Hard Plastic", "diameter": "74mm", "weight": "25.5g", "USAPA_approved": true},
+          "price_ranges": {"INR": {"min": 900, "max": 1400}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Franklin+X-40+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=franklin+x-40+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Official outdoor tournament ball. Durable and wind-resistant for outdoor courts."
+        },
+        {
+          "id": "pk_ba04",
+          "name": "Dura Fast 40 Outdoor (Pack of 6)",
+          "brand": "Onix",
+          "type": "Outdoor Ball",
+          "level": "advanced",
+          "specs": {"holes": 40, "material": "Hard Plastic", "diameter": "74mm", "weight": "26g", "USAPA_approved": true},
+          "price_ranges": {"INR": {"min": 1000, "max": 1600}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Dura+Fast+40+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=dura+fast+40+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "The standard tournament ball. Fast, consistent, and used in most professional events."
+        },
+        {
+          "id": "pk_ba05",
+          "name": "JOOLA Ben Johns Tour Ball (Pack of 6)",
+          "brand": "JOOLA",
+          "type": "Outdoor Ball",
+          "level": "advanced",
+          "specs": {"holes": 40, "material": "Hard Plastic", "diameter": "74mm", "weight": "26g", "USAPA_approved": true},
+          "price_ranges": {"INR": {"min": 1200, "max": 1800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Tour+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=joola+ben+johns+tour+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Ben Johns' signature tournament ball. Excellent flight characteristics."
+        }
+      ]
+    },
+    {
+      "category": "shoes",
+      "items": [
+        {
+          "id": "pk_sh01",
+          "name": "Nivia Court Shoes",
+          "brand": "Nivia",
+          "type": "Court Shoes",
+          "level": "beginner",
+          "specs": {"sole": "Non-marking rubber", "cushion": "EVA", "weight": "330g"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+court+shoes+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+court+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Budget Indian court shoe. Non-marking sole for indoor courts."
+        },
+        {
+          "id": "pk_sh02",
+          "name": "Decathlon TS160 Court Shoes",
+          "brand": "Artengo (Decathlon)",
+          "type": "Court Shoes",
+          "level": "beginner",
+          "specs": {"sole": "Non-marking rubber", "cushion": "EVA", "weight": "320g"},
+          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Decathlon+court+shoes+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=artengo+court+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Affordable Decathlon court shoe suitable for pickleball."
+        },
+        {
+          "id": "pk_sh03",
+          "name": "Asics Gel Renma",
+          "brand": "Asics",
+          "type": "Court Shoes",
+          "level": "intermediate",
+          "specs": {"sole": "Non-marking rubber", "cushion": "Gel", "weight": "330g"},
+          "price_ranges": {"INR": {"min": 5000, "max": 7500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Asics+Gel+Renma+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=asics+gel+renma"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Asics' pickleball-specific shoe. Gel cushioning for lateral movements."
+        },
+        {
+          "id": "pk_sh04",
+          "name": "K-Swiss Express Light Pickleball",
+          "brand": "K-Swiss",
+          "type": "Court Shoes",
+          "level": "intermediate",
+          "specs": {"sole": "Aosta rubber", "cushion": "Surge 7.0 midsole", "weight": "340g"},
+          "price_ranges": {"INR": {"min": 6000, "max": 9000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=K-Swiss+Express+Light+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=k-swiss+express+light+pickleball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Pickleball-specific shoe from K-Swiss. Good lateral support and comfort."
+        },
+        {
+          "id": "pk_sh05",
+          "name": "Nike Court Air Zoom NXT",
+          "brand": "Nike",
+          "type": "Court Shoes",
+          "level": "advanced",
+          "specs": {"sole": "Modified herringbone", "cushion": "Air Zoom", "weight": "350g"},
+          "price_ranges": {"INR": {"min": 9000, "max": 13000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Court+Air+Zoom+NXT",
+            "flipkart": "https://www.flipkart.com/search?q=nike+court+air+zoom+nxt"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Premium Nike court shoe. Responsive Air Zoom cushioning for competitive play."
+        }
+      ]
+    }
+  ]
+}

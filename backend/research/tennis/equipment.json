@@ -1,0 +1,417 @@
+{
+  "sport": "tennis",
+  "last_updated": "2026-03-24",
+  "currency_note": "INR prices reflect March 2026 Indian market.",
+  "equipment_categories": [
+    {
+      "category": "tennis_rackets",
+      "items": [
+        {
+          "id": "tn_r01",
+          "name": "Cosco Ace 25",
+          "brand": "Cosco",
+          "type": "Beginner Racket",
+          "level": "beginner",
+          "specs": {"head_size": "105 sq in", "weight": "280g", "balance": "Head Light", "pattern": "16x18"},
+          "price_ranges": {"INR": {"min": 1500, "max": 3000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Ace+25+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+ace+25+tennis+racket"
+          },
+          "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
+          "description": "Ultra-budget Indian brand racket for absolute beginners. Lightweight and forgiving."
+        },
+        {
+          "id": "tn_r02",
+          "name": "Decathlon TR100",
+          "brand": "Artengo (Decathlon)",
+          "type": "Beginner Racket",
+          "level": "beginner",
+          "specs": {"head_size": "105 sq in", "weight": "275g", "balance": "Head Light", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 1800, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Artengo+TR100+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=artengo+tr100+tennis+racket"
+          },
+          "image": "https://m.media-amazon.com/images/I/51pQFqDkSQL._SL1500_.jpg",
+          "description": "Decathlon's entry-level tennis racket. Light, maneuverable, and great value for beginners."
+        },
+        {
+          "id": "tn_r03",
+          "name": "Yonex EZONE 100",
+          "brand": "Yonex",
+          "type": "Comfort Power",
+          "level": "beginner",
+          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 14000, "max": 18000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Yonex+EZONE+100+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=yonex+ezone+100+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
+          "description": "Comfortable power racket from Yonex. Vibration dampening and generous sweet spot."
+        },
+        {
+          "id": "tn_r04",
+          "name": "Wilson Blade 100 v8",
+          "brand": "Wilson",
+          "type": "Control",
+          "level": "intermediate",
+          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 16000, "max": 22000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Wilson+Blade+100+v8+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=wilson+blade+100+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/61sAkZkW-zL._SL1500_.jpg",
+          "description": "Control-oriented racket for club players. Excellent feel and precision."
+        },
+        {
+          "id": "tn_r05",
+          "name": "Babolat Pure Drive 2024",
+          "brand": "Babolat",
+          "type": "All-Round Power",
+          "level": "intermediate",
+          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 15000, "max": 20000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Babolat+Pure+Drive+2024+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=babolat+pure+drive+2024"
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Best-selling intermediate racket. Excellent power and spin potential."
+        },
+        {
+          "id": "tn_r06",
+          "name": "Wilson Clash 100 v2",
+          "brand": "Wilson",
+          "type": "Flexible Control",
+          "level": "intermediate",
+          "specs": {"head_size": "100 sq in", "weight": "295g", "balance": "Head Light", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 18000, "max": 24000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Wilson+Clash+100+v2+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=wilson+clash+100+v2"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
+          "description": "Unique flex and stability combo. Comfortable yet controlled for aggressive baseliners."
+        },
+        {
+          "id": "tn_r07",
+          "name": "Head Speed MP 2024",
+          "brand": "Head",
+          "type": "Spin & Control",
+          "level": "advanced",
+          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 16000, "max": 22000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Head+Speed+MP+2024+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=head+speed+mp+2024"
+          },
+          "image": "https://m.media-amazon.com/images/I/61hLqYB0dXL._SL1500_.jpg",
+          "description": "Djokovic's racket line. Excellent control and spin for advanced players."
+        },
+        {
+          "id": "tn_r08",
+          "name": "Babolat Pure Aero 2023",
+          "brand": "Babolat",
+          "type": "Spin Power",
+          "level": "advanced",
+          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Slightly Head Heavy", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 18000, "max": 25000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Babolat+Pure+Aero+2023+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=babolat+pure+aero+2023"
+          },
+          "image": "https://m.media-amazon.com/images/I/71XFTGjm1RL._SL1500_.jpg",
+          "description": "Nadal's racket line. Maximum spin generation for topspin-heavy players."
+        }
+      ]
+    },
+    {
+      "category": "tennis_shoes",
+      "items": [
+        {
+          "id": "tn_s01",
+          "name": "Decathlon TS160 Tennis Shoes",
+          "brand": "Artengo (Decathlon)",
+          "type": "Multi Court",
+          "level": "beginner",
+          "specs": {"surface": "Multi Court", "cushion": "EVA", "weight": "320g"},
+          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Decathlon+TS160+tennis+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=artengo+ts160+tennis+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Affordable beginner tennis shoe from Decathlon. Decent grip and comfort."
+        },
+        {
+          "id": "tn_s02",
+          "name": "Nivia Pro Court Tennis Shoes",
+          "brand": "Nivia",
+          "type": "All Court",
+          "level": "beginner",
+          "specs": {"surface": "All Court", "cushion": "EVA", "weight": "340g"},
+          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+tennis+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+tennis+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Budget Indian brand tennis shoe. Non-marking sole, basic cushioning."
+        },
+        {
+          "id": "tn_s03",
+          "name": "Asics Gel Dedicate 8",
+          "brand": "Asics",
+          "type": "All Court",
+          "level": "intermediate",
+          "specs": {"surface": "All Court", "cushion": "Gel", "weight": "340g"},
+          "price_ranges": {"INR": {"min": 5000, "max": 7500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Asics+Gel+Dedicate+8+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=asics+gel+dedicate+8+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "Mid-range Asics tennis shoe with Gel cushioning. Good durability and support."
+        },
+        {
+          "id": "tn_s04",
+          "name": "Asics Gel Resolution 9",
+          "brand": "Asics",
+          "type": "All Court",
+          "level": "intermediate",
+          "specs": {"surface": "All Court", "cushion": "Gel + FlyteFoam", "weight": "360g"},
+          "price_ranges": {"INR": {"min": 8000, "max": 12000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Asics+Gel+Resolution+9+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=asics+gel+resolution+9+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Premium stability shoe. Excellent for players who slide on hard courts."
+        },
+        {
+          "id": "tn_s05",
+          "name": "Nike Court Air Zoom Vapor Pro 2",
+          "brand": "Nike",
+          "type": "All Court",
+          "level": "advanced",
+          "specs": {"surface": "All Court", "cushion": "Air Zoom", "weight": "340g"},
+          "price_ranges": {"INR": {"min": 10000, "max": 14000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Vapor+Pro+2+tennis+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=nike+vapor+pro+2+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Pro-level speed shoe with Air Zoom units. Lightweight and responsive."
+        },
+        {
+          "id": "tn_s06",
+          "name": "Adidas Barricade 13",
+          "brand": "Adidas",
+          "type": "All Court",
+          "level": "advanced",
+          "specs": {"surface": "All Court", "cushion": "Bounce Pro", "weight": "380g"},
+          "price_ranges": {"INR": {"min": 9000, "max": 13000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Barricade+13+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+barricade+13+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/71yH3XLHPEL._SL1500_.jpg",
+          "description": "Tank-like durability with excellent lateral support. Built for aggressive movers."
+        }
+      ]
+    },
+    {
+      "category": "tennis_strings",
+      "items": [
+        {
+          "id": "tn_st01",
+          "name": "Cosco Synthetic Gut String",
+          "brand": "Cosco",
+          "type": "Synthetic Gut",
+          "level": "beginner",
+          "specs": {"gauge": "1.30mm (16g)", "material": "Nylon", "tension_range": "45-60 lbs"},
+          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+tennis+string",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+tennis+string"
+          },
+          "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
+          "description": "Ultra-affordable synthetic gut. Good for recreational players and restringing budget rackets."
+        },
+        {
+          "id": "tn_st02",
+          "name": "Yonex Dynawire",
+          "brand": "Yonex",
+          "type": "Multifilament",
+          "level": "beginner",
+          "specs": {"gauge": "1.30mm (16g)", "material": "Nylon multifilament", "tension_range": "45-60 lbs"},
+          "price_ranges": {"INR": {"min": 500, "max": 800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Yonex+Dynawire+tennis+string",
+            "flipkart": "https://www.flipkart.com/search?q=yonex+dynawire+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
+          "description": "Durable and affordable Yonex string. Good power and comfort for beginners."
+        },
+        {
+          "id": "tn_st03",
+          "name": "Babolat Syn Gut Force",
+          "brand": "Babolat",
+          "type": "Synthetic Gut",
+          "level": "intermediate",
+          "specs": {"gauge": "1.30mm (16g)", "material": "Nylon with polyurethane", "tension_range": "50-60 lbs"},
+          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Babolat+Syn+Gut+Force+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=babolat+syn+gut+force"
+          },
+          "image": "https://m.media-amazon.com/images/I/61LfjJZK7pL._SL1500_.jpg",
+          "description": "Popular mid-range string. Good blend of power, comfort, and durability."
+        },
+        {
+          "id": "tn_st04",
+          "name": "Yonex Poly Tour Pro",
+          "brand": "Yonex",
+          "type": "Polyester",
+          "level": "intermediate",
+          "specs": {"gauge": "1.25mm (17g)", "material": "Co-polyester", "tension_range": "45-60 lbs"},
+          "price_ranges": {"INR": {"min": 800, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Yonex+Poly+Tour+Pro+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=yonex+poly+tour+pro"
+          },
+          "image": "https://m.media-amazon.com/images/I/61a8vB7XPZL._SL1500_.jpg",
+          "description": "Soft-feeling polyester string with excellent spin and control."
+        },
+        {
+          "id": "tn_st05",
+          "name": "Babolat RPM Blast",
+          "brand": "Babolat",
+          "type": "Polyester",
+          "level": "advanced",
+          "specs": {"gauge": "1.25mm (17g)", "material": "Co-polyester", "tension_range": "48-55 lbs"},
+          "price_ranges": {"INR": {"min": 1000, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Babolat+RPM+Blast+tennis+string",
+            "flipkart": "https://www.flipkart.com/search?q=babolat+rpm+blast"
+          },
+          "image": "https://m.media-amazon.com/images/I/71KqO4YSHML._SL1500_.jpg",
+          "description": "Nadal's string of choice. Maximum spin potential with firm control."
+        },
+        {
+          "id": "tn_st06",
+          "name": "Luxilon ALU Power",
+          "brand": "Luxilon (Wilson)",
+          "type": "Polyester",
+          "level": "advanced",
+          "specs": {"gauge": "1.25mm (16L)", "material": "Co-polyester", "tension_range": "46-55 lbs"},
+          "price_ranges": {"INR": {"min": 1200, "max": 1800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Luxilon+ALU+Power+tennis+string",
+            "flipkart": "https://www.flipkart.com/search?q=luxilon+alu+power"
+          },
+          "image": "https://m.media-amazon.com/images/I/71nXRxFGQDL._SL1500_.jpg",
+          "description": "The most used string on the ATP Tour. Excellent control and durability."
+        }
+      ]
+    },
+    {
+      "category": "tennis_balls",
+      "items": [
+        {
+          "id": "tn_b01",
+          "name": "Cosco Light Weight Cricket Tennis Ball",
+          "brand": "Cosco",
+          "type": "Pressureless Practice",
+          "level": "beginner",
+          "specs": {"type": "Pressureless", "felt": "Light duty", "use": "Practice/Recreational"},
+          "price_ranges": {"INR": {"min": 100, "max": 250}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+tennis+ball",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+tennis+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
+          "description": "Budget practice balls for recreational use. Widely available across India."
+        },
+        {
+          "id": "tn_b02",
+          "name": "Nivia Heavy Weight Tennis Ball (Pack of 6)",
+          "brand": "Nivia",
+          "type": "Pressureless Practice",
+          "level": "beginner",
+          "specs": {"type": "Pressureless", "felt": "Standard duty", "use": "Practice/Training"},
+          "price_ranges": {"INR": {"min": 300, "max": 550}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Heavy+Weight+Tennis+Ball",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+heavy+tennis+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Durable pressureless training balls. Good for wall practice and ball machines."
+        },
+        {
+          "id": "tn_b03",
+          "name": "Wilson Championship Tennis Balls (Can of 3)",
+          "brand": "Wilson",
+          "type": "Pressurized Match Ball",
+          "level": "intermediate",
+          "specs": {"type": "Pressurized", "felt": "Regular duty", "use": "Match/Practice", "ITF_approved": true},
+          "price_ranges": {"INR": {"min": 400, "max": 650}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Wilson+Championship+Tennis+Balls",
+            "flipkart": "https://www.flipkart.com/search?q=wilson+championship+tennis+balls"
+          },
+          "image": "https://m.media-amazon.com/images/I/71DZMbA2OcL._SL1500_.jpg",
+          "description": "Popular tournament ball. Good bounce consistency and durability."
+        },
+        {
+          "id": "tn_b04",
+          "name": "Head Tour Tennis Balls (Can of 3)",
+          "brand": "Head",
+          "type": "Pressurized Match Ball",
+          "level": "intermediate",
+          "specs": {"type": "Pressurized", "felt": "Regular duty", "use": "Match/Tournament", "ITF_approved": true},
+          "price_ranges": {"INR": {"min": 450, "max": 700}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Head+Tour+Tennis+Balls",
+            "flipkart": "https://www.flipkart.com/search?q=head+tour+tennis+balls"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Official ATP tour ball. Consistent bounce and excellent visibility."
+        },
+        {
+          "id": "tn_b05",
+          "name": "Dunlop Australian Open Tennis Balls (Can of 3)",
+          "brand": "Dunlop",
+          "type": "Pressurized Match Ball",
+          "level": "advanced",
+          "specs": {"type": "Pressurized", "felt": "Extra duty", "use": "Tournament", "ITF_approved": true},
+          "price_ranges": {"INR": {"min": 500, "max": 800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Dunlop+Australian+Open+Tennis+Balls",
+            "flipkart": "https://www.flipkart.com/search?q=dunlop+australian+open+tennis+balls"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Grand Slam tournament ball. Premium quality with excellent flight characteristics."
+        },
+        {
+          "id": "tn_b06",
+          "name": "Babolat French Open All Court (Can of 3)",
+          "brand": "Babolat",
+          "type": "Pressurized Match Ball",
+          "level": "advanced",
+          "specs": {"type": "Pressurized", "felt": "Clay court", "use": "Tournament", "ITF_approved": true},
+          "price_ranges": {"INR": {"min": 550, "max": 850}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Babolat+French+Open+Tennis+Balls",
+            "flipkart": "https://www.flipkart.com/search?q=babolat+french+open+tennis+balls"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kQj8ZXOPL._SL1500_.jpg",
+          "description": "Official French Open ball. Designed for clay and hard courts."
+        }
+      ]
+    }
+  ]
+}

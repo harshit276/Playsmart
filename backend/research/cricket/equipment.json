@@ -1,0 +1,577 @@
+{
+  "sport": "cricket",
+  "last_updated": "2026-03-24",
+  "currency_note": "INR prices reflect March 2026 Indian market.",
+  "equipment_categories": [
+    {
+      "category": "bats",
+      "items": [
+        {
+          "id": "cr_bat01",
+          "name": "Cosco Scorer Kashmir Willow",
+          "brand": "Cosco",
+          "type": "Kashmir Willow Bat",
+          "level": "beginner",
+          "specs": {"willow": "Kashmir Willow (Unbleached)", "weight": "1050-1150g", "sweet_spot": "Mid-High", "edges": "28-30mm"},
+          "price_ranges": {"INR": {"min": 500, "max": 900}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Scorer+Cricket+Bat",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+scorer+cricket+bat"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Ultra-budget Kashmir willow bat for recreational and gully cricket."
+        },
+        {
+          "id": "cr_bat02",
+          "name": "SG Opener LE Kashmir Willow",
+          "brand": "SG (Sanspareils Greenlands)",
+          "type": "Kashmir Willow Bat",
+          "level": "beginner",
+          "specs": {"willow": "Kashmir Willow (Selected)", "weight": "1100-1200g", "sweet_spot": "Mid", "edges": "32-35mm"},
+          "price_ranges": {"INR": {"min": 1500, "max": 3000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Opener+Kashmir+Willow",
+            "flipkart": "https://www.flipkart.com/search?q=sg+opener+kashmir+willow"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Affordable Kashmir willow bat from trusted Indian brand SG."
+        },
+        {
+          "id": "cr_bat03",
+          "name": "SS Kashur Kashmir Willow",
+          "brand": "SS (Sareen Sports)",
+          "type": "Kashmir Willow Bat",
+          "level": "beginner",
+          "specs": {"willow": "Kashmir Willow (Oil Finished)", "weight": "1100-1180g", "sweet_spot": "Mid", "edges": "30-34mm"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SS+Kashur+Kashmir+Willow+bat",
+            "flipkart": "https://www.flipkart.com/search?q=ss+kashur+kashmir+willow"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Quality Kashmir willow bat from SS. Oil-finished for better durability."
+        },
+        {
+          "id": "cr_bat04",
+          "name": "SG RSD Select English Willow",
+          "brand": "SG",
+          "type": "English Willow Bat",
+          "level": "intermediate",
+          "specs": {"willow": "English Willow (Grade 3)", "weight": "1150-1250g", "sweet_spot": "Mid", "edges": "36-38mm"},
+          "price_ranges": {"INR": {"min": 5000, "max": 8000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+RSD+Select+English+Willow",
+            "flipkart": "https://www.flipkart.com/search?q=sg+rsd+select+english+willow"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Entry-level English willow bat. Good pickup and decent power for club cricket."
+        },
+        {
+          "id": "cr_bat05",
+          "name": "SS Ton Player Edition English Willow",
+          "brand": "SS",
+          "type": "English Willow Bat",
+          "level": "intermediate",
+          "specs": {"willow": "English Willow (Grade 2)", "weight": "1170-1270g", "sweet_spot": "Mid-Low", "edges": "38-40mm"},
+          "price_ranges": {"INR": {"min": 8000, "max": 14000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SS+Ton+Player+Edition+English+Willow",
+            "flipkart": "https://www.flipkart.com/search?q=ss+ton+player+edition"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Mid-range English willow from SS. Thick edges and powerful stroke-making."
+        },
+        {
+          "id": "cr_bat06",
+          "name": "MRF Genius Grand Edition",
+          "brand": "MRF",
+          "type": "English Willow Bat",
+          "level": "intermediate",
+          "specs": {"willow": "English Willow (Grade 2)", "weight": "1180-1280g", "sweet_spot": "Mid", "edges": "38-42mm"},
+          "price_ranges": {"INR": {"min": 10000, "max": 18000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=MRF+Genius+Grand+Edition+bat",
+            "flipkart": "https://www.flipkart.com/search?q=mrf+genius+grand+edition"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Virat Kohli's brand. Premium English willow with generous sweet spot."
+        },
+        {
+          "id": "cr_bat07",
+          "name": "SG HP 33 English Willow",
+          "brand": "SG",
+          "type": "English Willow Bat",
+          "level": "advanced",
+          "specs": {"willow": "English Willow (Grade 1)", "weight": "1200-1300g", "sweet_spot": "Mid", "edges": "40-44mm"},
+          "price_ranges": {"INR": {"min": 18000, "max": 30000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+HP+33+English+Willow",
+            "flipkart": "https://www.flipkart.com/search?q=sg+hp+33+english+willow"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "Premium Grade 1 English willow. Match-ready bat for serious cricketers."
+        },
+        {
+          "id": "cr_bat08",
+          "name": "Kookaburra Kahuna Pro 1000",
+          "brand": "Kookaburra",
+          "type": "English Willow Bat",
+          "level": "advanced",
+          "specs": {"willow": "English Willow (Premium Grade 1)", "weight": "1200-1280g", "sweet_spot": "Mid-Low", "edges": "42-46mm"},
+          "price_ranges": {"INR": {"min": 25000, "max": 40000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Kookaburra+Kahuna+Pro+1000",
+            "flipkart": "https://www.flipkart.com/search?q=kookaburra+kahuna+pro+1000"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
+          "description": "International-grade premium bat. Huge profile with massive edges for powerful hitting."
+        }
+      ]
+    },
+    {
+      "category": "balls",
+      "items": [
+        {
+          "id": "cr_ba01",
+          "name": "Cosco Tuff Tennis Cricket Ball (Pack of 6)",
+          "brand": "Cosco",
+          "type": "Tennis Ball (Heavy)",
+          "level": "beginner",
+          "specs": {"type": "Tennis Ball", "weight": "Heavy", "use": "Gully/Street Cricket"},
+          "price_ranges": {"INR": {"min": 150, "max": 300}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Tuff+tennis+cricket+ball",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+tuff+tennis+cricket+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
+          "description": "India's favourite gully cricket ball. Heavy weight for realistic swing."
+        },
+        {
+          "id": "cr_ba02",
+          "name": "SG Club Practice Ball",
+          "brand": "SG",
+          "type": "Practice Ball (Leather)",
+          "level": "beginner",
+          "specs": {"type": "Leather", "weight": "155-163g", "seam": "Machine stitched"},
+          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Club+practice+cricket+ball",
+            "flipkart": "https://www.flipkart.com/search?q=sg+club+practice+cricket+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
+          "description": "Machine-stitched leather practice ball. Good for net sessions."
+        },
+        {
+          "id": "cr_ba03",
+          "name": "SS Incredi Ball (Pack of 3)",
+          "brand": "SS",
+          "type": "Training Ball",
+          "level": "beginner",
+          "specs": {"type": "PVC with cork core", "weight": "140-150g", "seam": "Moulded"},
+          "price_ranges": {"INR": {"min": 250, "max": 500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SS+Incredi+cricket+ball",
+            "flipkart": "https://www.flipkart.com/search?q=ss+incredi+cricket+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
+          "description": "PVC training ball with cork core. Safer for indoor practice."
+        },
+        {
+          "id": "cr_ba04",
+          "name": "SG Test Match Ball",
+          "brand": "SG",
+          "type": "Match Ball (Leather)",
+          "level": "intermediate",
+          "specs": {"type": "Leather (Alum Tanned)", "weight": "155-163g", "seam": "Hand stitched", "overs": "Up to 50 overs"},
+          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Test+match+cricket+ball",
+            "flipkart": "https://www.flipkart.com/search?q=sg+test+match+cricket+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
+          "description": "Official SG Test ball used in Indian domestic cricket. Hand-stitched seam."
+        },
+        {
+          "id": "cr_ba05",
+          "name": "Kookaburra Turf Match Ball",
+          "brand": "Kookaburra",
+          "type": "Match Ball (Leather)",
+          "level": "advanced",
+          "specs": {"type": "Leather (Premium Alum)", "weight": "155.9-163g", "seam": "Hand stitched", "overs": "Up to 80 overs"},
+          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Kookaburra+Turf+match+cricket+ball",
+            "flipkart": "https://www.flipkart.com/search?q=kookaburra+turf+match+cricket+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
+          "description": "International-grade match ball. Used in ICC white-ball tournaments."
+        },
+        {
+          "id": "cr_ba06",
+          "name": "Dukes Match Ball",
+          "brand": "Dukes",
+          "type": "Match Ball (Leather)",
+          "level": "advanced",
+          "specs": {"type": "Leather (Premium)", "weight": "155.9-163g", "seam": "Hand stitched (prominent)", "overs": "Up to 80 overs"},
+          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Dukes+cricket+match+ball",
+            "flipkart": "https://www.flipkart.com/search?q=dukes+cricket+match+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
+          "description": "English match ball with prominent seam. Used in English and WTC cricket."
+        }
+      ]
+    },
+    {
+      "category": "pads",
+      "items": [
+        {
+          "id": "cr_pd01",
+          "name": "Cosco Test Batting Pads",
+          "brand": "Cosco",
+          "type": "Batting Pads",
+          "level": "beginner",
+          "specs": {"material": "PVC", "protection": "Standard foam", "weight": "Light"},
+          "price_ranges": {"INR": {"min": 400, "max": 800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Test+batting+pads",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+test+batting+pads"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Budget batting pads for recreational cricket. Basic protection."
+        },
+        {
+          "id": "cr_pd02",
+          "name": "SG Campus Batting Pads",
+          "brand": "SG",
+          "type": "Batting Pads",
+          "level": "beginner",
+          "specs": {"material": "PVC + Cotton", "protection": "High density foam", "weight": "Medium"},
+          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Campus+batting+pads",
+            "flipkart": "https://www.flipkart.com/search?q=sg+campus+batting+pads"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Good value beginner pads from SG. Decent protection for club cricket."
+        },
+        {
+          "id": "cr_pd03",
+          "name": "SS Test Opener Batting Pads",
+          "brand": "SS",
+          "type": "Batting Pads",
+          "level": "intermediate",
+          "specs": {"material": "PU + Cotton", "protection": "Triple density foam + cane", "weight": "Medium"},
+          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SS+Test+Opener+batting+pads",
+            "flipkart": "https://www.flipkart.com/search?q=ss+test+opener+batting+pads"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Mid-range SS pads with triple density foam. Good for regular club matches."
+        },
+        {
+          "id": "cr_pd04",
+          "name": "SG Hilite Batting Pads",
+          "brand": "SG",
+          "type": "Batting Pads",
+          "level": "intermediate",
+          "specs": {"material": "PU Leather", "protection": "High density foam + cane rod", "weight": "Medium-Light"},
+          "price_ranges": {"INR": {"min": 3000, "max": 5000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Hilite+batting+pads",
+            "flipkart": "https://www.flipkart.com/search?q=sg+hilite+batting+pads"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Premium SG pads. Lightweight with excellent protection for competitive play."
+        },
+        {
+          "id": "cr_pd05",
+          "name": "SG Test Pro Batting Pads",
+          "brand": "SG",
+          "type": "Batting Pads",
+          "level": "advanced",
+          "specs": {"material": "Premium PU Leather", "protection": "High density foam + cane + knee roll", "weight": "Light"},
+          "price_ranges": {"INR": {"min": 5000, "max": 8000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Test+Pro+batting+pads",
+            "flipkart": "https://www.flipkart.com/search?q=sg+test+pro+batting+pads"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "International-quality batting pads. Used by Ranji and IPL players."
+        }
+      ]
+    },
+    {
+      "category": "gloves",
+      "items": [
+        {
+          "id": "cr_gl01",
+          "name": "Cosco Club Batting Gloves",
+          "brand": "Cosco",
+          "type": "Batting Gloves",
+          "level": "beginner",
+          "specs": {"material": "PVC + Cotton", "finger_protection": "Basic foam", "palm": "Cotton"},
+          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Club+batting+gloves",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+club+batting+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Budget batting gloves for recreational cricket."
+        },
+        {
+          "id": "cr_gl02",
+          "name": "SG Campus Batting Gloves",
+          "brand": "SG",
+          "type": "Batting Gloves",
+          "level": "beginner",
+          "specs": {"material": "PVC", "finger_protection": "Finger rolls with foam", "palm": "Cotton backed"},
+          "price_ranges": {"INR": {"min": 600, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Campus+batting+gloves",
+            "flipkart": "https://www.flipkart.com/search?q=sg+campus+batting+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Entry-level SG batting gloves. Good protection for beginners."
+        },
+        {
+          "id": "cr_gl03",
+          "name": "SS Test Pro Batting Gloves",
+          "brand": "SS",
+          "type": "Batting Gloves",
+          "level": "intermediate",
+          "specs": {"material": "PU Leather", "finger_protection": "High density finger rolls", "palm": "Pittard leather"},
+          "price_ranges": {"INR": {"min": 1500, "max": 3000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SS+Test+Pro+batting+gloves",
+            "flipkart": "https://www.flipkart.com/search?q=ss+test+pro+batting+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Quality mid-range batting gloves. Good grip and protection."
+        },
+        {
+          "id": "cr_gl04",
+          "name": "SG Hilite Batting Gloves",
+          "brand": "SG",
+          "type": "Batting Gloves",
+          "level": "intermediate",
+          "specs": {"material": "PU + Leather", "finger_protection": "Triple protection finger rolls", "palm": "Pittard leather"},
+          "price_ranges": {"INR": {"min": 2000, "max": 4000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Hilite+batting+gloves",
+            "flipkart": "https://www.flipkart.com/search?q=sg+hilite+batting+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Premium SG gloves with triple protection. Excellent feel and grip."
+        },
+        {
+          "id": "cr_gl05",
+          "name": "SG HP 33 Batting Gloves",
+          "brand": "SG",
+          "type": "Batting Gloves",
+          "level": "advanced",
+          "specs": {"material": "Premium Leather", "finger_protection": "Dual density protection", "palm": "Premium Pittard leather"},
+          "price_ranges": {"INR": {"min": 3500, "max": 6000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+HP+33+batting+gloves",
+            "flipkart": "https://www.flipkart.com/search?q=sg+hp+33+batting+gloves"
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "International-quality batting gloves. Premium protection and feel."
+        }
+      ]
+    },
+    {
+      "category": "helmets",
+      "items": [
+        {
+          "id": "cr_hm01",
+          "name": "Cosco Test Cricket Helmet",
+          "brand": "Cosco",
+          "type": "Cricket Helmet",
+          "level": "beginner",
+          "specs": {"shell": "ABS Plastic", "grill": "Steel", "padding": "EVA foam"},
+          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+cricket+helmet",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+cricket+helmet"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Budget cricket helmet for recreational play. Basic protection."
+        },
+        {
+          "id": "cr_hm02",
+          "name": "SG Aeroshield 2.0",
+          "brand": "SG",
+          "type": "Cricket Helmet",
+          "level": "beginner",
+          "specs": {"shell": "High-impact ABS", "grill": "Titanium coated steel", "padding": "Dual density foam"},
+          "price_ranges": {"INR": {"min": 1500, "max": 2800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Aeroshield+cricket+helmet",
+            "flipkart": "https://www.flipkart.com/search?q=sg+aeroshield+cricket+helmet"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Good value cricket helmet from SG. Dual density foam for better protection."
+        },
+        {
+          "id": "cr_hm03",
+          "name": "SS Elite Cricket Helmet",
+          "brand": "SS",
+          "type": "Cricket Helmet",
+          "level": "intermediate",
+          "specs": {"shell": "High-impact ABS", "grill": "Stainless steel (fixed)", "padding": "High density EVA + neck guard"},
+          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SS+Elite+cricket+helmet",
+            "flipkart": "https://www.flipkart.com/search?q=ss+elite+cricket+helmet"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Mid-range helmet with neck guard. Good for competitive club cricket."
+        },
+        {
+          "id": "cr_hm04",
+          "name": "SG Aero-Select Helmet",
+          "brand": "SG",
+          "type": "Cricket Helmet",
+          "level": "intermediate",
+          "specs": {"shell": "Fiber reinforced ABS", "grill": "Titanium steel", "padding": "Premium multi-density foam"},
+          "price_ranges": {"INR": {"min": 3500, "max": 5500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Aero+Select+cricket+helmet",
+            "flipkart": "https://www.flipkart.com/search?q=sg+aero+select+helmet"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Premium SG helmet with ventilation. Lightweight and comfortable."
+        },
+        {
+          "id": "cr_hm05",
+          "name": "Masuri VS Test Steel",
+          "brand": "Masuri",
+          "type": "Cricket Helmet",
+          "level": "advanced",
+          "specs": {"shell": "Carbon reinforced ABS", "grill": "Stainless steel", "padding": "Multi-impact protection system"},
+          "price_ranges": {"INR": {"min": 6000, "max": 10000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Masuri+VS+Test+cricket+helmet",
+            "flipkart": "https://www.flipkart.com/search?q=masuri+vs+test+helmet"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "International-grade helmet. Used by many international cricketers."
+        },
+        {
+          "id": "cr_hm06",
+          "name": "Shrey Masterclass Air 2.0 Titanium",
+          "brand": "Shrey",
+          "type": "Cricket Helmet",
+          "level": "advanced",
+          "specs": {"shell": "Premium ABS", "grill": "Titanium", "padding": "Air Flow ventilation + multi-density"},
+          "price_ranges": {"INR": {"min": 8000, "max": 14000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Shrey+Masterclass+Air+2.0+helmet",
+            "flipkart": "https://www.flipkart.com/search?q=shrey+masterclass+air+2.0"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Top-tier cricket helmet. Titanium grill with excellent ventilation and protection."
+        }
+      ]
+    },
+    {
+      "category": "shoes",
+      "items": [
+        {
+          "id": "cr_sh01",
+          "name": "Nivia Caribbean Cricket Shoes",
+          "brand": "Nivia",
+          "type": "Rubber Studs",
+          "level": "beginner",
+          "specs": {"sole": "Rubber studs", "upper": "PU", "weight": "350g"},
+          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Caribbean+cricket+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+caribbean+cricket+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Budget Indian brand cricket shoes. Rubber studs for basic grip."
+        },
+        {
+          "id": "cr_sh02",
+          "name": "SG Steadler 5.0 Cricket Shoes",
+          "brand": "SG",
+          "type": "Rubber Studs",
+          "level": "beginner",
+          "specs": {"sole": "Rubber studs", "upper": "PU Leather", "weight": "340g"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Steadler+cricket+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=sg+steadler+cricket+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Entry-level SG cricket shoes. Durable and affordable for club cricket."
+        },
+        {
+          "id": "cr_sh03",
+          "name": "SS Josh Cricket Shoes",
+          "brand": "SS",
+          "type": "Metal Spikes",
+          "level": "intermediate",
+          "specs": {"sole": "Removable metal spikes", "upper": "PU + Mesh", "weight": "330g"},
+          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SS+Josh+cricket+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=ss+josh+cricket+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Metal spike shoes for proper grass wickets. Good grip and comfort."
+        },
+        {
+          "id": "cr_sh04",
+          "name": "SG Hilite 5.0 Cricket Shoes",
+          "brand": "SG",
+          "type": "Metal Spikes",
+          "level": "intermediate",
+          "specs": {"sole": "Full metal spikes", "upper": "Premium PU", "weight": "320g"},
+          "price_ranges": {"INR": {"min": 3500, "max": 5500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=SG+Hilite+5.0+cricket+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=sg+hilite+5.0+cricket+shoes"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Premium SG cricket shoes with full spikes. Excellent for competitive cricket."
+        },
+        {
+          "id": "cr_sh05",
+          "name": "Asics Gel-Peake Cricket Shoes",
+          "brand": "Asics",
+          "type": "Metal Spikes",
+          "level": "advanced",
+          "specs": {"sole": "Removable metal spikes", "upper": "Synthetic + Mesh", "weight": "310g", "cushion": "Gel"},
+          "price_ranges": {"INR": {"min": 6000, "max": 10000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Asics+Gel+Peake+cricket+shoes",
+            "flipkart": "https://www.flipkart.com/search?q=asics+gel+peake+cricket"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "International-quality cricket shoes with Gel cushioning. Used by IPL players."
+        },
+        {
+          "id": "cr_sh06",
+          "name": "New Balance CK4040 Cricket Shoes",
+          "brand": "New Balance",
+          "type": "Metal Spikes",
+          "level": "advanced",
+          "specs": {"sole": "Removable 11-spike", "upper": "Synthetic", "weight": "300g", "cushion": "REVlite"},
+          "price_ranges": {"INR": {"min": 8000, "max": 14000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=New+Balance+CK4040+cricket",
+            "flipkart": "https://www.flipkart.com/search?q=new+balance+ck4040+cricket"
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Steve Smith's choice. Premium lightweight cricket shoe with excellent cushioning."
+        }
+      ]
+    }
+  ]
+}

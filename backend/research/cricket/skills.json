@@ -1,0 +1,931 @@
+{
+  "sport": "cricket",
+  "skill_areas": [
+    {
+      "id": "cr_batting_basics",
+      "name": "Batting Basics",
+      "level": "beginner",
+      "description": "Grip, stance, backlift, head position, weight distribution, and basic shot selection including front foot and back foot defense",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Incorrect grip (bottom hand too dominant) leading to lack of control",
+        "Head falling over or moving outside off stump, losing balance",
+        "Playing across the line to straight deliveries",
+        "Fear of short-pitched bowling causing flinching",
+        "Bat coming down at an angle instead of straight"
+      ],
+      "common_mistakes": [
+        "Gripping the bat too tightly causing stiff wrists",
+        "Standing too open or too side-on in stance",
+        "Backlift going towards second slip instead of over stumps",
+        "Weight stuck on back foot when playing front foot shots",
+        "Eyes not level at point of delivery"
+      ],
+      "drills": [
+        "Shadow batting for stance and backlift (15 min daily)",
+        "Throwdown practice for timing with half-volley lengths",
+        "Front foot drive against half-volley lengths",
+        "Defense drill - block 50 balls with focus on soft hands",
+        "Grip check drill with bat drop test"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_front_foot_shots", "cr_back_foot_shots", "cr_playing_spin", "cr_playing_pace"],
+        "milestones": [
+          "Can hold correct grip consistently for 30 minutes",
+          "Can defend balls on good length on both front and back foot",
+          "Can play straight drive with proper follow-through",
+          "Can leave balls outside off stump confidently"
+        ]
+      }
+    },
+    {
+      "id": "cr_front_foot_shots",
+      "name": "Front Foot Shots",
+      "level": "beginner",
+      "description": "Straight drive, cover drive, on drive, off drive, and front foot defense. Foundation shots for batting on good pitches.",
+      "personality_tags": ["anchor_batsman", "aggressive_batsman", "all_rounder"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Not getting to the pitch of the ball",
+        "Head not over front knee causing mistimed shots",
+        "Playing away from body in cover drive",
+        "Closing bat face too early on on-drive",
+        "No follow-through resulting in lack of power"
+      ],
+      "common_mistakes": [
+        "Lunging at the ball instead of stepping smoothly",
+        "Front foot going towards leg stump (falling over)",
+        "Not presenting full face of bat for straight drive",
+        "Trying to hit too hard instead of timing the ball",
+        "Bottom hand dominant causing cross-bat shots"
+      ],
+      "drills": [
+        "Cone drill - place cone at driving length, step to it",
+        "Throwdowns on off stump for cover drive practice",
+        "Shadow drive with bat - 50 repetitions daily",
+        "Drive off bowling machine at medium pace",
+        "Partner drill - hit drives into target zones"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_power_hitting", "cr_building_innings", "cr_playing_spin"],
+        "milestones": [
+          "Can play straight drive along the ground consistently",
+          "Can drive through covers with proper foot movement",
+          "Can differentiate between driving and defending length",
+          "Can play on-drive without closing the face"
+        ]
+      }
+    },
+    {
+      "id": "cr_back_foot_shots",
+      "name": "Back Foot Shots",
+      "level": "intermediate",
+      "description": "Cut shot, pull shot, hook shot, back foot punch, and back foot defense. Essential for handling short-pitched bowling.",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "all_rounder"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Getting hit by short balls due to slow reaction",
+        "Top-edging pull shots leading to catches",
+        "Playing cut shot too close to body",
+        "Not rocking back far enough on back foot",
+        "Cannot differentiate between balls to pull vs leave"
+      ],
+      "common_mistakes": [
+        "Closing eyes when ball is short",
+        "Not getting on top of bounce for cut shot",
+        "Attempting pull shot to deliveries too close to body",
+        "Front foot not clearing to give room for cut shot",
+        "Head falling towards off side on pull shot"
+      ],
+      "drills": [
+        "Short ball machine drill - practice ducking and pulling",
+        "Cut shot off throwdowns from close range",
+        "Pull shot with tennis ball for confidence building",
+        "Back foot punch drill against good length balls",
+        "Reaction drill - coach calls shot type before delivery"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_power_hitting", "cr_playing_pace", "cr_t20_batting"],
+        "milestones": [
+          "Can pull short balls consistently along the ground",
+          "Can cut balls outside off with placement",
+          "Can defend on back foot with soft hands",
+          "Can safely duck/sway under bouncers"
+        ]
+      }
+    },
+    {
+      "id": "cr_power_hitting",
+      "name": "Power Hitting (T20 Skills)",
+      "level": "advanced",
+      "description": "Switch hits, ramp shots, lofted drives, slog sweeps, reverse sweeps, and 360-degree batting for T20 and ODI formats",
+      "personality_tags": ["aggressive_batsman", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI"],
+      "pain_points": [
+        "Mistiming aerial shots leading to catches",
+        "Cannot clear the boundary consistently",
+        "Poor shot selection under pressure in death overs",
+        "Lack of range - can only score in limited areas",
+        "Cannot hit against the spin effectively"
+      ],
+      "common_mistakes": [
+        "Trying to hit every ball for six",
+        "Swinging too hard and losing shape",
+        "Not using the crease to create room",
+        "Ignoring singles while looking for boundaries",
+        "Pre-determining shots before seeing the ball"
+      ],
+      "drills": [
+        "Slog sweep against spin bowling machine",
+        "Upper cut practice with short ball machine",
+        "Ramp/scoop shot drill against pace (start with tennis ball)",
+        "Switch hit practice against throwdowns",
+        "Target hitting - place cones at different boundary sections",
+        "Free hitting after facing 6 dot balls (pressure drill)"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_t20_batting", "cr_powerplay_batting"],
+        "milestones": [
+          "Can clear 60m boundary with lofted drive",
+          "Can play switch hit off both spin and pace",
+          "Can execute scoop/ramp with controlled direction",
+          "Can score at 150+ strike rate for 5 overs in nets"
+        ]
+      }
+    },
+    {
+      "id": "cr_t20_batting",
+      "name": "T20 Match Batting",
+      "level": "advanced",
+      "description": "Match-specific T20 batting skills including powerplay aggression, middle overs rotation, death overs finishing, and batting under DLS scenarios",
+      "personality_tags": ["aggressive_batsman", "wicketkeeper_batsman", "all_rounder"],
+      "formats": ["T20"],
+      "pain_points": [
+        "Cannot accelerate at the right time",
+        "Getting bogged down in middle overs",
+        "Failing to finish innings with a flourish",
+        "Poor understanding of DLS target adjustments",
+        "Cannot read match situations for shot selection"
+      ],
+      "common_mistakes": [
+        "Playing too many dot balls trying to settle in",
+        "Not adapting to pitch conditions mid-innings",
+        "Ignoring field placements when choosing shots",
+        "Not using batting depth to take calculated risks",
+        "Playing the same way regardless of match phase"
+      ],
+      "drills": [
+        "Scenario-based net practice (need 15 off 6 balls)",
+        "Middle overs simulation - score at 8 RPO without boundaries",
+        "Death overs finishing drill - last 3 overs practice",
+        "Musical chairs batting - rotate strike every ball drill",
+        "Match simulation with bowling machine changing lengths"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_powerplay_batting", "cr_middle_overs_strategy"],
+        "milestones": [
+          "Can bat through a T20 innings in simulated match",
+          "Can accelerate from 100 SR to 180+ SR on demand",
+          "Can finish an innings with 15+ runs in last over",
+          "Can identify match phases and adjust approach"
+        ]
+      }
+    },
+    {
+      "id": "cr_playing_spin",
+      "name": "Playing Spin Bowling",
+      "level": "intermediate",
+      "description": "Techniques for facing off-spin, leg-spin, and variations. Reading spin from the hand, using feet, sweep options, and defensive technique against spin.",
+      "personality_tags": ["anchor_batsman", "aggressive_batsman", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Cannot read spin direction from bowler's hand",
+        "Stuck in crease - no footwork to get to pitch",
+        "Getting stumped when charging down the track",
+        "Playing for spin that does not exist (bat-pad catches)",
+        "Cannot sweep consistently against quality spinners"
+      ],
+      "common_mistakes": [
+        "Planting front foot before seeing length",
+        "Playing with hard hands leading to catches at short leg",
+        "Not watching the ball onto the bat",
+        "Using only pad to defend instead of bat-pad combination",
+        "Not sweeping when spinner is bowling tight on leg stump"
+      ],
+      "drills": [
+        "Ball identification drill - call spin direction before bounce",
+        "Charging drill - practice dancing down and driving spin",
+        "Sweep shot variations against side-arm throwdowns",
+        "Defending on back foot against spin with soft hands",
+        "Facing spinners with different actions (over/round the wicket)"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_power_hitting", "cr_building_innings"],
+        "milestones": [
+          "Can read off-spin vs leg-spin from bowler's hand",
+          "Can use feet to get to the pitch of the ball",
+          "Can sweep and reverse sweep with control",
+          "Can defend on turning pitches without edging"
+        ]
+      }
+    },
+    {
+      "id": "cr_playing_pace",
+      "name": "Playing Pace Bowling",
+      "level": "intermediate",
+      "description": "Handling 130+ km/h deliveries, trigger movements, playing late, leaving outside off, and survival techniques against quality fast bowling.",
+      "personality_tags": ["anchor_batsman", "aggressive_batsman", "all_rounder"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Late on deliveries - ball hits pad or misses bat",
+        "Poking at balls outside off stump",
+        "Cannot handle steep bounce from tall bowlers",
+        "Flinching or backing away from fast bowling",
+        "No score rotation against disciplined fast bowling"
+      ],
+      "common_mistakes": [
+        "Trigger movement too early or too large",
+        "Bat coming down too late for front foot shots",
+        "Chasing wide deliveries outside off stump",
+        "Standing too tall in stance against pace",
+        "Not watching the ball from bowler's hand to bat"
+      ],
+      "drills": [
+        "Bowling machine at 130+ km/h for eye adjustment",
+        "Side-arm practice to simulate pace and bounce",
+        "Leave drill - practice leaving balls outside off channel",
+        "Short ball drill - duck, sway, and pull progressions",
+        "Fast hands drill with rapid throwdowns from 15m"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_back_foot_shots", "cr_building_innings"],
+        "milestones": [
+          "Can face 130+ km/h comfortably in nets",
+          "Can leave balls on judgment outside off stump",
+          "Can pull and cut short balls safely",
+          "Can drive full deliveries from fast bowlers"
+        ]
+      }
+    },
+    {
+      "id": "cr_building_innings",
+      "name": "Building an Innings",
+      "level": "advanced",
+      "description": "The art of pacing an innings - getting set, rotating strike, converting starts to big scores, accelerating at the right time, and match awareness.",
+      "personality_tags": ["anchor_batsman", "all_rounder"],
+      "formats": ["ODI", "Test"],
+      "pain_points": [
+        "Getting out between 20-40 consistently (conversion problem)",
+        "Cannot rotate strike - too many dot balls",
+        "Playing a rash shot after getting set",
+        "Not reading match situation correctly",
+        "Fatigue affecting concentration after 50+ balls"
+      ],
+      "common_mistakes": [
+        "Trying to accelerate too early in innings",
+        "Not having a scoring plan against each bowler",
+        "Ignoring easy singles while waiting for boundaries",
+        "Losing concentration after reaching a milestone (50/100)",
+        "Not adjusting to changing pitch conditions"
+      ],
+      "drills": [
+        "Long batting drill - bat for 60+ minutes in nets",
+        "Strike rotation drill - take single off every ball in over",
+        "Phase batting - practice getting through first 20 balls",
+        "Acceleration drill - increase scoring rate every 10 balls",
+        "Match simulation with scoreboard pressure"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_captaincy_tactics", "cr_mental_preparation"],
+        "milestones": [
+          "Can bat 30+ minutes in nets without getting out",
+          "Can rotate strike against all bowling types",
+          "Conversion rate of 30+ scores to 50+ improves",
+          "Can identify when to attack and when to consolidate"
+        ]
+      }
+    },
+    {
+      "id": "cr_powerplay_batting",
+      "name": "Powerplay Batting (Overs 1-6)",
+      "level": "advanced",
+      "description": "Strategies and shot selection for batting in the powerplay with fielding restrictions. Opening batting in T20 and ODI formats.",
+      "personality_tags": ["aggressive_batsman", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI"],
+      "pain_points": [
+        "Getting out in powerplay trying to be aggressive",
+        "Scoring too slowly in powerplay wasting field restrictions",
+        "Cannot handle new ball swing in first 5 overs",
+        "Poor shot selection against new ball bowlers",
+        "Not using gaps in field during powerplay"
+      ],
+      "common_mistakes": [
+        "Trying to hit boundaries from ball one without judging conditions",
+        "Not using the pace of the ball for boundaries",
+        "Ignoring fielding restrictions and scoring options",
+        "Playing the same way on different pitches",
+        "Not targeting weaker bowlers in powerplay"
+      ],
+      "drills": [
+        "Powerplay simulation - 6 overs with new ball",
+        "Gap hitting drill - exploit areas where fielders cannot be placed",
+        "Against-swing batting practice in first 3 overs",
+        "Lofted shots over infield practice",
+        "Match awareness drill - scoring at 8+ RPO for 6 overs"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_t20_batting", "cr_playing_pace"],
+        "milestones": [
+          "Can score at 8+ RPO in powerplay practice",
+          "Can handle new ball movement while scoring",
+          "Can identify and exploit powerplay field gaps",
+          "Dismissal rate in powerplay reduces over time"
+        ]
+      }
+    },
+    {
+      "id": "cr_fast_bowling",
+      "name": "Fast Bowling",
+      "level": "intermediate",
+      "description": "Run-up, delivery stride, seam position, swing bowling (outswing, inswing, reverse swing), pace generation, and bowling action fundamentals",
+      "personality_tags": ["pace_bowler", "all_rounder"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "No-balls from overstepping crease",
+        "Losing pace due to poor body alignment",
+        "Cannot generate outswing or inswing consistently",
+        "Injury risk from incorrect action (stress fractures)",
+        "Cannot bowl a consistent line and length"
+      ],
+      "common_mistakes": [
+        "Mixed bowling action (front-on shoulders with side-on hips)",
+        "Run-up too long causing deceleration before crease",
+        "Head falling away at delivery point",
+        "Front arm pulling away too early",
+        "No follow-through after release"
+      ],
+      "drills": [
+        "Standing start delivery drill for action correction",
+        "Seam position practice with target at different positions",
+        "Bound and delivery stride drill from 5-step run-up",
+        "Slower ball variations practice (back of hand, knuckle, cutter)",
+        "Yorker practice with target on crease line",
+        "Run-up marking and consistency drill"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_swing_bowling", "cr_seam_bowling", "cr_death_bowling"],
+        "milestones": [
+          "Can bowl 6 overs without a no-ball",
+          "Can hit good length consistently (6 out of 6)",
+          "Can bowl outswing with upright seam",
+          "Can generate 120+ km/h pace"
+        ]
+      }
+    },
+    {
+      "id": "cr_swing_bowling",
+      "name": "Swing Bowling (Outswing, Inswing, Reverse)",
+      "level": "intermediate",
+      "description": "Mastering conventional swing (outswing and inswing) and reverse swing bowling. Seam position, wrist angle, release point, and conditions for swing.",
+      "personality_tags": ["pace_bowler", "all_rounder"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Ball does not swing despite correct seam position",
+        "Cannot control swing direction consistently",
+        "Losing pace while trying to swing the ball",
+        "No reverse swing with old ball",
+        "Swing disappearing after first few overs"
+      ],
+      "common_mistakes": [
+        "Seam not upright at release - wobbly seam",
+        "Wrist behind the ball instead of angled for swing",
+        "Bowling too short for swing to take effect",
+        "Not shining the ball correctly for conventional swing",
+        "Releasing too early or too late for desired movement"
+      ],
+      "drills": [
+        "Seam position drill with slow delivery focus",
+        "Outswing corridor bowling (4th-5th stump line)",
+        "Inswing with angled wrist - target leg stump",
+        "Old ball reverse swing practice after 40+ overs",
+        "Swing test drill - bowl 6 balls checking movement direction"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_death_bowling", "cr_fast_bowling"],
+        "milestones": [
+          "Can swing ball both ways on demand",
+          "Can maintain swing for 4+ overs",
+          "Can bowl reverse swing with old ball",
+          "Can combine swing with consistent line and length"
+        ]
+      }
+    },
+    {
+      "id": "cr_seam_bowling",
+      "name": "Seam Bowling",
+      "level": "intermediate",
+      "description": "Upright seam, cross seam, wobble seam, and seam movement off the pitch. Medium-fast bowling technique and variations.",
+      "personality_tags": ["pace_bowler", "all_rounder"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Seam landing position inconsistent",
+        "Cannot generate seam movement on flat pitches",
+        "Cross seam resulting in half-volleys",
+        "Ball not hitting seam on pitching",
+        "Cannot vary pace while maintaining seam position"
+      ],
+      "common_mistakes": [
+        "Releasing with scrambled seam instead of upright",
+        "Not using the crease for angle variation",
+        "Bowling same pace every ball",
+        "Wrist behind ball (no seam presentation)",
+        "Not adjusting seam position for different pitch types"
+      ],
+      "drills": [
+        "Upright seam release practice at reduced pace",
+        "Cross seam bounce variation drill",
+        "Wobble seam grip and release practice",
+        "Seam hitting drill - pitch ball on target and check seam impact",
+        "Crease variation drill - bowl from wide and close to stumps"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_swing_bowling", "cr_death_bowling"],
+        "milestones": [
+          "Can land ball on seam 4 out of 6 deliveries",
+          "Can bowl cross seam for extra bounce on demand",
+          "Can vary pace by 10+ km/h while keeping seam upright",
+          "Can use wobble seam as variation"
+        ]
+      }
+    },
+    {
+      "id": "cr_death_bowling",
+      "name": "Death Bowling (Last 5 Overs)",
+      "level": "advanced",
+      "description": "Yorker execution, slower ball variations (back of hand, knuckle, leg cutter, off cutter), wide yorkers, and strategies for bowling at the death in limited-overs cricket.",
+      "personality_tags": ["pace_bowler", "all_rounder"],
+      "formats": ["T20", "ODI"],
+      "pain_points": [
+        "Cannot execute yorker under pressure",
+        "Slower balls getting picked and hit for six",
+        "Full tosses instead of yorkers (slot balls)",
+        "No variation - batsman reads bowling pattern",
+        "Leaking 15+ runs per over at the death"
+      ],
+      "common_mistakes": [
+        "Bowling same slower ball variation repeatedly",
+        "Aiming at stumps instead of toes for yorker",
+        "Reducing pace too much on slower balls",
+        "Not having a plan B when yorkers miss target",
+        "Bowling to batsman's strengths instead of weaknesses"
+      ],
+      "drills": [
+        "Yorker target practice - hit base of stumps 50 times",
+        "Slower ball variations rotation (6 balls, 6 different types)",
+        "Wide yorker practice outside off stump",
+        "Pressure death over simulation - score under 10 runs",
+        "Bouncer-yorker combination drill for set batsmen"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_captaincy_tactics", "cr_mental_preparation"],
+        "milestones": [
+          "Can execute yorker 4 out of 6 attempts",
+          "Has 3+ slower ball variations",
+          "Can bowl death overs at under 10 RPO average",
+          "Can execute wide yorker on demand"
+        ]
+      }
+    },
+    {
+      "id": "cr_spin_bowling",
+      "name": "Spin Bowling",
+      "level": "intermediate",
+      "description": "Off-spin, leg-spin, left-arm orthodox, googly, doosra, carrom ball, top spinner, flipper, flight and loop control",
+      "personality_tags": ["spin_specialist", "all_rounder"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Cannot turn the ball consistently",
+        "No control over length and line while spinning",
+        "Getting hit for boundaries when tossing up for flight",
+        "Cannot bowl the googly/doosra without telegraphing it",
+        "Ball not dipping on approach to batsman"
+      ],
+      "common_mistakes": [
+        "Bowling too fast - not giving ball enough revolutions",
+        "Releasing with flat trajectory (no loop/flight)",
+        "Bowling too short allowing easy back foot play",
+        "Same arm speed for stock ball and variations",
+        "Wrist position changing visibly between deliveries"
+      ],
+      "drills": [
+        "Spinning the ball from hand without run-up (100 reps daily)",
+        "Target zone bowling on a length (6 balls in pizza box)",
+        "Flight and dip practice with variable pace at same length",
+        "Variation bowling - stock, googly, top spinner rotation",
+        "Bowling against batsman in nets with field set"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_captaincy_tactics", "cr_middle_overs_strategy"],
+        "milestones": [
+          "Can turn the ball consistently on any surface",
+          "Can bowl 4 overs for under 30 runs in practice match",
+          "Can bowl googly/variation without action change",
+          "Can control flight and get the ball to dip"
+        ]
+      }
+    },
+    {
+      "id": "cr_fielding",
+      "name": "Fielding and Ground Work",
+      "level": "beginner",
+      "description": "Ground fielding, sliding stops, throwing accuracy, relay throwing, attacking the ball, and fielding positions understanding",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "pace_bowler", "spin_specialist", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Poor throwing accuracy to keeper/bowler's end",
+        "Hesitation in approaching the ball (fear of misfield)",
+        "Cannot throw flat and hard from boundary",
+        "Slow ground fielding pickup technique",
+        "Not backing up throws from other fielders"
+      ],
+      "common_mistakes": [
+        "Not bending low enough for ground fielding",
+        "Throwing off wrong foot (losing momentum)",
+        "Standing flat-footed instead of being on toes",
+        "Not attacking the ball on approach",
+        "Picking up with wrong hand for throwing direction"
+      ],
+      "drills": [
+        "Rapid ground fielding and throw drill (20 reps)",
+        "Sliding stop practice on both sides",
+        "Throwing accuracy - hit single stump from 25m, 30m, 40m",
+        "Relay throw drill with partner",
+        "Chase and retrieve drill for boundary fielding"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_catching", "cr_captaincy_tactics"],
+        "milestones": [
+          "Can hit stumps directly 3 out of 5 throws from 30m",
+          "Can execute sliding stop and throw in one motion",
+          "Can field 20 balls without a misfield",
+          "Understands all standard fielding positions"
+        ]
+      }
+    },
+    {
+      "id": "cr_catching",
+      "name": "Catching (Slip, Outfield, High)",
+      "level": "beginner",
+      "description": "Slip catching technique, outfield catching, high catches under lights, catching in the deep, and close-in catching at short leg and silly point.",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "pace_bowler", "spin_specialist", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Dropping catches under pressure in match situations",
+        "Misjudging high catches in the outfield",
+        "Hard hands in slip cordon causing drops",
+        "Cannot catch with sun/floodlights in eyes",
+        "Poor reaction time at close-in positions"
+      ],
+      "common_mistakes": [
+        "Snatching at the ball instead of receiving it",
+        "Not getting into correct ready position",
+        "Running backwards for high catches instead of turning",
+        "Watching fielders instead of ball in slip cordon",
+        "Fingers pointing up for catches below waist (should point down)"
+      ],
+      "drills": [
+        "Slip catching cradle practice (50 catches per session)",
+        "High catch drill with catching machine",
+        "Outfield catch - run and judge trajectory drill",
+        "Close-in catching reaction drill with tennis ball",
+        "Catching under floodlights practice for day-night games"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_fielding", "cr_wicketkeeping"],
+        "milestones": [
+          "Can take 8 out of 10 slip catches in practice",
+          "Can judge and catch high balls consistently",
+          "Can take catches while running in outfield",
+          "Can react and catch at short leg from 3m"
+        ]
+      }
+    },
+    {
+      "id": "cr_wicketkeeping",
+      "name": "Wicketkeeping",
+      "level": "intermediate",
+      "description": "Stance, footwork, glovework to pace and spin, standing up and standing back, stumping technique, and diving catches",
+      "personality_tags": ["wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Late reactions to outside edges off fast bowlers",
+        "Poor footwork when standing up to spinners",
+        "Fumbling on leg-side takes and leg-side stumpings",
+        "Standing up too close or too far from stumps",
+        "Cannot take diving catches consistently"
+      ],
+      "common_mistakes": [
+        "Rising too early from crouch before delivery",
+        "Moving head before ball arrives (pre-empting direction)",
+        "Gloves not in correct position for receiving",
+        "Not giving with the ball on catch (hard hands)",
+        "Poor positioning for stumping - reaching instead of moving feet"
+      ],
+      "drills": [
+        "Tennis ball reaction drill (20 catches from 10m)",
+        "Standing up to spin with tennis ball for confidence",
+        "Lateral dive and catch drill (both sides, 10 each)",
+        "Stumping practice with spin bowler in nets",
+        "One-handed catch drill for diving takes",
+        "Footwork drill - move to 6 different positions"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_catching", "cr_captaincy_tactics"],
+        "milestones": [
+          "Can keep to pace bowlers without byes for 10 overs",
+          "Can stand up to medium-pace bowlers comfortably",
+          "Can execute stumping off spin within 0.5 seconds",
+          "Can take diving catches on both sides"
+        ]
+      }
+    },
+    {
+      "id": "cr_running",
+      "name": "Running Between Wickets",
+      "level": "beginner",
+      "description": "Calling conventions, turning technique, grounding the bat, judging quick singles, running twos, and building partnerships through rotation",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Poor calling leading to run-outs and mix-ups",
+        "Not grounding bat on turns (losing time)",
+        "Slow first 2 steps out of crease",
+        "Misjudging fielder arm strength and position",
+        "Not backing up at non-striker's end"
+      ],
+      "common_mistakes": [
+        "Both batsmen calling at same time (confusion)",
+        "Running with bat in air instead of dragging/grounding",
+        "Turning blind (not looking at ball while turning)",
+        "Not running the first run hard (lazy running)",
+        "Ball-watching instead of being ready to run"
+      ],
+      "drills": [
+        "Sprint and turn drill with bat (10 x 22 yards)",
+        "Calling and communication drill with partner",
+        "Quick single judgment drill with fielder",
+        "Ground bat drill - practice sliding bat at crease",
+        "Backing up drill at non-striker's end"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_fitness", "cr_building_innings"],
+        "milestones": [
+          "Can complete a single in under 3 seconds",
+          "Zero run-out mix-ups in 5 consecutive practice matches",
+          "Can convert 1s to 2s with efficient turning",
+          "Calling is clear and early every time"
+        ]
+      }
+    },
+    {
+      "id": "cr_captaincy_tactics",
+      "name": "Captaincy and Match Tactics",
+      "level": "advanced",
+      "description": "Field placement, bowling changes, batting order decisions, DRS usage, reading match situations, and tactical awareness across formats",
+      "personality_tags": ["anchor_batsman", "all_rounder", "spin_specialist"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Cannot set effective fields for different bowlers",
+        "Poor DRS decisions wasting reviews",
+        "Wrong bowling changes at crucial moments",
+        "Not adapting tactics to pitch and conditions",
+        "Cannot motivate team under pressure"
+      ],
+      "common_mistakes": [
+        "Setting defensive fields too early in innings",
+        "Not using part-time bowlers when conditions suit",
+        "Reviewing decisions based on emotion, not judgment",
+        "Keeping same field for different batsmen",
+        "Not communicating plans to bowlers clearly"
+      ],
+      "drills": [
+        "Field setting exercise on tactics board",
+        "Watch match footage and pause to decide bowling change",
+        "DRS decision simulation with ball tracking data",
+        "Scenario exercise - set field for death overs with 3 options",
+        "Communication drill - explain bowling plan to each bowler"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_mental_preparation"],
+        "milestones": [
+          "Can set attacking and defensive fields for each bowler",
+          "DRS success rate above 50% in practice scenarios",
+          "Can read match situations and adjust tactics",
+          "Team responds positively to tactical communication"
+        ]
+      }
+    },
+    {
+      "id": "cr_middle_overs_strategy",
+      "name": "Middle Overs Strategy (Overs 11-40)",
+      "level": "intermediate",
+      "description": "Batting and bowling strategies for middle overs in ODIs and T20s. Strike rotation, partnership building, spin bowling plans, and pressure building.",
+      "personality_tags": ["anchor_batsman", "spin_specialist", "all_rounder"],
+      "formats": ["T20", "ODI"],
+      "pain_points": [
+        "Scoring rate dropping too low in middle overs",
+        "Losing wickets in clusters during consolidation phase",
+        "Spinners getting hit when building pressure",
+        "Cannot rotate strike against tight bowling",
+        "Partnership breakdowns in middle overs"
+      ],
+      "common_mistakes": [
+        "Trying to accelerate before a platform is built",
+        "Not identifying which bowler to target",
+        "Batsmen scoring at same pace (no roles defined)",
+        "Spinners bowling too defensively in middle overs",
+        "Not using the reverse sweep or sweep to rotate"
+      ],
+      "drills": [
+        "Middle overs batting simulation (score 5-7 RPO for 10 overs)",
+        "Partnership role play - one anchor, one aggressor",
+        "Spin bowling in middle overs with field set",
+        "Strike rotation drill against spin",
+        "Targeting specific bowler in middle overs practice"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_building_innings", "cr_captaincy_tactics"],
+        "milestones": [
+          "Can maintain 6+ RPO in middle overs practice",
+          "Can build partnerships with defined roles",
+          "Spinner can bowl 5 overs for under 35 in middle period",
+          "Can identify and target weak bowling in middle overs"
+        ]
+      }
+    },
+    {
+      "id": "cr_fitness",
+      "name": "Cricket Fitness",
+      "level": "beginner",
+      "description": "Physical conditioning for cricket including the BCCI Yo-Yo test preparation, agility, speed, endurance, strength training, and injury prevention.",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "pace_bowler", "spin_specialist", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Failing BCCI Yo-Yo fitness test (16.1 score required)",
+        "Cramping during long batting or fielding sessions",
+        "Bowling speed dropping after 4-5 overs due to fatigue",
+        "Recurring injuries (hamstring, back, shoulder)",
+        "Cannot maintain concentration for full day in Test cricket"
+      ],
+      "common_mistakes": [
+        "Only running for fitness (ignoring strength and agility)",
+        "Not warming up properly before matches and nets",
+        "Skipping cool-down and stretching after sessions",
+        "Not hydrating enough in Indian heat conditions",
+        "Training too hard before match days"
+      ],
+      "drills": [
+        "Yo-Yo test preparation interval training (3x per week)",
+        "Agility ladder drills for fielding quickness",
+        "Core strength workout for batting and bowling stability",
+        "Shoulder strengthening for fast bowlers (rotator cuff)",
+        "Sprint and recovery intervals (20m x 10 sets)",
+        "Flexibility and mobility routine (daily 15 min)"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_mental_preparation"],
+        "milestones": [
+          "Can achieve Yo-Yo test score of 16.1+",
+          "Can field for 50 overs without fatigue",
+          "Bowling pace maintained for 8+ overs",
+          "No recurring injuries over 3 month period"
+        ]
+      }
+    },
+    {
+      "id": "cr_mental_preparation",
+      "name": "Mental Preparation and Pressure Handling",
+      "level": "intermediate",
+      "description": "Sports psychology for cricket - handling pressure, pre-match routines, visualization, dealing with failure, concentration techniques, and mental toughness.",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "pace_bowler", "spin_specialist", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Choking under pressure in crucial match situations",
+        "Cannot recover from a bad shot or dropped catch",
+        "Negative self-talk after getting out cheaply",
+        "Pre-match anxiety affecting performance",
+        "Loss of concentration during long innings or fielding sessions"
+      ],
+      "common_mistakes": [
+        "Thinking about previous delivery while facing next one",
+        "Setting unrealistic expectations before a match",
+        "Not having a consistent pre-delivery routine",
+        "Dwelling on failures instead of learning from them",
+        "Comparing performance with teammates or opponents"
+      ],
+      "drills": [
+        "Visualization exercise - batting for 10 minutes with eyes closed",
+        "Breathing technique for between deliveries (4-7-8 method)",
+        "Positive self-talk affirmation before batting",
+        "Concentration drill - face 6 balls fully focused, reset",
+        "Post-match reflection journal (what went well, what to improve)",
+        "Pressure simulation - crowd noise during net practice"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_building_innings", "cr_captaincy_tactics"],
+        "milestones": [
+          "Has consistent pre-delivery routine in place",
+          "Can reset after a bad ball within 10 seconds",
+          "Maintains focus for 30+ minutes continuously",
+          "Performs consistently in practice matches under pressure"
+        ]
+      }
+    },
+    {
+      "id": "cr_net_practice",
+      "name": "Net Practice Techniques",
+      "level": "beginner",
+      "description": "How to structure net sessions for maximum improvement. Goal-setting for practice, scenario-based drills, and self-assessment techniques.",
+      "personality_tags": ["aggressive_batsman", "anchor_batsman", "pace_bowler", "spin_specialist", "all_rounder", "wicketkeeper_batsman"],
+      "formats": ["T20", "ODI", "Test"],
+      "pain_points": [
+        "Wasting net sessions without specific goals",
+        "Just slogging in nets instead of practicing technique",
+        "Not practicing match scenarios in nets",
+        "Not recording and reviewing net sessions",
+        "No plan for what to work on each session"
+      ],
+      "common_mistakes": [
+        "Batting 30 minutes without a plan",
+        "Only facing friendly bowling in nets",
+        "Not practicing weaknesses (only playing strengths)",
+        "Bowlers not bowling with intent in nets",
+        "No feedback mechanism - practicing same mistakes"
+      ],
+      "drills": [
+        "Session planning - write 3 goals before entering nets",
+        "Scenario batting - 'last 5 overs need 50 runs'",
+        "Video recording of 10 balls and self-review",
+        "Weakness-focused session - 70% time on weak areas",
+        "Match simulation net with umpire and scoring"
+      ],
+      "progression_path": {
+        "next_skills": ["cr_batting_basics", "cr_fast_bowling", "cr_spin_bowling"],
+        "milestones": [
+          "Every net session has written goals",
+          "Can review own technique from video recordings",
+          "Practices match scenarios at least once per week",
+          "Shows measurable improvement in weak areas over 4 weeks"
+        ]
+      }
+    }
+  ],
+  "player_profiles": {
+    "aggressive_batsman": {
+      "focus_areas": ["cr_power_hitting", "cr_t20_batting", "cr_powerplay_batting", "cr_back_foot_shots", "cr_fitness"],
+      "description": "Fearless stroke-makers who dominate bowling attacks. Focus on power hitting, T20 batting, and back foot shots for short ball handling.",
+      "role_models": ["Virender Sehwag", "Rishabh Pant", "Suryakumar Yadav", "Hardik Pandya"]
+    },
+    "anchor_batsman": {
+      "focus_areas": ["cr_batting_basics", "cr_building_innings", "cr_playing_spin", "cr_playing_pace", "cr_front_foot_shots", "cr_mental_preparation"],
+      "description": "Backbone of any batting lineup. Build innings, rotate strike, convert starts to big scores, and bat through the innings.",
+      "role_models": ["Virat Kohli", "Sachin Tendulkar", "Rahul Dravid", "Cheteshwar Pujara", "KL Rahul"]
+    },
+    "pace_bowler": {
+      "focus_areas": ["cr_fast_bowling", "cr_swing_bowling", "cr_seam_bowling", "cr_death_bowling", "cr_fitness"],
+      "description": "Speed merchants and swing artists. Develop pace, swing, seam movement, and death bowling variations.",
+      "role_models": ["Jasprit Bumrah", "Mohammed Shami", "Zaheer Khan", "Javagal Srinath", "Mohammed Siraj"]
+    },
+    "spin_specialist": {
+      "focus_areas": ["cr_spin_bowling", "cr_middle_overs_strategy", "cr_captaincy_tactics", "cr_fielding"],
+      "description": "Masters of turn, flight, and deception. Develop spin variations, control, and tactical bowling in middle overs.",
+      "role_models": ["Ravichandran Ashwin", "Ravindra Jadeja", "Anil Kumble", "Harbhajan Singh", "Kuldeep Yadav", "Yuzvendra Chahal"]
+    },
+    "all_rounder": {
+      "focus_areas": ["cr_batting_basics", "cr_fast_bowling", "cr_spin_bowling", "cr_fielding", "cr_fitness", "cr_t20_batting"],
+      "description": "Complete cricketers who contribute with bat, ball, and in the field. Balance skill development across disciplines.",
+      "role_models": ["Hardik Pandya", "Ravindra Jadeja", "Kapil Dev", "Irfan Pathan", "Shardul Thakur"]
+    },
+    "wicketkeeper_batsman": {
+      "focus_areas": ["cr_wicketkeeping", "cr_batting_basics", "cr_power_hitting", "cr_catching", "cr_fitness"],
+      "description": "Dual-role specialists who keep wickets and contribute with the bat. Modern keepers are expected to be dynamic batsmen.",
+      "role_models": ["MS Dhoni", "Rishabh Pant", "KL Rahul", "Ishan Kishan", "Sanju Samson"]
+    },
+    "beginner": {
+      "focus_areas": ["cr_batting_basics", "cr_fielding", "cr_catching", "cr_running", "cr_net_practice", "cr_fitness"],
+      "description": "New cricketers should build sound batting technique, reliable catching, smart running between wickets, and learn how to practice effectively.",
+      "role_models": ["Sachin Tendulkar", "Rahul Dravid", "Virat Kohli"]
+    },
+    "intermediate": {
+      "focus_areas": ["cr_front_foot_shots", "cr_back_foot_shots", "cr_fast_bowling", "cr_spin_bowling", "cr_wicketkeeping", "cr_playing_spin", "cr_playing_pace"],
+      "description": "Developing cricketers should specialize in a bowling type, refine shot-making, and learn to handle quality bowling.",
+      "role_models": ["Depends on chosen specialization"]
+    },
+    "advanced": {
+      "focus_areas": ["cr_power_hitting", "cr_t20_batting", "cr_death_bowling", "cr_captaincy_tactics", "cr_building_innings", "cr_mental_preparation"],
+      "description": "Competitive players should develop T20 batting skills, advanced bowling variations, tactical awareness, and mental toughness.",
+      "role_models": ["Depends on chosen specialization"]
+    }
+  }
+}

@@ -1,0 +1,758 @@
+{
+  "sport": "badminton",
+  "last_updated": "2026-03-22",
+  "skill_areas": [
+    {
+      "id": "bd_grip",
+      "name": "Grip Technique",
+      "level": "beginner",
+      "personality_tags": ["all_players"],
+      "description": "Master forehand, backhand, panhandle, and bevel grips. The foundation of every shot in badminton.",
+      "pain_points": [
+        "Holding the racket too tightly (death grip)",
+        "Not switching grips between forehand and backhand",
+        "Using the same grip for all shots",
+        "Incorrect V-grip position on forehand"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Frying pan grip on all shots",
+          "fix": "Practice the V-grip by placing the V of your thumb and index finger on the narrow side of the handle",
+          "video_ref": "bd_v24"
+        },
+        {
+          "mistake": "Gripping too tightly throughout the rally",
+          "fix": "Relax grip to 30% between shots, tighten to 80% only at contact point",
+          "video_ref": "bd_v09"
+        }
+      ],
+      "drills": [
+        "Grip switching drill - alternate forehand/backhand grip 50 times without looking",
+        "Wall rally with conscious grip changes",
+        "Shadow swing with grip focus using a mirror"
+      ],
+      "progression_path": {
+        "current": "bd_grip",
+        "next": ["bd_serve", "bd_footwork"],
+        "description": "Once grips feel natural, move to serving and basic footwork."
+      }
+    },
+    {
+      "id": "bd_serve",
+      "name": "Serving",
+      "level": "beginner",
+      "personality_tags": ["all_players", "tactical_player"],
+      "description": "Master low serve, high serve, flick serve, and drive serve techniques. The serve is the only shot you have full control over.",
+      "pain_points": [
+        "Inconsistent toss height on high serve",
+        "Serving into the net on low serves",
+        "Lack of deception on flick serves",
+        "Illegal serves (above waist height)",
+        "Predictable serve patterns"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Low serve going too high over the net",
+          "fix": "Focus on pushing the shuttle rather than hitting it. Keep racket face open and use a gentle push motion.",
+          "video_ref": "bd_v04"
+        },
+        {
+          "mistake": "Always serving to the same spot",
+          "fix": "Practice serving to all four corners of the service box. Mix low, flick, and drive serves.",
+          "video_ref": "bd_v18"
+        },
+        {
+          "mistake": "Body position giving away serve type",
+          "fix": "Keep the same stance and arm position for all serve types. Only change at the last moment.",
+          "video_ref": "bd_v05"
+        }
+      ],
+      "drills": [
+        "Wall target practice for low serves - place a target 1 inch above net height",
+        "Shadow serving with shuttle placement markers on the court",
+        "Alternate low and flick serves to build deception",
+        "Serve and return drill with partner - immediate rally after serve",
+        "Pressure serving - serve under match-like pressure with scoring"
+      ],
+      "progression_path": {
+        "current": "bd_serve",
+        "next": ["bd_clear", "bd_footwork"],
+        "description": "After mastering basic serves, learn clears to build rallies and footwork for court coverage."
+      }
+    },
+    {
+      "id": "bd_footwork",
+      "name": "Footwork",
+      "level": "beginner",
+      "personality_tags": ["all_players", "defensive_player", "aggressive_player"],
+      "description": "Court coverage using split step, chasse step, lunge, and recovery steps. Good footwork is the difference between average and great players.",
+      "pain_points": [
+        "Slow recovery to base position",
+        "Flat-footed stance missing the split step",
+        "Poor balance during lunges",
+        "Not using chasse steps efficiently",
+        "Running instead of shuffling to the shuttle",
+        "Landing on wrong foot after overhead shots"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Not doing a split step before every shot",
+          "fix": "Train yourself to do a small hop-split as your opponent contacts the shuttle. This primes your legs for any direction.",
+          "video_ref": "bd_v03"
+        },
+        {
+          "mistake": "Crossing legs during lateral movement",
+          "fix": "Use side-shuffle (chasse steps) to move laterally. Never cross your feet on court.",
+          "video_ref": "bd_v01"
+        },
+        {
+          "mistake": "Not recovering to base position after each shot",
+          "fix": "After every shot, push back to center court. Don't admire your shot.",
+          "video_ref": "bd_v03"
+        }
+      ],
+      "drills": [
+        "6-corner footwork shadow drill (3 minutes non-stop)",
+        "Ladder agility drills for quick feet",
+        "Split step reaction drill with partner calling directions",
+        "Lunge and recovery drill - lunge to all 4 corners and push back",
+        "Court sprint drill - touch all 4 corners and center in sequence",
+        "Shadow badminton - full rally simulation without shuttle"
+      ],
+      "progression_path": {
+        "current": "bd_footwork",
+        "next": ["bd_clear", "bd_drop", "bd_smash"],
+        "description": "Once footwork is automatic, you can focus on shot quality because you'll reach the shuttle in good position."
+      }
+    },
+    {
+      "id": "bd_clear",
+      "name": "Clear Shots",
+      "level": "beginner",
+      "personality_tags": ["defensive_player", "all_players"],
+      "description": "Master the high defensive clear and attacking flat clear. Clears are the most fundamental rally-building shot.",
+      "pain_points": [
+        "Shuttle not reaching the back of the court",
+        "Using too much arm and not enough body rotation",
+        "Poor contact point (too low or too far behind)",
+        "Not differentiating between high and flat clear"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Hitting with a bent arm instead of full extension",
+          "fix": "Reach up and forward. Contact the shuttle at the highest possible point with a fully extended arm.",
+          "video_ref": "bd_v29"
+        },
+        {
+          "mistake": "No body rotation - using only the arm",
+          "fix": "Turn your body sideways, rotate hips and shoulders into the shot. Power comes from rotation, not arm strength.",
+          "video_ref": "bd_v17"
+        }
+      ],
+      "drills": [
+        "Continuous clear rally with partner - aim for 30+ consecutive clears",
+        "Clear to target zones on the back line",
+        "Alternate high clear and flat clear drill",
+        "Clear from deep backhand corner drill"
+      ],
+      "progression_path": {
+        "current": "bd_clear",
+        "next": ["bd_drop", "bd_smash"],
+        "description": "Once clears are consistent, add drop shots and smashes to create an attacking game from the rear court."
+      }
+    },
+    {
+      "id": "bd_smash",
+      "name": "Smashing",
+      "level": "intermediate",
+      "personality_tags": ["aggressive_player", "power_player"],
+      "description": "Develop powerful overhead smashes including jump smash, stick smash, and half smash. The primary attacking weapon in badminton.",
+      "pain_points": [
+        "Poor wrist snap leading to weak smashes",
+        "Incorrect footwork and body rotation",
+        "Hitting the frame instead of sweet spot",
+        "Lack of angle variation",
+        "Smashing from a poor position and losing the rally",
+        "No difference between smash and clear preparation"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Trying to smash every shuttle",
+          "fix": "Only smash when the shuttle is above your head and you're balanced. A well-placed drop from a poor position beats a weak smash.",
+          "video_ref": "bd_v02"
+        },
+        {
+          "mistake": "Aiming straight at the opponent",
+          "fix": "Aim for the body (hard to defend) or sharp angles to the sidelines. Vary your targets.",
+          "video_ref": "bd_v08"
+        },
+        {
+          "mistake": "No pronation in the forearm",
+          "fix": "The last burst of power comes from forearm pronation (rotation). Practice pronation drills with a towel.",
+          "video_ref": "bd_v15"
+        }
+      ],
+      "drills": [
+        "Multi-shuttle smash feeding drill (coach feeds 10-15 shuttles continuously)",
+        "Jump smash with target cones in opposite court",
+        "Shadow footwork for rear court positioning before smash",
+        "Half-smash placement drill - smash at 70% power to specific zones",
+        "Smash and follow to net drill - smash then move forward for the return",
+        "Backhand smash from rear court drill"
+      ],
+      "progression_path": {
+        "current": "bd_smash",
+        "next": ["bd_deception", "bd_net_play", "bd_singles_tactics"],
+        "description": "After developing a reliable smash, learn deception to disguise it and net play to finish points."
+      }
+    },
+    {
+      "id": "bd_drop",
+      "name": "Drop Shots",
+      "level": "intermediate",
+      "personality_tags": ["tactical_player", "control_player", "deceptive_player"],
+      "description": "Execute deceptive slow and fast drop shots from the rear court. Drops create openings by pulling opponents to the front.",
+      "pain_points": [
+        "Telegraphing the drop shot with body language",
+        "Shuttle going too high over the net",
+        "Inconsistent placement",
+        "Only using one type of drop (slow or fast)",
+        "Drop shots landing mid-court instead of near the net"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Different preparation for drop vs clear/smash",
+          "fix": "Use the same overhead preparation for all rear court shots. Only change at the point of contact.",
+          "video_ref": "bd_v05"
+        },
+        {
+          "mistake": "Hitting the shuttle too flat on drops",
+          "fix": "Slice across the shuttle to create a steeper trajectory. The shuttle should tumble over the net.",
+          "video_ref": "bd_v22"
+        }
+      ],
+      "drills": [
+        "Alternate clear and drop from rear court with partner",
+        "Target zone placement drill - place shuttles in 3 drop zones",
+        "Deception practice with partner trying to read your shot",
+        "Fast drop vs slow drop alternation drill",
+        "Cross-court drop shot drill from both forehand and backhand"
+      ],
+      "progression_path": {
+        "current": "bd_drop",
+        "next": ["bd_deception", "bd_net_play"],
+        "description": "Combine drops with deception skills and net play to create a complete front-court game."
+      }
+    },
+    {
+      "id": "bd_net_play",
+      "name": "Net Play",
+      "level": "intermediate",
+      "personality_tags": ["tactical_player", "control_player", "deceptive_player"],
+      "description": "Tumbling net shots, net kills, cross-net shots, and net lifts. Net play wins or loses points at the front court.",
+      "pain_points": [
+        "Touching the net during play (fault)",
+        "Shuttle spinning incorrectly on tumble shots",
+        "Late arrival at the net",
+        "Lifting the shuttle too high from the net",
+        "Not taking the shuttle early enough"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Swinging too hard at net shots",
+          "fix": "Net shots require soft hands. Use fingers and a gentle push, not a swing. Less is more at the net.",
+          "video_ref": "bd_v21"
+        },
+        {
+          "mistake": "Standing too close to the net",
+          "fix": "Position yourself about one arm-length from the net. This gives space to react and avoid net faults.",
+          "video_ref": "bd_v05"
+        }
+      ],
+      "drills": [
+        "Net shot and lift rally drill with partner",
+        "Reaction net kill practice - partner feeds random lifts",
+        "Cross-net shot with feeder - alternate straight and cross",
+        "Tumbling net shot drill - 50 repetitions for consistency",
+        "Net-to-net rally - both players only at the net"
+      ],
+      "progression_path": {
+        "current": "bd_net_play",
+        "next": ["bd_deception", "bd_doubles_strategy"],
+        "description": "Strong net play combined with deception makes you lethal at the front. Essential for doubles."
+      }
+    },
+    {
+      "id": "bd_defense",
+      "name": "Defensive Play",
+      "level": "intermediate",
+      "personality_tags": ["defensive_player", "all_players"],
+      "description": "Handle smash defense with blocks, drives, lifts, and counter-attacks. Good defense turns your opponent's attack into your opportunity.",
+      "pain_points": [
+        "Panic under fast smashes",
+        "Weak backhand defense",
+        "Poor positioning for doubles defense",
+        "Always lifting the shuttle giving away the attack",
+        "Not reading the smasher's body language"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Standing upright when defending",
+          "fix": "Get low with knees bent and racket up in front of your body. Lower center of gravity = faster reaction.",
+          "video_ref": "bd_v06"
+        },
+        {
+          "mistake": "Big backswing on defense",
+          "fix": "Defense requires compact strokes. Use the incoming pace of the smash and redirect it. No backswing needed.",
+          "video_ref": "bd_v28"
+        },
+        {
+          "mistake": "Always blocking straight back",
+          "fix": "Mix up cross-court blocks, drives to the body, and counter-drops to keep the attacker guessing.",
+          "video_ref": "bd_v06"
+        }
+      ],
+      "drills": [
+        "Continuous smash defense drill - partner smashes 20 shots, you defend",
+        "Backhand block to target zones on the court",
+        "Doubles flat defense rotation drill with 3-4 players",
+        "Cross-court defense block practice",
+        "Counter-attack drill - block then immediately move to attack"
+      ],
+      "progression_path": {
+        "current": "bd_defense",
+        "next": ["bd_doubles_strategy", "bd_singles_tactics"],
+        "description": "Solid defense feeds into strategic play in both singles and doubles."
+      }
+    },
+    {
+      "id": "bd_drive",
+      "name": "Drive Shots",
+      "level": "intermediate",
+      "personality_tags": ["aggressive_player", "all_players"],
+      "description": "Fast, flat shots that travel horizontally over the net. Essential in doubles for fast exchanges and creating pressure.",
+      "pain_points": [
+        "Drives going into the net",
+        "Not enough speed on the drive",
+        "Poor timing leading to mis-hits",
+        "Can't sustain fast drive rallies"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Using full arm swing on drives",
+          "fix": "Drives use compact forearm and wrist action. Short, quick motions generate speed without sacrificing control.",
+          "video_ref": "bd_v28"
+        },
+        {
+          "mistake": "Hitting drives from below the net tape",
+          "fix": "Take the shuttle early at the highest point possible. Step forward into the shot.",
+          "video_ref": "bd_v28"
+        }
+      ],
+      "drills": [
+        "Straight drive rally with partner - sustain for 1 minute",
+        "Cross-court drive exchange drill",
+        "Drive and net shot combination drill",
+        "Reaction drive drill - random feeds from partner"
+      ],
+      "progression_path": {
+        "current": "bd_drive",
+        "next": ["bd_doubles_strategy", "bd_defense"],
+        "description": "Drives are crucial for doubles. Combine with doubles strategy for effective partnership play."
+      }
+    },
+    {
+      "id": "bd_deception",
+      "name": "Deception & Trick Shots",
+      "level": "advanced",
+      "personality_tags": ["deceptive_player", "tactical_player"],
+      "description": "Disguise your shots to wrong-foot opponents. Includes reverse slices, hold shots, fake smashes, and deceptive net play.",
+      "pain_points": [
+        "Deception attempts are too obvious",
+        "Losing power/accuracy when attempting deception",
+        "Not reading when to use deception vs direct shots",
+        "Over-using deception and becoming predictable"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Trying deception every shot",
+          "fix": "Deception works because you have established a pattern. Hit 3-4 honest shots, then deceive on the 5th.",
+          "video_ref": "bd_v11"
+        },
+        {
+          "mistake": "Body language not matching the fake shot",
+          "fix": "The whole body must sell the fake. Your movement, shoulder, arm should all say 'smash' before you play a drop.",
+          "video_ref": "bd_v10"
+        }
+      ],
+      "drills": [
+        "Reverse slice drop from smash preparation",
+        "Hold and flick at the net",
+        "Fake smash to drop with partner reading drill",
+        "Cross-court deceptive drop shot practice",
+        "Watch and replicate pro deception from match videos"
+      ],
+      "progression_path": {
+        "current": "bd_deception",
+        "next": ["bd_singles_tactics", "bd_mental_game"],
+        "description": "Deception is a tactical weapon. Combine with match strategy and mental toughness for complete game."
+      }
+    },
+    {
+      "id": "bd_singles_tactics",
+      "name": "Singles Strategy & Tactics",
+      "level": "advanced",
+      "personality_tags": ["tactical_player", "aggressive_player", "defensive_player"],
+      "description": "Rally building, court geometry, reading opponents, when to attack vs defend, and pacing in singles matches.",
+      "pain_points": [
+        "Playing without a game plan",
+        "Not adapting strategy against different opponents",
+        "Getting stuck in defensive patterns",
+        "Poor shot selection under pressure",
+        "Not using the full court width"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Always hitting to the same area",
+          "fix": "Use the four corners and body shots. Move your opponent diagonally to create the maximum running distance.",
+          "video_ref": "bd_v22"
+        },
+        {
+          "mistake": "Attacking from a weak position",
+          "fix": "If you're off-balance or behind the shuttle, play a clear or high lift to reset. Attack only from a strong position.",
+          "video_ref": "bd_v16"
+        }
+      ],
+      "drills": [
+        "Pattern play - clear-drop-net routine with partner",
+        "Court geometry drill - hit to maximum distance from opponent",
+        "2-on-1 drill - one player defends against two to build court coverage",
+        "Match play with specific tactical restrictions (e.g., no smash game)",
+        "Video analysis of your own matches for tactical review"
+      ],
+      "progression_path": {
+        "current": "bd_singles_tactics",
+        "next": ["bd_mental_game", "bd_fitness"],
+        "description": "With tactics in place, mental toughness and fitness determine who wins close matches."
+      }
+    },
+    {
+      "id": "bd_doubles_strategy",
+      "name": "Doubles Strategy & Formation",
+      "level": "advanced",
+      "personality_tags": ["tactical_player", "all_players"],
+      "description": "Attack-defense formations, rotation, communication, serving strategy, and role specialization in doubles.",
+      "pain_points": [
+        "Poor rotation between front and back",
+        "Confusion on who takes mid-court shots",
+        "Inability to maintain attacking formation",
+        "No communication with partner",
+        "Weak third-shot strategy after serve"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Both players standing side-by-side when attacking",
+          "fix": "When attacking, one player should be at the front (intercepting) and one at the back (smashing). Only go side-by-side when defending.",
+          "video_ref": "bd_v06"
+        },
+        {
+          "mistake": "Not calling shots in the middle",
+          "fix": "Establish clear rules: forehand player takes middle shots, or the player who's 'hotter' calls it. Communicate loudly.",
+          "video_ref": "bd_v26"
+        },
+        {
+          "mistake": "Serving too high in doubles",
+          "fix": "In doubles, the low serve is king. Keep it tight and just over the net tape. Mix with occasional flick.",
+          "video_ref": "bd_v18"
+        }
+      ],
+      "drills": [
+        "Rotation drill with coach feeding to different areas",
+        "Attack-defense pattern play with 4 players",
+        "Communication and calling practice during rally",
+        "Serve and third shot drill - serve, partner moves, execute plan",
+        "Mixed doubles specific rotation drill"
+      ],
+      "progression_path": {
+        "current": "bd_doubles_strategy",
+        "next": ["bd_mental_game", "bd_drive"],
+        "description": "Refined doubles play requires mental coordination with your partner and fast drive exchanges."
+      }
+    },
+    {
+      "id": "bd_warmup",
+      "name": "Warm-Up & Pre-Match Routines",
+      "level": "beginner",
+      "personality_tags": ["all_players"],
+      "description": "Dynamic stretching, joint mobilization, and gradual intensity warm-up before playing. Prevents injury and improves performance.",
+      "pain_points": [
+        "Skipping warm-up and getting injured",
+        "Static stretching before play (harmful)",
+        "Not warming up the wrist and shoulder specifically",
+        "Going 100% intensity immediately"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Static stretching as warm-up",
+          "fix": "Do dynamic stretches before play (leg swings, arm circles, lunges). Save static stretching for after play.",
+          "video_ref": "bd_v19"
+        },
+        {
+          "mistake": "Ignoring wrist warm-up",
+          "fix": "Badminton puts huge stress on wrists. Do wrist circles, flexion/extension, and light swings before playing.",
+          "video_ref": "bd_v19"
+        }
+      ],
+      "drills": [
+        "5-minute dynamic warm-up routine: jog, high knees, butt kicks, lateral shuffles",
+        "Joint mobilization: ankles, knees, hips, shoulders, wrists (30 seconds each)",
+        "Shadow footwork at increasing intensity",
+        "Easy rally warm-up - clears and drops at 50% speed",
+        "Gradual intensity serving practice"
+      ],
+      "progression_path": {
+        "current": "bd_warmup",
+        "next": ["bd_footwork", "bd_fitness"],
+        "description": "A proper warm-up routine leads naturally into footwork drills and fitness training."
+      }
+    },
+    {
+      "id": "bd_fitness",
+      "name": "Badminton-Specific Fitness",
+      "level": "intermediate",
+      "personality_tags": ["all_players", "aggressive_player"],
+      "description": "Cardiovascular endurance, leg strength, core stability, wrist strength, and agility training tailored for badminton.",
+      "pain_points": [
+        "Running out of stamina in long matches",
+        "Legs giving out in the third game",
+        "Weak wrist leading to injuries",
+        "Slow reaction time",
+        "Poor explosive power for jump smashes"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Only doing long-distance running for cardio",
+          "fix": "Badminton is interval-based. Train with intervals: 20-sec sprints, 10-sec rest. HIIT is more sport-specific.",
+          "video_ref": "bd_v20"
+        },
+        {
+          "mistake": "Ignoring core training",
+          "fix": "A strong core transfers power from legs to racket. Planks, Russian twists, and medicine ball throws build core strength.",
+          "video_ref": "bd_v20"
+        }
+      ],
+      "drills": [
+        "HIIT circuit: 20s burpees, 20s jump lunges, 20s mountain climbers, 10s rest x 8 rounds",
+        "Leg strength: squats, lunges, calf raises (3 sets x 15 reps)",
+        "Core circuit: plank 60s, side plank 30s each, bicycle crunches 20 reps",
+        "Wrist strengthening: wrist curls with light dumbbell, rice bucket exercises",
+        "Agility ladder drills: in-out, lateral, Icky shuffle",
+        "Court sprint intervals: shuttle run for 6 corners"
+      ],
+      "progression_path": {
+        "current": "bd_fitness",
+        "next": ["bd_smash", "bd_footwork", "bd_recovery"],
+        "description": "Better fitness directly improves your on-court performance in all areas."
+      }
+    },
+    {
+      "id": "bd_mental_game",
+      "name": "Mental Toughness & Match Psychology",
+      "level": "advanced",
+      "personality_tags": ["tactical_player", "all_players"],
+      "description": "Handling pressure, staying focused, managing emotions, building confidence, and developing a champion's mindset.",
+      "pain_points": [
+        "Choking at match point",
+        "Losing focus after making errors",
+        "Getting angry and playing worse",
+        "Fear of losing to weaker opponents",
+        "Not being able to come back from a deficit"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Dwelling on the last point",
+          "fix": "Each point is independent. Use a reset routine: take a breath, bounce on your toes, ready position. The last point is gone.",
+          "video_ref": "bd_v27"
+        },
+        {
+          "mistake": "Changing strategy when losing",
+          "fix": "If your strategy is sound, stick with it. Often you're losing because of execution, not strategy. Stay patient.",
+          "video_ref": "bd_v16"
+        }
+      ],
+      "drills": [
+        "Pressure serving drill: must make 5 in a row or restart",
+        "Practice point scenarios: play from 18-20 down",
+        "Breathing exercises between points",
+        "Visualization: mentally rehearse match scenarios before sleep",
+        "Post-match journaling: write 3 things you did well, 1 to improve"
+      ],
+      "progression_path": {
+        "current": "bd_mental_game",
+        "next": ["bd_singles_tactics", "bd_doubles_strategy"],
+        "description": "Mental toughness enhances all tactical aspects of your game."
+      }
+    },
+    {
+      "id": "bd_recovery",
+      "name": "Recovery & Injury Prevention",
+      "level": "intermediate",
+      "personality_tags": ["all_players"],
+      "description": "Post-match recovery, stretching, common badminton injuries (shoulder, knee, ankle), and preventive care.",
+      "pain_points": [
+        "Shoulder pain from overhead shots",
+        "Knee pain from lunging",
+        "Ankle sprains from quick direction changes",
+        "Wrist tendinitis",
+        "General muscle soreness affecting next session"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Not cooling down after matches",
+          "fix": "Walk for 5 minutes, then do static stretches for all major muscle groups. Hold each stretch 20-30 seconds.",
+          "video_ref": "bd_v25"
+        },
+        {
+          "mistake": "Playing through pain",
+          "fix": "Distinguish between muscle fatigue and joint pain. Fatigue is normal; sharp joint pain means stop and consult a physio.",
+          "video_ref": "bd_v25"
+        }
+      ],
+      "drills": [
+        "Post-match static stretching routine (10 minutes)",
+        "Foam rolling for legs, back, and shoulders",
+        "Ice bath or cold shower for legs after intense sessions",
+        "Rotator cuff strengthening exercises (resistance band)",
+        "Ankle stability exercises: single-leg balance, wobble board",
+        "Rest day active recovery: light swimming or yoga"
+      ],
+      "progression_path": {
+        "current": "bd_recovery",
+        "next": ["bd_fitness", "bd_warmup"],
+        "description": "Good recovery enables better fitness training and proper warm-up habits."
+      }
+    },
+    {
+      "id": "bd_equipment",
+      "name": "Equipment Knowledge",
+      "level": "beginner",
+      "personality_tags": ["all_players"],
+      "description": "Understanding racket specs, string tension, shuttlecock types, shoe selection, and when to upgrade equipment.",
+      "pain_points": [
+        "Buying the wrong racket for your level",
+        "Not understanding string tension impact",
+        "Using worn-out shoes with no grip",
+        "Spending too much on equipment too early"
+      ],
+      "common_mistakes": [
+        {
+          "mistake": "Buying a pro-level stiff racket as a beginner",
+          "fix": "Beginners need flexible shaft rackets. Stiff shafts require advanced technique to generate power.",
+          "video_ref": "bd_v32"
+        },
+        {
+          "mistake": "Stringing at very high tension as a beginner",
+          "fix": "Start at 22-24 lbs. High tension reduces the sweet spot. Only increase as your technique improves.",
+          "video_ref": "bd_v32"
+        }
+      ],
+      "drills": [
+        "Try different racket weights at a sports store before buying",
+        "Experiment with different string tensions (2 lbs apart) to feel the difference",
+        "Compare nylon and feather shuttlecocks to understand the difference",
+        "Check shoe grip regularly - replace when the sole pattern is worn"
+      ],
+      "progression_path": {
+        "current": "bd_equipment",
+        "next": ["bd_grip", "bd_serve"],
+        "description": "Once you have the right equipment, focus on grip and serving fundamentals."
+      }
+    }
+  ],
+  "player_profiles": {
+    "beginner": {
+      "focus_areas": ["bd_grip", "bd_serve", "bd_footwork", "bd_clear", "bd_equipment", "bd_warmup"],
+      "description": "New players should build a solid foundation in grip, basic strokes, serving, and court movement. Get the right equipment and always warm up.",
+      "recommended_equipment_level": "beginner",
+      "weekly_plan": {
+        "days_per_week": 2,
+        "session_focus": ["Grip and serve practice", "Footwork and clear drills"]
+      }
+    },
+    "intermediate": {
+      "focus_areas": ["bd_smash", "bd_drop", "bd_defense", "bd_drive", "bd_net_play", "bd_fitness", "bd_recovery"],
+      "description": "Players with basic rally ability should develop attacking shots, deception, and defensive skills. Start fitness training and learn recovery.",
+      "recommended_equipment_level": "intermediate",
+      "weekly_plan": {
+        "days_per_week": 3,
+        "session_focus": ["Smash and drop technique", "Defense and drive drills", "Fitness and match play"]
+      }
+    },
+    "advanced": {
+      "focus_areas": ["bd_deception", "bd_singles_tactics", "bd_doubles_strategy", "bd_mental_game"],
+      "description": "Competitive players should refine deception, tactical awareness, doubles coordination, and mental toughness.",
+      "recommended_equipment_level": "advanced",
+      "weekly_plan": {
+        "days_per_week": 5,
+        "session_focus": ["Tactical pattern play", "Match simulation", "Deception drills", "Fitness/conditioning", "Match play with analysis"]
+      }
+    }
+  },
+  "personality_profiles": {
+    "aggressive_player": {
+      "description": "You love attacking and finishing points quickly. Your weapons are smash, jump smash, and fast drops.",
+      "key_skills": ["bd_smash", "bd_footwork", "bd_fitness", "bd_drive"],
+      "recommended_racket_type": "Offensive (Head Heavy, Stiff)",
+      "play_style_tips": [
+        "Develop a threatening smash that opponents fear",
+        "Use clears to push opponents deep, then punish short returns",
+        "Work on fitness - aggressive play demands stamina",
+        "Learn when NOT to attack - patience sets up better opportunities"
+      ]
+    },
+    "defensive_player": {
+      "description": "You outlast opponents with consistency and solid defense. You wait for mistakes and capitalize.",
+      "key_skills": ["bd_defense", "bd_clear", "bd_footwork", "bd_fitness"],
+      "recommended_racket_type": "All-round (Even Balance, Medium Flex)",
+      "play_style_tips": [
+        "Your defense should frustrate attackers into making errors",
+        "Develop excellent court coverage with superior footwork",
+        "Use high clears to slow the pace and reset rallies",
+        "Build exceptional stamina to outlast opponents in long games"
+      ]
+    },
+    "tactical_player": {
+      "description": "You read the game like chess. You set traps, use deception, and outthink opponents.",
+      "key_skills": ["bd_deception", "bd_drop", "bd_net_play", "bd_singles_tactics", "bd_mental_game"],
+      "recommended_racket_type": "Speed/Control (Head Light or Even, Medium Flex)",
+      "play_style_tips": [
+        "Study your opponent's patterns in the first few rallies",
+        "Use deception to create uncertainty - make them guess",
+        "Control the pace of the rally - speed up and slow down intentionally",
+        "Develop a wide variety of shots so you're never predictable"
+      ]
+    },
+    "power_player": {
+      "description": "Raw power is your weapon. You generate pace that opponents struggle to handle.",
+      "key_skills": ["bd_smash", "bd_drive", "bd_fitness"],
+      "recommended_racket_type": "Offensive (Head Heavy, Stiff/Extra Stiff)",
+      "play_style_tips": [
+        "Invest in physical strength training for even more power",
+        "Learn to use power selectively - not every shot needs maximum force",
+        "Develop a punishing jump smash as your signature weapon",
+        "Balance power with placement - a well-placed half-smash beats a wild full smash"
+      ]
+    },
+    "control_player": {
+      "description": "Precision and placement define your game. You put the shuttle exactly where you want it.",
+      "key_skills": ["bd_net_play", "bd_drop", "bd_serve", "bd_deception"],
+      "recommended_racket_type": "Speed (Head Light, Medium Flex)",
+      "play_style_tips": [
+        "Your net game should be razor sharp - tumbles that barely clear the tape",
+        "Develop pinpoint drop shots to all areas of the front court",
+        "Master the serve to start every rally with an advantage",
+        "Use slice and spin to make your shots harder to read"
+      ]
+    }
+  }
+}

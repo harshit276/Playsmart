@@ -242,59 +242,25 @@ export default function AnalyzePage() {
               throw new Error("Server enrichment failed");
             }
           } catch (serverErr) {
-            // Server enrichment failed — still show client-side results
+            // Server enrichment failed — show full client-side results anyway
             clearInterval(interval);
             setProgress(100);
             setLoadingText("Complete!");
 
-            const fallbackResult = {
-              success: true,
-              _processingMode: "client",
-              shot_analysis: {
-                shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
-                confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
-              },
-              speed_analysis: clientResult.speed || clientResult.speed_analysis || {},
-              metrics: clientResult.metrics || {},
-              video_info: clientResult.video_info || {},
-              player_preview: clientResult.player_preview || null,
-              coach_feedback: {
-                summary: "Analysis completed on your device. Coaching feedback unavailable (server connection issue).",
-                tips: clientResult.weaknesses?.map(w => w.fix) || ["Keep practicing!"],
-              },
-              skill_level: clientResult.skill_level || "Beginner",
-              shot_grade: clientResult.shot_grade || "C",
-            };
-            setResult(fallbackResult);
+            clientResult._processingMode = "client";
+            setResult(clientResult);
             setViewingHistorical(false);
             setActiveTab("results");
-            toast.info("Analysis done on device. Coaching feedback unavailable offline.");
+            toast.info("Analysis complete! Coaching feedback will be available when connected.");
           }
         } else {
-          // Guest user - show client-side results directly without server enrichment
+          // Guest user - show full client-side results directly
           clearInterval(interval);
           setProgress(100);
           setLoadingText("Complete!");
 
-          const guestResult = {
-            success: true,
-            _processingMode: "client",
-            shot_analysis: {
-              shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
-              confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
-            },
-            speed_analysis: clientResult.speed || clientResult.speed_analysis || {},
-            metrics: clientResult.metrics || {},
-            video_info: clientResult.video_info || {},
-            player_preview: clientResult.player_preview || null,
-            coach_feedback: {
-              summary: "Analysis completed on your device. Sign in for personalized coaching feedback!",
-              tips: clientResult.weaknesses?.map(w => w.fix) || ["Keep practicing!"],
-            },
-            skill_level: clientResult.skill_level || "Beginner",
-            shot_grade: clientResult.shot_grade || "C",
-          };
-          setResult(guestResult);
+          clientResult._processingMode = "client";
+          setResult(clientResult);
           setViewingHistorical(false);
           setActiveTab("results");
           toast.success("Analysis complete!");

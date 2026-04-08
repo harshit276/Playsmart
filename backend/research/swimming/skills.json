@@ -1,0 +1,535 @@
+{
+  "sport": "swimming",
+  "skill_areas": [
+    {
+      "id": "sw_water_confidence",
+      "name": "Water Confidence & Safety",
+      "level": "beginner",
+      "description": "Overcoming fear of water, learning to float, basic water safety, and building comfort in the pool for absolute beginners",
+      "personality_tags": ["anxious_beginner", "adult_learner", "parent_child"],
+      "swimmer_types": ["recreational", "kids_beginners", "fitness_swimmer"],
+      "progression_path": ["sw_water_confidence", "sw_breathing", "sw_freestyle", "sw_backstroke"],
+      "pain_points": [
+        "Fear of putting face in water",
+        "Panic when feet cannot touch the bottom",
+        "Cannot float on back or front",
+        "Anxiety about deep water",
+        "Previous bad experience or trauma with water"
+      ],
+      "common_mistakes": [
+        "Trying to learn strokes before being comfortable in water",
+        "Tensing up the body which prevents floating",
+        "Holding breath tightly instead of relaxed exhale",
+        "Gripping the wall or lane rope out of fear",
+        "Skipping gradual depth progression"
+      ],
+      "drills": [
+        "Standing water familiarization - splash face, pour water over head",
+        "Bobbing drill - stand in shallow water, dip face in, blow bubbles",
+        "Starfish float (front) with wall support, then without",
+        "Back float with head resting on water, arms out",
+        "Mushroom float (tuck knees, hug, float)",
+        "Wall push-off and glide to standing depth"
+      ]
+    },
+    {
+      "id": "sw_freestyle",
+      "name": "Freestyle (Front Crawl)",
+      "level": "beginner",
+      "description": "Efficient body position, bilateral breathing, high elbow catch and pull, and flutter kick for the fastest and most versatile stroke",
+      "personality_tags": ["technique_focused", "speed_seeker", "endurance_builder"],
+      "swimmer_types": ["fitness_swimmer", "competitive_swimmer", "triathlete", "recreational"],
+      "progression_path": ["sw_water_confidence", "sw_breathing", "sw_freestyle", "sw_endurance", "sw_turns"],
+      "pain_points": [
+        "Head position too high causing legs to sink",
+        "Breathing technique causes loss of balance",
+        "Crossing over on hand entry (crossing midline)",
+        "Inefficient kick using too much energy",
+        "Dropped elbow during catch phase",
+        "No body rotation - swimming flat",
+        "Thumb-first entry causing shoulder impingement"
+      ],
+      "common_mistakes": [
+        "Looking forward instead of down (raises head, sinks legs)",
+        "Wide hand entry outside shoulder line",
+        "Straight arm pull instead of high elbow catch",
+        "Kicking from the knees instead of the hips",
+        "Holding breath instead of continuous exhale underwater",
+        "Over-rotating the body during breathing"
+      ],
+      "drills": [
+        "Catch-up drill for stroke timing",
+        "Side kick drill for body rotation",
+        "Fingertip drag drill for high elbow recovery",
+        "6-3-6 drill for balance and rotation",
+        "Fist drill for improving catch feel",
+        "Single arm freestyle with other arm extended",
+        "Shark fin drill for high elbow recovery",
+        "Paddle scull drill for catch awareness"
+      ]
+    },
+    {
+      "id": "sw_backstroke",
+      "name": "Backstroke",
+      "level": "beginner",
+      "description": "Supine body position, arm recovery and entry, hip rotation, and steady flutter kick on back with proper head stability",
+      "personality_tags": ["relaxed_swimmer", "technique_focused", "back_comfort"],
+      "swimmer_types": ["recreational", "competitive_swimmer", "fitness_swimmer", "kids_beginners"],
+      "progression_path": ["sw_water_confidence", "sw_backstroke", "sw_turns", "sw_endurance"],
+      "pain_points": [
+        "Sinking hips and legs",
+        "Swimming crooked (no lane awareness)",
+        "Poor arm entry angle (too wide or crossing over)",
+        "Insufficient body rotation",
+        "Water going up the nose",
+        "Fear of not seeing where you are going"
+      ],
+      "common_mistakes": [
+        "Sitting up in the water instead of lying flat",
+        "Head too far forward (chin to chest) instead of neutral",
+        "Bending arms too early on the pull",
+        "Kicking with bent knees (bicycle kick)",
+        "Not using backstroke flags for wall awareness",
+        "Stopping rotation which flattens the stroke"
+      ],
+      "drills": [
+        "Single arm backstroke drill",
+        "6-kick switch drill for rotation",
+        "Backstroke with cup on forehead (head stability)",
+        "Double arm backstroke for pull pattern",
+        "Spin drill for rotation awareness",
+        "Backstroke kick with arms at sides for body position"
+      ]
+    },
+    {
+      "id": "sw_breaststroke",
+      "name": "Breaststroke",
+      "level": "intermediate",
+      "description": "Timing of pull, breathe, kick, glide sequence and developing a powerful whip kick with proper streamline recovery",
+      "personality_tags": ["timing_focused", "patient_learner", "social_swimmer"],
+      "swimmer_types": ["recreational", "competitive_swimmer", "fitness_swimmer"],
+      "progression_path": ["sw_freestyle", "sw_breaststroke", "sw_turns", "sw_endurance"],
+      "pain_points": [
+        "Scissor kick instead of whip kick",
+        "Poor timing between pull and kick",
+        "Head lifting too high causing drag",
+        "Knees dropping too wide and low creating drag",
+        "Not gliding long enough in streamline",
+        "Arms pulling too wide past shoulders"
+      ],
+      "common_mistakes": [
+        "Pulling arms past hip line (too far back)",
+        "Breathing by lifting head up instead of pressing chest forward",
+        "Asymmetric kick (one leg stronger than other)",
+        "Rush timing - pulling and kicking simultaneously instead of sequentially",
+        "Not finishing the kick with feet together pointed",
+        "Looking forward instead of down during glide phase"
+      ],
+      "drills": [
+        "2-kick 1-pull drill for kick emphasis",
+        "Breaststroke kick on back (watch feet for symmetry)",
+        "Streamline glide drill for timing",
+        "Wall kick drill with hands on deck watching foot path",
+        "Pull with dolphin kick to isolate pull pattern",
+        "Breaststroke pull with flutter kick for pull timing",
+        "3-second glide drill for streamline patience"
+      ]
+    },
+    {
+      "id": "sw_butterfly",
+      "name": "Butterfly",
+      "level": "advanced",
+      "description": "Undulating body dolphin kick, simultaneous arm recovery over water, breathing rhythm, and building butterfly-specific endurance",
+      "personality_tags": ["power_swimmer", "challenge_seeker", "competitive"],
+      "swimmer_types": ["competitive_swimmer"],
+      "progression_path": ["sw_freestyle", "sw_breaststroke", "sw_butterfly", "sw_underwater", "sw_turns"],
+      "pain_points": [
+        "Cannot maintain body undulation",
+        "Arms not clearing the water on recovery",
+        "Breathing timing disrupts rhythm",
+        "Exhaustion after one length (25m)",
+        "Two kicks not synced with arm cycle",
+        "Hips not rising during recovery phase"
+      ],
+      "common_mistakes": [
+        "Kicking only from the knees instead of full body wave",
+        "Breathing forward/up instead of low and forward",
+        "Single kick per stroke instead of two kicks",
+        "Over-pulling past hips which delays recovery",
+        "Entering hands too wide (should be shoulder width)",
+        "Trying to muscle through instead of using rhythm"
+      ],
+      "drills": [
+        "Underwater dolphin kick drill (on front and back)",
+        "Single arm butterfly drill (one arm at side)",
+        "3-3-3 drill (3 right, 3 left, 3 full)",
+        "Butterfly kick on back with arms overhead",
+        "2-kick-1-pull drill for timing",
+        "Butterfly with fins for rhythm development",
+        "Vertical dolphin kick in deep end for core strength"
+      ]
+    },
+    {
+      "id": "sw_turns",
+      "name": "Flip Turns & Open Turns",
+      "level": "intermediate",
+      "description": "Flip turns for freestyle and backstroke, open turns for breaststroke and butterfly, approach timing, and wall push-offs",
+      "personality_tags": ["competitive", "detail_oriented", "speed_seeker"],
+      "swimmer_types": ["competitive_swimmer", "fitness_swimmer", "triathlete"],
+      "progression_path": ["sw_freestyle", "sw_turns", "sw_dive_starts", "sw_underwater"],
+      "pain_points": [
+        "Losing speed approaching the wall",
+        "Not enough push-off force from the wall",
+        "Poor streamline during underwater phase",
+        "Misjudging distance from wall",
+        "Getting water up the nose during flip",
+        "Twisting to wrong direction on backstroke flip turn"
+      ],
+      "common_mistakes": [
+        "Gliding into the wall instead of swimming into the turn",
+        "Taking an extra stroke or half-stroke before flipping",
+        "Not blowing air out through nose during the flip",
+        "Pushing off on back instead of rotating to side/front",
+        "Shallow push-off without proper streamline",
+        "Breaking streamline too early after push-off",
+        "Not counting strokes from backstroke flags"
+      ],
+      "drills": [
+        "Somersault practice in open water (mid-pool)",
+        "Approach and flip turn with decreasing distance",
+        "Streamline push-off and breakout drill",
+        "No-breath-into-the-wall drill for approach speed",
+        "Backstroke flag counting drill (strokes from flags to wall)",
+        "Open turn touch-and-go speed drill",
+        "Underwater streamline kick for 5-8 meters off every wall"
+      ]
+    },
+    {
+      "id": "sw_dive_starts",
+      "name": "Dive Starts & Block Starts",
+      "level": "intermediate",
+      "description": "Racing dive from blocks, track start vs grab start, entry angle, streamline breakout, and relay exchange timing",
+      "personality_tags": ["competitive", "explosive", "race_focused"],
+      "swimmer_types": ["competitive_swimmer"],
+      "progression_path": ["sw_turns", "sw_dive_starts", "sw_underwater"],
+      "pain_points": [
+        "Belly-flopping on entry instead of clean entry",
+        "Fear of diving from blocks",
+        "Entering too deep and losing momentum",
+        "Entering too shallow and not getting depth for breakout",
+        "Slow reaction to start signal",
+        "Poor balance on the block before the start"
+      ],
+      "common_mistakes": [
+        "Looking up at the signal instead of looking down at the water",
+        "Jumping up instead of driving forward and out",
+        "Arms not in streamline before hitting the water",
+        "Not using back foot (track start) for power",
+        "Flat entry angle instead of hole-in-the-water entry",
+        "Coming up too early from the start"
+      ],
+      "drills": [
+        "Sitting dive from pool edge (beginner progression)",
+        "Kneeling dive from pool edge",
+        "Standing dive from pool edge",
+        "Block start with focus on forward drive",
+        "Reaction time practice with verbal commands",
+        "Entry angle practice - dive through a hoop target",
+        "Start-to-breakout practice (15m sprint)"
+      ]
+    },
+    {
+      "id": "sw_breathing",
+      "name": "Breathing Technique",
+      "level": "beginner",
+      "description": "Rhythmic breathing, bilateral breathing, continuous exhale underwater, breath control, and managing breathing anxiety",
+      "personality_tags": ["anxious_beginner", "technique_focused", "endurance_builder"],
+      "swimmer_types": ["recreational", "fitness_swimmer", "competitive_swimmer", "triathlete", "kids_beginners"],
+      "progression_path": ["sw_water_confidence", "sw_breathing", "sw_freestyle"],
+      "pain_points": [
+        "Holding breath instead of exhaling underwater",
+        "Lifting head to breathe instead of rotating",
+        "Panic and anxiety when face is in water",
+        "Cannot breathe on both sides (bilateral)",
+        "Running out of breath after one length",
+        "Swallowing water when trying to breathe"
+      ],
+      "common_mistakes": [
+        "Explosive exhale at the surface instead of steady underwater exhale",
+        "Turning head too far to breathe (looking at ceiling)",
+        "Inhaling through the nose instead of mouth",
+        "Not exhaling fully so lungs are not empty for quick inhale",
+        "Breathing every stroke instead of every 2-3 strokes",
+        "Tensing neck and jaw during breathing"
+      ],
+      "drills": [
+        "Bobbing drill (exhale underwater, inhale above)",
+        "Bilateral breathing sets (breathe every 3 strokes)",
+        "Breath control sets (25m on fewer breaths progressively)",
+        "Standing face-in-water exhale practice",
+        "Crocodile eyes drill (eyes at water level, mouth submerged, exhale)",
+        "Trickle breathing - slow continuous exhale through nose and mouth",
+        "Hypoxic sets (breathe every 5, 7 strokes for advanced)"
+      ]
+    },
+    {
+      "id": "sw_endurance",
+      "name": "Endurance & Pacing",
+      "level": "intermediate",
+      "description": "Building aerobic swim base, interval training, CSS (Critical Swim Speed), negative splitting, and race pacing strategy",
+      "personality_tags": ["endurance_builder", "data_driven", "distance_swimmer"],
+      "swimmer_types": ["fitness_swimmer", "competitive_swimmer", "triathlete"],
+      "progression_path": ["sw_freestyle", "sw_breathing", "sw_endurance", "sw_workout_planning"],
+      "pain_points": [
+        "Going out too fast and dying at the end",
+        "Cannot swim continuously for long distances",
+        "No sense of pace per 100m",
+        "Getting bored during long sets",
+        "Technique falling apart when tired"
+      ],
+      "common_mistakes": [
+        "Only swimming at one speed (no variation in intensity)",
+        "Skipping rest intervals and swimming junk yardage",
+        "Not tracking times or distances for progress",
+        "Ignoring stroke count (SPL) as a metric",
+        "Not tapering before competitions",
+        "Too much high-intensity, not enough aerobic base"
+      ],
+      "drills": [
+        "Descending sets (each repeat faster than the last)",
+        "CSS (Critical Swim Speed) test: time 400m and 200m, calculate CSS pace",
+        "Negative split practice (second half faster than first)",
+        "Broken swims (race distance with 10-second rests to learn pacing)",
+        "Stroke count per length (SPL) monitoring during endurance sets",
+        "Progressive 100s: build speed across a set of 8-10 x 100m",
+        "Test set: 10 x 100m on fixed interval, track consistency"
+      ]
+    },
+    {
+      "id": "sw_open_water",
+      "name": "Open Water Swimming",
+      "level": "intermediate",
+      "description": "Sighting, drafting, navigation, wave and current management, wetsuit swimming, and open water race tactics",
+      "personality_tags": ["adventure_seeker", "triathlete", "nature_lover"],
+      "swimmer_types": ["triathlete", "recreational", "competitive_swimmer"],
+      "progression_path": ["sw_freestyle", "sw_endurance", "sw_open_water"],
+      "pain_points": [
+        "Cannot swim straight without lane lines",
+        "Panic in deep water without a visible bottom",
+        "Sighting disrupts stroke rhythm",
+        "Dealing with waves, chop, and currents",
+        "Getting kicked or bumped by other swimmers in mass starts",
+        "Cold water shock"
+      ],
+      "common_mistakes": [
+        "Sighting too frequently which slows pace",
+        "Lifting head too high to sight (hips drop)",
+        "Not practicing in open water before race day",
+        "Wearing a brand-new wetsuit on race day",
+        "Swimming alone in open water (safety risk)",
+        "Ignoring water conditions and weather"
+      ],
+      "drills": [
+        "Sighting drill: lift eyes to waterline every 6-8 strokes",
+        "Crocodile eyes sighting (eyes barely break surface)",
+        "Tarzan drill (head-up freestyle for 25m)",
+        "Draft swimming practice (swim behind and beside a partner)",
+        "Beach entry and exit practice (running in shallow water)",
+        "Navigation practice: swim to a fixed point without lane lines",
+        "Wetsuit practice sessions before race day"
+      ]
+    },
+    {
+      "id": "sw_underwater",
+      "name": "Underwater Swimming & Dolphin Kick",
+      "level": "advanced",
+      "description": "Streamline body position, underwater dolphin kick off walls and starts, breakout timing, and maximizing underwater distance",
+      "personality_tags": ["competitive", "power_swimmer", "detail_oriented"],
+      "swimmer_types": ["competitive_swimmer"],
+      "progression_path": ["sw_turns", "sw_dive_starts", "sw_underwater"],
+      "pain_points": [
+        "Cannot hold streamline properly underwater",
+        "Dolphin kick too slow or too small",
+        "Breaking out too early (wasting free speed)",
+        "Breaking out too late (losing speed and oxygen)",
+        "Body not fully tight in streamline"
+      ],
+      "common_mistakes": [
+        "Hands not stacked properly in streamline (gap between hands)",
+        "Head poking up out of streamline",
+        "Kicking only from knees instead of core-driven wave",
+        "Not exhaling slightly through nose (water goes up nose)",
+        "Same kick frequency regardless of distance",
+        "Breaking streamline with arms before fully surfaced"
+      ],
+      "drills": [
+        "Streamline push-off: count kicks to 10m, then 12m, then 15m",
+        "Underwater dolphin kick on back for visual feedback",
+        "Vertical dolphin kick in deep end (treading position)",
+        "Streamline squeeze drill on deck (partner checks tightness)",
+        "Breakout timing practice: push off, kick 5-7 kicks, breakout at speed",
+        "Hypoxic streamline: push off, glide as far as possible on one breath"
+      ]
+    },
+    {
+      "id": "sw_kids_swimming",
+      "name": "Kids & Toddler Swimming",
+      "level": "beginner",
+      "description": "Age-appropriate water skills for children 3-12, water safety education, fun learning through games, and progression to basic strokes",
+      "personality_tags": ["parent_child", "playful", "safety_focused"],
+      "swimmer_types": ["kids_beginners"],
+      "progression_path": ["sw_kids_swimming", "sw_water_confidence", "sw_breathing", "sw_freestyle", "sw_backstroke"],
+      "pain_points": [
+        "Child is terrified of water or pool",
+        "Child won't put face in water",
+        "Short attention span during lessons",
+        "Parent anxiety about child's safety",
+        "Child can paddle but not proper strokes",
+        "Transitioning from floaties to independent swimming"
+      ],
+      "common_mistakes": [
+        "Forcing a scared child into the water",
+        "Using arm floaties too long (creates bad body position habits)",
+        "Not enrolling in structured lessons with qualified instructor",
+        "Skipping water safety education",
+        "Comparing child's progress to other children",
+        "Teaching strokes before water confidence is established"
+      ],
+      "drills": [
+        "Blow bubbles game (exhale through mouth making bubbles)",
+        "Ring/toy retrieval from shallow water",
+        "Assisted back float with parent support",
+        "Kick on a kickboard across shallow end",
+        "Jump into pool (to parent or coach)",
+        "Streamline glide with push from wall",
+        "Red light green light game (start/stop swimming)"
+      ]
+    },
+    {
+      "id": "sw_pool_etiquette",
+      "name": "Pool Etiquette & Lane Swimming",
+      "level": "beginner",
+      "description": "Rules and customs of shared pool swimming: lane speeds, circle swimming, passing, resting at the wall, and general pool courtesy",
+      "personality_tags": ["social_swimmer", "new_to_pool", "respectful"],
+      "swimmer_types": ["recreational", "fitness_swimmer", "kids_beginners"],
+      "progression_path": ["sw_water_confidence", "sw_pool_etiquette", "sw_freestyle"],
+      "pain_points": [
+        "Not knowing which lane speed to join",
+        "Confusion about circle swimming direction",
+        "Getting stuck behind slower swimmers",
+        "Anxiety about being judged for being slow",
+        "Not knowing when/where to rest"
+      ],
+      "common_mistakes": [
+        "Stopping in the middle of the lane to rest",
+        "Swimming breaststroke in the fast lane",
+        "Not tapping feet to signal passing",
+        "Pushing off just as someone is approaching the wall",
+        "Wearing jewelry or loose clothing in the pool",
+        "Not showering before entering the pool"
+      ],
+      "drills": [
+        "Practice circle swimming pattern in an empty lane",
+        "Learn the tap-and-pass protocol",
+        "Practice wall stops (corner, not center)",
+        "Read and follow your pool's posted lane rules"
+      ]
+    },
+    {
+      "id": "sw_workout_planning",
+      "name": "Swim Workout Planning",
+      "level": "intermediate",
+      "description": "Structuring swim sessions with warm-up, main set, drills, kick sets, pull sets, and cool-down. Periodization and weekly planning.",
+      "personality_tags": ["data_driven", "self_coached", "structured"],
+      "swimmer_types": ["fitness_swimmer", "competitive_swimmer", "triathlete"],
+      "progression_path": ["sw_endurance", "sw_workout_planning"],
+      "pain_points": [
+        "No idea how to structure a pool session",
+        "Just swimming back and forth without purpose",
+        "Not knowing what distance or pace to target",
+        "Boredom from lack of variety",
+        "Not knowing how many sessions per week"
+      ],
+      "common_mistakes": [
+        "Skipping warm-up and diving straight into fast swimming",
+        "Every session is the same (no periodization)",
+        "Not including drill work in sessions",
+        "Only swimming freestyle and ignoring other strokes",
+        "No cool-down after hard sets",
+        "Too much volume too soon (injury risk)"
+      ],
+      "drills": [
+        "Sample beginner session: 200 warm-up, 4x50 drill, 6x50 main set, 200 cool-down (800m total)",
+        "Sample intermediate session: 400 warm-up, 4x100 pull, 8x50 kick, 6x100 main set, 200 cool-down (2200m total)",
+        "Sample advanced session: 800 warm-up, 8x100 pull, 10x50 kick, 5x200 main set, 6x50 sprint, 400 cool-down (4000m total)",
+        "Weekly plan: 3-4 sessions for fitness, 5-6 for competitive, 2-3 for triathlon (combined with bike/run)"
+      ]
+    },
+    {
+      "id": "sw_dryland",
+      "name": "Dryland Training for Swimmers",
+      "level": "intermediate",
+      "description": "Out-of-pool exercises to build swim-specific strength, core stability, shoulder health, flexibility, and injury prevention",
+      "personality_tags": ["strength_focused", "injury_prevention", "cross_training"],
+      "swimmer_types": ["competitive_swimmer", "fitness_swimmer", "triathlete"],
+      "progression_path": ["sw_freestyle", "sw_dryland", "sw_endurance"],
+      "pain_points": [
+        "Weak core causing poor body position in water",
+        "Shoulder pain from swimming without strength work",
+        "No access to gym or dryland equipment",
+        "Not knowing which exercises transfer to swimming",
+        "Tight ankles limiting kick effectiveness"
+      ],
+      "common_mistakes": [
+        "Heavy weight training that builds bulk but not swim-speed",
+        "Ignoring shoulder prehab (rotator cuff work)",
+        "Not stretching ankles for better kick range",
+        "Only doing upper body and ignoring core and legs",
+        "Doing dryland on the same day as hard pool sessions",
+        "Skipping warm-up before dryland exercises"
+      ],
+      "drills": [
+        "Resistance band pull-apart for shoulder health (3x15)",
+        "Resistance band swim pull simulation (3x12 each arm)",
+        "Plank hold: front 60s, side 45s each side",
+        "Superman hold for back extension (3x30s)",
+        "Medicine ball slam for explosive power (3x10)",
+        "Ankle stretches: sit on feet (seiza position) for kick flexibility",
+        "Squat jumps for start and turn power (3x10)",
+        "Lat pulldown or resistance band lat pull for pull strength"
+      ]
+    }
+  ],
+  "swimmer_profiles": {
+    "recreational": {
+      "description": "Swimming for fun, relaxation, and basic fitness. May swim 1-2 times per week. Wants to enjoy the water without competitive pressure.",
+      "focus_areas": ["sw_water_confidence", "sw_freestyle", "sw_breathing", "sw_pool_etiquette"],
+      "recommended_gear_level": "beginner",
+      "sessions_per_week": "1-2"
+    },
+    "fitness_swimmer": {
+      "description": "Swimming primarily for cardio, weight management, and overall fitness. Swims 3-4 times per week. Wants structured workouts and steady improvement.",
+      "focus_areas": ["sw_freestyle", "sw_breathing", "sw_endurance", "sw_workout_planning", "sw_dryland"],
+      "recommended_gear_level": "beginner to intermediate",
+      "sessions_per_week": "3-4"
+    },
+    "competitive_swimmer": {
+      "description": "Training for swim meets, school/college/club competitions, or national-level events. Focused on all four strokes, turns, starts, and race tactics.",
+      "focus_areas": ["sw_freestyle", "sw_backstroke", "sw_breaststroke", "sw_butterfly", "sw_turns", "sw_dive_starts", "sw_underwater", "sw_endurance", "sw_workout_planning", "sw_dryland"],
+      "recommended_gear_level": "intermediate to advanced",
+      "sessions_per_week": "5-7"
+    },
+    "triathlete": {
+      "description": "Swimming as part of triathlon training. Needs efficient freestyle, open water skills, and endurance without burning out for bike and run legs.",
+      "focus_areas": ["sw_freestyle", "sw_breathing", "sw_endurance", "sw_open_water", "sw_workout_planning"],
+      "recommended_gear_level": "intermediate",
+      "sessions_per_week": "2-3"
+    },
+    "kids_beginners": {
+      "description": "Children aged 3-12 learning to swim. Focus on water safety, confidence, and progressive skill development through fun and games.",
+      "focus_areas": ["sw_kids_swimming", "sw_water_confidence", "sw_breathing", "sw_freestyle", "sw_backstroke"],
+      "recommended_gear_level": "beginner (kids sizes)",
+      "sessions_per_week": "2-3"
+    }
+  }
+}

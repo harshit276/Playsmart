@@ -1,0 +1,772 @@
+{
+  "sport": "pickleball",
+  "skill_areas": [
+    {
+      "id": "pk_serve",
+      "name": "Serving",
+      "level": "beginner",
+      "description": "Underhand serve technique including drive serve, lob serve, topspin serve, and spin serve variations",
+      "personality_tags": ["all"],
+      "pain_points": [
+        "Serving into the net consistently",
+        "Cannot place serves accurately to target zones",
+        "Lack of power on drive serves",
+        "Not using topspin or slice on serves",
+        "Foot faults — stepping on baseline before contact",
+        "Inconsistent toss causing erratic serves"
+      ],
+      "common_mistakes": [
+        "Hitting with an overhand motion (illegal in pickleball)",
+        "Not making contact below the waist",
+        "Standing too close to the baseline",
+        "Rushing the serve motion instead of being deliberate",
+        "Aiming for lines instead of safe targets as a beginner"
+      ],
+      "drills": [
+        "Target zone serve practice — place cones in deep corners",
+        "Deep serve to baseline drill — 10 in a row past the service line",
+        "Topspin serve with wrist snap practice",
+        "Serve placement progression: center, wide, deep",
+        "Consistency drill: 20 serves in a row without a fault"
+      ],
+      "progression_path": [
+        "Learn basic underhand motion with consistent contact",
+        "Develop deep serve placement to push opponent back",
+        "Add topspin for kick and depth",
+        "Learn drive serve for low, fast trajectory",
+        "Master lob serve for variety and to exploit weak overheads",
+        "Develop spin serve variations (side spin, backspin)"
+      ],
+      "related_videos": ["pk_v07", "pk_v14", "pk_v22"]
+    },
+    {
+      "id": "pk_return",
+      "name": "Return of Serve",
+      "level": "beginner",
+      "description": "Deep return placement and transition to kitchen line after return. The return team has the advantage — capitalize on it.",
+      "personality_tags": ["all"],
+      "pain_points": [
+        "Return going short giving server advantage to approach",
+        "Not moving to kitchen after return",
+        "Cannot handle spin serves on return",
+        "Hitting returns out of bounds trying to be too aggressive",
+        "Poor footwork — flat-footed on the return"
+      ],
+      "common_mistakes": [
+        "Hitting the return and standing still instead of approaching",
+        "Trying to hit winners off the return instead of going deep",
+        "Not split-stepping before the server contacts the ball",
+        "Standing too deep or too close on return position"
+      ],
+      "drills": [
+        "Deep return to baseline target — aim past the service line",
+        "Return and approach drill — hit return then sprint to kitchen",
+        "Spin serve return practice — partner hits various spins",
+        "Return placement drill — alternate deep middle and deep corners"
+      ],
+      "progression_path": [
+        "Consistently return deep past the service line",
+        "Develop the return-and-approach footwork pattern",
+        "Learn to handle topspin and side spin serves",
+        "Add depth and direction control to returns",
+        "Return with purpose — set up your partner's position"
+      ],
+      "related_videos": ["pk_v07", "pk_v01", "pk_v22"]
+    },
+    {
+      "id": "pk_dink",
+      "name": "Dinking",
+      "level": "beginner",
+      "description": "Soft shots from the non-volley zone (kitchen) that land in the opponent's kitchen. The foundation of high-level pickleball.",
+      "personality_tags": ["soft_game_player", "all_court_player"],
+      "pain_points": [
+        "Hitting dinks too high giving attackable balls",
+        "Popping the ball up on cross-court dinks",
+        "Lack of patience in dink rallies — wanting to speed up too early",
+        "Poor footwork at the kitchen line — reaching instead of moving",
+        "Cannot dink with backhand consistently",
+        "Getting jammed on body dinks"
+      ],
+      "common_mistakes": [
+        "Using wrist instead of shoulder and body for dink motion",
+        "Swinging too big — dinks should be compact push motions",
+        "Not bending knees — dinking with back bent over",
+        "Standing too far from the kitchen line",
+        "Hitting every dink cross-court (too predictable)"
+      ],
+      "drills": [
+        "Cross-court dink rally — 100 in a row challenge",
+        "Down-the-line dink placement drill",
+        "Inside-out dink angles — forehand to opponent's backhand",
+        "Dink and reset drill after partner speeds up",
+        "Body dink defense — soft hands redirection",
+        "Footwork ladder drills for kitchen line movement"
+      ],
+      "progression_path": [
+        "Learn basic forehand dink with consistent net clearance",
+        "Develop backhand dink with same control",
+        "Master cross-court dink patterns (most common in play)",
+        "Add down-the-line dinks for variety and surprise",
+        "Learn inside-out angle dinks to open up the court",
+        "Develop the ability to speed up out of a dink rally",
+        "Master body dink defense and redirection"
+      ],
+      "related_videos": ["pk_v03", "pk_v09", "pk_v21"]
+    },
+    {
+      "id": "pk_third_shot_drop",
+      "name": "Third Shot Drop",
+      "level": "intermediate",
+      "description": "The critical third shot drop from the baseline that allows the serving team to approach the net. The most important intermediate skill.",
+      "personality_tags": ["soft_game_player", "all_court_player"],
+      "pain_points": [
+        "Drop going too high and getting attacked at the net",
+        "Cannot consistently clear the net with soft touch",
+        "Choosing wrong shot — drop vs drive confusion",
+        "Poor transition to net after executing the third shot",
+        "Drop sailing long under pressure",
+        "Cannot hit drops with backspin for better control"
+      ],
+      "common_mistakes": [
+        "Hitting the drop too hard — treating it like a drive",
+        "Not following the drop to the net — hitting and standing",
+        "Using too much wrist instead of a pendulum arm swing",
+        "Not adjusting drop height based on opponent's position",
+        "Attempting drops from too deep when a drive would be better"
+      ],
+      "drills": [
+        "Third shot drop into kitchen target from baseline",
+        "Drop and transition footwork drill — drop then move",
+        "Crosscourt vs straight-ahead drop placement",
+        "Drop height control — barely over the net vs higher arc",
+        "Backspin drop technique practice",
+        "Live drill: serve, return, drop, approach, dink"
+      ],
+      "progression_path": [
+        "Learn the pendulum swing motion for soft drops",
+        "Develop consistent drops that land in the kitchen",
+        "Learn to transition forward after the drop",
+        "Add cross-court drops for better angles",
+        "Develop backspin drops that stay low after bounce",
+        "Master the drop-and-move pattern in live play",
+        "Learn to read when drop is the right choice vs drive"
+      ],
+      "related_videos": ["pk_v02", "pk_v16", "pk_v23"]
+    },
+    {
+      "id": "pk_third_shot_drive",
+      "name": "Third Shot Drive",
+      "level": "intermediate",
+      "description": "Aggressive third shot hit hard and low at opponents at the kitchen. Used when opponents give a short or high return.",
+      "personality_tags": ["aggressive_banger", "tennis_convert"],
+      "pain_points": [
+        "Driving every third shot without thinking — predictable",
+        "Drives going into the net or sailing long",
+        "Cannot follow the drive with a fifth shot drop or reset",
+        "Not targeting the right opponent with drives",
+        "Drives lacking pace or direction"
+      ],
+      "common_mistakes": [
+        "Driving on every single third shot regardless of situation",
+        "Aiming at the net player's paddle instead of their feet or body",
+        "Not transitioning forward after the drive",
+        "Hitting the drive too high giving an easy put-away",
+        "Over-swinging for power instead of controlled aggression"
+      ],
+      "drills": [
+        "Drive at target zones — feet, body, backhand side",
+        "Third shot drive then fifth shot drop sequence",
+        "Decision drill: coach feeds random returns, choose drive or drop",
+        "Drive and transition — hit then move forward",
+        "Speed and placement balance drill"
+      ],
+      "progression_path": [
+        "Learn flat, low drives over the net",
+        "Develop ability to target the weaker opponent",
+        "Learn the drive-then-drop sequence (5th shot transition)",
+        "Master the drive-and-move pattern in live play",
+        "Develop topspin drives for added margin and kick",
+        "Learn when to drive vs drop based on return quality"
+      ],
+      "related_videos": ["pk_v13", "pk_v16", "pk_v14"]
+    },
+    {
+      "id": "pk_volley",
+      "name": "Volleying",
+      "level": "intermediate",
+      "description": "Punch volleys, roll volleys, and block volleys at the non-volley zone. Essential for net play dominance.",
+      "personality_tags": ["aggressive_banger", "all_court_player"],
+      "pain_points": [
+        "Swinging too big on volleys instead of compact punches",
+        "Stepping into the kitchen on volleys (foot faults)",
+        "Cannot handle fast drives aimed at the body",
+        "Poor paddle positioning — keeping paddle too low",
+        "Cannot generate topspin on roll volleys",
+        "Popping up block volleys too high"
+      ],
+      "common_mistakes": [
+        "Taking a full backswing on volleys — just punch or block",
+        "Watching the ball instead of preparing paddle position",
+        "Leaning into the kitchen instead of staying behind the line",
+        "Volleying with one hand when two-handed support helps stability",
+        "Not keeping the paddle up between shots (ready position)"
+      ],
+      "drills": [
+        "Rapid volley exchange at the net — wall or partner",
+        "Block volley against hard drives — absorb pace",
+        "Roll volley for topspin winners — wrist and forearm rotation",
+        "Punch volley accuracy — target cones on opponent's side",
+        "Reaction volley drill — partner feeds rapid random shots",
+        "Kitchen line footwork — lateral movement between volleys"
+      ],
+      "progression_path": [
+        "Master the ready position with paddle up and in front",
+        "Learn punch volleys with compact forward motion",
+        "Develop block volleys for absorbing hard shots",
+        "Add roll volleys with topspin for offensive pressure",
+        "Master the backhand volley (most common in doubles)",
+        "Learn volley placement — deep corners and at feet",
+        "Develop hands speed for rapid counter-volley exchanges"
+      ],
+      "related_videos": ["pk_v06", "pk_v05", "pk_v09"]
+    },
+    {
+      "id": "pk_speedup",
+      "name": "Speed-Up Attacks",
+      "level": "intermediate",
+      "description": "Transitioning from a slow dink rally to a fast, aggressive attack. Knowing when and how to speed up is what separates levels.",
+      "personality_tags": ["aggressive_banger", "all_court_player"],
+      "pain_points": [
+        "Speeding up at the wrong time — getting countered",
+        "Attacking balls that are too low — into the net",
+        "Telegraphing the speed-up with body language",
+        "No plan after the speed-up — just hoping it works",
+        "Speed-ups going at opponent's paddle instead of body/feet"
+      ],
+      "common_mistakes": [
+        "Speeding up every high ball without reading opponent readiness",
+        "Attacking cross-court into the opponent's forehand",
+        "Not committing — half-speed attacks that get easily handled",
+        "Speeding up from too far below the net (hitting up gives easy counter)",
+        "No follow-up shot prepared after the initial speed-up"
+      ],
+      "drills": [
+        "Dink rally with random speed-up trigger — react and attack",
+        "Target practice — speed up to body, feet, backhand hip",
+        "Speed-up and follow drill — attack then cover the counter",
+        "Partner counter-drill — one attacks, other blocks and resets",
+        "Decision drill — coach says 'now' for when to speed up"
+      ],
+      "progression_path": [
+        "Recognize attackable balls (above net height, floating)",
+        "Learn the forehand flick speed-up from a dink position",
+        "Develop backhand speed-up for catching opponents off guard",
+        "Master targeting the body and backhand hip",
+        "Learn to chain speed-up with follow-up volley",
+        "Read opponent's paddle position to find openings",
+        "Develop misdirection on speed-ups"
+      ],
+      "related_videos": ["pk_v06", "pk_v09", "pk_v19"]
+    },
+    {
+      "id": "pk_reset",
+      "name": "Resetting After Speed-Up",
+      "level": "intermediate",
+      "description": "Absorbing an opponent's speed-up attack and returning a soft, controlled shot back into the kitchen. The defensive counter to aggression.",
+      "personality_tags": ["soft_game_player", "all_court_player"],
+      "pain_points": [
+        "Panicking during speed-ups and hitting wild shots",
+        "Reset going too high — giving another attackable ball",
+        "Stiff hands — not absorbing pace on the paddle",
+        "Cannot reset backhand side attacks consistently",
+        "Resetting into the net under pressure"
+      ],
+      "common_mistakes": [
+        "Trying to counter-attack every speed-up instead of resetting",
+        "Swinging at the ball instead of absorbing with soft hands",
+        "Pulling the paddle back on contact instead of keeping it steady",
+        "Not bending knees to get under the ball on low resets",
+        "Resetting back to the same spot every time (predictable)"
+      ],
+      "drills": [
+        "Partner drives hard, you reset into kitchen target",
+        "Rapid-fire reset drill — continuous attacks, continuous resets",
+        "Backhand reset practice with paddle angle focus",
+        "Low ball reset — getting under balls below net height",
+        "Reset placement — practice resetting to different kitchen zones"
+      ],
+      "progression_path": [
+        "Learn soft hands technique — loosen grip on impact",
+        "Master forehand reset with consistent kitchen landing",
+        "Develop backhand reset with same control",
+        "Learn to reset balls at different heights and speeds",
+        "Practice resetting while moving (transition zone resets)",
+        "Develop the ability to choose reset vs counter in real-time",
+        "Master resetting under tournament pressure"
+      ],
+      "related_videos": ["pk_v21", "pk_v06", "pk_v09"]
+    },
+    {
+      "id": "pk_transition_zone",
+      "name": "Transition Zone Play",
+      "level": "intermediate",
+      "description": "Navigating the area between the baseline and kitchen line (no man's land). Crucial for the serving team moving forward after the third shot.",
+      "personality_tags": ["all_court_player", "soft_game_player"],
+      "pain_points": [
+        "Getting stuck in no man's land — balls at feet",
+        "Not split-stepping when opponent hits",
+        "Moving forward too fast without controlling the ball",
+        "Cannot hit volleys or drops from the transition zone",
+        "Getting passed or lobbed while in transition"
+      ],
+      "common_mistakes": [
+        "Running straight to the kitchen without stopping to play a ball",
+        "Not split-stepping — caught moving when opponent strikes",
+        "Trying to hit winners from the transition zone instead of neutralizing",
+        "Standing upright instead of staying low through the zone",
+        "Moving forward after a bad third shot (should stay back)"
+      ],
+      "drills": [
+        "Split-step timing drill — stop on opponent's contact",
+        "Transition volley-drop — hit a soft drop from mid-court",
+        "Progressive approach — third shot, fifth shot, seventh shot approach",
+        "Ball-at-feet drill — partner hits at your feet in transition zone",
+        "Live rally with focus on controlled forward movement"
+      ],
+      "progression_path": [
+        "Learn the split-step and its timing in transition",
+        "Master the volley-drop from mid-court (soft shot forward)",
+        "Develop the ability to handle low balls at your feet",
+        "Learn when to keep moving forward vs hold position",
+        "Practice the full approach pattern in live rallies",
+        "Master reading opponent's shot to decide movement"
+      ],
+      "related_videos": ["pk_v23", "pk_v02", "pk_v16"]
+    },
+    {
+      "id": "pk_lob",
+      "name": "Lobbing",
+      "level": "intermediate",
+      "description": "Offensive and defensive lob shots over opponents at the kitchen line. An underused weapon that can change the pace and rhythm of play.",
+      "personality_tags": ["soft_game_player", "all_court_player"],
+      "pain_points": [
+        "Lobs going too short — easy overhead for opponent",
+        "Lobs going too deep — out of bounds",
+        "Telegraphing the lob with obvious backswing change",
+        "Cannot lob effectively off the backhand side",
+        "Over-relying on lobs — becoming predictable"
+      ],
+      "common_mistakes": [
+        "Lobbing when opponents are already back (they'll smash it)",
+        "Lobbing too often (loses effectiveness)",
+        "Not disguising the lob — same motion as a dink",
+        "Lobbing into the wind (outdoor play disaster)",
+        "Not following up the lob — standing and watching"
+      ],
+      "drills": [
+        "Lob depth control — land between baseline and kitchen",
+        "Disguised lob — same backswing as dink, lob finish",
+        "Backhand lob practice from kitchen line",
+        "Lob and move drill — lob then reposition",
+        "Wind condition lob practice (outdoor specific)"
+      ],
+      "progression_path": [
+        "Learn basic lob trajectory and depth control",
+        "Develop disguised lobs from dink rallies",
+        "Add backhand lob capability",
+        "Master topspin lobs that dive down after clearing opponent",
+        "Learn when lobs are high-percentage vs risky",
+        "Develop lob as part of pattern play (dink-dink-lob)"
+      ],
+      "related_videos": ["pk_v17"]
+    },
+    {
+      "id": "pk_lob_defense",
+      "name": "Lob Defense and Overheads",
+      "level": "intermediate",
+      "description": "Defending against lobs with proper footwork, overhead smashes, and recovery positioning.",
+      "personality_tags": ["aggressive_banger", "all_court_player", "tennis_convert"],
+      "pain_points": [
+        "Slow to recognize the lob and turn/run",
+        "Overhead smash going into the net or out",
+        "Cannot track the ball overhead while moving back",
+        "Partner confusion — who takes the lob",
+        "Poor recovery after retreating for a lob"
+      ],
+      "common_mistakes": [
+        "Backpedaling instead of turning and running to the lob",
+        "Trying to hit the overhead too hard (just place it)",
+        "Not communicating with partner about who takes the lob",
+        "Both players retreating for the same lob",
+        "Not recovering back to the kitchen after playing the lob"
+      ],
+      "drills": [
+        "Turn and run drill — partner lobs, you track and smash",
+        "Overhead placement — aim for deep corners not power",
+        "Partner communication drill — call 'mine' or 'yours'",
+        "Lob recovery drill — play the lob then sprint back to kitchen",
+        "Drop shot off a lob — touch alternative to overhead"
+      ],
+      "progression_path": [
+        "Learn to recognize lob early and start moving immediately",
+        "Master turn-and-run footwork (not backpedaling)",
+        "Develop overhead smash with consistent placement",
+        "Learn the drop shot alternative when lob pushes you deep",
+        "Master partner communication on lob coverage",
+        "Develop quick recovery back to kitchen position"
+      ],
+      "related_videos": ["pk_v17"]
+    },
+    {
+      "id": "pk_erne",
+      "name": "Erne Shot",
+      "level": "advanced",
+      "description": "Jumping or running around the kitchen to volley from outside the non-volley zone. A highlight-reel shot that is also tactically powerful.",
+      "personality_tags": ["aggressive_banger", "all_court_player"],
+      "pain_points": [
+        "Timing the approach — too early telegraphs, too late misses",
+        "Foot fault — touching kitchen zone during or after the shot",
+        "Cannot execute while maintaining balance",
+        "Leaving a gap for partner to cover when going for the Erne",
+        "Opponent reading the Erne attempt and adjusting"
+      ],
+      "common_mistakes": [
+        "Going for the Erne on every dink (too predictable)",
+        "Not establishing position outside the kitchen before the shot",
+        "Feet landing in the kitchen on the follow-through",
+        "Not communicating with partner about the Erne attempt",
+        "Attempting the Erne on a ball heading to center court"
+      ],
+      "drills": [
+        "Erne approach footwork — dink position to outside kitchen",
+        "Erne timing drill — partner dinks cross-court, you cut off",
+        "Balance drill — hit the Erne and land stably outside",
+        "Live pattern: set up the Erne with directed dinks",
+        "Two-shot Erne: dink to pull opponent wide, then Erne the response"
+      ],
+      "progression_path": [
+        "Learn the legal footwork for the Erne (outside kitchen)",
+        "Practice the approach from kitchen line to sideline",
+        "Develop the volley technique while jumping/moving laterally",
+        "Master timing — reading the dink pattern that enables the Erne",
+        "Learn to set up the Erne with directional dinks",
+        "Add the fake Erne to your arsenal (threaten but stay)"
+      ],
+      "related_videos": ["pk_v10", "pk_v05", "pk_v19"]
+    },
+    {
+      "id": "pk_atp",
+      "name": "Around the Post (ATP)",
+      "level": "advanced",
+      "description": "Hitting the ball around the net post instead of over the net. Legal in pickleball and a spectacular shot when opponents pull you wide.",
+      "personality_tags": ["aggressive_banger", "all_court_player"],
+      "pain_points": [
+        "Cannot recognize when ATP opportunity exists",
+        "Paddle angle wrong — ATP going wide or into net post",
+        "Not enough pace to get the ball around the post and in",
+        "Recovery after the ATP attempt leaving court open"
+      ],
+      "common_mistakes": [
+        "Trying ATP when the angle isn't wide enough",
+        "Hitting ATP too high — easy volley for opponent",
+        "Not committing fully to the shot (half-effort fails)",
+        "Forgetting that ATP can go below net height (no need to clear net)"
+      ],
+      "drills": [
+        "Wide ball ATP practice — partner hits sharp angles, you ATP",
+        "ATP paddle angle drill — practice the low, curving trajectory",
+        "Live rally ATP setup — dink wide to create the opportunity",
+        "ATP from both forehand and backhand sides"
+      ],
+      "progression_path": [
+        "Recognize when a ball is wide enough for an ATP attempt",
+        "Learn the paddle angle for the curved trajectory around the post",
+        "Understand that ATP doesn't need to clear net height",
+        "Practice from the forehand side first (more natural)",
+        "Add backhand ATP capability",
+        "Master setting up ATP opportunities with wide dinks"
+      ],
+      "related_videos": ["pk_v11", "pk_v19"]
+    },
+    {
+      "id": "pk_stacking",
+      "name": "Stacking and Switching in Doubles",
+      "level": "advanced",
+      "description": "Strategic positioning where both players line up on the same side to keep their preferred sides (forehand/backhand) in play. Essential for high-level doubles.",
+      "personality_tags": ["all_court_player", "soft_game_player"],
+      "pain_points": [
+        "Confusion about who goes where after serve/return",
+        "Slow switching — getting caught out of position",
+        "Partner miscommunication during stacking transitions",
+        "Not knowing when stacking is beneficial vs unnecessary",
+        "Stacking on return side feels awkward and unnatural"
+      ],
+      "common_mistakes": [
+        "Both players running to the same side during the switch",
+        "The non-hitting partner moving too early (tipping off opponents)",
+        "Stacking when it's not needed — overcomplicating simple points",
+        "Not using hand signals to communicate stacking plans",
+        "Forgetting score-dependent positioning in stacking"
+      ],
+      "drills": [
+        "Stacking on serve — practice the slide-over timing",
+        "Stacking on return — partner slides behind after return",
+        "Hand signal practice — establish clear signals",
+        "Half-stack drill — only stack on specific score situations",
+        "Live play with forced stacking every point"
+      ],
+      "progression_path": [
+        "Understand why stacking exists — keep forehands in the middle",
+        "Learn full stacking on the serving side first",
+        "Add stacking on the return side",
+        "Develop half-stacking for simpler situations",
+        "Create a hand signal system with your partner",
+        "Master score-aware stacking decisions",
+        "Learn stacking with switching mid-rally"
+      ],
+      "related_videos": ["pk_v12", "pk_v05"]
+    },
+    {
+      "id": "pk_strategy_doubles",
+      "name": "Doubles Strategy",
+      "level": "advanced",
+      "description": "Advanced doubles tactics covering court positioning, partner communication, pattern play, and match management.",
+      "personality_tags": ["all_court_player", "soft_game_player", "aggressive_banger"],
+      "pain_points": [
+        "Poor communication with partner — talking over each other or silence",
+        "Not knowing when to speed up vs stay patient in rallies",
+        "Wrong positioning — both players on same side or too far apart",
+        "Cannot adjust strategy against different opponent styles",
+        "Losing focus in long matches — mental fatigue"
+      ],
+      "common_mistakes": [
+        "Playing as two singles players instead of a coordinated team",
+        "The weaker player always targeted and partner not helping",
+        "Not moving together as a unit — staying synchronized",
+        "Hitting to the stronger opponent out of habit",
+        "Not adjusting strategy when losing (doing the same thing)"
+      ],
+      "drills": [
+        "Shadowing drill — partners move laterally together as a unit",
+        "Communication drill — call every ball out loud",
+        "Pattern play — serve wide, return deep, third shot drop, dink cross-court",
+        "Weakness exploitation drill — identify and target opponent weak side",
+        "Timeout simulation — practice making strategic adjustments"
+      ],
+      "progression_path": [
+        "Learn basic court positioning — both players at net or baseline",
+        "Develop partner communication habits (calling balls, encouragement)",
+        "Understand the importance of keeping the ball low and patient",
+        "Learn pattern play — predictable sequences that work",
+        "Develop ability to read opponents and adjust strategy",
+        "Master momentum management — staying composed under pressure",
+        "Learn advanced tactics: isolation plays, misdirection, fake movements"
+      ],
+      "related_videos": ["pk_v05", "pk_v12", "pk_v08", "pk_v24"]
+    },
+    {
+      "id": "pk_strategy_singles",
+      "name": "Singles Strategy",
+      "level": "intermediate",
+      "description": "Singles-specific strategy covering serve placement, court coverage, when to approach the net, and managing the larger court alone.",
+      "personality_tags": ["aggressive_banger", "tennis_convert", "all_court_player"],
+      "pain_points": [
+        "Cannot cover the full court alone — getting passed",
+        "Fitness not sufficient for singles rallies",
+        "Not knowing when to approach the net in singles",
+        "Serve and return strategy different from doubles",
+        "Over-dinking in singles (doubles habit that doesn't work)"
+      ],
+      "common_mistakes": [
+        "Playing doubles strategy in singles — too much dinking",
+        "Not serving deep and aggressive enough",
+        "Approaching the net without a quality approach shot",
+        "Standing in the middle after every shot instead of recovering",
+        "Not being aggressive enough — singles rewards taking the kitchen"
+      ],
+      "drills": [
+        "Court coverage drill — figure-8 movement patterns",
+        "Serve and drive drill — deep serve then third shot drive",
+        "Approach and put-away — drive then move forward and finish",
+        "Cardio intervals to match singles fitness demands",
+        "Singles-specific rally practice — more drives, less dinking"
+      ],
+      "progression_path": [
+        "Develop deep, aggressive serving for singles",
+        "Learn singles-specific court positioning (center-court recovery)",
+        "Master the third shot drive for singles (drops are less effective alone)",
+        "Develop fitness for sustained singles rallies",
+        "Learn when to approach the kitchen in singles",
+        "Master passing shots when opponent comes to net",
+        "Develop singles-specific mental toughness"
+      ],
+      "related_videos": ["pk_v13"]
+    },
+    {
+      "id": "pk_mental_game",
+      "name": "Mental Game and Match Psychology",
+      "level": "intermediate",
+      "description": "Mental toughness, pre-point routines, handling pressure, managing frustration, and competitive mindset for pickleball.",
+      "personality_tags": ["all"],
+      "pain_points": [
+        "Getting frustrated after unforced errors",
+        "Choking on game point or in tie-breakers",
+        "Negative body language affecting partner morale",
+        "Cannot let go of bad points — dwelling on mistakes",
+        "Overthinking technique during matches instead of playing"
+      ],
+      "common_mistakes": [
+        "Changing strategy after one bad point",
+        "Talking negatively to yourself or partner after errors",
+        "Trying to play perfect instead of playing smart",
+        "Not having a pre-serve or pre-return routine",
+        "Playing the score instead of playing the point"
+      ],
+      "drills": [
+        "Pre-point routine practice — develop a consistent 5-second routine",
+        "Breathing exercises between points — box breathing",
+        "Positive self-talk drill — replace negative with constructive",
+        "Pressure simulation — practice at game point regularly",
+        "Post-mistake reset — physical gesture to 'flush' the error"
+      ],
+      "progression_path": [
+        "Develop a consistent pre-point routine",
+        "Learn to recognize and manage frustration triggers",
+        "Build a positive self-talk vocabulary",
+        "Practice pressure situations in training",
+        "Develop the 'next point' mentality",
+        "Master breathing and body language under pressure",
+        "Build competitive resilience through tournament experience"
+      ],
+      "related_videos": ["pk_v26"]
+    },
+    {
+      "id": "pk_fitness",
+      "name": "Pickleball Fitness and Injury Prevention",
+      "level": "beginner",
+      "description": "Off-court fitness training, agility work, and injury prevention specific to pickleball movements and demands.",
+      "personality_tags": ["all"],
+      "pain_points": [
+        "Knee pain from lateral movements and stopping",
+        "Elbow or wrist soreness (pickleball elbow)",
+        "Cannot sustain energy through a long tournament day",
+        "Lack of lateral agility for quick kitchen exchanges",
+        "Shoulder soreness from overhead and serving motions"
+      ],
+      "common_mistakes": [
+        "Not warming up before playing — jumping straight into games",
+        "Ignoring flexibility and stretching after play",
+        "Wearing running shoes instead of court shoes (injury risk)",
+        "Playing through pain instead of resting and recovering",
+        "Not doing any off-court conditioning or strength training"
+      ],
+      "drills": [
+        "Dynamic warm-up routine — 5 minutes before play",
+        "Lateral agility ladder drills for kitchen movement",
+        "Split-step practice — explosive stops and starts",
+        "Wrist and forearm strengthening with resistance bands",
+        "Knee stability exercises — single leg balance and squats",
+        "Cool-down stretching routine — 5 minutes after play"
+      ],
+      "progression_path": [
+        "Establish a consistent pre-play warm-up routine",
+        "Build lateral movement agility with ladder and cone drills",
+        "Strengthen wrists, elbows, and shoulders for injury prevention",
+        "Develop cardiovascular fitness for sustained match play",
+        "Add flexibility work for better range of motion",
+        "Build a tournament-day nutrition and hydration plan",
+        "Develop a comprehensive off-court training program"
+      ],
+      "related_videos": ["pk_v18", "pk_v15"]
+    }
+  ],
+  "player_profiles": {
+    "beginner": {
+      "focus_areas": ["pk_serve", "pk_dink", "pk_return"],
+      "description": "New players should learn proper serve technique, basic dinking, and the importance of getting to the kitchen after the return.",
+      "recommended_equipment_level": "beginner",
+      "weekly_practice_suggestion": "2-3 sessions, 1 hour each. Focus 50% on drills, 50% on play."
+    },
+    "intermediate": {
+      "focus_areas": ["pk_third_shot_drop", "pk_third_shot_drive", "pk_volley", "pk_speedup", "pk_reset", "pk_transition_zone"],
+      "description": "Players with rally ability should develop the third shot (both drop and drive), net volleying skills, speed-up attacks, and resets.",
+      "recommended_equipment_level": "intermediate",
+      "weekly_practice_suggestion": "3-4 sessions. Include structured drills, pattern play, and competitive games."
+    },
+    "advanced": {
+      "focus_areas": ["pk_strategy_doubles", "pk_stacking", "pk_erne", "pk_atp", "pk_mental_game"],
+      "description": "Competitive players should master advanced doubles tactics, stacking, specialty shots like Erne and ATP, and mental game management.",
+      "recommended_equipment_level": "advanced",
+      "weekly_practice_suggestion": "4-5 sessions with match play, targeted drills, and off-court fitness."
+    },
+    "tennis_convert": {
+      "focus_areas": ["pk_dink", "pk_third_shot_drop", "pk_reset", "pk_mental_game"],
+      "description": "Tennis players have power and volleys but need to learn soft game, patience at the kitchen, shorter backswings, and the two-bounce rule.",
+      "conversion_tips": [
+        "Shorten your backswing dramatically — compact motions only",
+        "Your power is an asset but patience wins in pickleball",
+        "Learn to love the dink — it's not weak, it's strategic",
+        "Kitchen rules change everything — you can't just volley from anywhere",
+        "Your serve is underhand now — focus on placement, not power",
+        "Volleys are punches, not swings — much smaller motion",
+        "Your overhead and athletic ability transfer very well"
+      ],
+      "recommended_equipment_level": "intermediate",
+      "recommended_paddle_tags": ["tennis_convert", "control"]
+    },
+    "badminton_convert": {
+      "focus_areas": ["pk_serve", "pk_dink", "pk_volley", "pk_third_shot_drop"],
+      "description": "Badminton players have excellent wrist skills and net play but need to adjust to the heavier paddle, no overhead serves, and the two-bounce rule.",
+      "conversion_tips": [
+        "Your wrist skills and soft touch transfer beautifully to dinking",
+        "Net play instincts are a huge advantage — use them at the kitchen",
+        "The paddle is heavier than a racket — adjust your grip pressure",
+        "No overhead serve — learn the underhand motion",
+        "Your agility and footwork are major assets",
+        "Adjust power — pickleball courts are smaller than badminton",
+        "Your drop shot skills translate directly to third shot drops"
+      ],
+      "recommended_equipment_level": "beginner",
+      "recommended_paddle_tags": ["control", "beginner_friendly"]
+    },
+    "table_tennis_convert": {
+      "focus_areas": ["pk_serve", "pk_dink", "pk_speedup", "pk_transition_zone"],
+      "description": "Table tennis players bring excellent spin skills, fast hands, and reflexes but need to adjust to a larger court, different paddle mechanics, and movement patterns.",
+      "conversion_tips": [
+        "Your spin generation and wrist skills are a huge advantage",
+        "Fast hands at the net will serve you well in counter-volley exchanges",
+        "The court is much larger — footwork and conditioning are key",
+        "Serve is underhand with different rules — relearn from scratch",
+        "Your quick reflexes make you naturally good at resets and blocks",
+        "Adjust paddle angle knowledge for the larger, different-shaped paddle",
+        "Movement is more lateral than forward/backward compared to TT"
+      ],
+      "recommended_equipment_level": "beginner",
+      "recommended_paddle_tags": ["spin", "control"]
+    },
+    "aggressive_banger": {
+      "focus_areas": ["pk_third_shot_drive", "pk_speedup", "pk_volley", "pk_lob_defense"],
+      "description": "Power-oriented players who love driving the ball. Need to develop the soft game to complement their aggression for higher-level play.",
+      "style_tips": [
+        "Your power is great but learn when NOT to use it",
+        "Develop a reliable third shot drop — you can't drive everything",
+        "The reset skill is essential when opponents handle your pace",
+        "Use your drives to set up put-away volleys, not as winners themselves",
+        "Against good defenders, mix in drops and dinks to keep them guessing"
+      ],
+      "recommended_paddle_tags": ["power"]
+    },
+    "soft_game_player": {
+      "focus_areas": ["pk_dink", "pk_third_shot_drop", "pk_reset", "pk_lob"],
+      "description": "Touch-oriented players who excel at dinking and patience. Need to develop the ability to speed up and put balls away when opportunities arise.",
+      "style_tips": [
+        "Your patience and touch are elite skills — don't abandon them",
+        "Develop a reliable speed-up attack for when opponents pop the ball up",
+        "Learn to recognize when you SHOULD be aggressive",
+        "Your dinks can be weapons — use angles and body shots",
+        "Add a lob to your arsenal for variety and to push aggressive opponents back"
+      ],
+      "recommended_paddle_tags": ["control", "soft_game"]
+    }
+  }
+}

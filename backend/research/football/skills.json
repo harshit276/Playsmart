@@ -1,0 +1,701 @@
+{
+  "sport": "football",
+  "skill_areas": [
+    {
+      "id": "fb_dribbling",
+      "name": "Dribbling & Ball Carrying",
+      "level": "beginner",
+      "description": "Close ball control, change of direction, and beating defenders 1v1 using skill moves. The foundation of individual attacking play.",
+      "personality_tags": ["speed_merchant", "playmaker"],
+      "position_relevance": ["winger", "striker", "CAM", "full_back"],
+      "pain_points": [
+        "Ball getting too far ahead when dribbling at speed",
+        "Cannot use weak foot while dribbling",
+        "Losing the ball in tight spaces",
+        "Lack of confidence to take on defenders",
+        "Head always down when dribbling"
+      ],
+      "drills": [
+        "Cone weaving with both feet (inside-outside)",
+        "Inside-outside touch drill at speed",
+        "1v1 dribbling challenge with defender in a grid",
+        "Maradona turn and step-over practice",
+        "Ball mastery circuit: rolls, drags, Cruyff, elastico"
+      ],
+      "skill_moves": [
+        { "name": "Step Over", "difficulty": "beginner", "best_for": "wingers", "description": "Circle foot over the ball to fake direction change. Simple but effective at all levels." },
+        { "name": "Cruyff Turn", "difficulty": "beginner", "best_for": "any attacker", "description": "Fake a pass/shot then drag ball behind standing leg. Iconic move invented by Johan Cruyff." },
+        { "name": "Body Feint", "difficulty": "beginner", "best_for": "strikers", "description": "Drop shoulder one way, push ball the other. Requires timing and conviction." },
+        { "name": "Ronaldo Chop", "difficulty": "intermediate", "best_for": "wingers", "description": "Jump and chop ball behind standing leg at pace. Best used when running at full speed down the wing." },
+        { "name": "Elastico (Flip Flap)", "difficulty": "advanced", "best_for": "wingers", "description": "Push ball outside then snap inside in one fluid motion. Ronaldinho's signature move." },
+        { "name": "Roulette (Maradona/Zidane Turn)", "difficulty": "intermediate", "best_for": "midfielders", "description": "360-degree spin shielding ball from defender. Elegant and effective in tight spaces." },
+        { "name": "Neymar Rainbow Flick", "difficulty": "advanced", "best_for": "freestyle/show", "description": "Flick ball over opponent with heels. High-risk, high-reward showpiece move." },
+        { "name": "La Croqueta", "difficulty": "intermediate", "best_for": "midfielders", "description": "Quick lateral shift ball from one foot to the other. Iniesta's signature move for evading tackles." }
+      ],
+      "progression_path": [
+        "Master basic ball control with both feet",
+        "Learn step-over and body feint",
+        "Practice Cruyff turn and drag-back",
+        "Combine moves in 1v1 situations",
+        "Add advanced moves: elastico, roulette",
+        "Apply moves at game speed in matches"
+      ],
+      "common_mistakes": [
+        "Attempting skill moves too far from the defender",
+        "Not selling the fake with body movement",
+        "Always cutting to the same side",
+        "Doing moves for show rather than to create space",
+        "Not accelerating after beating the defender"
+      ]
+    },
+    {
+      "id": "fb_passing",
+      "name": "Passing & Distribution",
+      "level": "beginner",
+      "description": "Short passes, long balls, through balls, crosses, and first-touch passing for build-up play. The most used skill in football.",
+      "personality_tags": ["playmaker", "ball_playing_defender", "box_to_box"],
+      "position_relevance": ["CDM", "CM", "CAM", "centre_back", "full_back"],
+      "pain_points": [
+        "Inaccurate short passes under pressure",
+        "Cannot weight long balls correctly",
+        "Poor first touch killing passing options",
+        "Not looking up before passing",
+        "Crosses rarely find a teammate",
+        "One-touch passing breaks down in fast play"
+      ],
+      "drills": [
+        "Two-touch passing triangle drill",
+        "Long ball accuracy to target zones (5 yard squares)",
+        "Wall pass (give and go) drill in pairs",
+        "Rondo (keep-away) games: 4v1, 5v2, 4v4+3",
+        "Crossing from wide areas to near/far post targets",
+        "One-touch passing in a circle with movement"
+      ],
+      "pass_types": [
+        { "name": "Short Pass (Inside Foot)", "difficulty": "beginner", "description": "The bread-and-butter pass. Side-foot for accuracy. Lock ankle, follow through to target." },
+        { "name": "Long Pass (Lofted)", "difficulty": "intermediate", "description": "Hit under the ball with instep. Used to switch play or find runners behind the defence." },
+        { "name": "Through Ball", "difficulty": "intermediate", "description": "Weighted pass into space ahead of a runner. Timing and vision are everything." },
+        { "name": "One-Touch Pass", "difficulty": "intermediate", "description": "Pass without controlling first. Speeds up play and catches opponents off guard." },
+        { "name": "Crossing (Low/High)", "difficulty": "intermediate", "description": "Delivery from wide areas into the box. Low driven crosses or lofted deliveries." },
+        { "name": "Chipped Pass", "difficulty": "advanced", "description": "Delicate lofted pass over short distance to beat pressing opponents." },
+        { "name": "Outside Foot Pass", "difficulty": "advanced", "description": "Disguised pass using outside of foot. Hard to read for defenders." }
+      ],
+      "progression_path": [
+        "Master inside-foot short passing accuracy",
+        "Develop both-foot passing ability",
+        "Learn long ball technique and weight",
+        "Practice through balls with timing",
+        "Add crossing from wide positions",
+        "Master one-touch and outside-foot passes"
+      ],
+      "common_mistakes": [
+        "Not opening body to see the full pitch before receiving",
+        "Passing to the player instead of into their path",
+        "Toe-poking instead of using the inside of the foot",
+        "Not following through toward the target",
+        "Telegraphing the pass by staring at the target"
+      ]
+    },
+    {
+      "id": "fb_shooting",
+      "name": "Shooting & Finishing",
+      "level": "intermediate",
+      "description": "Finishing techniques including power shots, placement, volleys, headers, and composure in front of goal. Goals win games.",
+      "personality_tags": ["target_man", "speed_merchant"],
+      "position_relevance": ["striker", "winger", "CAM", "CM"],
+      "pain_points": [
+        "Shooting over the bar consistently",
+        "No power on weak foot shots",
+        "Poor composure in 1v1 with goalkeeper",
+        "Cannot finish on the volley",
+        "Snatching at chances under pressure",
+        "Leaning back too much when shooting"
+      ],
+      "drills": [
+        "Shooting from the edge of the box: placement vs power",
+        "1v1 finishing against goalkeeper",
+        "Volley and half-volley finishing drill (served crosses)",
+        "Weak foot shooting: 50 reps daily",
+        "First-time finish from cutbacks",
+        "Header finishing from crosses"
+      ],
+      "shot_types": [
+        { "name": "Power Shot (Laces)", "difficulty": "beginner", "description": "Strike through the center with laces. Plant foot next to ball, follow through." },
+        { "name": "Finesse Shot (Curled)", "difficulty": "intermediate", "description": "Side-foot curl into far corner. Used from angles outside the box." },
+        { "name": "Chip Shot", "difficulty": "advanced", "description": "Delicate lob over advancing goalkeeper. Requires extreme composure." },
+        { "name": "Volley", "difficulty": "advanced", "description": "Strike ball out of the air. Keep knee over ball, lock ankle." },
+        { "name": "Bicycle Kick (Overhead)", "difficulty": "advanced", "description": "Acrobatic overhead kick. Spectacular but risky. Only attempt in safe situations." },
+        { "name": "Header", "difficulty": "intermediate", "description": "Direct the ball with forehead. Power from neck and core, not head movement." },
+        { "name": "Placed Finish (Side Foot)", "difficulty": "beginner", "description": "Calm side-foot finish into corners. Accuracy over power in close range." }
+      ],
+      "progression_path": [
+        "Master the basic laces power shot",
+        "Learn placed finishing with side foot",
+        "Develop finesse curl shots",
+        "Practice 1v1 composure against keepers",
+        "Add volleys and headers",
+        "Master weak foot finishing"
+      ],
+      "common_mistakes": [
+        "Leaning back causing the ball to fly over the bar",
+        "Not planting the standing foot next to the ball",
+        "Looking up at the goal instead of at the ball at moment of contact",
+        "Using too much power in close-range situations",
+        "Not following up shots for rebounds"
+      ]
+    },
+    {
+      "id": "fb_defending",
+      "name": "Defending & Tackling",
+      "level": "intermediate",
+      "description": "Tackling, positioning, marking, pressing, and 1v1 defensive technique. Good defence wins championships.",
+      "personality_tags": ["ball_playing_defender", "box_to_box"],
+      "position_relevance": ["centre_back", "full_back", "CDM", "CM"],
+      "pain_points": [
+        "Diving in and getting beaten",
+        "Poor body position when jockeying",
+        "Losing aerial duels",
+        "Switching off on set pieces",
+        "Getting turned by attackers",
+        "Not communicating with defensive partners"
+      ],
+      "drills": [
+        "1v1 jockeying and channeling drill (force to weak foot)",
+        "Slide tackle technique on safe surface",
+        "Heading clearance from crosses",
+        "Defensive line movement and offside trap drill",
+        "Recovery run and tracking drill",
+        "Pressing triggers: 2v1 pressing exercises"
+      ],
+      "defensive_skills": [
+        { "name": "Jockeying", "difficulty": "beginner", "description": "Stay on feet, stay side-on, delay attacker. Force them where you want them to go." },
+        { "name": "Standing Tackle", "difficulty": "beginner", "description": "Time the tackle to win the ball cleanly. Get body weight behind it." },
+        { "name": "Slide Tackle", "difficulty": "intermediate", "description": "Last resort tackle. Commit fully, win the ball, stay legal." },
+        { "name": "Aerial Duel", "difficulty": "intermediate", "description": "Timing, positioning, and courage. Attack the ball at the highest point." },
+        { "name": "Pressing", "difficulty": "intermediate", "description": "Coordinated high press to win ball back. Read pressing triggers." },
+        { "name": "Covering & Tracking", "difficulty": "intermediate", "description": "Cover passing lanes and track runners making off-the-ball movements." },
+        { "name": "Ball-Playing from Back", "difficulty": "advanced", "description": "Playing out from defence under pressure. Modern defenders must be comfortable on the ball." }
+      ],
+      "progression_path": [
+        "Learn body shape for 1v1 defending",
+        "Master jockeying and delaying",
+        "Practice standing tackles",
+        "Develop aerial ability",
+        "Understand pressing triggers and team pressing",
+        "Learn to play out from the back under pressure"
+      ],
+      "common_mistakes": [
+        "Diving in instead of staying on feet",
+        "Being flat-footed instead of on toes",
+        "Watching the ball instead of the attacker's hips",
+        "Not communicating with teammates",
+        "Ball watching instead of tracking runners"
+      ]
+    },
+    {
+      "id": "fb_goalkeeping",
+      "name": "Goalkeeping",
+      "level": "intermediate",
+      "description": "Shot stopping, positioning, distribution, crosses, 1v1 saving, and sweeper keeper play. The most specialized position.",
+      "personality_tags": ["sweeper_keeper"],
+      "position_relevance": ["goalkeeper"],
+      "pain_points": [
+        "Wrong positioning for shots from angles",
+        "Fear of diving to the ground",
+        "Poor distribution with feet",
+        "Misjudging crosses and coming off the line",
+        "Getting beaten at the near post",
+        "Weak communication with defence"
+      ],
+      "drills": [
+        "Rapid-fire shot stopping: 10 shots in 30 seconds",
+        "Cross claiming under pressure with outfield players",
+        "1v1 rushing: when to come out, how to spread",
+        "Goal kick and distribution accuracy to zones",
+        "Diving technique: collapse, extension, high",
+        "Footwork: shuffling, set position, recovery"
+      ],
+      "goalkeeper_skills": [
+        { "name": "Set Position", "difficulty": "beginner", "description": "Ready stance: feet shoulder-width, knees bent, weight forward, hands ready." },
+        { "name": "Shot Stopping (Low)", "difficulty": "beginner", "description": "Collapse dive to the side. Get behind the ball. Smother technique." },
+        { "name": "Shot Stopping (High)", "difficulty": "intermediate", "description": "Extension dive reaching across goal. One-handed saves at full stretch." },
+        { "name": "Cross Claiming", "difficulty": "intermediate", "description": "Come off line to punch or catch crosses. Command the box." },
+        { "name": "1v1 Saving", "difficulty": "intermediate", "description": "Rush out, make yourself big, stay on feet as long as possible. Star shape." },
+        { "name": "Distribution (Feet)", "difficulty": "intermediate", "description": "Goal kicks, short passes, long balls. Modern keepers must play like outfield players." },
+        { "name": "Sweeper Keeper", "difficulty": "advanced", "description": "High starting position to intercept through balls. Requires reading the game and pace." },
+        { "name": "Penalty Saving", "difficulty": "advanced", "description": "Study the taker, pick a side, commit fully. Psychological battle." }
+      ],
+      "progression_path": [
+        "Master set position and basic handling",
+        "Learn collapse and extension dives",
+        "Develop distribution with both feet",
+        "Practice cross claiming and box command",
+        "Train 1v1 scenarios",
+        "Add sweeper keeper play and playing from the back"
+      ],
+      "common_mistakes": [
+        "Standing too upright in set position",
+        "Falling backwards instead of diving forward",
+        "Coming for crosses you cannot reach",
+        "Not communicating with defenders",
+        "Parrying into dangerous areas instead of away",
+        "Kicking distribution always long instead of building from the back"
+      ]
+    },
+    {
+      "id": "fb_fitness",
+      "name": "Football Fitness & Conditioning",
+      "level": "beginner",
+      "description": "Endurance, speed, agility, strength, and match-specific conditioning for 90-minute performance. Football demands repeated sprints, changes of direction, and sustained effort.",
+      "personality_tags": ["speed_merchant", "box_to_box", "target_man"],
+      "position_relevance": ["all_positions"],
+      "pain_points": [
+        "Fading in the second half",
+        "Slow recovery between sprints",
+        "Lack of explosive acceleration",
+        "Injury from poor warm-up or overtraining",
+        "Poor agility and change of direction speed",
+        "Not strong enough in physical duels"
+      ],
+      "drills": [
+        "Interval running: 30s sprint, 30s jog x 10",
+        "Agility ladder: in-in-out-out, crossover, Icky shuffle",
+        "Shuttle runs with ball (5m-10m-15m-20m)",
+        "Yo-Yo intermittent recovery test (benchmark)",
+        "Resistance band lateral shuffles",
+        "Single-leg squats and Nordic hamstring curls"
+      ],
+      "fitness_components": [
+        { "name": "Aerobic Endurance", "description": "Base cardio for 90 minutes. Build with long runs (30-45 min) and tempo runs." },
+        { "name": "Sprint Speed", "description": "Short bursts of 10-30m. Train with hill sprints, sled pulls, and flying sprints." },
+        { "name": "Agility & COD", "description": "Change of direction speed. Ladder drills, T-test, and reactive agility." },
+        { "name": "Strength & Power", "description": "Leg strength for shooting, jumping, tackling. Squats, lunges, plyometrics." },
+        { "name": "Flexibility & Mobility", "description": "Prevent injury with dynamic warm-up and post-training stretching. Hip flexor and hamstring focus." },
+        { "name": "Recovery", "description": "Sleep, nutrition, hydration, and active recovery. Critical in Indian heat and humidity." }
+      ],
+      "progression_path": [
+        "Build base fitness with regular running (3x per week)",
+        "Add football-specific interval training",
+        "Incorporate agility and ladder work",
+        "Develop strength with bodyweight exercises",
+        "Progress to gym-based strength training",
+        "Peak for match days with periodization"
+      ],
+      "common_mistakes": [
+        "Skipping warm-up and cool-down",
+        "Only doing long-distance running (football is intermittent)",
+        "Not hydrating enough in Indian heat",
+        "Training too hard the day before a match",
+        "Ignoring hamstring and groin flexibility"
+      ]
+    },
+    {
+      "id": "fb_set_pieces",
+      "name": "Set Pieces (Free Kicks, Corners, Penalties, Throw-ins)",
+      "level": "advanced",
+      "description": "Free kick technique, corner delivery, penalty taking, throw-in routines, and rehearsed set piece plays. Games are won and lost on set pieces.",
+      "personality_tags": ["playmaker"],
+      "position_relevance": ["CAM", "winger", "centre_back", "striker"],
+      "pain_points": [
+        "Cannot bend free kicks over the wall",
+        "Inconsistent corner delivery",
+        "Missing penalties under pressure",
+        "No rehearsed set piece routines",
+        "Long throw-ins not utilized",
+        "Defensive set piece organization is poor"
+      ],
+      "drills": [
+        "Free kick curl and dip practice (20 reps daily)",
+        "Corner delivery to near post, far post, and penalty spot",
+        "Penalty practice under simulated pressure (sprint before taking)",
+        "Set piece routine rehearsal with team: short corners, dummy runs",
+        "Knuckleball technique from 25-30 yards",
+        "Long throw-in practice (for outfield players)"
+      ],
+      "set_piece_types": [
+        { "name": "Curled Free Kick", "difficulty": "intermediate", "description": "Bend ball over wall into corner. Strike side of ball with inside of foot." },
+        { "name": "Knuckleball Free Kick", "difficulty": "advanced", "description": "Hit dead center with no spin. Ball moves unpredictably in the air." },
+        { "name": "Power Free Kick", "difficulty": "intermediate", "description": "Blast through the wall with pace. Low trajectory, minimal spin." },
+        { "name": "Dipping Free Kick", "difficulty": "advanced", "description": "Top-spin strike that rises over wall then dips sharply. Bale/CR7 technique." },
+        { "name": "Corner (Inswinger)", "difficulty": "intermediate", "description": "Corner curling toward goal. Creates chances with goalkeeper under pressure." },
+        { "name": "Corner (Outswinger)", "difficulty": "intermediate", "description": "Corner curling away from goal. Easier to attack with a running header." },
+        { "name": "Penalty", "difficulty": "beginner", "description": "Pick your spot, commit, follow through. Mental composure is the key skill." },
+        { "name": "Long Throw-in", "difficulty": "intermediate", "description": "Treated like a set piece. Arc the ball into the box from the touchline." }
+      ],
+      "progression_path": [
+        "Master basic penalty technique and composure",
+        "Learn curled free kick technique",
+        "Develop consistent corner delivery",
+        "Add knuckleball and dipping free kicks",
+        "Design and rehearse team set piece routines",
+        "Study opposition for set piece weaknesses"
+      ],
+      "common_mistakes": [
+        "Changing mind during penalty run-up",
+        "Not enough practice reps on free kicks",
+        "Hitting free kicks with too much pace and not enough technique",
+        "Poor run-up angle on free kicks",
+        "Defensive team not organized for opposition corners"
+      ]
+    },
+    {
+      "id": "fb_first_touch",
+      "name": "First Touch & Ball Control",
+      "level": "beginner",
+      "description": "Receiving the ball cleanly with any surface: feet, thigh, chest. A great first touch creates time and space. The difference between good and great players.",
+      "personality_tags": ["playmaker", "target_man"],
+      "position_relevance": ["all_positions"],
+      "pain_points": [
+        "Ball bouncing off when receiving a hard pass",
+        "First touch too heavy, losing possession",
+        "Cannot control aerial passes (chest/thigh)",
+        "Touch always in front instead of to the side",
+        "No awareness of surroundings before receiving"
+      ],
+      "drills": [
+        "Wall passing: receive and control with inside/outside foot",
+        "Aerial ball control: throw up, chest down, play",
+        "Partner drill: receive under pressure from behind",
+        "Rebounder net: first touch into space",
+        "Juggling for ball feel: feet, thighs, head"
+      ],
+      "touch_types": [
+        { "name": "Inside Foot Cushion", "difficulty": "beginner", "description": "Soft touch with inside of foot. Withdraw foot on contact to absorb pace." },
+        { "name": "Outside Foot Touch", "difficulty": "intermediate", "description": "Control with outside of foot. Opens body to play forward quickly." },
+        { "name": "Sole Control", "difficulty": "beginner", "description": "Trap ball under sole. Quick stop for tight spaces. Futsal fundamental." },
+        { "name": "Thigh Control", "difficulty": "intermediate", "description": "Cushion aerial balls with thigh. Relax muscle on contact." },
+        { "name": "Chest Control", "difficulty": "intermediate", "description": "Use chest to bring high balls down. Arch back to cushion, or push chest forward to redirect." },
+        { "name": "Directional First Touch", "difficulty": "advanced", "description": "Touch ball into space away from pressure in one movement. Scan before receiving." }
+      ],
+      "progression_path": [
+        "Practice basic inside foot receiving against a wall",
+        "Add outside foot and sole control",
+        "Develop aerial control: chest and thigh",
+        "Practice receiving under passive pressure",
+        "Master directional first touch with scanning",
+        "Apply in match situations at speed"
+      ],
+      "common_mistakes": [
+        "Stiff ankle instead of relaxed cushioning",
+        "Not scanning before the ball arrives",
+        "First touch always toward pressure instead of away",
+        "Standing still to receive instead of moving to the ball",
+        "Not using the back foot to receive and turn"
+      ]
+    },
+    {
+      "id": "fb_heading",
+      "name": "Heading",
+      "level": "intermediate",
+      "description": "Attacking and defensive heading technique. Scoring from crosses, clearing from corners, and winning aerial duels.",
+      "personality_tags": ["target_man", "ball_playing_defender"],
+      "position_relevance": ["striker", "centre_back", "CDM"],
+      "pain_points": [
+        "Closing eyes when heading",
+        "No power or direction on headers",
+        "Poor timing on jumps for aerial balls",
+        "Fear of heading the ball",
+        "Losing aerial duels to smaller opponents"
+      ],
+      "drills": [
+        "Standing header into goal from short crosses",
+        "Jumping header practice with served crosses",
+        "Defensive heading clearance from corners",
+        "Heading accuracy: aim for target zones",
+        "1v1 aerial duel practice"
+      ],
+      "progression_path": [
+        "Get comfortable heading a soft ball from close range",
+        "Practice standing headers with gentle serves",
+        "Add jumping headers with timing",
+        "Develop defensive clearing headers",
+        "Win aerial duels under physical challenge"
+      ],
+      "common_mistakes": [
+        "Closing eyes on contact (most common issue)",
+        "Heading with top of head instead of forehead",
+        "Not jumping to meet the ball at highest point",
+        "Heading backwards instead of generating forward power",
+        "Not using arms for balance and elevation"
+      ]
+    },
+    {
+      "id": "fb_weak_foot",
+      "name": "Weak Foot Development",
+      "level": "beginner",
+      "description": "Systematic development of the non-dominant foot for passing, shooting, and dribbling. Being two-footed doubles your effectiveness.",
+      "personality_tags": ["playmaker", "speed_merchant", "box_to_box"],
+      "position_relevance": ["all_positions"],
+      "pain_points": [
+        "Avoiding weak foot completely in matches",
+        "No power or accuracy with weak foot",
+        "Defenders forcing onto weak foot and winning easily",
+        "Weak foot touch is heavy and inaccurate",
+        "Cannot cross or shoot with weak foot"
+      ],
+      "drills": [
+        "Weak foot wall passing: 100 reps daily",
+        "Weak foot shooting: 50 shots at goal daily",
+        "Dribble with weak foot only through cones",
+        "Weak foot juggling: target 50 consecutive touches",
+        "Play small-sided games using only weak foot"
+      ],
+      "progression_path": [
+        "Start with simple weak foot passing against a wall",
+        "Add weak foot shooting from close range",
+        "Dribble with weak foot in training",
+        "Use weak foot in non-pressured match situations",
+        "Gradually increase weak foot usage to 30-40% of touches",
+        "Become truly two-footed: no defender can force you one way"
+      ],
+      "common_mistakes": [
+        "Expecting instant results (takes months of daily work)",
+        "Only practicing when convenient instead of daily",
+        "Not committing to using weak foot in matches",
+        "Practicing only one skill (e.g., only passing, not shooting)",
+        "Giving up after a few weeks"
+      ]
+    },
+    {
+      "id": "fb_tactical_awareness",
+      "name": "Tactical Awareness & Game Intelligence",
+      "level": "intermediate",
+      "description": "Understanding formations, pressing triggers, positional play, and reading the game. Football IQ separates average from elite players.",
+      "personality_tags": ["playmaker", "ball_playing_defender", "box_to_box"],
+      "position_relevance": ["all_positions"],
+      "pain_points": [
+        "Not knowing when to press and when to hold",
+        "Poor positioning in formation",
+        "Cannot read opposition patterns",
+        "Always reactive instead of anticipating",
+        "Does not understand role in different formations"
+      ],
+      "formations": [
+        { "name": "4-4-2", "style": "balanced", "description": "Classic formation. Two banks of four with striker partnership. Solid defensively, direct in attack." },
+        { "name": "4-3-3", "style": "attacking", "description": "Wide wingers and single pivot. Great for pressing and quick transitions. Most popular modern formation." },
+        { "name": "3-5-2", "style": "wing_back_focused", "description": "Three centre-backs with wing-backs providing width. Midfield overload. Popular in ISL." },
+        { "name": "4-2-3-1", "style": "balanced_creative", "description": "Double pivot protection with creative CAM. Balanced between defence and attack." },
+        { "name": "3-4-3", "style": "aggressive", "description": "Aggressive attacking shape. Requires very fit wing-backs and disciplined pressing." }
+      ],
+      "tactical_concepts": [
+        { "name": "Pressing Triggers", "description": "When to press: bad touch, backwards pass, goalkeeper receiving. Recognizing moments to win the ball high." },
+        { "name": "Counter-Attack", "description": "Quick transitions from defence to attack. Exploit space behind high defensive lines." },
+        { "name": "Positional Play", "description": "Occupy correct spaces to create passing options. Width, depth, and spacing." },
+        { "name": "Off-the-Ball Movement", "description": "Runs behind, check-to-feet, overlaps, underlaps. Creating space for yourself and teammates." },
+        { "name": "Defensive Shape", "description": "Maintaining compact shape as a unit. Sliding across the pitch together." },
+        { "name": "Build-Up Play", "description": "Playing out from the back through midfield. Patient possession to find openings." }
+      ],
+      "progression_path": [
+        "Learn your role in one formation",
+        "Understand basic pressing triggers",
+        "Study off-the-ball movement patterns",
+        "Watch tactical analysis videos (Tifo Football, The Athletic)",
+        "Learn multiple formations and your role in each",
+        "Develop ability to read the game and anticipate"
+      ],
+      "common_mistakes": [
+        "Pressing alone without team coordination",
+        "Leaving position to chase the ball",
+        "Not scanning before receiving",
+        "Standing still when your team has the ball",
+        "Not adjusting position when the ball moves"
+      ]
+    },
+    {
+      "id": "fb_off_the_ball",
+      "name": "Off-the-Ball Movement & Positioning",
+      "level": "intermediate",
+      "description": "Intelligent runs, finding space, creating passing lanes, and making yourself available. You only have the ball 2-3 minutes in a 90-minute game - the rest is off-the-ball.",
+      "personality_tags": ["speed_merchant", "target_man", "box_to_box"],
+      "position_relevance": ["striker", "winger", "CAM", "CM", "full_back"],
+      "pain_points": [
+        "Standing still waiting for the ball",
+        "Making runs that are never seen",
+        "Not checking shoulders before receiving",
+        "Running into offside positions",
+        "Not creating space for teammates"
+      ],
+      "movement_types": [
+        { "name": "Run Behind", "difficulty": "beginner", "description": "Sprint into space behind the defensive line. Time run to stay onside." },
+        { "name": "Check to Feet", "difficulty": "beginner", "description": "Drop toward the ball to receive to feet. Creates space behind you." },
+        { "name": "Diagonal Run", "difficulty": "intermediate", "description": "Angled run across defenders. Harder to track than straight runs." },
+        { "name": "Overlap", "difficulty": "intermediate", "description": "Full-back or wide midfielder runs outside the winger. Creates 2v1 on the wing." },
+        { "name": "Underlap", "difficulty": "intermediate", "description": "Inside run behind the winger. Creates overload centrally." },
+        { "name": "Decoy Run", "difficulty": "advanced", "description": "Run to drag defenders away, creating space for a teammate. Selfless but crucial." }
+      ],
+      "progression_path": [
+        "Start making basic runs behind the defence",
+        "Learn to check to feet and play with back to goal",
+        "Add diagonal runs and movements off the shoulder",
+        "Understand when to overlap and underlap",
+        "Make decoy runs for teammates",
+        "Read the game to time runs perfectly"
+      ],
+      "common_mistakes": [
+        "Running before the passer is ready to play",
+        "Always running forward instead of sometimes checking short",
+        "Not timing the run to stay onside",
+        "Making the same run every time (becoming predictable)",
+        "Not communicating the run to the passer"
+      ]
+    },
+    {
+      "id": "fb_futsal_skills",
+      "name": "Futsal & Indoor Football Skills",
+      "level": "intermediate",
+      "description": "Futsal-specific techniques that also enhance outdoor football ability. Close control, sole usage, quick thinking, and small-space play. Futsal is booming in Indian cities.",
+      "personality_tags": ["playmaker", "speed_merchant"],
+      "position_relevance": ["all_positions"],
+      "pain_points": [
+        "Not comfortable using the sole of the foot",
+        "Too slow in tight spaces",
+        "Cannot play one-touch futsal style",
+        "Dribbling too wide for indoor dimensions",
+        "Not adapting to the heavier, low-bounce futsal ball"
+      ],
+      "futsal_techniques": [
+        { "name": "Sole Roll", "difficulty": "beginner", "description": "Control and move ball using sole of foot. The fundamental futsal touch." },
+        { "name": "Toe Poke Finish", "difficulty": "beginner", "description": "Quick jabbed finish with toe. Faster release than laces in tight spaces." },
+        { "name": "Sole Drag Turn", "difficulty": "intermediate", "description": "Drag ball with sole while turning. Change direction quickly in tight spaces." },
+        { "name": "Pivot Play", "difficulty": "intermediate", "description": "Receive with back to goal, hold up, and lay off. Central futsal role." },
+        { "name": "1-2 Combinations", "difficulty": "intermediate", "description": "Rapid give-and-go passing. The heart of futsal attacking play." },
+        { "name": "Power Play GK", "difficulty": "advanced", "description": "Goalkeeper as outfield player. 5v4 overload in futsal when chasing the game." }
+      ],
+      "progression_path": [
+        "Get comfortable with sole rolls and sole control",
+        "Learn toe poke finishing",
+        "Practice 1-2 combinations at speed",
+        "Develop pivot play and hold-up",
+        "Apply futsal skills to outdoor 11-a-side football"
+      ],
+      "common_mistakes": [
+        "Playing futsal like outdoor football (too wide, too long)",
+        "Not using the sole enough",
+        "Standing still after passing instead of moving",
+        "Taking too many touches in tight spaces",
+        "Not adapting to the low-bounce futsal ball"
+      ]
+    },
+    {
+      "id": "fb_freestyle",
+      "name": "Freestyle Tricks & Juggling",
+      "level": "advanced",
+      "description": "Freestyle football tricks, juggling, and showboating skills. Builds incredible ball feel and coordination. Great for fun and social media content.",
+      "personality_tags": ["speed_merchant", "playmaker"],
+      "position_relevance": ["winger", "CAM", "striker"],
+      "pain_points": [
+        "Cannot juggle more than 10 times",
+        "Ball goes everywhere when trying tricks",
+        "No confidence to try tricks in games",
+        "Cannot do around-the-world or rainbow flick"
+      ],
+      "freestyle_tricks": [
+        { "name": "Basic Juggling", "difficulty": "beginner", "description": "Keep ball in the air with feet, thighs, head. Build to 50+ consecutive." },
+        { "name": "Around the World", "difficulty": "intermediate", "description": "Circle foot around the ball while juggling. Classic freestyle fundamental." },
+        { "name": "Rainbow Flick", "difficulty": "intermediate", "description": "Roll ball up calf and flick over head. Showstopping in matches." },
+        { "name": "Crossover", "difficulty": "intermediate", "description": "Cross legs while juggling. Develops coordination and body control." },
+        { "name": "Akka (Ground Moves)", "difficulty": "advanced", "description": "Ground-based freestyle tricks. Panna (nutmeg), akka 3000, and more." }
+      ],
+      "progression_path": [
+        "Master basic juggling to 50 consecutive",
+        "Learn around-the-world and stalls",
+        "Add rainbow flick and crossover",
+        "Combine tricks into sequences",
+        "Develop ground moves (akkas) for practical use"
+      ],
+      "common_mistakes": [
+        "Kicking the ball too high when juggling",
+        "Not relaxing the ankle",
+        "Trying advanced tricks before mastering basics",
+        "Practicing on uneven surfaces"
+      ]
+    }
+  ],
+  "position_skill_paths": {
+    "striker": {
+      "primary_skills": ["fb_shooting", "fb_off_the_ball", "fb_heading", "fb_first_touch"],
+      "secondary_skills": ["fb_dribbling", "fb_fitness", "fb_weak_foot"],
+      "playing_styles": ["target_man", "speed_merchant"],
+      "description": "Strikers need clinical finishing, intelligent movement, and composure in the box. Target men need heading and hold-up play; speed merchants need pace and running behind.",
+      "role_models": "Sunil Chhetri (India), Haaland (power), Mbappe (speed), Kane (complete)"
+    },
+    "winger": {
+      "primary_skills": ["fb_dribbling", "fb_passing", "fb_fitness", "fb_shooting"],
+      "secondary_skills": ["fb_weak_foot", "fb_off_the_ball", "fb_freestyle"],
+      "playing_styles": ["speed_merchant", "playmaker"],
+      "description": "Wingers need 1v1 dribbling, crossing ability, pace, and the ability to cut inside and shoot. Must be two-footed and supremely fit for recovery runs.",
+      "role_models": "Salah (cut inside), Vinicius Jr (dribbling), Saka (all-round)"
+    },
+    "CAM": {
+      "primary_skills": ["fb_passing", "fb_first_touch", "fb_tactical_awareness", "fb_shooting"],
+      "secondary_skills": ["fb_dribbling", "fb_set_pieces", "fb_weak_foot"],
+      "playing_styles": ["playmaker"],
+      "description": "The creative hub. Needs vision, passing range, first touch, and the ability to score from distance. Must link midfield to attack.",
+      "role_models": "De Bruyne (passing), Odegaard (creativity), Modric (all-round)"
+    },
+    "CM": {
+      "primary_skills": ["fb_passing", "fb_tactical_awareness", "fb_fitness", "fb_first_touch"],
+      "secondary_skills": ["fb_defending", "fb_shooting", "fb_weak_foot"],
+      "playing_styles": ["box_to_box", "playmaker"],
+      "description": "Box-to-box midfielders need endurance, passing, and the ability to contribute at both ends. The engine room of the team.",
+      "role_models": "Bellingham (box-to-box), Pedri (technical), Rice (defensive)"
+    },
+    "CDM": {
+      "primary_skills": ["fb_defending", "fb_passing", "fb_tactical_awareness", "fb_heading"],
+      "secondary_skills": ["fb_fitness", "fb_first_touch", "fb_weak_foot"],
+      "playing_styles": ["ball_playing_defender", "box_to_box"],
+      "description": "The shield in front of defence. Needs positional intelligence, tackling, passing under pressure, and aerial ability. Controls the game's tempo.",
+      "role_models": "Rodri (complete), Casemiro (destroyer), Fernandinho (tenacious)"
+    },
+    "centre_back": {
+      "primary_skills": ["fb_defending", "fb_heading", "fb_passing", "fb_tactical_awareness"],
+      "secondary_skills": ["fb_fitness", "fb_first_touch", "fb_set_pieces"],
+      "playing_styles": ["ball_playing_defender"],
+      "description": "Must read the game, win aerial duels, and play out from the back in modern football. Communication and leadership are essential.",
+      "role_models": "Van Dijk (complete), Dias (leader), Saliba (ball-playing)"
+    },
+    "full_back": {
+      "primary_skills": ["fb_defending", "fb_fitness", "fb_passing", "fb_dribbling"],
+      "secondary_skills": ["fb_off_the_ball", "fb_tactical_awareness", "fb_weak_foot"],
+      "playing_styles": ["speed_merchant", "box_to_box"],
+      "description": "Modern full-backs are the most demanding position. Must defend, attack, overlap, cross, and have elite fitness. Inverted full-backs cut inside to play as extra midfielders.",
+      "role_models": "Alexander-Arnold (crossing), Cancelo (inverted), Hakimi (pace)"
+    },
+    "goalkeeper": {
+      "primary_skills": ["fb_goalkeeping"],
+      "secondary_skills": ["fb_passing", "fb_first_touch", "fb_fitness"],
+      "playing_styles": ["sweeper_keeper"],
+      "description": "The last line of defence and first line of attack. Modern keepers must save shots, command the box, distribute with feet, and sweep behind the defence.",
+      "role_models": "Alisson (complete), Ederson (sweeper), Courtois (shot-stopper), Gurpreet Singh Sandhu (India)"
+    }
+  },
+  "player_profiles": {
+    "beginner": {
+      "focus_areas": ["fb_first_touch", "fb_passing", "fb_dribbling", "fb_fitness", "fb_weak_foot"],
+      "weekly_plan": {
+        "days_per_week": 3,
+        "session_length": "45-60 minutes",
+        "breakdown": "15 min ball mastery, 15 min passing, 10 min shooting/skill, 10 min fitness"
+      },
+      "description": "New players should build ball comfort with both feet, basic passing accuracy, and base fitness. Focus on touches on the ball - aim for 500+ touches per training session."
+    },
+    "intermediate": {
+      "focus_areas": ["fb_shooting", "fb_defending", "fb_tactical_awareness", "fb_off_the_ball", "fb_heading"],
+      "weekly_plan": {
+        "days_per_week": 4,
+        "session_length": "60-75 minutes",
+        "breakdown": "10 min warm-up, 20 min position-specific, 20 min match scenarios, 15 min fitness, 10 min cool-down"
+      },
+      "description": "Developing players should specialize in their position, understand tactics, and improve match-specific skills like shooting under pressure and defensive positioning."
+    },
+    "advanced": {
+      "focus_areas": ["fb_set_pieces", "fb_tactical_awareness", "fb_weak_foot", "fb_futsal_skills"],
+      "weekly_plan": {
+        "days_per_week": 5,
+        "session_length": "75-90 minutes",
+        "breakdown": "15 min activation, 25 min technical, 25 min tactical/team, 15 min set pieces, 10 min recovery"
+      },
+      "description": "Competitive players should master set pieces, develop tactical intelligence, become truly two-footed, and train at match intensity. Study the game through video analysis."
+    }
+  }
+}

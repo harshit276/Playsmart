@@ -12,10 +12,11 @@ from typing import Optional, List, Dict, Any
 logger = logging.getLogger(__name__)
 
 # ─── Resolve research folder path ───
-# Walk upward from backend to find the research folder at the sportsapp root
 _BACKEND_DIR = Path(__file__).parent
-_PROJECT_ROOT = _BACKEND_DIR.parent.parent  # sportsapp/
-RESEARCH_DIR = _PROJECT_ROOT / "research"
+# Try multiple locations: backend/research (Vercel), sportsapp/research (local)
+RESEARCH_DIR = _BACKEND_DIR / "research"
+if not RESEARCH_DIR.exists():
+    RESEARCH_DIR = _BACKEND_DIR.parent.parent / "research"  # sportsapp/research
 
 SUPPORTED_RESEARCH_SPORTS = [
     "badminton", "table_tennis", "tennis", "pickleball",
@@ -156,7 +157,26 @@ def get_equipment_by_budget(
     Strictly respects budget - never returns items above budget_max.
     """
     _load_all()
-    items = _equipment_by_category.get(sport, {}).get(category, [])
+    sport_cats = _equipment_by_category.get(sport, {})
+    items = sport_cats.get(category, [])
+    # Try plural/singular variants if not found
+    if not items:
+        variants = {
+            "racket": "rackets", "rackets": "racket",
+            "shoe": "shoes", "shoes": "shoe",
+            "string": "strings", "strings": "string",
+            "grip": "grips", "grips": "grip",
+            "shuttlecock": "shuttlecocks", "shuttlecocks": "shuttlecock",
+            "ball": "balls", "balls": "ball",
+            "rubber": "rubbers", "rubbers": "rubber",
+            "blade": "blades", "blades": "blade",
+            "paddle": "paddles", "paddles": "paddle",
+            "bat": "bats", "bats": "bat",
+            "accessory": "accessories", "accessories": "accessory",
+        }
+        alt = variants.get(category)
+        if alt:
+            items = sport_cats.get(alt, [])
 
     results = []
     for item in items:

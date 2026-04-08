@@ -1,0 +1,515 @@
+{
+  "sport": "table_tennis",
+  "skill_areas": [
+    {
+      "id": "tt_grip",
+      "name": "Grip Fundamentals",
+      "level": "beginner",
+      "description": "Choosing and mastering shakehand or penhold grip. Foundation for all strokes.",
+      "personality_tags": ["patient", "detail-oriented", "foundational"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Learn shakehand grip basics", "Understand V-grip finger placement", "Explore penhold if interested", "Develop relaxed grip pressure", "Adjust grip for different strokes"],
+      "common_mistakes": [
+        "Gripping the handle too tightly causing wrist stiffness",
+        "Thumb pressing flat on forehand rubber reducing backhand flexibility",
+        "Index finger too far up the blade affecting control",
+        "Not adjusting grip pressure between rallying and serving"
+      ],
+      "pain_points": [
+        "Hand cramps from overly tight grip",
+        "Cannot switch between forehand and backhand quickly",
+        "Racket twists in hand on off-center hits"
+      ],
+      "drills": [
+        "Grip pressure awareness drill — rally while consciously relaxing grip",
+        "Forehand-backhand transition with focus on finger pressure shift",
+        "Penhold grip exploration — practice basic drives with penhold"
+      ]
+    },
+    {
+      "id": "tt_serve",
+      "name": "Serving",
+      "level": "beginner",
+      "description": "Master backspin, topspin, sidespin, and short serves with deception. Serves are the only shot you have 100% control over.",
+      "personality_tags": ["creative", "deceptive", "strategic"],
+      "playing_styles": ["attacker", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Learn legal serve rules (open palm, 16cm toss)", "Basic backspin serve", "Pendulum serve with sidespin", "Short serve (two bounces on opponent side)", "Reverse pendulum serve", "Tomahawk serve", "Ghost serve (no-spin disguised as spin)", "Fast long serve for surprise"],
+      "common_mistakes": [
+        "Hiding the ball during serve (illegal under ITTF rules)",
+        "Not tossing the ball high enough (must be 16cm+)",
+        "Using arm instead of wrist for spin generation",
+        "Telegraphing spin type with body position or toss angle",
+        "Serving too long, giving opponent easy attack",
+        "Contacting ball too high, making serve sit up"
+      ],
+      "pain_points": [
+        "Cannot generate enough spin on serves",
+        "Serve goes too long giving opponent easy attack",
+        "Lack of variation and deception",
+        "Illegal serve (hidden contact point)",
+        "Cannot keep backspin serves short"
+      ],
+      "drills": [
+        "Backspin serve into a target box (place towel on table)",
+        "Pendulum serve with spin variation — same motion, different spin",
+        "Short serve practice — ball must bounce twice on opponent side",
+        "Serve and 3rd ball attack drill — serve then attack the return",
+        "Ghost serve practice — no-spin with spin motion"
+      ]
+    },
+    {
+      "id": "tt_forehand_loop",
+      "name": "Forehand Loop/Topspin",
+      "level": "intermediate",
+      "description": "Generate heavy topspin attacks from mid-distance using forehand loop against backspin and topspin. The primary attacking weapon in modern table tennis.",
+      "personality_tags": ["aggressive", "powerful", "athletic"],
+      "playing_styles": ["attacker", "all-rounder"],
+      "progression_path": ["Basic forehand drive (flat hit)", "Forehand topspin against block", "Loop against backspin (open bat, brush up)", "Loop against topspin (close bat, forward-up)", "Loop with placement (crosscourt vs down-the-line)", "Counter-loop against opponent's topspin", "Power loop vs spin loop variation"],
+      "common_mistakes": [
+        "Hitting flat instead of brushing up on the ball",
+        "Contacting ball too late (behind the body)",
+        "Not using legs and core — arm-only swing",
+        "Opening bat angle too much against topspin",
+        "Standing too far or too close to table",
+        "Not returning to ready position after the loop"
+      ],
+      "pain_points": [
+        "Inconsistent contact point",
+        "Not enough spin — hitting flat",
+        "Poor weight transfer and timing",
+        "Cannot loop heavy backspin",
+        "Loop goes into the net against backspin"
+      ],
+      "drills": [
+        "Multi-ball forehand loop drill (coach feeds backspin)",
+        "Loop against backspin push — alternate push and loop",
+        "Forehand loop crosscourt and down the line alternation",
+        "Loop from mid-distance stepping back and in",
+        "Counter-loop rally drill with partner"
+      ]
+    },
+    {
+      "id": "tt_backhand",
+      "name": "Backhand Techniques",
+      "level": "intermediate",
+      "description": "Backhand drive, flick, loop, and punch techniques. Modern table tennis demands a strong backhand for close-to-table exchanges.",
+      "personality_tags": ["technical", "quick", "modern"],
+      "playing_styles": ["attacker", "all-rounder"],
+      "progression_path": ["Basic backhand drive", "Backhand push (short and long)", "Backhand topspin/loop", "Backhand against backspin", "Backhand counter-topspin", "Backhand punch/smash against high balls"],
+      "common_mistakes": [
+        "Elbow too close to body restricting swing",
+        "Using shoulder instead of forearm and wrist",
+        "Bat angle too open causing ball to pop up",
+        "Not using core rotation — relying on arm only",
+        "Standing too square instead of slightly side-on"
+      ],
+      "pain_points": [
+        "Weak backhand compared to forehand",
+        "Cannot generate power on backhand loops",
+        "Backhand flick timing errors",
+        "Elbow positioning issues",
+        "Cannot sustain backhand-to-backhand rallies"
+      ],
+      "drills": [
+        "Backhand topspin rally drill — 50 consecutive",
+        "Backhand flick against short serve from partner",
+        "Forehand-backhand transition drill (Falkenberg variant)",
+        "Backhand loop against multiball backspin feed",
+        "Backhand counter-topspin at close range"
+      ]
+    },
+    {
+      "id": "tt_flick",
+      "name": "Flick Techniques (Banana & Strawberry)",
+      "level": "advanced",
+      "description": "Aggressive receive options against short serves. The banana flick (backhand) and strawberry flick (reverse-spin) are essential modern weapons.",
+      "personality_tags": ["explosive", "aggressive", "modern"],
+      "playing_styles": ["attacker", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Basic forehand flick over the table", "Backhand flick fundamentals", "Banana flick — wrist-driven sidespin-topspin flick", "Controlling banana flick placement", "Strawberry flick — reverse sidespin variation", "Reading serve spin before choosing flick type"],
+      "common_mistakes": [
+        "Reaching in too late — ball already dropping below table level",
+        "Not getting close enough to the ball (footwork failure)",
+        "Flicking with arm instead of wrist snap",
+        "Using banana flick against long serves (wrong situation)",
+        "Not reading spin before committing to flick"
+      ],
+      "pain_points": [
+        "Cannot execute banana flick consistently",
+        "Flick goes off the end of the table",
+        "Timing feels rushed and panicked",
+        "Cannot read if serve is short enough to flick"
+      ],
+      "drills": [
+        "Partner serves short — practice banana flick receive",
+        "Slow-motion wrist snap drills without ball",
+        "Flick placement drill — crosscourt vs middle vs down the line",
+        "Alternating banana flick and push receive against serve"
+      ]
+    },
+    {
+      "id": "tt_push",
+      "name": "Pushing (Backspin Control)",
+      "level": "beginner",
+      "description": "Control backspin rallies with long push, short push, and heavy push. Pushing is the foundation of defense and creates setups for attack.",
+      "personality_tags": ["patient", "controlled", "tactical"],
+      "playing_styles": ["defender", "all-rounder", "attacker"],
+      "progression_path": ["Basic forehand and backhand push", "Keeping push low over the net", "Short push (two bounces on opponent side)", "Long heavy backspin push", "Push with sidespin variation", "Push to set up third ball attack"],
+      "common_mistakes": [
+        "Bat angle too open — ball pops up high",
+        "Pushing from too far back — should be over the table",
+        "No wrist action — flat push with no spin",
+        "Pushing too hard causing ball to go long",
+        "Not reading incoming spin before pushing"
+      ],
+      "pain_points": [
+        "Popping the ball up giving opponent easy smash",
+        "Cannot keep pushes low and short",
+        "Reading spin on opponent's serve before pushing",
+        "Push has no backspin, easy for opponent to loop"
+      ],
+      "drills": [
+        "Short push to target zones (place coins on table)",
+        "Push and loop combination drill — push then attack next ball",
+        "Heavy backspin push practice — maximize spin",
+        "Push rally drill — 30 consecutive without error",
+        "Alternate short and long push to develop variation"
+      ]
+    },
+    {
+      "id": "tt_footwork",
+      "name": "Footwork",
+      "level": "beginner",
+      "description": "Side-to-side movement, in-out movement, and pivot footwork. Good footwork is the difference between average and excellent players.",
+      "personality_tags": ["athletic", "energetic", "disciplined"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Ready position — weight on balls of feet", "Side-to-side shuffle step", "In-out movement (short ball to long ball)", "Forehand pivot from backhand corner", "Crossover step for wide balls", "Falkenberg pattern (2 forehand + 1 backhand)", "Recovery step after attacking"],
+      "common_mistakes": [
+        "Standing flat-footed instead of on balls of feet",
+        "Crossing legs during side movement",
+        "Not returning to neutral position after each shot",
+        "Moving the arm instead of moving the feet to the ball",
+        "Taking too large steps — small, quick steps are better"
+      ],
+      "pain_points": [
+        "Standing too close or too far from table",
+        "Flat-footed and not ready to move",
+        "Cannot recover after wide forehand",
+        "Running out of time against fast rallies"
+      ],
+      "drills": [
+        "Falkenberg footwork drill (2 forehand 1 backhand pattern)",
+        "Side-to-side shuffle drill with multiball",
+        "In-out footwork with multiball — short ball then long ball",
+        "Shadow footwork without ball — practice movement patterns",
+        "Pivot drill — partner blocks to backhand, you pivot to forehand"
+      ]
+    },
+    {
+      "id": "tt_receive",
+      "name": "Return of Serve",
+      "level": "advanced",
+      "description": "Reading spin, flicking short serves, and attacking long serves on return. The serve-receive battle decides most points at higher levels.",
+      "personality_tags": ["analytical", "adaptive", "quick-thinking"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Learn to watch contact point on opponent's serve", "Basic push return against backspin serves", "Touch/drop return to keep ball short", "Flick return against short serves", "Loop return against long serves", "Reading no-spin vs heavy spin", "Tactical return placement"],
+      "common_mistakes": [
+        "Watching the ball instead of the opponent's contact point",
+        "Deciding what to do before reading the spin",
+        "Standing too far from table for short serve returns",
+        "Returning everything to the same spot — no variation",
+        "Panicking and just pushing everything back passively"
+      ],
+      "pain_points": [
+        "Cannot read spin type on serve",
+        "Returning into the net on heavy backspin serves",
+        "No attacking option on return",
+        "Getting aced by fast long serves"
+      ],
+      "drills": [
+        "Serve and return practice with partner — focus on reading spin",
+        "Banana flick return drill against short serves",
+        "Push return placement drill — return to specific zones",
+        "Loop return against long serves — partner serves long, you attack",
+        "Random serve receive — partner varies all serve types"
+      ]
+    },
+    {
+      "id": "tt_smash",
+      "name": "Smash and Kill Shot",
+      "level": "intermediate",
+      "description": "Finishing high balls with powerful flat hits and angled smashes. The exclamation mark at the end of a rally.",
+      "personality_tags": ["explosive", "confident", "aggressive"],
+      "playing_styles": ["attacker", "all-rounder"],
+      "progression_path": ["Basic forehand smash against high balls", "Angled smash — crosscourt and down the line", "Backhand smash/punch", "Smash against lobbed balls", "Counter-smash in fast exchanges"],
+      "common_mistakes": [
+        "Over-hitting — trying to kill every ball at maximum power",
+        "Poor timing — hitting too early or too late",
+        "Not moving feet to get into optimal position",
+        "Aiming for lines instead of safe targets",
+        "Tensing up before contact"
+      ],
+      "pain_points": [
+        "Over-hitting and missing the table",
+        "Poor timing on high balls",
+        "Lack of placement on smashes",
+        "Smash gets blocked back and no follow-up ready"
+      ],
+      "drills": [
+        "High ball smash practice with multiball feeder",
+        "Angled smash to corners drill — alternate sides",
+        "Counter-smash rally drill",
+        "Smash and recover drill — smash then play next ball",
+        "Target smash — place targets on table corners"
+      ]
+    },
+    {
+      "id": "tt_match_tactics",
+      "name": "Match Tactics & Strategy",
+      "level": "intermediate",
+      "description": "Game plans against different playing styles. Understanding when to attack, when to control, and how to exploit opponent weaknesses.",
+      "personality_tags": ["strategic", "analytical", "adaptable"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Understand your own playing style strengths", "Learn basic serve-and-third-ball patterns", "Tactics against pushers/blockers", "Tactics against loopers", "Tactics against choppers/defenders", "Tactics against penhold players", "Tactics against pips players", "Match management — timeouts, pacing, momentum"],
+      "common_mistakes": [
+        "No game plan — just reacting to everything",
+        "Not changing tactics when losing",
+        "Playing to opponent's strength instead of weakness",
+        "Ignoring the score situation — playing same way at 9-9 as at 1-1",
+        "Not using timeouts strategically"
+      ],
+      "pain_points": [
+        "Losing to players with unorthodox styles (choppers, pips)",
+        "Cannot adjust mid-match when plan is not working",
+        "No serve patterns — random serving",
+        "Losing close games due to mental pressure"
+      ],
+      "drills": [
+        "Practice serve-and-third-ball patterns — serve, predict return, attack",
+        "Play practice sets against different styles and review what worked",
+        "Watch match videos and identify tactical patterns",
+        "Practice specific patterns: serve short to forehand, attack weak return"
+      ],
+      "tactical_guides": {
+        "vs_choppers": "Use heavy topspin loops with patience. Vary between spin and speed. Attack the crossover point. Don't try to blast through — build the rally. Choppers thrive on your impatience.",
+        "vs_loopers": "Keep ball short and low to deny looping opportunities. Attack first when possible. Use fast blocks to redirect speed. Target the middle/crossover.",
+        "vs_penhold": "Target the wide backhand (traditional penhold weakness). Use fast long serves to the backhand. Be prepared for strong forehand pivots.",
+        "vs_pips_players": "Understand spin reversal — your topspin comes back as backspin. Hit flat or with less spin to reduce reversal effect. Attack with speed rather than spin."
+      }
+    },
+    {
+      "id": "tt_mental_game",
+      "name": "Mental Game & Psychology",
+      "level": "intermediate",
+      "description": "Handling pressure, building confidence, and maintaining focus during matches. The mental side separates good players from great ones.",
+      "personality_tags": ["resilient", "focused", "calm"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Develop a pre-serve routine for consistency", "Learn to reset after losing a point", "Practice breathing techniques between points", "Build positive self-talk habits", "Visualize key shots before matches", "Handle deuce situations with confidence", "Recover from losing first game"],
+      "common_mistakes": [
+        "Dwelling on mistakes instead of focusing on next point",
+        "Changing your entire game when losing instead of making small adjustments",
+        "Getting frustrated with lucky nets and edges",
+        "Rushing between points when nervous",
+        "Negative body language affecting own confidence"
+      ],
+      "pain_points": [
+        "Choking at 9-9 or deuce situations",
+        "Playing much worse in tournaments than in practice",
+        "Losing to weaker players due to mental lapses",
+        "Cannot recover momentum after opponent takes a lead"
+      ],
+      "drills": [
+        "Play practice games starting from 8-8 to simulate pressure",
+        "Breathing routine between points — 3 seconds inhale, 3 exhale",
+        "Post-match journal — write what went well and what to improve",
+        "Visualization sessions — imagine yourself executing perfect shots",
+        "Play handicap games (start 0-5 down) to practice comeback mentality"
+      ]
+    },
+    {
+      "id": "tt_fitness",
+      "name": "Table Tennis Fitness",
+      "level": "intermediate",
+      "description": "Off-table physical conditioning for speed, agility, endurance, and injury prevention specific to table tennis demands.",
+      "personality_tags": ["disciplined", "athletic", "health-conscious"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Basic stretching and warm-up routine", "Lateral agility drills (ladder, cones)", "Core stability exercises (planks, rotations)", "Wrist and forearm strengthening", "Leg endurance (squats, lunges, box jumps)", "Cardio for match stamina (interval training)", "Cool-down and injury prevention"],
+      "common_mistakes": [
+        "Skipping warm-up before playing",
+        "Only doing upper body — neglecting legs and core",
+        "Overdoing wrist exercises leading to injury",
+        "Not stretching after sessions",
+        "Doing slow/heavy strength training instead of explosive/agility work"
+      ],
+      "pain_points": [
+        "Getting tired in long matches — poor endurance",
+        "Slow lateral movement despite good technique",
+        "Shoulder or elbow pain from overuse",
+        "Wrist fatigue during extended practice sessions"
+      ],
+      "drills": [
+        "Agility ladder side-shuffle drill — 3 sets of 30 seconds",
+        "Core rotation with medicine ball — mimics forehand loop motion",
+        "Wrist curls with light dumbbell (1-2kg) — 3 sets of 15",
+        "Interval sprints — 20 seconds sprint, 40 seconds rest, 8 rounds",
+        "Single-leg squats for balance and leg stability",
+        "Dynamic stretching warm-up routine (5 minutes before play)"
+      ]
+    },
+    {
+      "id": "tt_rubber_care",
+      "name": "Rubber Care & Maintenance",
+      "level": "beginner",
+      "description": "How to clean, protect, and maintain your rubbers to maximize lifespan and performance. Well-maintained rubbers grip better and last longer.",
+      "personality_tags": ["careful", "detail-oriented", "economical"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Learn to apply protective film after every session", "Clean rubber with spray cleaner and sponge", "Store bat in a case away from heat/sunlight", "Know when rubber needs replacing (loss of grip/spin)", "Understand rubber aging — even unused rubbers degrade"],
+      "common_mistakes": [
+        "Leaving rubbers exposed to air/sunlight when not playing",
+        "Using water or household cleaners instead of proper rubber cleaner",
+        "Touching rubber surface with fingers (oil transfer)",
+        "Storing bat in a hot car or near windows",
+        "Not cleaning after every session"
+      ],
+      "pain_points": [
+        "Rubber loses grip too quickly",
+        "Expensive rubbers not lasting long enough",
+        "Not sure when to replace rubbers",
+        "Rubber surface becomes slippery or dull"
+      ],
+      "drills": [
+        "Post-session routine: clean with spray, apply film, store in case",
+        "Monthly grip test: place ball on rubber surface at 45 degrees — should not slide",
+        "Compare old vs new rubber — if spin generation drops noticeably, time to replace"
+      ]
+    },
+    {
+      "id": "tt_equipment_selection",
+      "name": "Equipment Selection Guide",
+      "level": "beginner",
+      "description": "How to choose the right blade, rubber, and setup for your level and playing style. Avoid buying equipment that is too advanced or mismatched.",
+      "personality_tags": ["analytical", "practical", "research-oriented"],
+      "playing_styles": ["attacker", "defender", "all-rounder", "penhold_specialist"],
+      "progression_path": ["Start with pre-assembled bat or basic all-wood blade + control rubbers", "Understand blade speed vs control tradeoff", "Learn about rubber types: inverted, short pips, long pips", "Choose rubber thickness based on level", "Upgrade to intermediate blade after 6-12 months", "Match blade and rubber to your playing style", "Advanced: understand carbon types (ALC, ZLC, ZL Fiber)"],
+      "common_mistakes": [
+        "Buying the most expensive/fastest equipment as a beginner",
+        "Copying pro player setups without having pro technique",
+        "Changing equipment too frequently — not giving time to adapt",
+        "Using maximum thickness rubber before technique is ready",
+        "Ignoring control rating and only looking at speed"
+      ],
+      "pain_points": [
+        "Overwhelmed by too many equipment choices",
+        "Wasted money on wrong equipment",
+        "Equipment feels too fast and uncontrollable",
+        "Not sure when to upgrade"
+      ],
+      "drills": [],
+      "equipment_recommendations": {
+        "absolute_beginner": {
+          "option_1": "Pre-assembled bat (Palio Expert 3.0 or Stiga Pro Carbon)",
+          "option_2": "Stiga Allround Classic blade + Yasaka Mark V on both sides",
+          "budget_inr": "1500-3500"
+        },
+        "intermediate_attacker": {
+          "option_1": "Stiga Clipper + DHS Hurricane 3 Neo (FH) + Xiom Vega Europe (BH)",
+          "option_2": "Yinhe N-11s + Tibhar Evolution MX-P (FH) + Xiom Vega Europe (BH)",
+          "budget_inr": "4000-8000"
+        },
+        "advanced_attacker": {
+          "option_1": "Butterfly Viscaria + Dignics 09c (FH) + Tenergy 05 (BH)",
+          "option_2": "Butterfly Timo Boll ALC + DHS Hurricane 3 Blue Sponge (FH) + Tenergy 05 (BH)",
+          "budget_inr": "15000-30000"
+        },
+        "defender_chopper": {
+          "option_1": "Defensive blade + Tibhar Grass D.TecS (BH) + control rubber (FH)",
+          "budget_inr": "5000-12000"
+        }
+      }
+    },
+    {
+      "id": "tt_pips_play",
+      "name": "Pimples (Pips) Rubber Play",
+      "level": "intermediate",
+      "description": "Using and playing against short pimples and long pimples rubbers. Pips rubbers create unique spin effects that confuse opponents.",
+      "personality_tags": ["unorthodox", "deceptive", "patient"],
+      "playing_styles": ["defender", "all-rounder"],
+      "progression_path": ["Understand how pips reverse or negate spin", "Short pips basics — flat hitting and blocking", "Long pips basics — chopping and blocking", "Spin reversal awareness — your topspin returns as backspin", "Twiddling (switching sides mid-rally)", "Using pips to disrupt opponent's rhythm"],
+      "common_mistakes": [
+        "Trying to generate spin with long pips (they negate spin, not create it)",
+        "Not using pips' strengths — just pushing passively",
+        "Forgetting to twiddle at the right moment",
+        "Not understanding how opponent's spin affects your pips return"
+      ],
+      "pain_points": [
+        "Cannot control the ball with pips rubbers",
+        "Opponents figure out the pips game quickly",
+        "Difficulty switching between pips and inverted techniques",
+        "Not sure which pips type suits playing style"
+      ],
+      "drills": [
+        "Long pips chopping drill — focus on consistent spin reversal",
+        "Short pips flat hitting drill — punch through the ball",
+        "Twiddle drill — switch bat sides and play forehand with each rubber",
+        "Practice against pips — partner uses pips while you learn to read the spin"
+      ]
+    }
+  ],
+  "player_profiles": {
+    "beginner": {
+      "focus_areas": ["tt_grip", "tt_serve", "tt_push", "tt_footwork", "tt_rubber_care", "tt_equipment_selection"],
+      "description": "New players should learn proper grip (shakehand/penhold), basic strokes, consistent pushing, and good footwork habits. Start with controlled equipment.",
+      "recommended_practice_split": {
+        "technique_drills": "50%",
+        "serve_practice": "20%",
+        "match_play": "20%",
+        "fitness": "10%"
+      }
+    },
+    "intermediate": {
+      "focus_areas": ["tt_forehand_loop", "tt_backhand", "tt_smash", "tt_match_tactics", "tt_fitness"],
+      "description": "Players with consistent rallies should develop topspin attacks, strengthen backhand, and begin understanding tactical play. Upgrade equipment thoughtfully.",
+      "recommended_practice_split": {
+        "technique_drills": "40%",
+        "serve_and_receive": "20%",
+        "match_play": "25%",
+        "fitness": "15%"
+      }
+    },
+    "advanced": {
+      "focus_areas": ["tt_receive", "tt_flick", "tt_match_tactics", "tt_mental_game"],
+      "description": "Competitive players must master serve-receive game, develop flick techniques, and refine tactical variations. Mental game becomes critical.",
+      "recommended_practice_split": {
+        "serve_and_receive": "30%",
+        "technique_refinement": "25%",
+        "match_play": "25%",
+        "fitness_and_mental": "20%"
+      }
+    }
+  },
+  "playing_style_guides": {
+    "attacker": {
+      "description": "Aggressive topspin-dominant style. Close to mid-distance play with powerful forehand and backhand loops.",
+      "key_skills": ["tt_forehand_loop", "tt_backhand", "tt_serve", "tt_flick", "tt_smash"],
+      "equipment_tendency": "Fast offensive blade (ALC/ZLC) + spinny offensive rubbers (Tenergy, Dignics)",
+      "pro_examples": ["Fan Zhendong", "Ma Long", "Tomokazu Harimoto"]
+    },
+    "defender": {
+      "description": "Chopping and blocking style played from mid to far distance. Uses long pimples and spin variation to frustrate attackers.",
+      "key_skills": ["tt_push", "tt_pips_play", "tt_footwork", "tt_match_tactics"],
+      "equipment_tendency": "Defensive blade + long pimples (BH) + control/allround rubber (FH)",
+      "pro_examples": ["Joo Sae-hyuk", "Ruwen Filus", "Manika Batra (hybrid)"]
+    },
+    "all_rounder": {
+      "description": "Balanced style combining controlled attacks with solid defense. Adaptable to different opponents.",
+      "key_skills": ["tt_forehand_loop", "tt_backhand", "tt_push", "tt_serve", "tt_match_tactics"],
+      "equipment_tendency": "All-wood or soft carbon blade + medium-speed rubbers (Vega, Evolution)",
+      "pro_examples": ["Timo Boll", "Dimitrij Ovtcharov", "Hugo Calderano"]
+    },
+    "penhold_specialist": {
+      "description": "Penhold grip style — traditional (Chinese/Japanese) or reverse penhold backhand (RPB). Strong forehand with wristy serves.",
+      "key_skills": ["tt_grip", "tt_serve", "tt_forehand_loop", "tt_flick", "tt_footwork"],
+      "equipment_tendency": "Penhold blade (Chinese or Japanese) + tacky rubber (FH) + tensor or pips (BH)",
+      "pro_examples": ["Xu Xin", "Wang Chuqin", "Ryu Seung-min"]
+    }
+  }
+}

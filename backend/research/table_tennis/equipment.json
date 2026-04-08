@@ -1,0 +1,322 @@
+{
+  "sport": "table_tennis",
+  "last_updated": "2026-03-24",
+  "currency_note": "INR prices reflect March 2026 Indian market.",
+  "equipment_categories": [
+    {
+      "category": "blades",
+      "items": [
+        {
+          "id": "tt_bl01",
+          "name": "Cossack Offensive",
+          "brand": "Cossack",
+          "type": "Allround Blade",
+          "level": "beginner",
+          "specs": {"weight": "85g", "plies": "5 wood", "composition": "All wood", "speed_rating": 5.0, "control_rating": 8.5, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 500, "max": 900}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cossack+Offensive+table+tennis+blade",
+            "flipkart": "https://www.flipkart.com/search?q=cossack+offensive+table+tennis+blade"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "Budget Indian brand blade. Great value for beginners starting with custom setups."
+        },
+        {
+          "id": "tt_bl02",
+          "name": "DHS PG7",
+          "brand": "DHS (Double Happiness)",
+          "type": "Allround Blade",
+          "level": "beginner",
+          "specs": {"weight": "88g", "plies": "7 wood", "composition": "All wood", "speed_rating": 5.5, "control_rating": 8.0, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=DHS+PG7+table+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=dhs+pg7+table+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "Unbeatable value beginner blade from DHS. 7-ply wood gives decent speed with good control."
+        },
+        {
+          "id": "tt_bl03",
+          "name": "Stiga Allround Classic",
+          "brand": "Stiga",
+          "type": "Allround Blade",
+          "level": "beginner",
+          "specs": {"weight": "75g", "plies": "5 wood", "composition": "All wood", "speed_rating": 4.5, "control_rating": 9.0, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 2500, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Stiga+Allround+Classic",
+            "flipkart": "https://www.flipkart.com/search?q=stiga+allround+classic"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "The gold standard beginner blade. 5-ply all-wood with outstanding control and feel."
+        },
+        {
+          "id": "tt_bl04",
+          "name": "Butterfly Timo Boll ALC",
+          "brand": "Butterfly",
+          "type": "Offensive Blade",
+          "level": "intermediate",
+          "specs": {"weight": "86g", "plies": "5+2 arylate carbon", "composition": "Wood + Arylate Carbon", "speed_rating": 8.5, "control_rating": 7.0, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 10000, "max": 14000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Timo+Boll+ALC",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+timo+boll+alc"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "Premium intermediate blade with Arylate Carbon layers. Excellent balance of speed and control."
+        },
+        {
+          "id": "tt_bl05",
+          "name": "DHS Hurricane Long 5",
+          "brand": "DHS",
+          "type": "Offensive Blade",
+          "level": "intermediate",
+          "specs": {"weight": "90g", "plies": "5+2 carbon", "composition": "Wood + Carbon", "speed_rating": 8.0, "control_rating": 7.5, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 4000, "max": 6000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+Long+5+blade",
+            "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+long+5"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "Ma Long's former blade. Hard feel with explosive power for aggressive play."
+        },
+        {
+          "id": "tt_bl06",
+          "name": "Stiga Carbonado 245",
+          "brand": "Stiga",
+          "type": "Offensive Blade",
+          "level": "intermediate",
+          "specs": {"weight": "82g", "plies": "5+2 carbon", "composition": "Wood + TeXtreme Carbon", "speed_rating": 8.0, "control_rating": 7.5, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 6000, "max": 8000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Stiga+Carbonado+245",
+            "flipkart": "https://www.flipkart.com/search?q=stiga+carbonado+245"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "TeXtreme carbon blade for maximum lightweight power. Fast with decent control."
+        },
+        {
+          "id": "tt_bl07",
+          "name": "Butterfly Viscaria",
+          "brand": "Butterfly",
+          "type": "Offensive+ Blade",
+          "level": "advanced",
+          "specs": {"weight": "87g", "plies": "5+2 arylate carbon", "composition": "Wood + Arylate Carbon", "speed_rating": 9.0, "control_rating": 6.5, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 14000, "max": 18000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Viscaria+blade",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+viscaria"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "Legendary blade used by Zhang Jike. Exceptional speed with good feel for advanced players."
+        },
+        {
+          "id": "tt_bl08",
+          "name": "Butterfly Zhang Jike Super ZLC",
+          "brand": "Butterfly",
+          "type": "Offensive+ Blade",
+          "level": "advanced",
+          "specs": {"weight": "89g", "plies": "5+2 super ZLC", "composition": "Wood + Super ZL Carbon", "speed_rating": 9.5, "control_rating": 6.0, "handle": "Flared (FL)"},
+          "price_ranges": {"INR": {"min": 22000, "max": 28000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Zhang+Jike+Super+ZLC",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+zhang+jike+super+zlc"
+          },
+          "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "description": "Top-tier professional blade. Maximum speed for elite players with precise technique."
+        }
+      ]
+    },
+    {
+      "category": "rubbers",
+      "items": [
+        {
+          "id": "tt_rb01",
+          "name": "DHS Hurricane 3 Neo",
+          "brand": "DHS",
+          "type": "Chinese Tacky Rubber",
+          "level": "beginner",
+          "specs": {"sponge_thickness": "2.15mm", "speed": 7.5, "spin": 9.5, "control": 7.0, "surface": "Inverted pimples (tacky)"},
+          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+3+Neo",
+            "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+3+neo"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Most popular Chinese rubber. Incredible spin generation at a very affordable price."
+        },
+        {
+          "id": "tt_rb02",
+          "name": "Stiga Mantra M",
+          "brand": "Stiga",
+          "type": "Tensor Rubber",
+          "level": "beginner",
+          "specs": {"sponge_thickness": "2.1mm", "speed": 7.0, "spin": 8.5, "control": 8.5, "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 1800, "max": 2500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Stiga+Mantra+M",
+            "flipkart": "https://www.flipkart.com/search?q=stiga+mantra+m"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Excellent beginner tensor rubber. Good speed and spin with forgiving control."
+        },
+        {
+          "id": "tt_rb03",
+          "name": "Yasaka Mark V",
+          "brand": "Yasaka",
+          "type": "Classic Rubber",
+          "level": "beginner",
+          "specs": {"sponge_thickness": "2.0mm", "speed": 7.5, "spin": 8.0, "control": 8.5, "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 1200, "max": 1800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Yasaka+Mark+V",
+            "flipkart": "https://www.flipkart.com/search?q=yasaka+mark+v"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Legendary classic rubber. The learning standard for generations of table tennis players."
+        },
+        {
+          "id": "tt_rb04",
+          "name": "Butterfly Rozena",
+          "brand": "Butterfly",
+          "type": "Tensor Rubber",
+          "level": "intermediate",
+          "specs": {"sponge_thickness": "2.1mm", "speed": 8.5, "spin": 8.5, "control": 7.5, "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 2500, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Rozena",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+rozena"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Butterfly's best intermediate rubber. Spring Sponge technology for excellent all-round play."
+        },
+        {
+          "id": "tt_rb05",
+          "name": "Xiom Vega Europe",
+          "brand": "Xiom",
+          "type": "Tensor Rubber",
+          "level": "intermediate",
+          "specs": {"sponge_thickness": "2.0mm", "speed": 8.0, "spin": 9.0, "control": 8.0, "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 2000, "max": 3000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Xiom+Vega+Europe",
+            "flipkart": "https://www.flipkart.com/search?q=xiom+vega+europe"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Excellent spin-oriented rubber. Forgiving sponge with great arc. Popular among intermediate players."
+        },
+        {
+          "id": "tt_rb06",
+          "name": "Butterfly Tenergy 05",
+          "brand": "Butterfly",
+          "type": "High-performance Tensor",
+          "level": "advanced",
+          "specs": {"sponge_thickness": "2.1mm", "speed": 9.5, "spin": 10.0, "control": 6.5, "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 5000, "max": 7000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Tenergy+05",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+tenergy+05"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "The benchmark high-performance rubber. Incredible spin and speed for advanced players."
+        },
+        {
+          "id": "tt_rb07",
+          "name": "Butterfly Dignics 05",
+          "brand": "Butterfly",
+          "type": "Premium Tensor",
+          "level": "advanced",
+          "specs": {"sponge_thickness": "2.1mm", "speed": 10.0, "spin": 10.0, "control": 6.0, "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 7000, "max": 9500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+Dignics+05",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+dignics+05"
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Butterfly's flagship rubber. Ultimate speed and spin for professional play."
+        }
+      ]
+    },
+    {
+      "category": "balls",
+      "items": [
+        {
+          "id": "tt_ba01",
+          "name": "GKI Premium 3-Star (Pack of 6)",
+          "brand": "GKI",
+          "type": "3-Star Ball",
+          "level": "beginner",
+          "specs": {"star_rating": 3, "material": "ABS Poly", "diameter": "40mm"},
+          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=GKI+3+star+table+tennis+ball",
+            "flipkart": "https://www.flipkart.com/search?q=gki+3+star+table+tennis+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Affordable Indian brand 3-star balls. Good for recreational play and practice."
+        },
+        {
+          "id": "tt_ba02",
+          "name": "Stag 3-Star Premium (Pack of 6)",
+          "brand": "Stag",
+          "type": "3-Star Ball",
+          "level": "beginner",
+          "specs": {"star_rating": 3, "material": "ABS Poly", "diameter": "40+mm"},
+          "price_ranges": {"INR": {"min": 250, "max": 450}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Stag+3+star+table+tennis+ball",
+            "flipkart": "https://www.flipkart.com/search?q=stag+3+star+table+tennis+ball"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Indian brand tournament balls. Consistent bounce for regular practice."
+        },
+        {
+          "id": "tt_ba03",
+          "name": "DHS D40+ 3-Star (Pack of 6)",
+          "brand": "DHS",
+          "type": "3-Star ITTF Approved",
+          "level": "intermediate",
+          "specs": {"star_rating": 3, "material": "ABS Poly 40+", "diameter": "40+mm", "ITTF_approved": true},
+          "price_ranges": {"INR": {"min": 500, "max": 800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=DHS+D40+3+star+table+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=dhs+d40+3+star"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "ITTF approved match ball. Consistent bounce and excellent roundness."
+        },
+        {
+          "id": "tt_ba04",
+          "name": "Nittaku 3-Star Premium (Pack of 3)",
+          "brand": "Nittaku",
+          "type": "3-Star ITTF Approved",
+          "level": "intermediate",
+          "specs": {"star_rating": 3, "material": "Poly 40+", "diameter": "40+mm", "ITTF_approved": true},
+          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nittaku+3+star+table+tennis+ball",
+            "flipkart": "https://www.flipkart.com/search?q=nittaku+3+star+table+tennis"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Premium Japanese match ball. Excellent consistency for tournament play."
+        },
+        {
+          "id": "tt_ba05",
+          "name": "Butterfly G40+ 3-Star (Pack of 3)",
+          "brand": "Butterfly",
+          "type": "3-Star ITTF Approved",
+          "level": "advanced",
+          "specs": {"star_rating": 3, "material": "Poly 40+", "diameter": "40+mm", "ITTF_approved": true},
+          "price_ranges": {"INR": {"min": 800, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Butterfly+G40+3+star",
+            "flipkart": "https://www.flipkart.com/search?q=butterfly+g40+3+star"
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Official WTT match ball. The highest quality ball for professional play."
+        }
+      ]
+    }
+  ]
+}
