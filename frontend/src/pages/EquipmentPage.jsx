@@ -738,7 +738,7 @@ export default function EquipmentPage() {
   const [fetchError, setFetchError] = useState(false);
 
   const fetchData = useCallback(async (sport) => {
-    if (!user?.id) return;
+    const userId = user?.id || "guest";
     setLoading(true);
     setFetchError(false);
     setRacketData(null);
@@ -748,14 +748,13 @@ export default function EquipmentPage() {
     const sportQuery = sport ? `?sport=${sport}` : '';
     try {
       const [racketRes, shoeRes, gearRes] = await Promise.allSettled([
-        api.get(`/recommendations/equipment/${user.id}?category=racket${sportParam}`),
-        api.get(`/recommendations/equipment/${user.id}?category=shoes${sportParam}`),
-        api.get(`/recommendations/gear/${user.id}${sportQuery}`),
+        api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}`, { timeout: 15000 }),
+        api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}`, { timeout: 15000 }),
+        api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 15000 }),
       ]);
       if (racketRes.status === "fulfilled") setRacketData(racketRes.value.data);
       if (shoeRes.status === "fulfilled") setShoeData(shoeRes.value.data);
       if (gearRes.status === "fulfilled") setGearData(gearRes.value.data);
-      // If all failed, show error
       if (racketRes.status !== "fulfilled" && shoeRes.status !== "fulfilled" && gearRes.status !== "fulfilled") {
         setFetchError(true);
       }
@@ -765,13 +764,12 @@ export default function EquipmentPage() {
     setLoading(false);
   }, [user?.id]);
 
-  // Fetch equipment when selectedSport changes (only for configured sports)
+  // Fetch equipment when selectedSport changes
   useEffect(() => {
     const isConfigured = configuredSports.includes(selectedSport) || selectedSport === profile?.active_sport;
-    if (isConfigured && user?.id) {
+    if (isConfigured || !user?.id) {
+      // Fetch for configured sports, or for guests (always fetch)
       fetchData(selectedSport);
-    } else if (!user?.id) {
-      setLoading(false);
     }
   }, [selectedSport, fetchData, profile?.active_sport, user?.id]);
 

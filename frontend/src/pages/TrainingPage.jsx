@@ -124,12 +124,12 @@ export default function TrainingPage() {
   const [fetchError, setFetchError] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!user?.id) { setLoading(false); return; }
+    const userId = user?.id || "guest";
     setFetchError(false);
     try {
       const results = await Promise.allSettled([
-        api.get(`/recommendations/training/${user.id}`, { timeout: 15000 }),
-        api.get(`/progress/${user.id}`, { timeout: 15000 }),
+        api.get(`/recommendations/training/${userId}`, { timeout: 15000 }),
+        api.get(`/progress/${userId}`, { timeout: 15000 }),
       ]);
 
       if (results[0].status === "fulfilled") setPlanData(results[0].value.data);
