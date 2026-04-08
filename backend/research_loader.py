@@ -186,10 +186,11 @@ def get_equipment_by_budget(
         item_min = price_range.get("min", 0)
         item_max = price_range.get("max", 999999)
 
-        # Item's minimum price must be within budget
-        if item_min > budget_max:
+        # Item must be affordable: its minimum price must be UNDER budget max
+        if item_min >= budget_max:
             continue
-        if item_max < budget_min:
+        # Item shouldn't be too cheap for the range
+        if budget_min > 0 and item_max < budget_min:
             continue
 
         # Level filter

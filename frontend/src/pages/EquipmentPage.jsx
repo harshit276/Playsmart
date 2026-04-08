@@ -758,21 +758,16 @@ export default function EquipmentPage() {
     const budgetKey = budget || selectedBudget || "Medium";
     const bRange = BUDGET_RANGES[budgetKey];
     const budgetParam = bRange ? `&budget_min=${bRange.min}&budget_max=${bRange.max}` : '';
-    try {
-      const [racketRes, shoeRes, gearRes] = await Promise.allSettled([
-        api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`, { timeout: 15000 }),
-        api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`, { timeout: 15000 }),
-        api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 15000 }),
-      ]);
-      if (racketRes.status === "fulfilled") setRacketData(racketRes.value.data);
-      if (shoeRes.status === "fulfilled") setShoeData(shoeRes.value.data);
-      if (gearRes.status === "fulfilled") setGearData(gearRes.value.data);
-      if (racketRes.status !== "fulfilled" && shoeRes.status !== "fulfilled" && gearRes.status !== "fulfilled") {
-        setFetchError(true);
-      }
-    } catch {
-      setFetchError(true);
-    }
+    // Fire all requests and show data progressively as each arrives
+    let anySuccess = false;
+    const r1 = api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`, { timeout: 20000 })
+      .then(res => { setRacketData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+    const r2 = api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`, { timeout: 20000 })
+      .then(res => { setShoeData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+    const r3 = api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 20000 })
+      .then(res => { setGearData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+    await Promise.allSettled([r1, r2, r3]);
+    if (!anySuccess) setFetchError(true);
     setLoading(false);
   }, [user?.id, selectedBudget]);
 
