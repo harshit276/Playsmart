@@ -266,6 +266,8 @@ function clamp(value, lo, hi) {
 function detectDominantHand(allKeypoints) {
   let leftMotion = 0;
   let rightMotion = 0;
+  const leftMotions = [];
+  const rightMotions = [];
 
   for (let i = 1; i < allKeypoints.length; i++) {
     const prevLW = getKp(allKeypoints[i - 1], "left_wrist");
@@ -273,11 +275,37 @@ function detectDominantHand(allKeypoints) {
     const prevRW = getKp(allKeypoints[i - 1], "right_wrist");
     const currRW = getKp(allKeypoints[i], "right_wrist");
 
-    if (prevLW && currLW) leftMotion += kpDist(prevLW, currLW);
-    if (prevRW && currRW) rightMotion += kpDist(prevRW, currRW);
+    const ld = (prevLW && currLW) ? kpDist(prevLW, currLW) : 0;
+    const rd = (prevRW && currRW) ? kpDist(prevRW, currRW) : 0;
+
+    leftMotion += ld;
+    rightMotion += rd;
+    leftMotions.push(ld);
+    rightMotions.push(rd);
   }
 
-  return rightMotion > leftMotion ? "right" : "left";
+  const cumulativeResult = rightMotion > leftMotion ? "right" : "left";
+
+  // Cross-validate: at the fastest frame(s), which wrist moved more?
+  // The playing hand should be the fastest at impact points.
+  if (leftMotions.length > 0) {
+    const wristSpeeds = leftMotions.map((l, i) => l + rightMotions[i]);
+    const fastestIdx = wristSpeeds.indexOf(Math.max(...wristSpeeds));
+    const fastLeft = leftMotions[fastestIdx] || 0;
+    const fastRight = rightMotions[fastestIdx] || 0;
+
+    const peakResult = fastRight > fastLeft ? "right" : "left";
+
+    // If the fastest frame contradicts cumulative AND the margin is close (<20%), trust fastest frame
+    if (peakResult !== cumulativeResult) {
+      const ratio = Math.min(leftMotion, rightMotion) / Math.max(leftMotion, rightMotion);
+      if (ratio > 0.8) {
+        return peakResult;
+      }
+    }
+  }
+
+  return cumulativeResult;
 }
 
 // ─── Shot Moment Detection ─────────────────────────────────────────────────
@@ -321,7 +349,11 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
 
   // Compute threshold: shots are faster than average
   const avgSpeed = avg(wristSpeeds.map((w) => w.speed));
-  const threshold = avgSpeed * 1.5;
+  const threshold = avgSpeed * 2.0;
+
+  // Adaptive minimum gap between peaks based on video duration
+  const duration = timestamps.length > 0 ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
+  const minGap = duration < 15 ? 2.0 : duration < 60 ? 1.0 : 0.5;
 
   // Find peaks (local maxima above threshold)
   const peaks = [];
@@ -331,11 +363,18 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
       wristSpeeds[i].speed >= wristSpeeds[i - 1].speed &&
       wristSpeeds[i].speed >= wristSpeeds[i + 1].speed
     ) {
-      // Enforce minimum 0.5s between peaks
-      if (peaks.length === 0 || wristSpeeds[i].time - peaks[peaks.length - 1].time > 0.5) {
+      if (peaks.length === 0 || wristSpeeds[i].time - peaks[peaks.length - 1].time > minGap) {
         peaks.push(wristSpeeds[i]);
       }
     }
+  }
+
+  // Cap max shots based on video duration to avoid over-detection
+  const maxShots = duration < 15 ? 3 : duration < 30 ? 6 : duration < 120 ? 15 : 30;
+  if (peaks.length > maxShots) {
+    peaks.sort((a, b) => b.speed - a.speed);
+    peaks.length = maxShots;
+    peaks.sort((a, b) => a.time - b.time); // restore chronological order
   }
 
   // If no peaks found (e.g. single slow shot), treat the fastest frame as one shot
@@ -387,23 +426,24 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
     return { type: "unknown", name: "Unknown", confidence: 0.1, isBackhand: false, elbowAngle: 0, wristSpeed: 0 };
   }
 
+  // Torso length for normalization (moved up so backhand margin can use it)
+  const torsoLength = hip ? Math.abs(shoulder.y - hip.y) : 80;
+  const safeTorso = torsoLength > 5 ? torsoLength : 80;
+
   // Body center X from both shoulders
   const bodyCenterX = (lShoulder && rShoulder) ? (lShoulder.x + rShoulder.x) / 2 : shoulder.x;
 
   // Determine backhand: wrist on opposite side of body center from natural side
+  const backhandMargin = safeTorso * 0.15; // ~15% of torso length (~8-12px on 256px canvas)
   const isBackhand = dominantHand === "right"
-    ? wrist.x < bodyCenterX - 3  // wrist left of center for right-hander (pixel coords)
-    : wrist.x > bodyCenterX + 3; // wrist right of center for left-hander
+    ? wrist.x < bodyCenterX - backhandMargin  // right-hander: wrist left of center = backhand
+    : wrist.x > bodyCenterX + backhandMargin; // left-hander: wrist right of center = backhand
 
   // Wrist height relative to shoulder
   const wristAboveShoulder = wrist.y < shoulder.y - 5;
   const hipY = hip ? hip.y : shoulder.y + 80;
   const wristBelowHip = wrist.y > hipY;
   const wristNearShoulderHeight = Math.abs(wrist.y - shoulder.y) < 20;
-
-  // Torso length for normalization
-  const torsoLength = hip ? Math.abs(shoulder.y - hip.y) : 80;
-  const safeTorso = torsoLength > 5 ? torsoLength : 80;
 
   // Wrist velocity direction from neighboring frames
   let wristVelY = 0;
@@ -476,44 +516,50 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
  * @returns {{ type: string, confidence: number }}
  */
 function classifyBadmintonShot(aboveShoulder, belowHip, isBackhand, velY, velX, elbowAngle, speed, nearShoulder) {
+  // velY/velX are torso-normalized displacements (pixel coords / torsoLength).
+  // speed is torso-normalized velocity (pixel dist / torsoLength / dt).
+  // Typical ranges on 256px canvas: velY +-0.01..0.5, velX 0..0.3, speed 0.1..5.0
   let type;
   let confidence;
 
   if (isBackhand) {
     // Backhand variants
-    if (aboveShoulder && speed > 0.3 && velY > 0.05) {
+    if (aboveShoulder && speed > 0.2 && velY > 0.03) {
       type = "smash"; confidence = 0.72;
-    } else if (aboveShoulder && velY < -0.02) {
+    } else if (aboveShoulder && velY < -0.01) {
       type = "clear"; confidence = 0.65;
-    } else if (aboveShoulder && speed < 0.2) {
+    } else if (aboveShoulder && speed < 0.15) {
       type = "drop"; confidence = 0.60;
-    } else if (nearShoulder && velX > 0.04) {
+    } else if (nearShoulder && velX > 0.03) {
       type = "drive"; confidence = 0.62;
-    } else if (!aboveShoulder && speed < 0.15) {
+    } else if (!aboveShoulder && speed < 0.1) {
       type = "net_shot"; confidence = 0.58;
-    } else if (belowHip && velY < -0.05) {
+    } else if (belowHip && velY < -0.03) {
       type = "lift"; confidence = 0.55;
+    } else if (aboveShoulder) {
+      type = speed > 0.15 ? "smash" : "clear";
+      confidence = 0.48;
     } else {
       type = "drive"; confidence = 0.45;
     }
   } else {
     // Forehand variants
-    if (aboveShoulder && speed > 0.3 && velY > 0.05) {
+    if (aboveShoulder && speed > 0.2 && velY > 0.03) {
       type = "smash"; confidence = 0.80;
-    } else if (aboveShoulder && velY < -0.02) {
+    } else if (aboveShoulder && velY < -0.01) {
       type = "clear"; confidence = 0.72;
-    } else if (aboveShoulder && speed < 0.2) {
+    } else if (aboveShoulder && speed < 0.15) {
       type = "drop"; confidence = 0.65;
-    } else if (nearShoulder && velX > 0.04) {
+    } else if (nearShoulder && velX > 0.03) {
       type = "drive"; confidence = 0.68;
-    } else if (!aboveShoulder && speed < 0.15) {
+    } else if (!aboveShoulder && speed < 0.1) {
       type = "net_shot"; confidence = 0.62;
-    } else if (belowHip && velY < -0.05) {
+    } else if (belowHip && velY < -0.03) {
       type = "lift"; confidence = 0.58;
-    } else if (belowHip && speed < 0.2) {
+    } else if (belowHip && speed < 0.15) {
       type = "serve"; confidence = 0.60;
     } else if (aboveShoulder) {
-      type = speed > 0.25 ? "smash" : "clear";
+      type = speed > 0.15 ? "smash" : "clear";
       confidence = 0.50;
     } else {
       type = "drive"; confidence = 0.45;
@@ -536,41 +582,42 @@ function classifyBadmintonShot(aboveShoulder, belowHip, isBackhand, velY, velX, 
  * @returns {{ type: string, confidence: number }}
  */
 function classifyTTShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip) {
+  // velY/velX are torso-normalized displacements, speed is torso-normalized velocity.
   let type;
   let confidence;
 
   // Very fast flat trajectory = smash
-  if (speed > 0.5 && velX > 0.06 && Math.abs(velY) < 0.03) {
+  if (speed > 0.35 && velX > 0.04 && Math.abs(velY) < 0.02) {
     type = "smash";
     confidence = 0.75;
   }
   // Upward brush motion = loop/topspin
-  else if (velY < -0.03 && speed > 0.2) {
+  else if (velY < -0.02 && speed > 0.15) {
     type = isBackhand ? "backhand_loop" : "forehand_loop";
     confidence = 0.72;
   }
   // Strong downward motion = chop
-  else if (velY > 0.04 && velX < 0.03) {
+  else if (velY > 0.03 && velX < 0.02) {
     type = "chop";
     confidence = 0.68;
   }
   // Moderate speed forward = drive
-  else if (speed > 0.15 && velX > 0.02) {
+  else if (speed > 0.1 && velX > 0.015) {
     type = isBackhand ? "backhand_drive" : "forehand_drive";
     confidence = 0.65;
   }
   // Compact behind-body motion, slow = serve
-  else if (belowHip && speed < 0.15) {
+  else if (belowHip && speed < 0.1) {
     type = "serve";
     confidence = 0.62;
   }
   // Very slow, small motion = push or block
-  else if (speed < 0.1) {
-    type = speed < 0.05 ? "block" : "push";
+  else if (speed < 0.08) {
+    type = speed < 0.03 ? "block" : "push";
     confidence = 0.55;
   }
   // Quick wrist flick at table height = flick
-  else if (speed > 0.25 && elbowAngle > 140) {
+  else if (speed > 0.18 && elbowAngle > 140) {
     type = "flick";
     confidence = 0.58;
   }
@@ -599,17 +646,17 @@ function classifyTennisShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, s
   let type;
   let confidence;
 
-  if (aboveShoulder && speed > 0.4 && elbowAngle > 150) {
+  if (aboveShoulder && speed > 0.3 && elbowAngle > 150) {
     type = "serve"; confidence = 0.78;
-  } else if (aboveShoulder && velY > 0.1) {
+  } else if (aboveShoulder && velY > 0.06) {
     type = "overhead"; confidence = 0.70;
-  } else if (velY > 0.08 && speed < 0.2) {
+  } else if (velY > 0.05 && speed < 0.15) {
     type = "slice"; confidence = 0.62;
-  } else if (velY < -0.1 && !aboveShoulder) {
+  } else if (velY < -0.06 && !aboveShoulder) {
     type = "lob"; confidence = 0.60;
-  } else if (!aboveShoulder && speed < 0.08) {
+  } else if (!aboveShoulder && speed < 0.06) {
     type = "drop_shot"; confidence = 0.55;
-  } else if (speed < 0.12 && !aboveShoulder) {
+  } else if (speed < 0.1 && !aboveShoulder) {
     type = "volley"; confidence = 0.55;
   } else {
     type = isBackhand ? "backhand" : "forehand";
@@ -636,17 +683,17 @@ function classifyPickleballShot(aboveShoulder, isBackhand, velY, velX, elbowAngl
   let type;
   let confidence;
 
-  if (aboveShoulder && velY > 0.1) {
+  if (aboveShoulder && velY > 0.06) {
     type = "overhead"; confidence = 0.68;
-  } else if (speed < 0.08 && !aboveShoulder) {
+  } else if (speed < 0.06 && !aboveShoulder) {
     type = "dink"; confidence = 0.65;
-  } else if (belowHip && speed < 0.15) {
+  } else if (belowHip && speed < 0.1) {
     type = "serve"; confidence = 0.62;
-  } else if (speed > 0.2) {
+  } else if (speed > 0.15) {
     type = "drive"; confidence = 0.60;
-  } else if (velY < -0.1) {
+  } else if (velY < -0.06) {
     type = "lob"; confidence = 0.55;
-  } else if (speed < 0.12 && !aboveShoulder) {
+  } else if (speed < 0.1 && !aboveShoulder) {
     type = "third_shot_drop"; confidence = 0.55;
   } else if (nearShoulder && speed < 0.15) {
     type = "volley"; confidence = 0.52;
@@ -925,10 +972,10 @@ function detectWeaknesses(metrics, shotName) {
  * to approximate real-world shot speed in km/h.
  */
 const SPEED_CALIBRATION = {
-  badminton:    { factor: 280, minPlausible: 30, maxPlausible: 450 },
-  table_tennis: { factor: 100, minPlausible: 10, maxPlausible: 130 },
-  tennis:       { factor: 240, minPlausible: 30, maxPlausible: 260 },
-  pickleball:   { factor: 110, minPlausible: 15, maxPlausible: 100 },
+  badminton:    { factor: 60,  minPlausible: 20, maxPlausible: 200 },
+  table_tennis: { factor: 30,  minPlausible: 5,  maxPlausible: 100 },
+  tennis:       { factor: 55,  minPlausible: 20, maxPlausible: 200 },
+  pickleball:   { factor: 35,  minPlausible: 10, maxPlausible: 80  },
 };
 
 /**
