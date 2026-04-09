@@ -821,9 +821,14 @@ export default function AnalyzePage() {
                       )}
                     </Badge>
                   )}
-                  {result.target_player && result.target_player !== "auto" && (
+                  {result.target_player && (
                     <Badge className="text-[10px] px-2 py-0.5 bg-violet-400/10 text-violet-400 border-violet-400/20">
-                      <Target className="w-2.5 h-2.5 mr-1 inline" /> Analyzed: {result.target_player.replace("-", " ")} player
+                      <Target className="w-2.5 h-2.5 mr-1 inline" /> {result.target_player === "auto" ? "Primary player" : `${result.target_player.replace("-", " ")} player`}
+                    </Badge>
+                  )}
+                  {result.dominant_hand && (
+                    <Badge className="text-[10px] px-2 py-0.5 bg-cyan-400/10 text-cyan-400 border-cyan-400/20">
+                      {result.dominant_hand === "right" ? "Right-handed" : "Left-handed"}
                     </Badge>
                   )}
                 </div>
