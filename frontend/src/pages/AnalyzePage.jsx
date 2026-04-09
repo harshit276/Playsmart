@@ -631,21 +631,21 @@ export default function AnalyzePage() {
       {/* Selected file */}
       {file && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          className="mt-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-center justify-between">
+          className="mt-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center shrink-0">
               <Video className="w-5 h-5 text-lime-400" strokeWidth={1.5} />
             </div>
-            <div>
-              <p className="text-sm font-medium text-white truncate max-w-[180px] sm:max-w-none">{file.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white truncate">{file.name}</p>
               <p className="text-xs text-zinc-500">{(file.size / (1024 * 1024)).toFixed(1)} MB</p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" onClick={clearFile}
-              className="text-zinc-500 hover:text-red-400 text-xs">Remove</Button>
+              className="text-zinc-500 hover:text-red-400 text-xs shrink-0">Remove</Button>
+          </div>
+          <div className="mt-3 flex justify-end sm:mt-3">
             <Button size="sm" onClick={analyze} disabled={analyzing || !analysisMode}
-              className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-5"
+              className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-5 w-full sm:w-auto"
               data-testid="analyze-btn">
               {analyzing ? (
                 <><div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin mr-1" /> Analyzing...</>
@@ -655,6 +655,17 @@ export default function AnalyzePage() {
             </Button>
           </div>
         </motion.div>
+      )}
+
+      {/* Mobile sticky analyze button */}
+      {file && !analyzing && !result && !error && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 sm:hidden">
+          <Button onClick={analyze} disabled={!analysisMode}
+            className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-sm py-3 shadow-lg shadow-lime-400/20"
+            data-testid="analyze-btn-mobile">
+            <Zap className="w-4 h-4 mr-2" /> Analyze Video
+          </Button>
+        </div>
       )}
 
       {/* Loading state */}
@@ -847,6 +858,116 @@ export default function AnalyzePage() {
             </div>
           </div>
         </motion.div>
+
+        {/* ── Multi-Shot Summary (if match video) ── */}
+        {result.multi_shot && result.shots?.length > 1 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
+            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
+              <Film className="w-3 h-3 text-sky-400" /> Match Analysis — {result.total_shots_detected} Shots Detected
+            </p>
+
+            {/* Dominant hand + Play style */}
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              <Badge className="bg-violet-400/10 text-violet-400 border-violet-400/20 text-[10px] uppercase font-bold">
+                {result.dominant_hand === "right" ? "Right-handed" : "Left-handed"}
+              </Badge>
+              {result.player_profile?.play_style && (
+                <Badge className="bg-sky-400/10 text-sky-400 border-sky-400/20 text-[10px] uppercase font-bold">
+                  {result.player_profile.play_style} Style
+                </Badge>
+              )}
+            </div>
+
+            {/* Shot distribution bars */}
+            {result.shot_distribution && Object.keys(result.shot_distribution).length > 0 && (
+              <div className="space-y-2 mb-4">
+                {Object.entries(result.shot_distribution)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([shotType, count], i) => {
+                    const pct = Math.round((count / result.total_shots_detected) * 100);
+                    const shotLabel = shotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                    return (
+                      <div key={shotType}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs font-medium text-zinc-300">{shotLabel}</span>
+                          <span className="text-xs text-zinc-500">{count}x ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, delay: 0.1 + i * 0.05 }}
+                            className="h-full rounded-full bg-lime-400"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            {/* Individual shots timeline */}
+            <details className="group">
+              <summary className="text-xs text-zinc-500 cursor-pointer hover:text-lime-400 flex items-center gap-1">
+                <ChevronRight className="w-3 h-3 group-open:rotate-90 transition-transform" /> View all shots
+              </summary>
+              <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
+                {result.shots.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between bg-zinc-800/50 rounded-lg px-3 py-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
+                        s.grade === "A" ? "bg-lime-400 text-black" :
+                        s.grade === "B" ? "bg-sky-400 text-black" :
+                        s.grade === "C" ? "bg-amber-400 text-black" :
+                        "bg-red-500 text-white"
+                      }`}>{s.grade}</span>
+                      <span className="text-xs text-zinc-300 font-medium">{s.name}</span>
+                      {s.isBackhand && (
+                        <Badge className="text-[9px] bg-violet-400/10 text-violet-400 border-violet-400/20 px-1 py-0">BH</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {s.speed > 0 && <span className="text-[10px] text-zinc-500">{s.speed} km/h</span>}
+                      <span className="text-[10px] text-zinc-600">{s.timestamp}s</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
+
+            {/* Strengths and weaknesses */}
+            {result.player_profile?.strengths?.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-zinc-800/50">
+                <p className="text-[10px] text-zinc-500 uppercase mb-1 font-medium">Strong shots</p>
+                <div className="flex flex-wrap gap-1">
+                  {result.player_profile.strengths.map((s, i) => (
+                    <Badge key={i} className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px]">{s}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.player_profile?.weaknesses?.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[10px] text-zinc-500 uppercase mb-1 font-medium">Needs work</p>
+                <div className="flex flex-wrap gap-1">
+                  {result.player_profile.weaknesses.map((w, i) => (
+                    <Badge key={i} className="bg-red-400/10 text-red-400 border-red-400/20 text-[10px]">{w}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ── Dominant hand badge (single shot mode) ── */}
+        {result.dominant_hand && !result.multi_shot && (
+          <div className="flex items-center gap-2 -mt-1">
+            <Badge className="bg-violet-400/10 text-violet-400 border-violet-400/20 text-[10px] uppercase font-bold">
+              {result.dominant_hand === "right" ? "Right-handed" : "Left-handed"} player detected
+            </Badge>
+          </div>
+        )}
 
         {/* ── Score Comparison with Previous ── */}
         {scoreComparison?.length > 0 && (

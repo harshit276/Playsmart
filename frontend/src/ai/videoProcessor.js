@@ -2,8 +2,12 @@
  * @module videoProcessor
  * Main video analysis pipeline that runs entirely in the browser.
  * Extracts frames from video using HTML5 canvas, runs MoveNet pose detection,
- * classifies shots, computes metrics, and returns results in the same format
- * as the server's /analyze-video endpoint.
+ * detects individual shot moments via motion peaks, classifies each shot
+ * separately, computes metrics, and returns a multi-shot report.
+ *
+ * Supports:
+ * - Single player, single shot type videos
+ * - 2-3 minute match videos with multiple shot types
  */
 
 import { initModel, detectPose, getKeypointByName, calculateAngle, keypointDistance, countVisibleKeypoints } from "./poseDetector.js";
@@ -60,11 +64,12 @@ function getCropRegion(videoWidth, videoHeight, targetPlayer) {
 
 /**
  * Extract frames from a video file at regular intervals using an offscreen
- * HTML5 video element and canvas.
+ * HTML5 video element and canvas. Frame count scales with video duration.
  *
  * @param {File} videoFile - Video file from an <input> element
- * @param {number} [targetFrameCount=50] - Number of frames to extract
+ * @param {number} [targetFrameCount=30] - Number of frames to extract
  * @param {string} [targetPlayer="auto"] - Player quadrant to crop
+ * @param {number} [canvasSize=256] - Canvas resolution for model input
  * @returns {Promise<{ frames: ImageData[], timestamps: number[], duration: number,
  *   fps: number, width: number, height: number }>}
  */
@@ -161,10 +166,7 @@ function computeMotionScore(frame1, frame2) {
  *   activeFrameCount: number, powerMoments: number }}
  */
 function detectSegments(motionScores, timestamps) {
-  // Mark frames as active/inactive
   const active = motionScores.map((s) => s > MOTION_ACTIVE_THRESHOLD);
-
-  // Find contiguous active regions
   const rawSegments = [];
   let segStart = -1;
 
@@ -180,7 +182,6 @@ function detectSegments(motionScores, timestamps) {
     rawSegments.push({ startFrame: segStart, endFrame: active.length - 1 });
   }
 
-  // Merge segments that are close together
   const merged = [];
   for (const seg of rawSegments) {
     if (merged.length > 0) {
@@ -193,7 +194,6 @@ function detectSegments(motionScores, timestamps) {
     merged.push({ ...seg });
   }
 
-  // Filter by minimum length
   const segments = merged
     .filter((s) => s.endFrame - s.startFrame + 1 >= MIN_SEGMENT_FRAMES)
     .map((s) => ({
@@ -204,312 +204,526 @@ function detectSegments(motionScores, timestamps) {
     }));
 
   const activeFrameCount = active.filter(Boolean).length;
-
-  // Power moments = frames with very high motion
   const highThreshold = MOTION_ACTIVE_THRESHOLD * 3;
   const powerMoments = motionScores.filter((s) => s > highThreshold).length;
 
   return { segments, activeFrameCount, powerMoments };
 }
 
-// ─── Shot Classification ────────────────────────────────────────────────────
+// ─── Utility Helpers ───────────────────────────────────────────────────────
 
 /**
- * Determine which arm is the dominant (racket) arm based on range of motion.
- * The arm that moves more across frames is likely holding the racket.
+ * Shorthand for getKeypointByName.
+ * @param {import("./poseDetector.js").Keypoint[]} kps
+ * @param {string} name
+ * @returns {import("./poseDetector.js").Keypoint|null}
+ */
+function getKp(kps, name) {
+  return getKeypointByName(kps, name);
+}
+
+/**
+ * Euclidean distance between two keypoints.
+ * @param {import("./poseDetector.js").Keypoint} a
+ * @param {import("./poseDetector.js").Keypoint} b
+ * @returns {number}
+ */
+function kpDist(a, b) {
+  if (!a || !b) return 0;
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+/** @param {number[]} arr */
+const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+/** @param {number[]} arr */
+const stddev = (arr) => {
+  if (arr.length < 2) return 0;
+  const mean = avg(arr);
+  return Math.sqrt(arr.reduce((sum, v) => sum + (v - mean) ** 2, 0) / arr.length);
+};
+
+/**
+ * Clamp a number between min and max.
+ * @param {number} value
+ * @param {number} lo
+ * @param {number} hi
+ * @returns {number}
+ */
+function clamp(value, lo, hi) {
+  return Math.max(lo, Math.min(hi, value));
+}
+
+// ─── Dominant Hand Detection ───────────────────────────────────────────────
+
+/**
+ * Detect which hand is the dominant (racket) hand by comparing cumulative
+ * wrist motion across all frames. The hand that moves more is the playing hand.
  *
  * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
  * @returns {"right"|"left"}
  */
-function detectDominantArm(allKeypoints) {
-  let rightMotion = 0;
+function detectDominantHand(allKeypoints) {
   let leftMotion = 0;
+  let rightMotion = 0;
 
   for (let i = 1; i < allKeypoints.length; i++) {
-    const prevRW = getKeypointByName(allKeypoints[i - 1], "right_wrist");
-    const currRW = getKeypointByName(allKeypoints[i], "right_wrist");
-    const prevLW = getKeypointByName(allKeypoints[i - 1], "left_wrist");
-    const currLW = getKeypointByName(allKeypoints[i], "left_wrist");
+    const prevLW = getKp(allKeypoints[i - 1], "left_wrist");
+    const currLW = getKp(allKeypoints[i], "left_wrist");
+    const prevRW = getKp(allKeypoints[i - 1], "right_wrist");
+    const currRW = getKp(allKeypoints[i], "right_wrist");
 
-    if (prevRW && currRW) {
-      rightMotion += Math.sqrt((currRW.x - prevRW.x) ** 2 + (currRW.y - prevRW.y) ** 2);
-    }
-    if (prevLW && currLW) {
-      leftMotion += Math.sqrt((currLW.x - prevLW.x) ** 2 + (currLW.y - prevLW.y) ** 2);
-    }
+    if (prevLW && currLW) leftMotion += kpDist(prevLW, currLW);
+    if (prevRW && currRW) rightMotion += kpDist(prevRW, currRW);
   }
 
-  return rightMotion >= leftMotion ? "right" : "left";
+  return rightMotion > leftMotion ? "right" : "left";
 }
 
+// ─── Shot Moment Detection ─────────────────────────────────────────────────
+
 /**
- * Extract per-frame motion features for the dominant arm, normalised by torso length.
+ * @typedef {Object} ShotPeak
+ * @property {number} index - Frame index of the peak
+ * @property {number} speed - Wrist speed at peak
+ * @property {number} time - Timestamp of the peak
+ */
+
+/**
+ * Find individual shot moments by detecting motion peaks in the dominant
+ * wrist speed. A shot is defined as a local maximum in wrist speed that
+ * exceeds a threshold (1.5x average speed) with at least 0.5s between peaks.
  *
  * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
- * @param {"right"|"left"} arm
- * @returns {{ wristRelHeights: number[], wristVelocitiesY: number[], wristVelocitiesX: number[],
- *   wristSpeeds: number[], elbowAngles: number[], hipRelHeights: number[],
- *   bodyCenterXs: number[], wristXs: number[] }}
+ * @param {number[]} timestamps
+ * @param {"right"|"left"} dominantHand
+ * @returns {ShotPeak[]}
  */
-function extractArmFeatures(allKeypoints, arm) {
-  const prefix = arm === "right" ? "right" : "left";
-  const otherPrefix = arm === "right" ? "left" : "right";
+function findShotMoments(allKeypoints, timestamps, dominantHand) {
+  const wristName = dominantHand === "right" ? "right_wrist" : "left_wrist";
 
-  const wristRelHeights = []; // wrist.y - shoulder.y, normalised by torso length (negative = above shoulder)
-  const wristVelocitiesY = []; // frame-to-frame vertical velocity (negative = moving up)
-  const wristVelocitiesX = []; // frame-to-frame horizontal velocity
-  const wristSpeeds = []; // absolute speed normalised by torso
-  const elbowAngles = [];
-  const hipRelHeights = []; // wrist.y - hip.y, normalised (negative = above hip)
-  const bodyCenterXs = []; // x-centre of the body
-  const wristXs = []; // wrist x positions
+  // Calculate wrist speed for each frame pair
+  const wristSpeeds = [];
+  for (let i = 1; i < allKeypoints.length; i++) {
+    const prev = getKp(allKeypoints[i - 1], wristName);
+    const curr = getKp(allKeypoints[i], wristName);
+    const dt = timestamps[i] - timestamps[i - 1];
 
-  let prevWristX = null;
-  let prevWristY = null;
-
-  for (const kps of allKeypoints) {
-    const shoulder = getKeypointByName(kps, `${prefix}_shoulder`);
-    const elbow = getKeypointByName(kps, `${prefix}_elbow`);
-    const wrist = getKeypointByName(kps, `${prefix}_wrist`);
-    const hip = getKeypointByName(kps, `${prefix}_hip`);
-    const otherShoulder = getKeypointByName(kps, `${otherPrefix}_shoulder`);
-    const otherHip = getKeypointByName(kps, `${otherPrefix}_hip`);
-
-    // Torso length for normalisation (shoulder to hip)
-    let torso = 1; // fallback
-    if (shoulder && hip) {
-      const t = Math.sqrt((shoulder.x - hip.x) ** 2 + (shoulder.y - hip.y) ** 2);
-      if (t > 5) torso = t; // guard against degenerate poses
-    }
-
-    if (wrist && shoulder) {
-      wristRelHeights.push((wrist.y - shoulder.y) / torso);
-    }
-
-    if (wrist && hip) {
-      hipRelHeights.push((wrist.y - hip.y) / torso);
-    }
-
-    if (shoulder && elbow && wrist) {
-      elbowAngles.push(calculateAngle(shoulder, elbow, wrist));
-    }
-
-    // Body centre X
-    if (shoulder && otherShoulder) {
-      bodyCenterXs.push((shoulder.x + otherShoulder.x) / 2);
-    }
-
-    if (wrist) {
-      wristXs.push(wrist.x);
-
-      if (prevWristX !== null && prevWristY !== null) {
-        const dx = (wrist.x - prevWristX) / torso;
-        const dy = (wrist.y - prevWristY) / torso;
-        wristVelocitiesX.push(dx);
-        wristVelocitiesY.push(dy);
-        wristSpeeds.push(Math.sqrt(dx * dx + dy * dy));
-      }
-
-      prevWristX = wrist.x;
-      prevWristY = wrist.y;
+    if (prev && curr && dt > 0) {
+      const speed = kpDist(prev, curr) / dt;
+      wristSpeeds.push({ index: i, speed, time: timestamps[i] });
+    } else {
+      wristSpeeds.push({ index: i, speed: 0, time: timestamps[i] });
     }
   }
 
-  return { wristRelHeights, wristVelocitiesY, wristVelocitiesX, wristSpeeds, elbowAngles, hipRelHeights, bodyCenterXs, wristXs };
+  if (wristSpeeds.length < 3) return [];
+
+  // Compute threshold: shots are faster than average
+  const avgSpeed = avg(wristSpeeds.map((w) => w.speed));
+  const threshold = avgSpeed * 1.5;
+
+  // Find peaks (local maxima above threshold)
+  const peaks = [];
+  for (let i = 1; i < wristSpeeds.length - 1; i++) {
+    if (
+      wristSpeeds[i].speed > threshold &&
+      wristSpeeds[i].speed >= wristSpeeds[i - 1].speed &&
+      wristSpeeds[i].speed >= wristSpeeds[i + 1].speed
+    ) {
+      // Enforce minimum 0.5s between peaks
+      if (peaks.length === 0 || wristSpeeds[i].time - peaks[peaks.length - 1].time > 0.5) {
+        peaks.push(wristSpeeds[i]);
+      }
+    }
+  }
+
+  // If no peaks found (e.g. single slow shot), treat the fastest frame as one shot
+  if (peaks.length === 0 && wristSpeeds.length > 0) {
+    let maxIdx = 0;
+    for (let i = 1; i < wristSpeeds.length; i++) {
+      if (wristSpeeds[i].speed > wristSpeeds[maxIdx].speed) maxIdx = i;
+    }
+    if (wristSpeeds[maxIdx].speed > 0) {
+      peaks.push(wristSpeeds[maxIdx]);
+    }
+  }
+
+  return peaks;
 }
 
-/**
- * Classify the dominant shot type from pose keypoints across frames.
- * Uses motion direction, wrist position relative to body, and speed
- * for accurate multi-factor classification.
- *
- * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints - Keypoints for each frame
- * @param {string} sport - Sport key
- * @returns {{ shotType: string, shotName: string, confidence: number }}
- */
-function classifyShot(allKeypoints, sport) {
-  const shotTypes = SHOT_TYPES[sport] || SHOT_TYPES.badminton;
+// ─── Single Shot Classification ────────────────────────────────────────────
 
-  if (allKeypoints.length < 2) {
-    const shotType = shotTypes[0] || "unknown";
-    const shotName = shotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    return { shotType, shotName, confidence: 0.3 };
+/**
+ * Classify a single shot from the frames around a detected peak.
+ *
+ * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints - All frame keypoints
+ * @param {number} peakIdx - Frame index of the motion peak
+ * @param {"right"|"left"} dominantHand - Which hand holds the racket
+ * @param {string} sport - Sport key
+ * @param {number[]} timestamps - Frame timestamps
+ * @returns {{ type: string, name: string, confidence: number, isBackhand: boolean,
+ *   elbowAngle: number, wristSpeed: number }}
+ */
+function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestamps) {
+  const wristName = dominantHand === "right" ? "right_wrist" : "left_wrist";
+  const shoulderName = dominantHand === "right" ? "right_shoulder" : "left_shoulder";
+  const elbowName = dominantHand === "right" ? "right_elbow" : "left_elbow";
+  const hipName = dominantHand === "right" ? "right_hip" : "left_hip";
+
+  const peakFrame = allKeypoints[peakIdx];
+  if (!peakFrame) {
+    return { type: "unknown", name: "Unknown", confidence: 0, isBackhand: false, elbowAngle: 0, wristSpeed: 0 };
   }
 
-  const arm = detectDominantArm(allKeypoints);
-  const feat = extractArmFeatures(allKeypoints, arm);
+  const wrist = getKp(peakFrame, wristName);
+  const shoulder = getKp(peakFrame, shoulderName);
+  const elbow = getKp(peakFrame, elbowName);
+  const hip = getKp(peakFrame, hipName);
+  const lShoulder = getKp(peakFrame, "left_shoulder");
+  const rShoulder = getKp(peakFrame, "right_shoulder");
 
-  // Helpers
-  const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-  const max = (arr) => arr.length > 0 ? Math.max(...arr) : 0;
-  const min = (arr) => arr.length > 0 ? Math.min(...arr) : 0;
+  if (!wrist || !shoulder) {
+    return { type: "unknown", name: "Unknown", confidence: 0.1, isBackhand: false, elbowAngle: 0, wristSpeed: 0 };
+  }
 
-  const avgWristRelHeight = avg(feat.wristRelHeights);
-  const minWristRelHeight = min(feat.wristRelHeights); // most negative = highest above shoulder
-  const maxWristRelHeight = max(feat.wristRelHeights);
-  const peakWristSpeed = max(feat.wristSpeeds);
-  const avgWristSpeed = avg(feat.wristSpeeds);
+  // Body center X from both shoulders
+  const bodyCenterX = (lShoulder && rShoulder) ? (lShoulder.x + rShoulder.x) / 2 : shoulder.x;
 
-  // Net vertical velocity: negative = overall upward motion, positive = downward
-  const avgVelY = avg(feat.wristVelocitiesY);
-  // Look at the fastest portion — find peak downward and upward velocities
-  const peakDownVelY = max(feat.wristVelocitiesY); // most positive = fastest downward
-  const peakUpVelY = min(feat.wristVelocitiesY);    // most negative = fastest upward
+  // Determine backhand: wrist on opposite side of body center from natural side
+  const isBackhand = dominantHand === "right"
+    ? wrist.x < bodyCenterX - 3  // wrist left of center for right-hander (pixel coords)
+    : wrist.x > bodyCenterX + 3; // wrist right of center for left-hander
 
-  // Whether wrist was ever above shoulder (relHeight < -0.2 means well above)
-  const wristWentAboveShoulder = minWristRelHeight < -0.15;
-  // Whether wrist was near or below hip
-  const wristNearHip = avg(feat.hipRelHeights) > -0.3;
-  const wristBelowHip = max(feat.hipRelHeights) > 0.1;
+  // Wrist height relative to shoulder
+  const wristAboveShoulder = wrist.y < shoulder.y - 5;
+  const hipY = hip ? hip.y : shoulder.y + 80;
+  const wristBelowHip = wrist.y > hipY;
+  const wristNearShoulderHeight = Math.abs(wrist.y - shoulder.y) < 20;
 
-  // Whether the wrist is on the same side as the arm or crossed to opposite side
-  const avgBodyCenterX = avg(feat.bodyCenterXs);
-  const avgWristX = avg(feat.wristXs);
-  const wristOnNaturalSide = arm === "right" ? (avgWristX > avgBodyCenterX) : (avgWristX < avgBodyCenterX);
+  // Torso length for normalization
+  const torsoLength = hip ? Math.abs(shoulder.y - hip.y) : 80;
+  const safeTorso = torsoLength > 5 ? torsoLength : 80;
 
-  let shotType;
+  // Wrist velocity direction from neighboring frames
+  let wristVelY = 0;
+  let wristVelX = 0;
+  let peakSpeed = 0;
+  if (peakIdx > 0 && peakIdx < allKeypoints.length - 1) {
+    const prevWrist = getKp(allKeypoints[peakIdx - 1], wristName);
+    const nextWrist = getKp(allKeypoints[peakIdx + 1], wristName);
+    if (prevWrist && nextWrist) {
+      wristVelY = (nextWrist.y - prevWrist.y) / safeTorso; // positive = downward
+      wristVelX = Math.abs(nextWrist.x - prevWrist.x) / safeTorso;
+    }
+  }
+
+  // Peak wrist speed (normalized by torso)
+  if (peakIdx > 0) {
+    const prevWrist = getKp(allKeypoints[peakIdx - 1], wristName);
+    if (prevWrist) {
+      const dt = timestamps[peakIdx] - timestamps[peakIdx - 1];
+      if (dt > 0) {
+        peakSpeed = kpDist(wrist, prevWrist) / safeTorso / dt;
+      }
+    }
+  }
+
+  // Elbow angle at peak
+  const elbowAngle = elbow ? calculateAngle(shoulder, elbow, wrist) : 90;
+
+  // Sport-specific classification
+  let type;
   let confidence;
 
   if (sport === "badminton") {
-    if (wristWentAboveShoulder && peakWristSpeed > 0.4 && peakDownVelY > 0.2) {
-      // High position + fast + downward motion = smash
-      shotType = "smash";
-      confidence = 0.80;
-    } else if (wristWentAboveShoulder && peakUpVelY < -0.15) {
-      // High position + upward trajectory = clear
-      shotType = "clear";
-      confidence = 0.72;
-    } else if (wristWentAboveShoulder && peakWristSpeed < 0.25) {
-      // High position + slow speed = drop shot (deceptive)
-      shotType = "drop";
-      confidence = 0.65;
-    } else if (!wristWentAboveShoulder && Math.abs(avgWristRelHeight) < 0.3 && peakWristSpeed > 0.25) {
-      // Arm roughly horizontal + fast horizontal movement = drive
-      shotType = "drive";
-      confidence = 0.68;
-    } else if (!wristWentAboveShoulder && avgWristRelHeight > 0.2 && avgWristSpeed < 0.15) {
-      // Wrist below shoulder, slow controlled = net shot
-      shotType = "net_shot";
-      confidence = 0.62;
-    } else if (wristBelowHip && peakUpVelY < -0.1) {
-      // Low start + upward motion = lift/lob
-      shotType = "lift";
-      confidence = 0.58;
-    } else if (wristBelowHip && avgWristSpeed < 0.2) {
-      // Low position, underhand, slow = serve
-      shotType = "serve";
-      confidence = 0.60;
-    } else if (wristWentAboveShoulder) {
-      // Fallback for high shots we couldn't differentiate
-      shotType = peakWristSpeed > 0.3 ? "smash" : "clear";
-      confidence = 0.50;
-    } else {
-      shotType = "drive";
-      confidence = 0.45;
-    }
+    ({ type, confidence } = classifyBadmintonShot(
+      wristAboveShoulder, wristBelowHip, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristNearShoulderHeight
+    ));
   } else if (sport === "table_tennis") {
-    // Table tennis: shorter motions, distinguish forehand/backhand by arm side
-    const isForehand = wristOnNaturalSide;
-
-    if (peakWristSpeed > 0.5 && !wristWentAboveShoulder) {
-      // Very fast, flat = smash
-      shotType = "smash";
-      confidence = 0.72;
-    } else if (peakUpVelY < -0.15 && avgWristSpeed > 0.2) {
-      // Upward brush motion = loop/topspin
-      shotType = isForehand ? "forehand_loop" : "backhand_loop";
-      confidence = 0.70;
-    } else if (peakDownVelY > 0.15 && avgWristSpeed > 0.15) {
-      // Downward motion = chop
-      shotType = "chop";
-      confidence = 0.65;
-    } else if (avgWristSpeed > 0.15) {
-      // Moderate speed forward motion = drive
-      shotType = isForehand ? "forehand_drive" : "backhand_drive";
-      confidence = 0.62;
-    } else if (wristNearHip && avgWristSpeed < 0.12) {
-      // Low, compact, slow = serve
-      shotType = "serve";
-      confidence = 0.60;
-    } else if (avgWristSpeed < 0.1) {
-      // Very slow = push/block
-      shotType = peakWristSpeed < 0.08 ? "block" : "push";
-      confidence = 0.55;
-    } else {
-      shotType = isForehand ? "forehand_drive" : "backhand_drive";
-      confidence = 0.45;
-    }
+    ({ type, confidence } = classifyTTShot(
+      wristAboveShoulder, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristBelowHip
+    ));
   } else if (sport === "tennis") {
-    const isForehand = wristOnNaturalSide;
-
-    if (wristWentAboveShoulder && minWristRelHeight < -0.5 && peakWristSpeed > 0.4) {
-      shotType = "serve";
-      confidence = 0.75;
-    } else if (wristWentAboveShoulder && peakDownVelY > 0.2) {
-      shotType = "overhead";
-      confidence = 0.68;
-    } else if (peakDownVelY > 0.15 && avgWristSpeed < 0.2) {
-      shotType = "slice";
-      confidence = 0.60;
-    } else if (!wristWentAboveShoulder && avgWristSpeed < 0.1) {
-      shotType = "drop_shot";
-      confidence = 0.55;
-    } else if (peakUpVelY < -0.2 && !wristWentAboveShoulder) {
-      shotType = "lob";
-      confidence = 0.58;
-    } else if (avgWristSpeed > 0.12 && !wristWentAboveShoulder) {
-      shotType = isForehand ? "forehand" : "backhand";
-      confidence = 0.65;
-    } else if (wristNearHip && avgWristSpeed < 0.15) {
-      shotType = "volley";
-      confidence = 0.55;
-    } else {
-      shotType = isForehand ? "forehand" : "backhand";
-      confidence = 0.48;
-    }
+    ({ type, confidence } = classifyTennisShot(
+      wristAboveShoulder, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristBelowHip
+    ));
   } else if (sport === "pickleball") {
-    const isForehand = wristOnNaturalSide;
-
-    if (wristWentAboveShoulder && peakDownVelY > 0.15) {
-      shotType = "overhead";
-      confidence = 0.68;
-    } else if (wristNearHip && avgWristSpeed < 0.08) {
-      shotType = "dink";
-      confidence = 0.65;
-    } else if (wristBelowHip && avgWristSpeed < 0.15) {
-      shotType = "serve";
-      confidence = 0.62;
-    } else if (avgWristSpeed > 0.2) {
-      shotType = "drive";
-      confidence = 0.60;
-    } else if (peakUpVelY < -0.15) {
-      shotType = "lob";
-      confidence = 0.55;
-    } else if (avgWristSpeed < 0.12 && !wristWentAboveShoulder) {
-      shotType = "third_shot_drop";
-      confidence = 0.55;
-    } else if (!wristWentAboveShoulder && avgWristSpeed < 0.15) {
-      shotType = "volley";
-      confidence = 0.52;
-    } else {
-      shotType = "drop";
-      confidence = 0.45;
-    }
+    ({ type, confidence } = classifyPickleballShot(
+      wristAboveShoulder, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristBelowHip, wristNearShoulderHeight
+    ));
   } else {
-    shotType = shotTypes[0] || "unknown";
-    confidence = 0.40;
+    type = "unknown";
+    confidence = 0.3;
   }
 
-  // Convert snake_case to Title Case for display
-  const shotName = shotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const name = type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-  return { shotType, shotName, confidence };
+  return { type, name, confidence, isBackhand, elbowAngle, wristSpeed: peakSpeed };
 }
 
-// ─── Metrics Computation ────────────────────────────────────────────────────
+/**
+ * Classify a badminton shot from motion features at the peak frame.
+ *
+ * @param {boolean} aboveShoulder - Wrist is above shoulder
+ * @param {boolean} belowHip - Wrist is below hip
+ * @param {boolean} isBackhand - Wrist is on backhand side
+ * @param {number} velY - Normalized vertical velocity (positive=down)
+ * @param {number} velX - Normalized horizontal velocity (absolute)
+ * @param {number} elbowAngle - Elbow angle in degrees
+ * @param {number} speed - Normalized peak speed
+ * @param {boolean} nearShoulder - Wrist near shoulder height
+ * @returns {{ type: string, confidence: number }}
+ */
+function classifyBadmintonShot(aboveShoulder, belowHip, isBackhand, velY, velX, elbowAngle, speed, nearShoulder) {
+  let type;
+  let confidence;
+
+  if (isBackhand) {
+    // Backhand variants
+    if (aboveShoulder && speed > 0.3 && velY > 0.05) {
+      type = "smash"; confidence = 0.72;
+    } else if (aboveShoulder && velY < -0.02) {
+      type = "clear"; confidence = 0.65;
+    } else if (aboveShoulder && speed < 0.2) {
+      type = "drop"; confidence = 0.60;
+    } else if (nearShoulder && velX > 0.04) {
+      type = "drive"; confidence = 0.62;
+    } else if (!aboveShoulder && speed < 0.15) {
+      type = "net_shot"; confidence = 0.58;
+    } else if (belowHip && velY < -0.05) {
+      type = "lift"; confidence = 0.55;
+    } else {
+      type = "drive"; confidence = 0.45;
+    }
+  } else {
+    // Forehand variants
+    if (aboveShoulder && speed > 0.3 && velY > 0.05) {
+      type = "smash"; confidence = 0.80;
+    } else if (aboveShoulder && velY < -0.02) {
+      type = "clear"; confidence = 0.72;
+    } else if (aboveShoulder && speed < 0.2) {
+      type = "drop"; confidence = 0.65;
+    } else if (nearShoulder && velX > 0.04) {
+      type = "drive"; confidence = 0.68;
+    } else if (!aboveShoulder && speed < 0.15) {
+      type = "net_shot"; confidence = 0.62;
+    } else if (belowHip && velY < -0.05) {
+      type = "lift"; confidence = 0.58;
+    } else if (belowHip && speed < 0.2) {
+      type = "serve"; confidence = 0.60;
+    } else if (aboveShoulder) {
+      type = speed > 0.25 ? "smash" : "clear";
+      confidence = 0.50;
+    } else {
+      type = "drive"; confidence = 0.45;
+    }
+  }
+
+  return { type, confidence };
+}
 
 /**
- * Compute analysis metrics from pose keypoints.
+ * Classify a table tennis shot from motion features at the peak frame.
+ *
+ * @param {boolean} aboveShoulder - Wrist is above shoulder
+ * @param {boolean} isBackhand - Wrist is on backhand side of body
+ * @param {number} velY - Normalized vertical velocity (positive=down)
+ * @param {number} velX - Normalized horizontal velocity (absolute)
+ * @param {number} elbowAngle - Elbow angle in degrees
+ * @param {number} speed - Normalized peak speed
+ * @param {boolean} belowHip - Wrist is below hip
+ * @returns {{ type: string, confidence: number }}
+ */
+function classifyTTShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip) {
+  let type;
+  let confidence;
+
+  // Very fast flat trajectory = smash
+  if (speed > 0.5 && velX > 0.06 && Math.abs(velY) < 0.03) {
+    type = "smash";
+    confidence = 0.75;
+  }
+  // Upward brush motion = loop/topspin
+  else if (velY < -0.03 && speed > 0.2) {
+    type = isBackhand ? "backhand_loop" : "forehand_loop";
+    confidence = 0.72;
+  }
+  // Strong downward motion = chop
+  else if (velY > 0.04 && velX < 0.03) {
+    type = "chop";
+    confidence = 0.68;
+  }
+  // Moderate speed forward = drive
+  else if (speed > 0.15 && velX > 0.02) {
+    type = isBackhand ? "backhand_drive" : "forehand_drive";
+    confidence = 0.65;
+  }
+  // Compact behind-body motion, slow = serve
+  else if (belowHip && speed < 0.15) {
+    type = "serve";
+    confidence = 0.62;
+  }
+  // Very slow, small motion = push or block
+  else if (speed < 0.1) {
+    type = speed < 0.05 ? "block" : "push";
+    confidence = 0.55;
+  }
+  // Quick wrist flick at table height = flick
+  else if (speed > 0.25 && elbowAngle > 140) {
+    type = "flick";
+    confidence = 0.58;
+  }
+  // Default: drive based on side
+  else {
+    type = isBackhand ? "backhand_drive" : "forehand_drive";
+    confidence = 0.45;
+  }
+
+  return { type, confidence };
+}
+
+/**
+ * Classify a tennis shot from motion features at the peak frame.
+ *
+ * @param {boolean} aboveShoulder
+ * @param {boolean} isBackhand
+ * @param {number} velY
+ * @param {number} velX
+ * @param {number} elbowAngle
+ * @param {number} speed
+ * @param {boolean} belowHip
+ * @returns {{ type: string, confidence: number }}
+ */
+function classifyTennisShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip) {
+  let type;
+  let confidence;
+
+  if (aboveShoulder && speed > 0.4 && elbowAngle > 150) {
+    type = "serve"; confidence = 0.78;
+  } else if (aboveShoulder && velY > 0.1) {
+    type = "overhead"; confidence = 0.70;
+  } else if (velY > 0.08 && speed < 0.2) {
+    type = "slice"; confidence = 0.62;
+  } else if (velY < -0.1 && !aboveShoulder) {
+    type = "lob"; confidence = 0.60;
+  } else if (!aboveShoulder && speed < 0.08) {
+    type = "drop_shot"; confidence = 0.55;
+  } else if (speed < 0.12 && !aboveShoulder) {
+    type = "volley"; confidence = 0.55;
+  } else {
+    type = isBackhand ? "backhand" : "forehand";
+    confidence = 0.65;
+  }
+
+  return { type, confidence };
+}
+
+/**
+ * Classify a pickleball shot from motion features at the peak frame.
+ *
+ * @param {boolean} aboveShoulder
+ * @param {boolean} isBackhand
+ * @param {number} velY
+ * @param {number} velX
+ * @param {number} elbowAngle
+ * @param {number} speed
+ * @param {boolean} belowHip
+ * @param {boolean} nearShoulder
+ * @returns {{ type: string, confidence: number }}
+ */
+function classifyPickleballShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip, nearShoulder) {
+  let type;
+  let confidence;
+
+  if (aboveShoulder && velY > 0.1) {
+    type = "overhead"; confidence = 0.68;
+  } else if (speed < 0.08 && !aboveShoulder) {
+    type = "dink"; confidence = 0.65;
+  } else if (belowHip && speed < 0.15) {
+    type = "serve"; confidence = 0.62;
+  } else if (speed > 0.2) {
+    type = "drive"; confidence = 0.60;
+  } else if (velY < -0.1) {
+    type = "lob"; confidence = 0.55;
+  } else if (speed < 0.12 && !aboveShoulder) {
+    type = "third_shot_drop"; confidence = 0.55;
+  } else if (nearShoulder && speed < 0.15) {
+    type = "volley"; confidence = 0.52;
+  } else {
+    type = "drop"; confidence = 0.45;
+  }
+
+  return { type, confidence };
+}
+
+// ─── Per-Shot Metrics ──────────────────────────────────────────────────────
+
+/**
+ * Compute metrics for a window of frames around a shot peak.
+ *
+ * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
+ * @param {number} peakIdx - Frame index of the shot
+ * @param {number} windowSize - Number of frames on each side to include
+ * @returns {object} Metrics for this shot window
+ */
+function computeShotMetrics(allKeypoints, peakIdx, windowSize = 3) {
+  const start = Math.max(0, peakIdx - windowSize);
+  const end = Math.min(allKeypoints.length - 1, peakIdx + windowSize);
+  const window = allKeypoints.slice(start, end + 1);
+
+  const elbowAngles = [];
+  const shoulderAngles = [];
+  const balanceScores = [];
+  const visibilityCounts = [];
+
+  for (const kps of window) {
+    visibilityCounts.push(countVisibleKeypoints(kps));
+
+    const rShoulder = getKp(kps, "right_shoulder");
+    const rElbow = getKp(kps, "right_elbow");
+    const rWrist = getKp(kps, "right_wrist");
+    const rHip = getKp(kps, "right_hip");
+    const lShoulder = getKp(kps, "left_shoulder");
+    const rAnkle = getKp(kps, "right_ankle");
+    const lAnkle = getKp(kps, "left_ankle");
+
+    if (rShoulder && rElbow && rWrist) elbowAngles.push(calculateAngle(rShoulder, rElbow, rWrist));
+    if (rHip && rShoulder && rElbow) shoulderAngles.push(calculateAngle(rHip, rShoulder, rElbow));
+
+    if (rShoulder && lShoulder && rAnkle && lAnkle) {
+      const shoulderWidth = Math.abs(rShoulder.x - lShoulder.x);
+      const ankleWidth = Math.abs(rAnkle.x - lAnkle.x);
+      if (shoulderWidth > 0) {
+        const ratio = ankleWidth / shoulderWidth;
+        const deviation = Math.abs(ratio - 1.0);
+        balanceScores.push(Math.max(0, 100 - deviation * 80));
+      }
+    }
+  }
+
+  const avgElbow = avg(elbowAngles);
+  const elbowStd = stddev(elbowAngles);
+  const elbowAngleQuality = Math.max(0, Math.min(100, 100 - Math.abs(avgElbow - 120) * 0.8 - elbowStd * 0.5));
+  const formScore = Math.min(100, (avg(visibilityCounts) / 17) * 70 + 30 - elbowStd * 0.3);
+  const balanceScore = avg(balanceScores) || 60;
+
+  const overallShotScore = Math.round(
+    formScore * 0.3 + elbowAngleQuality * 0.3 + balanceScore * 0.2 + Math.min(100, avg(shoulderAngles) * 0.5) * 0.2
+  );
+
+  return {
+    form_score: Math.round(clamp(formScore, 0, 100)),
+    elbow_angle_quality: Math.round(clamp(elbowAngleQuality, 0, 100)),
+    balance_score: Math.round(clamp(balanceScore, 0, 100)),
+    overall: clamp(overallShotScore, 0, 100),
+  };
+}
+
+// ─── Full Metrics Computation ──────────────────────────────────────────────
+
+/**
+ * Compute analysis metrics from all pose keypoints across the entire video.
  *
  * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
  * @param {{ segments: object[], activeFrameCount: number }} segmentData
@@ -527,82 +741,44 @@ function computeMetrics(allKeypoints, segmentData, totalFrames) {
   for (const kps of allKeypoints) {
     visibilityCounts.push(countVisibleKeypoints(kps));
 
-    // Elbow angles
-    const rShoulder = getKeypointByName(kps, "right_shoulder");
-    const rElbow = getKeypointByName(kps, "right_elbow");
-    const rWrist = getKeypointByName(kps, "right_wrist");
-    if (rShoulder && rElbow && rWrist) {
-      elbowAngles.push(calculateAngle(rShoulder, rElbow, rWrist));
-    }
+    const rShoulder = getKp(kps, "right_shoulder");
+    const rElbow = getKp(kps, "right_elbow");
+    const rWrist = getKp(kps, "right_wrist");
+    const rHip = getKp(kps, "right_hip");
+    const lHip = getKp(kps, "left_hip");
+    const rKnee = getKp(kps, "right_knee");
+    const rAnkle = getKp(kps, "right_ankle");
+    const lShoulder = getKp(kps, "left_shoulder");
+    const lAnkle = getKp(kps, "left_ankle");
 
-    // Shoulder angle (arm raise relative to torso)
-    const rHip = getKeypointByName(kps, "right_hip");
-    if (rHip && rShoulder && rElbow) {
-      shoulderAngles.push(calculateAngle(rHip, rShoulder, rElbow));
-    }
+    if (rShoulder && rElbow && rWrist) elbowAngles.push(calculateAngle(rShoulder, rElbow, rWrist));
+    if (rHip && rShoulder && rElbow) shoulderAngles.push(calculateAngle(rHip, rShoulder, rElbow));
+    if (rShoulder && rHip && rKnee) hipAngles.push(calculateAngle(rShoulder, rHip, rKnee));
+    if (rHip && rKnee && rAnkle) kneeAngles.push(calculateAngle(rHip, rKnee, rAnkle));
 
-    // Hip angles
-    const lHip = getKeypointByName(kps, "left_hip");
-    const rKnee = getKeypointByName(kps, "right_knee");
-    if (rShoulder && rHip && rKnee) {
-      hipAngles.push(calculateAngle(rShoulder, rHip, rKnee));
-    }
-
-    // Knee angles
-    const rAnkle = getKeypointByName(kps, "right_ankle");
-    if (rHip && rKnee && rAnkle) {
-      kneeAngles.push(calculateAngle(rHip, rKnee, rAnkle));
-    }
-
-    // Balance: horizontal distance between ankles relative to shoulders
-    const lShoulder = getKeypointByName(kps, "left_shoulder");
-    const lAnkle = getKeypointByName(kps, "left_ankle");
     if (rShoulder && lShoulder && rAnkle && lAnkle) {
       const shoulderWidth = Math.abs(rShoulder.x - lShoulder.x);
       const ankleWidth = Math.abs(rAnkle.x - lAnkle.x);
       if (shoulderWidth > 0) {
         const ratio = ankleWidth / shoulderWidth;
-        // Ideal stance: ankles roughly shoulder-width (ratio ~1.0)
         const deviation = Math.abs(ratio - 1.0);
         balanceScores.push(Math.max(0, 100 - deviation * 80));
       }
     }
   }
 
-  // Helper: average of an array
-  const avg = (arr) => (arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
-  const stddev = (arr) => {
-    if (arr.length < 2) return 0;
-    const mean = avg(arr);
-    return Math.sqrt(arr.reduce((sum, v) => sum + (v - mean) ** 2, 0) / arr.length);
-  };
-
-  // Elbow angle quality: closer to sport-ideal is better
   const avgElbow = avg(elbowAngles);
   const elbowStd = stddev(elbowAngles);
-  // Good elbow: angle between 80-160 degrees, low std
   const elbowAngleQuality = Math.max(0, Math.min(100, 100 - Math.abs(avgElbow - 120) * 0.8 - elbowStd * 0.5));
-
-  // Range of motion: std dev of shoulder angles (more movement = more ROM)
   const romScore = Math.min(100, avg(shoulderAngles) * 0.5 + stddev(shoulderAngles) * 2);
-
-  // Form score: based on visibility and posture consistency
-  const avgVisibility = avg(visibilityCounts);
-  const formScore = Math.min(100, (avgVisibility / 17) * 70 + 30 - elbowStd * 0.3);
-
-  // Consistency: inverse of variation in key angles
+  const formScore = Math.min(100, (avg(visibilityCounts) / 17) * 70 + 30 - elbowStd * 0.3);
   const elbowConsistency = Math.max(0, 100 - elbowStd * 2);
   const hipConsistency = Math.max(0, 100 - stddev(hipAngles) * 2);
   const consistencyScore = (elbowConsistency + hipConsistency) / 2;
-
-  // Wrist action: range of elbow angles indicates wrist/arm snap
   const elbowRange = elbowAngles.length > 1 ? Math.max(...elbowAngles) - Math.min(...elbowAngles) : 0;
   const wristAction = Math.min(100, elbowRange * 0.8);
-
-  // Footwork: based on knee angle variation (more = more dynamic footwork)
   const kneeVariation = stddev(kneeAngles);
   const footworkScore = Math.min(100, kneeVariation * 3 + 20);
-
   const balanceScore = avg(balanceScores) || 60;
 
   return {
@@ -620,30 +796,16 @@ function computeMetrics(allKeypoints, segmentData, totalFrames) {
   };
 }
 
-/**
- * Clamp a number between min and max.
- *
- * @param {number} value
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
 // ─── Scoring & Grading ──────────────────────────────────────────────────────
 
 /**
  * Compute a weighted overall score from individual metrics.
- *
  * @param {object} metrics
  * @returns {number} Score 0-100
  */
 function computeOverallScore(metrics) {
   let totalWeight = 0;
   let weightedSum = 0;
-
   for (const [key, weight] of Object.entries(METRIC_WEIGHTS)) {
     const value = metrics[key];
     if (typeof value === "number") {
@@ -651,13 +813,11 @@ function computeOverallScore(metrics) {
       totalWeight += weight;
     }
   }
-
   return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 50;
 }
 
 /**
  * Determine letter grade from overall score.
- *
  * @param {number} score
  * @returns {string}
  */
@@ -670,7 +830,6 @@ function scoreToGrade(score) {
 
 /**
  * Determine skill level from overall score.
- *
  * @param {number} score
  * @returns {string}
  */
@@ -764,15 +923,6 @@ function detectWeaknesses(metrics, shotName) {
 /**
  * Sport-specific calibration factors to convert body-relative wrist speed
  * to approximate real-world shot speed in km/h.
- *
- * Rationale: average torso length is ~0.5m. Wrist speed relative to torso is
- * a dimensionless ratio. We multiply by a sport-specific factor calibrated
- * against known amateur speed ranges.
- *
- * The factor accounts for:
- * - Racket/paddle extension beyond the wrist
- * - Typical amateur vs pro speed ranges
- * - The fact that wrist speed != shuttle/ball speed (transfer ratio)
  */
 const SPEED_CALIBRATION = {
   badminton:    { factor: 280, minPlausible: 30, maxPlausible: 450 },
@@ -784,11 +934,6 @@ const SPEED_CALIBRATION = {
 /**
  * Estimate swing speed from wrist movement relative to torso size.
  *
- * Instead of converting pixels to meters (which depends on camera distance),
- * we normalise wrist displacement by torso length (shoulder-to-hip distance)
- * then apply a sport-specific calibration factor to produce a plausible km/h
- * estimate.
- *
  * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
  * @param {number[]} timestamps
  * @param {string} sport
@@ -796,32 +941,31 @@ const SPEED_CALIBRATION = {
  * @returns {{ estimated_speed_kmh: number, speed_class: string, note: string }}
  */
 function estimateSpeed(allKeypoints, timestamps, sport, videoInfo) {
-  const arm = detectDominantArm(allKeypoints);
+  const arm = detectDominantHand(allKeypoints);
   const wristName = `${arm}_wrist`;
   const shoulderName = `${arm}_shoulder`;
   const hipName = `${arm}_hip`;
 
-  const normalisedSpeeds = []; // wrist displacement / torso length per second
+  const normalisedSpeeds = [];
 
   for (let i = 1; i < allKeypoints.length; i++) {
-    const prevWrist = getKeypointByName(allKeypoints[i - 1], wristName) ||
-                      getKeypointByName(allKeypoints[i - 1], "right_wrist") ||
-                      getKeypointByName(allKeypoints[i - 1], "left_wrist");
-    const currWrist = getKeypointByName(allKeypoints[i], wristName) ||
-                      getKeypointByName(allKeypoints[i], "right_wrist") ||
-                      getKeypointByName(allKeypoints[i], "left_wrist");
+    const prevWrist = getKp(allKeypoints[i - 1], wristName) ||
+                      getKp(allKeypoints[i - 1], "right_wrist") ||
+                      getKp(allKeypoints[i - 1], "left_wrist");
+    const currWrist = getKp(allKeypoints[i], wristName) ||
+                      getKp(allKeypoints[i], "right_wrist") ||
+                      getKp(allKeypoints[i], "left_wrist");
 
     if (!prevWrist || !currWrist) continue;
 
     const dt = timestamps[i] - timestamps[i - 1];
     if (dt <= 0) continue;
 
-    // Compute torso length as scale reference (average of both frames)
     let torso = 0;
     let torsoCount = 0;
     for (const kps of [allKeypoints[i - 1], allKeypoints[i]]) {
-      const sh = getKeypointByName(kps, shoulderName) || getKeypointByName(kps, "right_shoulder") || getKeypointByName(kps, "left_shoulder");
-      const hp = getKeypointByName(kps, hipName) || getKeypointByName(kps, "right_hip") || getKeypointByName(kps, "left_hip");
+      const sh = getKp(kps, shoulderName) || getKp(kps, "right_shoulder") || getKp(kps, "left_shoulder");
+      const hp = getKp(kps, hipName) || getKp(kps, "right_hip") || getKp(kps, "left_hip");
       if (sh && hp) {
         const t = Math.sqrt((sh.x - hp.x) ** 2 + (sh.y - hp.y) ** 2);
         if (t > 5) { torso += t; torsoCount++; }
@@ -832,8 +976,7 @@ function estimateSpeed(allKeypoints, timestamps, sport, videoInfo) {
     const avgTorso = torso / torsoCount;
 
     const pixelDist = Math.sqrt((currWrist.x - prevWrist.x) ** 2 + (currWrist.y - prevWrist.y) ** 2);
-    const relativeSpeed = (pixelDist / avgTorso) / dt; // torso-lengths per second
-
+    const relativeSpeed = (pixelDist / avgTorso) / dt;
     normalisedSpeeds.push(relativeSpeed);
   }
 
@@ -841,19 +984,14 @@ function estimateSpeed(allKeypoints, timestamps, sport, videoInfo) {
     return { estimated_speed_kmh: 0, speed_class: "Unknown", note: "Could not estimate speed — wrist not visible." };
   }
 
-  // Use the average of the top 3-5 fastest frames (peak swing phase)
   normalisedSpeeds.sort((a, b) => b - a);
   const topN = Math.min(5, Math.max(3, Math.floor(normalisedSpeeds.length * 0.15)));
   const peakRelativeSpeed = normalisedSpeeds.slice(0, topN).reduce((a, b) => a + b, 0) / topN;
 
-  // Convert to km/h using sport-specific calibration
   const cal = SPEED_CALIBRATION[sport] || SPEED_CALIBRATION.badminton;
   let estimatedSpeed = Math.round(peakRelativeSpeed * cal.factor);
-
-  // Clamp to plausible range for the sport
   estimatedSpeed = Math.max(cal.minPlausible, Math.min(cal.maxPlausible, estimatedSpeed));
 
-  // Classify speed
   const thresholds = SPEED_THRESHOLDS[sport] || SPEED_THRESHOLDS.badminton;
   let speedClass;
   if (estimatedSpeed >= thresholds.advanced) {
@@ -873,15 +1011,164 @@ function estimateSpeed(allKeypoints, timestamps, sport, videoInfo) {
   };
 }
 
+/**
+ * Estimate speed for a single shot window around a peak.
+ *
+ * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
+ * @param {number[]} timestamps
+ * @param {number} peakIdx
+ * @param {string} sport
+ * @param {"right"|"left"} dominantHand
+ * @returns {number} Estimated speed in km/h
+ */
+function estimateShotSpeed(allKeypoints, timestamps, peakIdx, sport, dominantHand) {
+  const wristName = `${dominantHand}_wrist`;
+  const shoulderName = `${dominantHand}_shoulder`;
+  const hipName = `${dominantHand}_hip`;
+  const windowStart = Math.max(1, peakIdx - 2);
+  const windowEnd = Math.min(allKeypoints.length - 1, peakIdx + 2);
+
+  const speeds = [];
+  for (let i = windowStart; i <= windowEnd; i++) {
+    const prevWrist = getKp(allKeypoints[i - 1], wristName);
+    const currWrist = getKp(allKeypoints[i], wristName);
+    if (!prevWrist || !currWrist) continue;
+
+    const dt = timestamps[i] - timestamps[i - 1];
+    if (dt <= 0) continue;
+
+    let torso = 80;
+    const sh = getKp(allKeypoints[i], shoulderName);
+    const hp = getKp(allKeypoints[i], hipName);
+    if (sh && hp) {
+      const t = Math.abs(sh.y - hp.y);
+      if (t > 5) torso = t;
+    }
+
+    const pixelDist = kpDist(prevWrist, currWrist);
+    speeds.push((pixelDist / torso) / dt);
+  }
+
+  if (speeds.length === 0) return 0;
+
+  const peakSpeed = Math.max(...speeds);
+  const cal = SPEED_CALIBRATION[sport] || SPEED_CALIBRATION.badminton;
+  const estimated = Math.round(peakSpeed * cal.factor);
+  return clamp(estimated, cal.minPlausible, cal.maxPlausible);
+}
+
+// ─── Player Profile & Multi-Shot Aggregation ───────────────────────────────
+
+/**
+ * Build a player profile from detected shots.
+ *
+ * @param {object[]} detectedShots - Array of classified shots
+ * @param {"right"|"left"} dominantHand
+ * @returns {object} Player profile
+ */
+function buildPlayerProfile(detectedShots, dominantHand) {
+  if (detectedShots.length === 0) {
+    return {
+      dominant_hand: dominantHand,
+      total_shots: 0,
+      shot_distribution: {},
+      primary_shot: "unknown",
+      play_style: "unknown",
+      overall_grade: "N/A",
+      strengths: [],
+      weaknesses: [],
+    };
+  }
+
+  // Build shot distribution
+  const shotDistribution = {};
+  for (const shot of detectedShots) {
+    const key = shot.type;
+    if (!shotDistribution[key]) {
+      shotDistribution[key] = { count: 0, grades: [], speeds: [], confidences: [] };
+    }
+    shotDistribution[key].count++;
+    shotDistribution[key].grades.push(shot.grade);
+    shotDistribution[key].speeds.push(shot.speed);
+    shotDistribution[key].confidences.push(shot.confidence);
+  }
+
+  // Find primary shot (most frequent)
+  let primaryShot = "unknown";
+  let maxCount = 0;
+  for (const [shotType, data] of Object.entries(shotDistribution)) {
+    if (data.count > maxCount) {
+      maxCount = data.count;
+      primaryShot = shotType;
+    }
+  }
+
+  // Derive play style from distribution
+  const aggressiveTypes = ["smash", "forehand_loop", "backhand_loop", "drive", "overhead", "forehand_drive"];
+  const defensiveTypes = ["clear", "chop", "push", "block", "lob", "net_shot", "dink", "third_shot_drop"];
+
+  let aggressiveCount = 0;
+  let defensiveCount = 0;
+  for (const shot of detectedShots) {
+    if (aggressiveTypes.includes(shot.type)) aggressiveCount++;
+    if (defensiveTypes.includes(shot.type)) defensiveCount++;
+  }
+
+  let playStyle;
+  if (aggressiveCount > defensiveCount * 2) playStyle = "Aggressive";
+  else if (defensiveCount > aggressiveCount * 2) playStyle = "Defensive";
+  else if (aggressiveCount > defensiveCount) playStyle = "Attacking";
+  else playStyle = "All-round";
+
+  // Overall grade from average of all shot scores
+  const allScores = detectedShots.map((s) => s.score).filter((s) => s > 0);
+  const overallScore = allScores.length > 0 ? Math.round(avg(allScores)) : 50;
+  const overallGrade = scoreToGrade(overallScore);
+
+  // Strengths: shots with grade A or B
+  const strengths = [];
+  const weaknessTypes = [];
+  for (const [shotType, data] of Object.entries(shotDistribution)) {
+    const gradeValues = data.grades.map((g) => {
+      const entry = GRADE_THRESHOLDS.find((t) => t.grade === g);
+      return entry ? entry.minScore + 10 : 50;
+    });
+    const avgGradeVal = avg(gradeValues);
+    const displayName = shotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    if (avgGradeVal >= 70) strengths.push(displayName);
+    if (avgGradeVal < 55) weaknessTypes.push(displayName);
+  }
+
+  // Simplified distribution for the result
+  const simpleDist = {};
+  for (const [key, data] of Object.entries(shotDistribution)) {
+    simpleDist[key] = data.count;
+  }
+
+  return {
+    dominant_hand: dominantHand,
+    total_shots: detectedShots.length,
+    shot_distribution: simpleDist,
+    primary_shot: primaryShot,
+    play_style: playStyle,
+    overall_grade: overallGrade,
+    overall_score: overallScore,
+    strengths,
+    weaknesses: weaknessTypes,
+  };
+}
+
 // ─── Main Pipeline ──────────────────────────────────────────────────────────
 
 /**
  * Main video analysis pipeline that runs entirely in the browser.
  *
  * Extracts frames from the provided video file, runs MoveNet pose detection
- * on each frame, classifies the shot type, computes technique metrics, detects
- * active segments, estimates swing speed, and returns results in the same
- * format as the server's /analyze-video endpoint.
+ * on each frame, detects individual shot moments via wrist speed peaks,
+ * classifies each shot separately, computes technique metrics, and returns
+ * a multi-shot report.
+ *
+ * Works for both single-shot and multi-minute match videos.
  *
  * @param {File} videoFile - The video file to analyze
  * @param {string} sport - Sport type (badminton, table_tennis, tennis, pickleball)
@@ -902,8 +1189,6 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     throw new Error(`Video analysis is not available for ${sportConfig.name}.`);
   }
 
-  const targetFrameCount = mode === "quick" ? sportConfig.quickFrames : sportConfig.targetFrames;
-
   /** Report progress to the caller. */
   const progress = (step, percent, message) => {
     if (onProgress) {
@@ -916,9 +1201,29 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     progress("model", 10, "Loading AI model...");
     await initModel();
 
-    // ── Step 2: Read video metadata ──────────────────────────────────────
+    // ── Step 2: Determine frame count based on video duration ───────────
     progress("metadata", 15, "Reading video...");
-    // We get metadata as part of frame extraction, but report it as a step
+
+    // Peek at duration first to decide frame count
+    const tempVideo = document.createElement("video");
+    const tempUrl = URL.createObjectURL(videoFile);
+    tempVideo.src = tempUrl;
+    tempVideo.muted = true;
+    await new Promise((resolve, reject) => {
+      tempVideo.onloadedmetadata = resolve;
+      tempVideo.onerror = () => reject(new Error("Failed to load video metadata."));
+      tempVideo.load();
+    });
+    const videoDuration = tempVideo.duration;
+    URL.revokeObjectURL(tempUrl);
+
+    // Scale frame count by duration: ~3fps sampling, clamped 30-100
+    let targetFrameCount;
+    if (mode === "quick") {
+      targetFrameCount = sportConfig.quickFrames;
+    } else {
+      targetFrameCount = Math.min(100, Math.max(30, Math.floor(videoDuration * 3)));
+    }
 
     // ── Step 3: Extract frames ───────────────────────────────────────────
     const canvasSize = mode === "quick" ? QUICK_MODEL_INPUT_SIZE : MODEL_INPUT_SIZE;
@@ -932,95 +1237,170 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
 
     const videoInfo = { duration, fps, width, height, frame_count: frames.length };
 
-    // ── Step 3b: Compute motion scores early to skip static frames ──────
-    progress("motion", 35, "Detecting motion...");
+    // ── Step 3b: Compute motion scores ──────────────────────────────────
+    progress("motion", 30, "Detecting motion...");
     const motionScores = [];
     for (let i = 1; i < frames.length; i++) {
       motionScores.push(computeMotionScore(frames[i - 1], frames[i]));
     }
-    // First frame has no predecessor — assume active
     const isActiveFrame = [true, ...motionScores.map((s) => s > MOTION_ACTIVE_THRESHOLD * 0.5)];
 
     // ── Step 4: Detect poses (skip static frames) ────────────────────────
-    progress("pose", 45, "Detecting poses...");
+    progress("pose", 35, "Detecting poses...");
     const allKeypoints = [];
-    const emptyPose = Array.from({ length: 17 }, (_, i) => ({ name: "", x: 0, y: 0, score: 0 }));
+    const emptyPose = Array.from({ length: 17 }, () => ({ name: "", x: 0, y: 0, score: 0 }));
     let poseCount = 0;
     const totalActive = isActiveFrame.filter(Boolean).length;
+
     for (let i = 0; i < frames.length; i++) {
       if (isActiveFrame[i]) {
         const kps = await detectPose(frames[i]);
         allKeypoints.push(kps);
         poseCount++;
-        const subPercent = 45 + Math.round((poseCount / totalActive) * 15);
+        const subPercent = 35 + Math.round((poseCount / totalActive) * 20);
         progress("pose", subPercent, `Detecting poses... (${poseCount}/${totalActive})`);
       } else {
-        // Skip pose detection on static frames — reuse empty placeholder
         allKeypoints.push(emptyPose);
       }
     }
 
-    // ── Step 5: Classify technique ───────────────────────────────────────
-    progress("classify", 60, "Classifying technique...");
-    // Only use active-frame keypoints for classification
+    // ── Step 5: Detect dominant hand ─────────────────────────────────────
+    progress("classify", 56, "Detecting dominant hand...");
     const activeKeypoints = allKeypoints.filter((_, i) => isActiveFrame[i]);
-    const { shotType, shotName, confidence } = classifyShot(
-      activeKeypoints.length > 0 ? activeKeypoints : allKeypoints,
-      sport
-    );
+    const dominantHand = detectDominantHand(activeKeypoints.length > 0 ? activeKeypoints : allKeypoints);
 
-    // ── Step 6: Analyze segments (motion detection) ──────────────────────
-    progress("segments", 70, "Analyzing segments...");
-    const segmentData = detectSegments(motionScores, timestamps);
+    // ── Step 6: Find shot moments (motion peaks) ─────────────────────────
+    progress("classify", 58, "Finding shot moments...");
+    const shotPeaks = findShotMoments(allKeypoints, timestamps, dominantHand);
+
+    // ── Step 7: Classify each shot individually ──────────────────────────
+    progress("classify", 62, `Classifying ${shotPeaks.length} shot(s)...`);
+    const detectedShots = [];
+
+    for (let i = 0; i < shotPeaks.length; i++) {
+      const peak = shotPeaks[i];
+      const classification = classifySingleShot(allKeypoints, peak.index, dominantHand, sport, timestamps);
+      const shotMetrics = computeShotMetrics(allKeypoints, peak.index);
+      const shotSpeed = estimateShotSpeed(allKeypoints, timestamps, peak.index, sport, dominantHand);
+      const shotScore = shotMetrics.overall;
+      const shotGrade = scoreToGrade(shotScore);
+
+      detectedShots.push({
+        type: classification.type,
+        name: classification.name,
+        confidence: classification.confidence,
+        isBackhand: classification.isBackhand,
+        timestamp: peak.time,
+        frameIndex: peak.index,
+        grade: shotGrade,
+        score: shotScore,
+        speed: shotSpeed,
+        elbowAngle: classification.elbowAngle,
+        metrics: shotMetrics,
+      });
+
+      const subPercent = 62 + Math.round(((i + 1) / shotPeaks.length) * 8);
+      progress("classify", subPercent, `Classified shot ${i + 1}/${shotPeaks.length}: ${classification.name}`);
+    }
 
     // Release frame data to free memory
     frames.length = 0;
 
-    // ── Step 7: Compute metrics ──────────────────────────────────────────
-    progress("metrics", 80, "Computing metrics...");
+    // ── Step 8: Analyze segments ─────────────────────────────────────────
+    progress("segments", 72, "Analyzing segments...");
+    const segmentData = detectSegments(motionScores, timestamps);
+
+    // ── Step 9: Compute overall metrics ──────────────────────────────────
+    progress("metrics", 78, "Computing metrics...");
     const metrics = computeMetrics(allKeypoints, segmentData, allKeypoints.length);
     const overallScore = computeOverallScore(metrics);
     const grade = scoreToGrade(overallScore);
     const skillLevel = scoreToSkillLevel(overallScore);
-    const weaknesses = detectWeaknesses(metrics, shotName);
 
-    // ── Step 8: Estimate speed ───────────────────────────────────────────
-    progress("speed", 85, "Estimating speed...");
+    // ── Step 10: Build player profile ────────────────────────────────────
+    progress("profile", 82, "Building player profile...");
+    const playerProfile = buildPlayerProfile(detectedShots, dominantHand);
+
+    // Determine the "primary" shot for backward compat
+    const primaryShotType = playerProfile.primary_shot;
+    const primaryShotName = primaryShotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const primaryConfidence = detectedShots.length > 0
+      ? avg(detectedShots.filter((s) => s.type === primaryShotType).map((s) => s.confidence))
+      : 0.5;
+
+    const weaknesses = detectWeaknesses(metrics, primaryShotName);
+
+    // ── Step 11: Estimate overall speed ──────────────────────────────────
+    progress("speed", 88, "Estimating speed...");
     const speedAnalysis = estimateSpeed(allKeypoints, timestamps, sport, { width, height });
 
-    // ── Step 9: Generate results ─────────────────────────────────────────
+    // ── Step 12: Build shot distribution ─────────────────────────────────
+    const shotDistribution = {};
+    for (const shot of detectedShots) {
+      if (!shotDistribution[shot.type]) shotDistribution[shot.type] = 0;
+      shotDistribution[shot.type]++;
+    }
+
+    // ── Step 13: Generate results ────────────────────────────────────────
     progress("results", 95, "Generating results...");
+
+    const isMultiShot = detectedShots.length > 1;
 
     const result = {
       success: true,
+      multi_shot: isMultiShot,
+      total_shots_detected: detectedShots.length,
+      dominant_hand: dominantHand,
+
+      // Individual shots array (NEW)
+      shots: detectedShots.map((s) => ({
+        type: s.type,
+        name: s.name,
+        confidence: s.confidence,
+        isBackhand: s.isBackhand,
+        timestamp: Math.round(s.timestamp * 10) / 10,
+        grade: s.grade,
+        score: s.score,
+        speed: s.speed,
+      })),
+
+      // Shot distribution (NEW)
+      shot_distribution: shotDistribution,
+
+      // Player profile (NEW)
+      player_profile: playerProfile,
+
+      // Backward-compatible fields — use the primary/most common shot
       skill_level: skillLevel,
       analysis_mode: mode,
       shot_analysis: {
-        shot_type: shotType,
-        shot_name: shotName,
-        confidence,
+        shot_type: primaryShotType,
+        shot_name: primaryShotName,
+        confidence: primaryConfidence,
         grade,
         score: overallScore,
         weaknesses,
         improvement_plan: weaknesses.length > 0
           ? `Focus on ${weaknesses[0].area} first — ${weaknesses[0].fix}`
-          : `Great ${shotName}! Keep practicing to maintain your form.`,
+          : `Great ${primaryShotName}! Keep practicing to maintain your form.`,
       },
       pro_comparison: {
         overall_score: overallScore,
         level: skillLevel,
         message: overallScore >= 80
-          ? `Your ${shotName} shows advanced technique. Fine-tune the details to reach elite level.`
+          ? `Your ${primaryShotName} shows advanced technique. Fine-tune the details to reach elite level.`
           : overallScore >= 55
-            ? `Your ${shotName} is solid. Focus on the identified weaknesses to level up.`
-            : `Your ${shotName} has room for improvement. Work on the basics first.`,
-        pro_tips: generateProTips(shotType, sport, weaknesses),
+            ? `Your ${primaryShotName} is solid. Focus on the identified weaknesses to level up.`
+            : `Your ${primaryShotName} has room for improvement. Work on the basics first.`,
+        pro_tips: generateProTips(primaryShotType, sport, weaknesses),
         player_match: null,
       },
       metrics,
       coaching: null,
       comprehensive_coaching: null,
-      quick_summary: `${shotName} analysis: ${grade} grade (${overallScore}/100). ${weaknesses.length > 0 ? `Key area: ${weaknesses[0].issue}.` : "Looking good!"}`,
+      quick_summary: isMultiShot
+        ? `Match analysis: ${detectedShots.length} shots detected. ${grade} overall (${overallScore}/100). Style: ${playerProfile.play_style}. Primary: ${primaryShotName}.`
+        : `${primaryShotName} analysis: ${grade} grade (${overallScore}/100). ${weaknesses.length > 0 ? `Key area: ${weaknesses[0].issue}.` : "Looking good!"}`,
       frames_analyzed: allKeypoints.length,
       analyzed_player_preview: null,
       video_info: videoInfo,
@@ -1033,10 +1413,11 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         active: segmentData.activeFrameCount,
         power_moments: segmentData.powerMoments,
       },
-      // Fields the server adds via DB/research — null in client-side mode
       analysis_id: `local-${Date.now()}`,
       coach_feedback: {
-        summary: `Your ${shotName} scored ${overallScore}/100 (${grade}). ${skillLevel} level detected.`,
+        summary: isMultiShot
+          ? `Match analysis: ${detectedShots.length} shots detected. Overall ${grade} (${overallScore}/100). Dominant hand: ${dominantHand}. Play style: ${playerProfile.play_style}.`
+          : `Your ${primaryShotName} scored ${overallScore}/100 (${grade}). ${skillLevel} level detected.`,
         top_issues: weaknesses.slice(0, 3).map((w) => ({
           issue: w.issue,
           coach_says: `Let's work on your ${w.area} — ${w.issue.toLowerCase()}.`,
@@ -1044,7 +1425,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
           drill: null,
           severity: w.severity,
         })),
-        strengths: buildStrengths(metrics, shotName, grade, overallScore),
+        strengths: buildStrengths(metrics, primaryShotName, grade, overallScore),
         encouragement: weaknesses.length === 0
           ? "Excellent technique! Keep up the great work."
           : "Every champion started where you are. Keep practicing!",
@@ -1052,7 +1433,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       improvement_plan: {
         this_week: weaknesses.slice(0, 3).map((w) => `Focus on: ${w.issue}`),
         next_upload: "Upload again in 7 days to track your improvement",
-        expected_improvement: `With daily practice, you should see noticeable improvement in your ${shotName} within 2 weeks`,
+        expected_improvement: `With daily practice, you should see noticeable improvement in your ${primaryShotName} within 2 weeks`,
       },
       recommended_videos: [],
       recommended_drills: [],
@@ -1064,12 +1445,11 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       _client_side: true,
     };
 
-    // ── Step 10: Complete ────────────────────────────────────────────────
+    // ── Step 14: Complete ────────────────────────────────────────────────
     progress("complete", 100, "Complete!");
 
     return result;
   } catch (err) {
-    // Provide a structured error result so callers can display it gracefully
     const errorResult = {
       success: false,
       error: err.message || "Unknown analysis error",
@@ -1093,7 +1473,6 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
  */
 function generateProTips(shotType, sport, weaknesses) {
   const tips = [];
-
   const sportName = SUPPORTED_SPORTS[sport]?.name || sport;
 
   if (weaknesses.some((w) => w.area === "form")) {
@@ -1109,7 +1488,6 @@ function generateProTips(shotType, sport, weaknesses) {
     tips.push("Lower your center of gravity by bending your knees. This improves both balance and reaction time.");
   }
 
-  // Always include a general tip
   if (tips.length === 0) {
     tips.push(`Great foundation! Focus on shot placement and tactical decision-making to reach the next level.`);
   }
@@ -1129,24 +1507,12 @@ function generateProTips(shotType, sport, weaknesses) {
 function buildStrengths(metrics, shotName, grade, score) {
   const strengths = [];
 
-  if (grade === "A" || grade === "B") {
-    strengths.push(`Good ${shotName} technique`);
-  }
-  if (score > 70) {
-    strengths.push("Solid overall form");
-  }
-  if (metrics.consistency_score > 70) {
-    strengths.push("Consistent technique across repetitions");
-  }
-  if (metrics.balance_score > 75) {
-    strengths.push("Excellent balance and stance");
-  }
-  if (metrics.range_of_motion > 70) {
-    strengths.push("Good range of motion");
-  }
-  if (metrics.wrist_action > 70) {
-    strengths.push("Strong wrist action");
-  }
+  if (grade === "A" || grade === "B") strengths.push(`Good ${shotName} technique`);
+  if (score > 70) strengths.push("Solid overall form");
+  if (metrics.consistency_score > 70) strengths.push("Consistent technique across repetitions");
+  if (metrics.balance_score > 75) strengths.push("Excellent balance and stance");
+  if (metrics.range_of_motion > 70) strengths.push("Good range of motion");
+  if (metrics.wrist_action > 70) strengths.push("Strong wrist action");
 
   return strengths.length > 0 ? strengths.slice(0, 5) : ["Keep practicing to build your strengths!"];
 }
