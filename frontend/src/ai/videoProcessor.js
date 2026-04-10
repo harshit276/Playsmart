@@ -10,7 +10,7 @@
  * - 2-3 minute match videos with multiple shot types
  */
 
-import { initModel, detectPose, getKeypointByName, calculateAngle, keypointDistance, countVisibleKeypoints } from "./poseDetector.js";
+import { initModel, detectPose, getKeypointByName, calculateAngle, keypointDistance, countVisibleKeypoints, detectMultiplePeople, initMultiPoseModel } from "./poseDetector.js";
 import {
   SUPPORTED_SPORTS,
   SHOT_TYPES,
@@ -73,7 +73,7 @@ function getCropRegion(videoWidth, videoHeight, targetPlayer) {
  * @returns {Promise<{ frames: ImageData[], timestamps: number[], duration: number,
  *   fps: number, width: number, height: number }>}
  */
-async function extractFrames(videoFile, targetFrameCount = 30, targetPlayer = "auto", canvasSize = MODEL_INPUT_SIZE) {
+async function extractFrames(videoFile, targetFrameCount = 30, targetPlayer = "auto", canvasSize = MODEL_INPUT_SIZE, customCropBox = null) {
   const video = document.createElement("video");
   const objectUrl = URL.createObjectURL(videoFile);
   video.src = objectUrl;
@@ -96,7 +96,22 @@ async function extractFrames(videoFile, targetFrameCount = 30, targetPlayer = "a
   const videoWidth = video.videoWidth;
   const videoHeight = video.videoHeight;
   const interval = duration / targetFrameCount;
-  const crop = getCropRegion(videoWidth, videoHeight, targetPlayer);
+  let crop;
+  if (customCropBox) {
+    // Clamp normalized box to [0,1] and convert to pixel coords
+    const cx = Math.max(0, Math.min(1, customCropBox.x));
+    const cy = Math.max(0, Math.min(1, customCropBox.y));
+    const cw = Math.max(0, Math.min(1 - cx, customCropBox.width));
+    const ch = Math.max(0, Math.min(1 - cy, customCropBox.height));
+    crop = {
+      sx: cx * videoWidth,
+      sy: cy * videoHeight,
+      sw: Math.max(1, cw * videoWidth),
+      sh: Math.max(1, ch * videoHeight),
+    };
+  } else {
+    crop = getCropRegion(videoWidth, videoHeight, targetPlayer);
+  }
 
   // Canvas sized to model input (smaller for quick mode = faster)
   const canvas = document.createElement("canvas");
@@ -1222,11 +1237,91 @@ function buildPlayerProfile(detectedShots, dominantHand) {
  * @param {object} [options] - Analysis options
  * @param {string} [options.mode="full"] - "full" or "quick"
  * @param {string} [options.targetPlayer="auto"] - Player quadrant: "auto", "top-left", etc.
+ * @param {{x:number,y:number,width:number,height:number}|null} [options.customCropBox] - Optional normalized (0-1) crop box from user player selection. Overrides targetPlayer.
  * @param {(progress: { step: string, percent: number, message: string }) => void} [options.onProgress] - Progress callback
  * @returns {Promise<object>} Analysis results matching the server's response format
  */
+/**
+ * Quickly scan a video to detect how many people are visible. Extracts a few
+ * sample frames from the middle portion of the video and runs multi-person
+ * detection on each. Returns the sample frames (as data URLs) along with the
+ * bounding boxes of detected people in normalized coordinates (0-1).
+ *
+ * @param {File} videoFile
+ * @returns {Promise<{
+ *   frames: Array<{ imageDataUrl: string, people: Array<{box: {x:number,y:number,width:number,height:number}, score: number}>, timestamp: number }>,
+ *   videoWidth: number,
+ *   videoHeight: number,
+ * }>}
+ */
+export async function scanVideoForPlayers(videoFile) {
+  const video = document.createElement("video");
+  const objectUrl = URL.createObjectURL(videoFile);
+  video.src = objectUrl;
+  video.muted = true;
+  video.playsInline = true;
+  video.crossOrigin = "anonymous";
+
+  await new Promise((resolve, reject) => {
+    video.onloadedmetadata = resolve;
+    video.onerror = () => reject(new Error("Failed to load video metadata."));
+    video.load();
+  });
+
+  const duration = video.duration;
+  if (!duration || !isFinite(duration) || duration <= 0) {
+    URL.revokeObjectURL(objectUrl);
+    throw new Error("Could not determine video duration.");
+  }
+
+  // Pre-load multi-pose model
+  await initMultiPoseModel();
+
+  const videoWidth = video.videoWidth;
+  const videoHeight = video.videoHeight;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = videoWidth;
+  canvas.height = videoHeight;
+  const ctx = canvas.getContext("2d");
+
+  // Sample 3 frames from the middle of the video
+  const sampleTimes = [duration * 0.25, duration * 0.5, duration * 0.75];
+  const sampleFrames = [];
+
+  for (const time of sampleTimes) {
+    video.currentTime = Math.min(time, duration - 0.01);
+    await new Promise((resolve) => {
+      video.onseeked = resolve;
+    });
+
+    ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+
+    let people = [];
+    try {
+      people = await detectMultiplePeople(canvas);
+    } catch {
+      people = [];
+    }
+
+    sampleFrames.push({
+      imageDataUrl: canvas.toDataURL("image/jpeg", 0.7),
+      people,
+      timestamp: time,
+    });
+  }
+
+  URL.revokeObjectURL(objectUrl);
+
+  return {
+    frames: sampleFrames,
+    videoWidth,
+    videoHeight,
+  };
+}
+
 export async function analyzeVideo(videoFile, sport, options = {}) {
-  const { mode = "full", targetPlayer = "auto", onProgress } = options;
+  const { mode = "full", targetPlayer = "auto", onProgress, customCropBox = null } = options;
 
   const sportConfig = SUPPORTED_SPORTS[sport];
   if (!sportConfig) {
@@ -1279,7 +1374,8 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       videoFile,
       targetFrameCount,
       targetPlayer,
-      canvasSize
+      canvasSize,
+      customCropBox
     );
 
     const videoInfo = { duration, fps, width, height, frame_count: frames.length };

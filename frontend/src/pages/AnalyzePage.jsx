@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import ShareModal from "@/components/ShareModal";
+import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import { NewBadgeOverlay } from "@/components/BadgeDisplay";
 
 const CLIENT_LOADING_STEPS = [
@@ -78,6 +79,9 @@ export default function AnalyzePage() {
   const [viewingHistorical, setViewingHistorical] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [processingMode, setProcessingMode] = useState("client"); // "client" or "server"
+  const [scanResult, setScanResult] = useState(null);
+  const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [pendingAnalysisSport, setPendingAnalysisSport] = useState(null);
 
   const loadHistory = useCallback(async () => {
     if (!user?.id) return;
@@ -162,99 +166,126 @@ export default function AnalyzePage() {
     const sportToAnalyze = selectedSport || (VIDEO_ANALYSIS_SPORTS.includes(activeSport) ? activeSport : "badminton");
 
     if (processingMode === "client") {
-      // ─── Client-side analysis (on-device) ───
-      setLoadingText("Loading AI model...");
-      const steps = CLIENT_LOADING_STEPS;
-      let stepIdx = 0;
-      const interval = setInterval(() => {
-        if (stepIdx < steps.length) {
-          setProgress(steps[stepIdx].pct);
-          setLoadingText(steps[stepIdx].text);
-          stepIdx++;
-        }
-      }, 2000);
-
+      // ─── Pre-scan the video for multiple players ───
+      setLoadingText("Scanning video for players...");
+      setProgress(5);
       try {
-        let analyzeVideo;
+        const mod = await import("@/ai/videoProcessor");
+        if (typeof mod.scanVideoForPlayers === "function") {
+          const scan = await mod.scanVideoForPlayers(file);
+          const maxPeople = Math.max(0, ...scan.frames.map((f) => f.people.length));
+          if (maxPeople >= 2) {
+            // Ask user which player to analyze
+            setScanResult(scan);
+            setPendingAnalysisSport(sportToAnalyze);
+            setShowPlayerModal(true);
+            // Keep analyzing=false so the UI isn't stuck on the loading panel
+            setAnalyzing(false);
+            return;
+          }
+        }
+      } catch (scanErr) {
+        // Scan failed — fall through to regular analysis
+        console.warn("Player scan failed, proceeding without selection", scanErr);
+      }
+
+      await runClientAnalysis(sportToAnalyze, null);
+      return;
+    }
+
+    await runServerAnalysis(sportToAnalyze);
+  };
+
+  /**
+   * Run the on-device analysis pipeline. Optionally scoped to a custom crop
+   * box chosen by the user from the player selection modal.
+   */
+  const runClientAnalysis = async (sportToAnalyze, customCropBox) => {
+    setAnalyzing(true);
+    setResult(null);
+    setError(null);
+    setProgress(0);
+    setLoadingText("Loading AI model...");
+    const steps = CLIENT_LOADING_STEPS;
+    let stepIdx = 0;
+    const interval = setInterval(() => {
+      if (stepIdx < steps.length) {
+        setProgress(steps[stepIdx].pct);
+        setLoadingText(steps[stepIdx].text);
+        stepIdx++;
+      }
+    }, 2000);
+
+    try {
+      let analyzeVideo;
+      try {
+        const mod = await import("@/ai/videoProcessor");
+        analyzeVideo = mod.analyzeVideo;
+      } catch (importErr) {
+        toast.error("On-device AI not available. Switching to server mode...");
+        clearInterval(interval);
+        setProcessingMode("server");
+        setAnalyzing(false);
+        return;
+      }
+
+      const clientResult = await analyzeVideo(file, sportToAnalyze, {
+        mode: analysisMode,
+        targetPlayer,
+        customCropBox,
+        onProgress: (info) => {
+          // videoProcessor sends { step, percent, message }
+          const pct = typeof info === "number" ? info : info?.percent;
+          const msg = typeof info === "string" ? info : info?.message;
+          if (pct != null) setProgress(pct);
+          if (msg) setLoadingText(msg);
+        },
+      });
+
+      if (!clientResult || clientResult.error) {
+        throw new Error(clientResult?.error || "Analysis returned no results");
+      }
+
+      // Send client results to backend for coaching enrichment (only if logged in)
+      const hasToken = !!localStorage.getItem('playsmart_token');
+      if (hasToken) {
+        setProgress(92);
+        setLoadingText("Getting coaching feedback...");
         try {
-          const mod = await import("@/ai/videoProcessor");
-          analyzeVideo = mod.analyzeVideo;
-        } catch (importErr) {
-          toast.error("On-device AI not available. Switching to server mode...");
+          const { data } = await api.post("/analyze-client-results", {
+            sport: sportToAnalyze,
+            shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
+            confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
+            metrics: clientResult.metrics || {},
+            speed: clientResult.speed || clientResult.speed_analysis || {},
+            skill_level: clientResult.skill_level || "Beginner",
+            shot_grade: clientResult.shot_grade || "C",
+            segments: clientResult.segments || [],
+            video_info: clientResult.video_info || {},
+            player_preview: clientResult.player_preview || null,
+            weaknesses: clientResult.weaknesses || [],
+          }, { timeout: 30000 });
+
           clearInterval(interval);
-          setProcessingMode("server");
-          setAnalyzing(false);
-          return;
-        }
+          setProgress(100);
+          setLoadingText("Complete!");
 
-        const clientResult = await analyzeVideo(file, sportToAnalyze, {
-          mode: analysisMode,
-          targetPlayer,
-          onProgress: (info) => {
-            // videoProcessor sends { step, percent, message }
-            const pct = typeof info === "number" ? info : info?.percent;
-            const msg = typeof info === "string" ? info : info?.message;
-            if (pct != null) setProgress(pct);
-            if (msg) setLoadingText(msg);
-          },
-        });
-
-        if (!clientResult || clientResult.error) {
-          throw new Error(clientResult?.error || "Analysis returned no results");
-        }
-
-        // Send client results to backend for coaching enrichment (only if logged in)
-        const hasToken = !!localStorage.getItem('playsmart_token');
-        if (hasToken) {
-          setProgress(92);
-          setLoadingText("Getting coaching feedback...");
-          try {
-            const { data } = await api.post("/analyze-client-results", {
-              sport: sportToAnalyze,
-              shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
-              confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
-              metrics: clientResult.metrics || {},
-              speed: clientResult.speed || clientResult.speed_analysis || {},
-              skill_level: clientResult.skill_level || "Beginner",
-              shot_grade: clientResult.shot_grade || "C",
-              segments: clientResult.segments || [],
-              video_info: clientResult.video_info || {},
-              player_preview: clientResult.player_preview || null,
-              weaknesses: clientResult.weaknesses || [],
-            }, { timeout: 30000 });
-
-            clearInterval(interval);
-            setProgress(100);
-            setLoadingText("Complete!");
-
-            if (data.success !== false) {
-              data._processingMode = "client";
-              setResult(data);
-              setViewingHistorical(false);
-              setActiveTab("results");
-              refreshProfile();
-              loadHistory();
-              toast.success("Analysis complete!");
-              if (data.new_badges?.length > 0) {
-                setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
-              }
-            } else {
-              throw new Error("Server enrichment failed");
-            }
-          } catch (serverErr) {
-            // Server enrichment failed — show full client-side results anyway
-            clearInterval(interval);
-            setProgress(100);
-            setLoadingText("Complete!");
-
-            clientResult._processingMode = "client";
-            setResult(clientResult);
+          if (data.success !== false) {
+            data._processingMode = "client";
+            setResult(data);
             setViewingHistorical(false);
             setActiveTab("results");
-            toast.info("Analysis complete! Coaching feedback will be available when connected.");
+            refreshProfile();
+            loadHistory();
+            toast.success("Analysis complete!");
+            if (data.new_badges?.length > 0) {
+              setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
+            }
+          } else {
+            throw new Error("Server enrichment failed");
           }
-        } else {
-          // Guest user - show full client-side results directly
+        } catch (serverErr) {
+          // Server enrichment failed — show full client-side results anyway
           clearInterval(interval);
           setProgress(100);
           setLoadingText("Complete!");
@@ -263,62 +294,98 @@ export default function AnalyzePage() {
           setResult(clientResult);
           setViewingHistorical(false);
           setActiveTab("results");
-          toast.success("Analysis complete!");
+          toast.info("Analysis complete! Coaching feedback will be available when connected.");
         }
-      } catch (err) {
-        clearInterval(interval);
-        const msg = err.response?.data?.detail || err.message || "Analysis failed";
-        setError(msg);
-        toast.error(msg);
-      }
-    } else {
-      // ─── Server-side analysis (upload) ───
-      setLoadingText("Uploading video...");
-      const steps = analysisMode === "quick" ? QUICK_LOADING_STEPS : FULL_LOADING_STEPS;
-      let stepIdx = 0;
-      const interval = setInterval(() => {
-        if (stepIdx < steps.length) {
-          setProgress(steps[stepIdx].pct);
-          setLoadingText(steps[stepIdx].text);
-          stepIdx++;
-        }
-      }, analysisMode === "quick" ? 1800 : 2500);
-
-      try {
-        const formData = new FormData();
-        formData.append("video", file);
-        const playerParam = targetPlayer !== "auto" ? `&target_player=${targetPlayer}` : "";
-        const { data } = await api.post(
-          `/analyze-video?sport=${sportToAnalyze}&analysis_mode=${analysisMode}${playerParam}`,
-          formData,
-          { headers: { "Content-Type": "multipart/form-data" }, timeout: 300000 }
-        );
-
+      } else {
+        // Guest user - show full client-side results directly
         clearInterval(interval);
         setProgress(100);
         setLoadingText("Complete!");
 
-        if (data.success) {
-          data._processingMode = "server";
-          setResult(data);
-          setViewingHistorical(false);
-          setActiveTab("results");
-          refreshProfile();
-          loadHistory();
-          toast.success("Analysis complete!");
-          if (data.new_badges?.length > 0) {
-            setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
-          }
-        } else {
-          throw new Error("Analysis returned unsuccessful");
-        }
-      } catch (err) {
-        clearInterval(interval);
-        const msg = err.response?.data?.detail || err.message || "Analysis failed";
-        setError(msg);
-        toast.error(msg);
+        clientResult._processingMode = "client";
+        setResult(clientResult);
+        setViewingHistorical(false);
+        setActiveTab("results");
+        toast.success("Analysis complete!");
       }
+    } catch (err) {
+      clearInterval(interval);
+      const msg = err.response?.data?.detail || err.message || "Analysis failed";
+      setError(msg);
+      toast.error(msg);
     }
+    setAnalyzing(false);
+  };
+
+  const runServerAnalysis = async (sportToAnalyze) => {
+    setAnalyzing(true);
+    setResult(null);
+    setError(null);
+    setProgress(0);
+
+    // ─── Server-side analysis (upload) ───
+    setLoadingText("Uploading video...");
+    const steps = analysisMode === "quick" ? QUICK_LOADING_STEPS : FULL_LOADING_STEPS;
+    let stepIdx = 0;
+    const interval = setInterval(() => {
+      if (stepIdx < steps.length) {
+        setProgress(steps[stepIdx].pct);
+        setLoadingText(steps[stepIdx].text);
+        stepIdx++;
+      }
+    }, analysisMode === "quick" ? 1800 : 2500);
+
+    try {
+      const formData = new FormData();
+      formData.append("video", file);
+      const playerParam = targetPlayer !== "auto" ? `&target_player=${targetPlayer}` : "";
+      const { data } = await api.post(
+        `/analyze-video?sport=${sportToAnalyze}&analysis_mode=${analysisMode}${playerParam}`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" }, timeout: 300000 }
+      );
+
+      clearInterval(interval);
+      setProgress(100);
+      setLoadingText("Complete!");
+
+      if (data.success) {
+        data._processingMode = "server";
+        setResult(data);
+        setViewingHistorical(false);
+        setActiveTab("results");
+        refreshProfile();
+        loadHistory();
+        toast.success("Analysis complete!");
+        if (data.new_badges?.length > 0) {
+          setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
+        }
+      } else {
+        throw new Error("Analysis returned unsuccessful");
+      }
+    } catch (err) {
+      clearInterval(interval);
+      const msg = err.response?.data?.detail || err.message || "Analysis failed";
+      setError(msg);
+      toast.error(msg);
+    }
+    setAnalyzing(false);
+  };
+
+  const handlePlayerSelected = async (box, _idx) => {
+    setShowPlayerModal(false);
+    const sportToAnalyze = pendingAnalysisSport;
+    setPendingAnalysisSport(null);
+    setScanResult(null);
+    if (!sportToAnalyze) return;
+    // box is null if user clicked "Skip — Analyze Whole Video"
+    await runClientAnalysis(sportToAnalyze, box);
+  };
+
+  const handlePlayerModalClose = () => {
+    setShowPlayerModal(false);
+    setScanResult(null);
+    setPendingAnalysisSport(null);
     setAnalyzing(false);
   };
 
@@ -592,6 +659,18 @@ export default function AnalyzePage() {
 
       {/* Mode Selection */}
       {renderModeSelection()}
+
+      {/* Tips for best results */}
+      <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 mb-4 text-xs text-zinc-400">
+        <div className="flex items-center gap-2 text-blue-400 font-medium mb-1">
+          <Lightbulb className="w-4 h-4" /> For Best Results
+        </div>
+        <ul className="space-y-1 ml-6 list-disc">
+          <li>Upload a video where you&apos;re clearly visible (15-30 seconds works best)</li>
+          <li>If multiple players are in frame, you can tap to select which one to analyze</li>
+          <li>Side angle works better than front-facing for technique analysis</li>
+        </ul>
+      </div>
 
       {/* Upload area */}
       <div
@@ -1881,6 +1960,14 @@ export default function AnalyzePage() {
           <TabsContent value="history">{renderHistory()}</TabsContent>
         </Tabs>
       </div>
+
+      {/* Player Selection Modal (multi-person videos) */}
+      <PlayerSelectionModal
+        isOpen={showPlayerModal}
+        scanResult={scanResult}
+        onSelect={handlePlayerSelected}
+        onClose={handlePlayerModalClose}
+      />
 
       {/* Share Modal */}
       <ShareModal

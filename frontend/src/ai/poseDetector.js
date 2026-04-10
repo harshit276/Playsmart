@@ -68,6 +68,12 @@ let _errorMessage = null;
 /** @type {Promise<poseDetection.PoseDetector>|null} */
 let _loadingPromise = null;
 
+/** @type {poseDetection.PoseDetector|null} */
+let _multiDetector = null;
+
+/** @type {Promise<poseDetection.PoseDetector>|null} */
+let _multiLoadingPromise = null;
+
 // ------------- public API -------------
 
 /**
@@ -127,6 +133,98 @@ export async function initModel() {
   })();
 
   return _loadingPromise;
+}
+
+/**
+ * Load the MoveNet MULTIPOSE Lightning model (singleton) for multi-person
+ * detection. Separate from the main SINGLEPOSE_THUNDER detector used for
+ * single-player analysis.
+ *
+ * @returns {Promise<poseDetection.PoseDetector>}
+ */
+export async function initMultiPoseModel() {
+  if (_multiDetector) return _multiDetector;
+  if (_multiLoadingPromise) return _multiLoadingPromise;
+
+  _multiLoadingPromise = (async () => {
+    try {
+      try {
+        await tf.setBackend("webgl");
+      } catch {
+        // fall back
+      }
+      await tf.ready();
+
+      const model = poseDetection.SupportedModels.MoveNet;
+      const detectorConfig = {
+        modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
+        enableSmoothing: false,
+        enableTracking: false,
+      };
+
+      _multiDetector = await poseDetection.createDetector(model, detectorConfig);
+      return _multiDetector;
+    } catch (err) {
+      _multiLoadingPromise = null;
+      throw err;
+    }
+  })();
+
+  return _multiLoadingPromise;
+}
+
+/**
+ * Detect multiple people in a single frame using MoveNet MultiPose.
+ * Returns an array of detected people with normalized bounding boxes (0-1).
+ *
+ * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageData} input
+ * @returns {Promise<Array<{box: {x: number, y: number, width: number, height: number}, score: number, keypoints: Keypoint[]}>>}
+ */
+export async function detectMultiplePeople(input) {
+  const detector = await initMultiPoseModel();
+  const poses = await detector.estimatePoses(input, { maxPoses: 6 });
+
+  if (!poses || poses.length === 0) return [];
+
+  // Determine input dimensions for normalization
+  const width = input.width || input.videoWidth || input.naturalWidth || 1;
+  const height = input.height || input.videoHeight || input.naturalHeight || 1;
+
+  return poses
+    .map((pose) => {
+      const validKps = (pose.keypoints || []).filter((kp) => (kp.score ?? 0) > 0.3);
+      if (validKps.length < 5) return null;
+
+      const xs = validKps.map((kp) => kp.x);
+      const ys = validKps.map((kp) => kp.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+
+      // 20% padding around the keypoint bounding box
+      const rawW = maxX - minX;
+      const rawH = maxY - minY;
+      const padX = rawW * 0.2;
+      const padY = rawH * 0.2;
+
+      const nx = Math.max(0, (minX - padX) / width);
+      const ny = Math.max(0, (minY - padY) / height);
+      const nw = Math.min(1 - nx, (rawW + padX * 2) / width);
+      const nh = Math.min(1 - ny, (rawH + padY * 2) / height);
+
+      return {
+        box: { x: nx, y: ny, width: nw, height: nh },
+        score: pose.score ?? 0.5,
+        keypoints: pose.keypoints.map((kp, i) => ({
+          name: kp.name ?? KEYPOINT_NAMES[i],
+          x: kp.x,
+          y: kp.y,
+          score: kp.score ?? 0,
+        })),
+      };
+    })
+    .filter((p) => p !== null);
 }
 
 /**
