@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { X, Users } from "lucide-react";
+import { X, Users, CheckCircle2, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
@@ -34,6 +34,8 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
   if (!isOpen || !scanResult || !scanResult.frames?.length) return null;
 
   const frame = scanResult.frames[selectedFrameIdx] || scanResult.frames[bestFrameIdx];
+  const isSinglePlayer = frame.people.length === 1;
+  const noPlayers = frame.people.length === 0;
 
   return (
     <AnimatePresence>
@@ -53,9 +55,19 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
         >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-lime-400" />
+              {isSinglePlayer ? (
+                <CheckCircle2 className="w-5 h-5 text-lime-400" />
+              ) : noPlayers ? (
+                <User className="w-5 h-5 text-amber-400" />
+              ) : (
+                <Users className="w-5 h-5 text-lime-400" />
+              )}
               <h3 className="font-heading font-bold text-lg text-white">
-                {frame.people.length} Player{frame.people.length === 1 ? "" : "s"} Detected
+                {noPlayers
+                  ? "No Player Detected"
+                  : isSinglePlayer
+                    ? "1 Player Detected"
+                    : `${frame.people.length} Players Detected`}
               </h3>
             </div>
             <button
@@ -68,7 +80,11 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
           </div>
 
           <p className="text-sm text-zinc-400 mb-4">
-            Tap the player you want to analyze. We&apos;ll focus the video on them for best results.
+            {noPlayers
+              ? "We couldn't detect a player in this video. You can still try analyzing the whole video."
+              : isSinglePlayer
+                ? "We've detected the player in the video. Click 'Analyze This Player' to continue."
+                : "Tap the player you want to analyze. We'll focus the video on them for best results."}
           </p>
 
           {/* Frame with overlays */}
@@ -91,7 +107,7 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
                     onMouseEnter={() => setHoveredIdx(idx)}
                     onMouseLeave={() => setHoveredIdx(null)}
                     className={`absolute border-2 rounded transition-all ${
-                      isHovered
+                      isHovered || isSinglePlayer
                         ? "border-lime-400 bg-lime-400/20 shadow-lg shadow-lime-400/50"
                         : "border-lime-400/60 bg-lime-400/10 hover:border-lime-400"
                     }`}
@@ -132,20 +148,56 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
           )}
 
           <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
-            <Button
-              variant="ghost"
-              onClick={() => onSelect(null, -1)}
-              className="text-zinc-400 hover:text-white text-xs"
-            >
-              Skip — Analyze Whole Video
-            </Button>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs"
-            >
-              Cancel
-            </Button>
+            {isSinglePlayer ? (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={onClose}
+                  className="text-zinc-400 hover:text-white text-xs sm:order-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => onSelect(frame.people[0].box, 0)}
+                  className="bg-lime-400 text-black hover:bg-lime-500 font-bold sm:order-2 flex-1 sm:flex-initial"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Analyze This Player
+                </Button>
+              </>
+            ) : noPlayers ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => onSelect(null, -1)}
+                  className="bg-lime-400 text-black hover:bg-lime-500 font-bold"
+                >
+                  Analyze Whole Video
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => onSelect(null, -1)}
+                  className="text-zinc-400 hover:text-white text-xs"
+                >
+                  Skip — Analyze Whole Video
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs"
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
           </div>
         </motion.div>
       </motion.div>

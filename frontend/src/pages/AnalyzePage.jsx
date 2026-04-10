@@ -174,18 +174,16 @@ export default function AnalyzePage() {
         if (typeof mod.scanVideoForPlayers === "function") {
           const scan = await mod.scanVideoForPlayers(file);
           const maxPeople = Math.max(0, ...scan.frames.map((f) => f.people.length));
-          if (maxPeople >= 2) {
-            // Ask user which player to analyze
+          if (maxPeople >= 1) {
+            // Show confirmation modal — for 1 player just confirm, for 2+ let them choose
             setScanResult(scan);
             setPendingAnalysisSport(sportToAnalyze);
             setShowPlayerModal(true);
-            // Keep analyzing=false so the UI isn't stuck on the loading panel
             setAnalyzing(false);
             return;
           }
         }
       } catch (scanErr) {
-        // Scan failed — fall through to regular analysis
         console.warn("Player scan failed, proceeding without selection", scanErr);
       }
 
