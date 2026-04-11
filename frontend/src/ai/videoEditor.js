@@ -16,6 +16,8 @@ import { fetchFile, toBlobURL } from "@ffmpeg/util";
 let _ffmpeg = null;
 let _loading = null;
 let _currentSourceKey = null;  // Identity of currently loaded video
+let _operationCount = 0;  // Reset ffmpeg every N operations to free memory
+const RESET_AFTER_OPS = 4;  // Reset ffmpeg every 4 operations to avoid memory exhaustion
 
 /**
  * Lazy-load and initialize ffmpeg.wasm.
@@ -81,13 +83,31 @@ async function ensureSourceLoaded(videoFile) {
 
 /**
  * Reset the editor (frees memory). Call between separate analyses.
+ * Also called automatically every N operations to prevent memory exhaustion.
  */
 export async function resetEditor() {
   if (!_ffmpeg) return;
   try {
-    await _ffmpeg.deleteFile(SOURCE_NAME);
-  } catch {}
+    // Terminate the worker to fully free memory
+    await _ffmpeg.terminate();
+  } catch (err) {
+    console.warn("[ffmpeg] terminate failed:", err);
+  }
+  _ffmpeg = null;
+  _loading = null;
   _currentSourceKey = null;
+  _operationCount = 0;
+}
+
+/**
+ * Check if we should reset ffmpeg to free memory.
+ */
+async function maybeResetForMemory() {
+  _operationCount++;
+  if (_operationCount >= RESET_AFTER_OPS) {
+    console.log("[ffmpeg] Auto-reset to free memory after", _operationCount, "ops");
+    await resetEditor();
+  }
 }
 
 /**
@@ -166,6 +186,9 @@ export async function extractClip(videoFile, startTime, endTime, options = {}) {
   try {
     await ffmpeg.deleteFile(outputName);
   } catch {}
+
+  // Periodically reset to free memory (prevents "memory access out of bounds")
+  await maybeResetForMemory();
 
   return blob;
 }

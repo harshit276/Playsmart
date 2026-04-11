@@ -13,13 +13,13 @@ import { SPORT_LABEL, SPORT_EMOJI } from "@/lib/sportConfig";
 import SEO from "@/components/SEO";
 
 const HIGHLIGHT_COUNT_OPTIONS = [
-  { value: 4, label: "4 clips" },
-  { value: 6, label: "6 clips" },
+  { value: 3, label: "3 clips" },
+  { value: 5, label: "5 clips" },
   { value: 8, label: "8 clips" },
-  { value: 12, label: "12 clips" },
 ];
 
 function downloadBlob(blob, filename) {
+  if (!blob) return;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -28,11 +28,16 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function safeBlobURL(blob) {
+  if (!blob || !(blob instanceof Blob)) return null;
+  try { return URL.createObjectURL(blob); } catch { return null; }
+}
+
 export default function HighlightsPage() {
   const { profile } = useAuth();
   const [file, setFile] = useState(null);
   const [selectedSport, setSelectedSport] = useState(null);
-  const [maxClips, setMaxClips] = useState(8);
+  const [maxClips, setMaxClips] = useState(5);
   const [includeSlomo, setIncludeSlomo] = useState(true);
 
   // Set page title
@@ -53,18 +58,18 @@ export default function HighlightsPage() {
     if (!selectedSport) setSelectedSport(activeSport);
   }, [activeSport, selectedSport]);
 
-  // Convert blobs to playable URLs
+  // Convert blobs to playable URLs (safe against null/undefined)
   const reelUrl = useMemo(
-    () => (result?.reel ? URL.createObjectURL(result.reel) : null),
+    () => safeBlobURL(result?.reel),
     [result?.reel]
   );
   const clipUrls = useMemo(
     () =>
       result?.clips?.map((c) => ({
-        url: URL.createObjectURL(c.blob),
-        thumbUrl: URL.createObjectURL(c.thumbnail),
+        url: safeBlobURL(c.blob),
+        thumbUrl: safeBlobURL(c.thumbnail),
         moment: c.moment,
-      })) || [],
+      })).filter((c) => c.url) || [],
     [result?.clips]
   );
 

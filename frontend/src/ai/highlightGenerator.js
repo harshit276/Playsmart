@@ -8,7 +8,74 @@
  */
 
 import { detectHighlights } from "./highlightDetector.js";
-import { extractClip, concatenateClips, generateThumbnail, resetEditor } from "./videoEditor.js";
+import { extractClip, concatenateClips, resetEditor } from "./videoEditor.js";
+
+/**
+ * Generate a thumbnail by seeking a hidden video element to the timestamp.
+ * Uses native HTML5 video — no ffmpeg memory needed.
+ */
+async function generateThumbnailNative(videoFile, timestamp) {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    const url = URL.createObjectURL(videoFile);
+    video.src = url;
+    video.muted = true;
+    video.playsInline = true;
+    video.crossOrigin = "anonymous";
+
+    let resolved = false;
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+    };
+
+    const timeout = setTimeout(() => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      resolve(null);
+    }, 5000);
+
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.min(timestamp, video.duration - 0.1);
+    };
+
+    video.onseeked = () => {
+      if (resolved) return;
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 320;
+        canvas.height = Math.round((320 * video.videoHeight) / video.videoWidth) || 180;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            resolved = true;
+            clearTimeout(timeout);
+            cleanup();
+            resolve(blob);
+          },
+          "image/jpeg",
+          0.8,
+        );
+      } catch (err) {
+        resolved = true;
+        clearTimeout(timeout);
+        cleanup();
+        resolve(null);
+      }
+    };
+
+    video.onerror = () => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timeout);
+      cleanup();
+      resolve(null);
+    };
+
+    video.load();
+  });
+}
 
 /**
  * Generate a complete highlight reel from a video.
@@ -55,7 +122,21 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
     throw new Error("No highlight-worthy moments detected in this video. Try a longer video with more action.");
   }
 
-  // Step 2: Extract individual clips
+  // Step 2a: Generate all thumbnails using native HTML5 video (no ffmpeg memory)
+  progress(35, "Generating thumbnails...");
+  const thumbnails = [];
+  for (let i = 0; i < moments.length; i++) {
+    const moment = moments[i];
+    const thumbTime = (moment.start_time + moment.end_time) / 2;
+    const thumb = await generateThumbnailNative(videoFile, thumbTime);
+    thumbnails.push(thumb);
+  }
+  console.log("[HighlightGen] Generated", thumbnails.filter(t => t).length, "thumbnails");
+
+  // Reset ffmpeg before clip extraction to start with clean memory
+  await resetEditor();
+
+  // Step 2b: Extract individual clips (one at a time, with auto-reset between)
   progress(40, `Loading video editor (~25MB on first use)...`);
   const clips = [];
   let firstClipError = null;
@@ -73,21 +154,13 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
         label: moment.speed_kmh > 0 ? `${Math.round(moment.speed_kmh)} km/h` : null,
       });
 
-      // Generate thumbnail
-      const thumbTime = (moment.start_time + moment.end_time) / 2;
-      let thumbnail;
-      try {
-        thumbnail = await generateThumbnail(videoFile, thumbTime);
-      } catch (thumbErr) {
-        console.warn("Thumbnail failed:", thumbErr);
-        thumbnail = null;
-      }
-
-      clips.push({ blob, moment, thumbnail });
+      clips.push({ blob, moment, thumbnail: thumbnails[i] });
       console.log(`[HighlightGen] Extracted clip ${i + 1}`);
     } catch (err) {
       console.error(`[HighlightGen] Failed to extract clip ${i + 1}:`, err);
       if (!firstClipError) firstClipError = err;
+      // Reset ffmpeg on error to recover memory
+      try { await resetEditor(); } catch {}
     }
   }
 
