@@ -16,6 +16,7 @@ import {
   SHOT_TYPES,
   SPEED_THRESHOLDS,
   SKILL_LEVEL_THRESHOLDS,
+  SPEED_SKILL_BOOST,
   GRADE_THRESHOLDS,
   METRIC_WEIGHTS,
   MOTION_ACTIVE_THRESHOLD,
@@ -902,6 +903,39 @@ function scoreToSkillLevel(score) {
   return "Beginner";
 }
 
+/**
+ * Determine skill level using BOTH form score AND speed.
+ * Speed is a strong signal: a 200 km/h smash = pro regardless of perceived form.
+ *
+ * @param {number} formScore - 0-100 technique score
+ * @param {number} speedKmh - Estimated shot speed
+ * @param {string} sport
+ * @param {string} shotType - The detected shot type (smash gets more weight than push)
+ * @returns {string} skill level
+ */
+function determineSkillLevel(formScore, speedKmh, sport, shotType) {
+  const baseLevel = scoreToSkillLevel(formScore);
+  const boost = SPEED_SKILL_BOOST[sport] || SPEED_SKILL_BOOST.badminton;
+
+  // Speed-based level (only meaningful for fast shots, not pushes/drops)
+  const isFastShot = ["smash", "drive", "loop", "drive_clear", "clear", "forehand_drive", "backhand_drive", "forehand_loop", "backhand_loop", "forehand_smash", "tt_smash", "serve", "forehand", "backhand"].some(s => shotType?.toLowerCase().includes(s));
+
+  if (!isFastShot || !speedKmh || speedKmh <= 0) {
+    return baseLevel;
+  }
+
+  let speedLevel = "Beginner";
+  if (speedKmh >= boost.pro) speedLevel = "Pro";
+  else if (speedKmh >= boost.advanced) speedLevel = "Advanced";
+  else if (speedKmh >= boost.intermediate) speedLevel = "Intermediate";
+
+  // Take the HIGHER of the two levels (speed is hard to fake)
+  const levels = ["Beginner", "Intermediate", "Advanced", "Pro"];
+  const baseIdx = levels.indexOf(baseLevel);
+  const speedIdx = levels.indexOf(speedLevel);
+  return levels[Math.max(baseIdx, speedIdx)];
+}
+
 // ─── Weakness Detection ─────────────────────────────────────────────────────
 
 /**
@@ -1458,8 +1492,6 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     const metrics = computeMetrics(allKeypoints, segmentData, allKeypoints.length);
     const overallScore = computeOverallScore(metrics);
     const grade = scoreToGrade(overallScore);
-    const skillLevel = scoreToSkillLevel(overallScore);
-
     // ── Step 10: Build player profile ────────────────────────────────────
     progress("profile", 82, "Building player profile...");
     const playerProfile = buildPlayerProfile(detectedShots, dominantHand);
@@ -1476,6 +1508,15 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // ── Step 11: Estimate overall speed ──────────────────────────────────
     progress("speed", 88, "Estimating speed...");
     const speedAnalysis = estimateSpeed(allKeypoints, timestamps, sport, { width, height });
+
+    // Determine skill level using BOTH form score AND speed
+    // Speed is a strong signal: a 200km/h smash = pro regardless of form score
+    const skillLevel = determineSkillLevel(
+      overallScore,
+      speedAnalysis?.estimated_speed_kmh || 0,
+      sport,
+      primaryShotType,
+    );
 
     // ── Step 12: Build shot distribution ─────────────────────────────────
     const shotDistribution = {};

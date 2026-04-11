@@ -117,11 +117,20 @@ export const SPEED_THRESHOLDS = {
 
 /** @type {{ label: string, minScore: number }[]} */
 export const SKILL_LEVEL_THRESHOLDS = [
-  { label: "Advanced", minScore: 80 },
-  { label: "Intermediate", minScore: 55 },
-  { label: "Beginner+", minScore: 35 },
+  { label: "Pro", minScore: 85 },
+  { label: "Advanced", minScore: 70 },
+  { label: "Intermediate", minScore: 50 },
   { label: "Beginner", minScore: 0 },
 ];
+
+// Speed thresholds (km/h) — speed is a strong signal of skill level
+// If a shot's detected speed exceeds these, the skill level is bumped up
+export const SPEED_SKILL_BOOST = {
+  badminton: { pro: 150, advanced: 100, intermediate: 60 },
+  table_tennis: { pro: 60, advanced: 40, intermediate: 25 },
+  tennis: { pro: 130, advanced: 90, intermediate: 60 },
+  pickleball: { pro: 50, advanced: 35, intermediate: 22 },
+};
 
 // ─── Grade Thresholds (based on overall score 0-100) ────────────────────────
 
