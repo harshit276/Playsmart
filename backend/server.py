@@ -19,6 +19,15 @@ from fastapi.responses import FileResponse
 import shutil
 import asyncio
 import time as _time
+import time
+import hashlib
+import httpx
+
+# ─── Cloudinary credentials ───
+# TODO: move these to env vars in Vercel / Railway dashboards.
+CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "dz6anvjej")
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "262276841895161")
+CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "XJryUbbGxuJ23Wg7j1MoMZRuZgU")
 
 # ─── Simple in-memory cache for equipment data ───
 _equipment_cache: dict = {}
@@ -2155,6 +2164,136 @@ async def get_highlight_reel(
         raise HTTPException(status_code=404, detail="Highlight reel not found")
 
     return FileResponse(str(reel_path), media_type="video/mp4", filename=reel_filename)
+
+
+# ─── Cloudinary-based highlight generation ───
+#
+# Architecture:
+#   Browser → (1) asks backend for signed upload params
+#           → (2) uploads the video directly to Cloudinary
+#           → (3) asks backend to generate a highlight reel URL
+#           → (4) plays / downloads the reel from Cloudinary
+#           → (5) asks backend to delete the uploaded video when done
+#
+# The API Secret never leaves the backend.
+
+class HighlightReelRequest(BaseModel):
+    public_id: str
+    sport: str = "badminton"
+    duration_seconds: float = 0  # Total video duration
+    target_clips: int = 5
+    include_speed_overlay: bool = True
+
+
+def _cloudinary_sign(params: dict) -> str:
+    """Build a Cloudinary SHA1 signature from the given params."""
+    sorted_params = sorted([(k, v) for k, v in params.items()])
+    to_sign = "&".join([f"{k}={v}" for k, v in sorted_params]) + CLOUDINARY_API_SECRET
+    return hashlib.sha1(to_sign.encode("utf-8")).hexdigest()
+
+
+@api_router.post("/highlights/sign-upload")
+async def sign_cloudinary_upload(request: Request):
+    """
+    Generate signed upload params so the browser can upload a video directly
+    to Cloudinary without ever exposing our API secret.
+    """
+    # Body is optional — we accept it for future expansion (e.g. custom tags).
+    try:
+        _ = await request.json() if request.headers.get("content-length") else {}
+    except Exception:
+        _ = {}
+
+    timestamp = int(time.time())
+    public_id = f"highlights/{uuid.uuid4().hex}"
+
+    params_to_sign = {
+        "timestamp": timestamp,
+        "public_id": public_id,
+        "folder": "athlyticai_uploads",
+    }
+
+    signature = _cloudinary_sign(params_to_sign)
+
+    return {
+        "signature": signature,
+        "timestamp": timestamp,
+        "public_id": public_id,
+        "folder": "athlyticai_uploads",
+        "api_key": CLOUDINARY_API_KEY,
+        "cloud_name": CLOUDINARY_CLOUD_NAME,
+        "upload_url": f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD_NAME}/video/upload",
+    }
+
+
+@api_router.post("/highlights/generate-reel")
+async def generate_cloudinary_reel(req: HighlightReelRequest):
+    """
+    Generate a highlight reel URL using Cloudinary's e_preview transformation,
+    which auto-detects the most interesting moments in the video.
+    """
+    # Target reel length: 20% of original, clamped to [20s, 60s]. If duration
+    # is unknown, default to 30s.
+    if req.duration_seconds > 0:
+        target_duration = max(20, min(60, int(req.duration_seconds * 0.20)))
+    else:
+        target_duration = 30
+
+    max_segments = max(1, int(req.target_clips))
+    min_segment = 2  # 2-second minimum per clip
+
+    transformations = [
+        f"e_preview:duration_{target_duration}:max_seg_{max_segments}:min_seg_{min_segment}",
+        "q_auto:good",
+        "f_mp4",
+    ]
+    transformation_str = "/".join(transformations)
+
+    reel_url = (
+        f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}"
+        f"/video/upload/{transformation_str}/{req.public_id}.mp4"
+    )
+    thumbnail_url = (
+        f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}"
+        f"/video/upload/so_0,w_640,c_limit,f_jpg/{req.public_id}.jpg"
+    )
+
+    return {
+        "reel_url": reel_url,
+        "thumbnail_url": thumbnail_url,
+        "target_duration": target_duration,
+        "max_clips": max_segments,
+    }
+
+
+@api_router.delete("/highlights/cleanup/{public_id:path}")
+async def cleanup_cloudinary_video(public_id: str):
+    """
+    Delete an uploaded video from Cloudinary to free storage. Called by the
+    frontend after the user has downloaded/viewed their reel.
+    """
+    timestamp = int(time.time())
+    params_to_sign = {
+        "public_id": public_id,
+        "timestamp": timestamp,
+    }
+    signature = _cloudinary_sign(params_to_sign)
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD_NAME}/video/destroy",
+                data={
+                    "public_id": public_id,
+                    "api_key": CLOUDINARY_API_KEY,
+                    "timestamp": timestamp,
+                    "signature": signature,
+                },
+            )
+            return {"deleted": resp.status_code == 200, "status": resp.status_code}
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Cloudinary cleanup failed: {e}")
+        return {"deleted": False, "error": str(e)}
 
 
 # ─── Video size / duration limits (process-only, no permanent storage) ───

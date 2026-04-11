@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,27 +11,13 @@ import {
 } from "lucide-react";
 import { SPORT_LABEL, SPORT_EMOJI } from "@/lib/sportConfig";
 import SEO from "@/components/SEO";
+import { uploadToCloudinary, generateReel, cleanupVideo } from "@/lib/cloudinaryUpload";
 
 const HIGHLIGHT_COUNT_OPTIONS = [
   { value: 3, label: "3 clips" },
   { value: 5, label: "5 clips" },
   { value: 8, label: "8 clips" },
 ];
-
-function downloadBlob(blob, filename) {
-  if (!blob) return;
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function safeBlobURL(blob) {
-  if (!blob || !(blob instanceof Blob)) return null;
-  try { return URL.createObjectURL(blob); } catch { return null; }
-}
 
 export default function HighlightsPage() {
   const { profile } = useAuth();
@@ -58,31 +44,9 @@ export default function HighlightsPage() {
     if (!selectedSport) setSelectedSport(activeSport);
   }, [activeSport, selectedSport]);
 
-  // Convert blobs to playable URLs (safe against null/undefined)
-  const reelUrl = useMemo(
-    () => safeBlobURL(result?.reel),
-    [result?.reel]
-  );
-  const clipUrls = useMemo(
-    () =>
-      result?.clips?.map((c) => ({
-        url: safeBlobURL(c.blob),
-        thumbUrl: safeBlobURL(c.thumbnail),
-        moment: c.moment,
-      })).filter((c) => c.url) || [],
-    [result?.clips]
-  );
-
-  // Cleanup blob URLs when they change or on unmount
-  useEffect(() => {
-    return () => {
-      if (reelUrl) URL.revokeObjectURL(reelUrl);
-      clipUrls.forEach((c) => {
-        URL.revokeObjectURL(c.url);
-        URL.revokeObjectURL(c.thumbUrl);
-      });
-    };
-  }, [reelUrl, clipUrls]);
+  // With the Cloudinary flow the result already contains direct URLs; no blob
+  // bookkeeping needed.
+  const reelUrl = result?.reel_url || null;
 
   const handleFile = (e) => {
     const f = e.target.files?.[0];
@@ -132,30 +96,51 @@ export default function HighlightsPage() {
     setProgress(0);
     setError(null);
     setResult(null);
-    setLoadingText("Loading video editor...");
+    setLoadingText("Uploading video...");
+
+    let publicId = null;
 
     try {
-      // Lazy-load the highlight generator so ffmpeg.wasm is code-split
-      const { generateHighlightReel } = await import("@/ai/highlightGenerator");
-
-      const reelResult = await generateHighlightReel(file, selectedSport || activeSport, {
-        maxClips,
-        includeSlomo,
+      // Step 1: upload to Cloudinary (auto-compresses if large)
+      const uploaded = await uploadToCloudinary(file, {
         onProgress: ({ percent, message }) => {
           if (typeof percent === "number") setProgress(percent);
           if (message) setLoadingText(message);
         },
       });
+      publicId = uploaded.public_id;
+
+      // Step 2: ask backend to build a highlight reel URL
+      setLoadingText("Generating highlight reel...");
+      setProgress(80);
+      const reel = await generateReel(
+        publicId,
+        selectedSport || activeSport,
+        uploaded.duration,
+        { target_clips: maxClips, include_speed_overlay: includeSlomo }
+      );
 
       setProgress(100);
       setLoadingText("Done!");
-      setResult(reelResult);
-      toast.success(`Generated ${reelResult.clips.length} highlight clips!`);
+      setResult({
+        reel_url: reel.reel_url,
+        thumbnail_url: reel.thumbnail_url,
+        target_duration: reel.target_duration,
+        max_clips: reel.max_clips,
+        original_duration: uploaded.duration,
+        public_id: publicId,
+      });
+
+      toast.success("Highlight reel generated!");
+
+      // Cleanup after 1 minute so Cloudinary storage stays cheap
+      setTimeout(() => cleanupVideo(publicId), 60 * 1000);
     } catch (err) {
       console.error("Highlight generation failed:", err);
-      const msg = err?.message || "Highlight generation failed";
+      const msg = err?.response?.data?.detail || err?.message || "Highlight generation failed";
       setError(msg);
       toast.error(msg);
+      if (publicId) cleanupVideo(publicId);
     } finally {
       setGenerating(false);
     }
@@ -206,13 +191,13 @@ export default function HighlightsPage() {
         </p>
       </motion.div>
 
-      {/* First-Use Warning */}
+      {/* First-Use Info */}
       {!generating && !result && (
         <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 mb-6 flex items-start gap-2">
           <Shield className="w-4 h-4 shrink-0 mt-0.5" />
           <p>
-            First-time use: We'll download the video editor (~25MB) which works entirely in your browser.
-            Your video never leaves your device.
+            Your video is uploaded securely to the cloud, a highlight reel is generated, and the
+            original upload is automatically deleted within a minute.
           </p>
         </div>
       )}
@@ -429,7 +414,7 @@ export default function HighlightsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20">
-                  {result.clips.length} clips
+                  {result.target_duration}s reel
                 </Badge>
                 <Button size="sm" variant="outline"
                   className="h-7 text-xs border-zinc-700 text-zinc-400 hover:bg-zinc-800"
@@ -443,12 +428,33 @@ export default function HighlightsPage() {
                 src={reelUrl}
                 controls
                 playsInline
+                poster={result.thumbnail_url}
                 className="w-full h-auto max-h-[60vh] object-contain"
-                poster={clipUrls[0]?.thumbUrl}
               />
             </div>
+
+            {result.original_duration > 0 && (
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-zinc-500">Original</p>
+                  <p className="text-white font-bold">{Math.round(result.original_duration)}s</p>
+                </div>
+                <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-zinc-500">Highlight</p>
+                  <p className="text-lime-400 font-bold">{result.target_duration}s</p>
+                </div>
+              </div>
+            )}
+
             <Button
-              onClick={() => downloadBlob(result.reel, "athlyticai_highlights.mp4")}
+              onClick={() => {
+                const a = document.createElement("a");
+                a.href = result.reel_url;
+                a.download = "athlyticai_highlights.mp4";
+                a.target = "_blank";
+                a.rel = "noopener";
+                a.click();
+              }}
               className="w-full mt-4 bg-lime-400 text-black hover:bg-lime-500 font-bold"
             >
               <Download className="w-4 h-4 mr-2" /> Download Highlight Reel
@@ -457,7 +463,7 @@ export default function HighlightsPage() {
             {/* Share / Copy */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
               <span className="text-[10px] text-zinc-500">
-                Generated entirely in your browser
+                Powered by Cloudinary video AI
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="ghost"
@@ -472,69 +478,12 @@ export default function HighlightsPage() {
                 <Button size="sm" variant="ghost"
                   className="h-6 text-[10px] text-zinc-400 hover:text-purple-400 px-2"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/highlights`);
-                    toast.success("Link copied!");
+                    navigator.clipboard.writeText(result.reel_url);
+                    toast.success("Reel link copied!");
                   }}>
                   <Copy className="w-3 h-3 mr-1" /> Copy Link
                 </Button>
               </div>
-            </div>
-          </div>
-
-          {/* Individual Clips Grid */}
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
-            <h3 className="font-bold text-white text-lg mb-4">Individual Clips</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {clipUrls.map((clip, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.05 * i }}
-                  className="bg-zinc-800/50 rounded-xl overflow-hidden"
-                >
-                  <div className="bg-black flex items-center justify-center" style={{ aspectRatio: "16/9", maxHeight: "240px" }}>
-                    <video
-                      src={clip.url}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      poster={clip.thumbUrl}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-medium text-white text-sm capitalize">
-                        {String(clip.moment.type || "moment").replace(/_/g, " ")}
-                      </p>
-                      <Badge className="bg-purple-400/10 text-purple-400 border-purple-400/20 text-xs">
-                        {Math.round(clip.moment.score || 0)}/100
-                      </Badge>
-                    </div>
-                    {clip.moment.description && (
-                      <p className="text-xs text-zinc-400 mb-2">{clip.moment.description}</p>
-                    )}
-                    <div className="flex items-center justify-between text-xs text-zinc-500">
-                      <span>{clip.moment.duration?.toFixed(1)}s</span>
-                      {clip.moment.speed_kmh > 0 && (
-                        <span className="text-amber-400">{Math.round(clip.moment.speed_kmh)} km/h</span>
-                      )}
-                      {clip.moment.should_slowmo && (
-                        <span className="text-blue-400">Slo-mo</span>
-                      )}
-                    </div>
-                    <Button
-                      onClick={() => downloadBlob(result.clips[i].blob, `clip_${i + 1}.mp4`)}
-                      size="sm"
-                      variant="outline"
-                      className="w-full mt-2 border-zinc-700 text-zinc-300 text-xs h-8"
-                    >
-                      <Download className="w-3 h-3 mr-1" /> Download
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
             </div>
           </div>
 
