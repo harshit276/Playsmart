@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Zap, Clock, Calendar, ArrowRight, BookOpen } from "lucide-react";
 import api from "@/lib/api";
+import SEO from "@/components/SEO";
 
 const CATEGORIES = [
   { key: "all", label: "All" },
@@ -68,6 +69,12 @@ export default function BlogListPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      <SEO
+        title="Sports Tips, Training Guides & Equipment Reviews"
+        description="Expert articles on badminton, tennis, table tennis, and pickleball. Training tips, equipment reviews, technique guides, and video analysis insights from AthlyticAI."
+        keywords="badminton tips, tennis training, table tennis guide, pickleball strategy, sports equipment reviews"
+        url="https://athlyticai.com/blog"
+      />
       {/* Hero */}
       <section className="relative py-20 sm:py-28 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/80 via-zinc-950 to-zinc-950" />

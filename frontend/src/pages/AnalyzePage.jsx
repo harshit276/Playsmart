@@ -20,6 +20,7 @@ import api from "@/lib/api";
 import ShareModal from "@/components/ShareModal";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import { NewBadgeOverlay } from "@/components/BadgeDisplay";
+import SEO from "@/components/SEO";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -2428,6 +2429,12 @@ export default function AnalyzePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="analyze-page">
+      <SEO
+        title="AI Video Analysis - Analyze Your Badminton, Tennis, Table Tennis Shots"
+        description="Upload a video and get instant AI-powered shot analysis. Detect smashes, drives, drops, and more. Get speed estimation, technique scoring, and personalized improvement tips. Free for badminton, tennis, table tennis, and pickleball."
+        keywords="badminton shot analysis, tennis video analyzer, table tennis stroke analysis, AI sports video analysis, badminton smash speed, tennis serve analyzer"
+        url="https://athlyticai.com/analyze"
+      />
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">

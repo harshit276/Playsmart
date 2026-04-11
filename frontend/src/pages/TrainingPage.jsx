@@ -12,6 +12,7 @@ import {
   Zap, Star, Shield, Footprints, Eye, BarChart3, X
 } from "lucide-react";
 import api from "@/lib/api";
+import SEO from "@/components/SEO";
 
 /* ─── Sport icons ─── */
 const SPORT_EMOJI = {
@@ -366,6 +367,12 @@ export default function TrainingPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="training-page">
+      <SEO
+        title="Personalized Sports Training Plans - Drills & Workouts"
+        description="Get a personalized training plan with drills, exercises, and video tutorials. Improve your badminton smash, tennis serve, table tennis spin, or pickleball dink with structured weekly workouts."
+        keywords="badminton training plan, tennis drills, table tennis exercises, sports workout plan, badminton footwork drills"
+        url="https://athlyticai.com/training"
+      />
       <div className="container mx-auto px-4 max-w-5xl">
 
         {/* ═══ COMPACT HEADER ═══ */}

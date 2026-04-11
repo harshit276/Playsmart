@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { getSportEmoji, getSportLabel, SPORT_LABEL } from "@/lib/sportConfig";
+import SEO from "@/components/SEO";
 
 const BUDGET_RANGES = {
   Low: { label: "Budget", min: 0, max: 3000 },
@@ -850,6 +851,12 @@ export default function EquipmentPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="equipment-page">
+      <SEO
+        title="Best Sports Equipment Recommendations - Rackets, Shoes, Gear"
+        description="AI-powered equipment recommendations based on your skill level, play style, and budget. Find the best badminton rackets, tennis racquets, table tennis paddles, and more from top brands like Yonex, Wilson, Butterfly, DHS."
+        keywords="best badminton racket, tennis racquet recommendation, table tennis paddle, sports equipment India, badminton shoes, Yonex racket review, Wilson tennis"
+        url="https://athlyticai.com/equipment"
+      />
       <div className="container mx-auto px-4 max-w-5xl">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="font-heading font-bold text-2xl sm:text-3xl md:text-5xl uppercase tracking-tight text-white mb-2" data-testid="equipment-title">

@@ -10,6 +10,7 @@ import {
   Settings, Sparkles, RefreshCw, Shield
 } from "lucide-react";
 import { SPORT_LABEL, SPORT_EMOJI } from "@/lib/sportConfig";
+import SEO from "@/components/SEO";
 
 const HIGHLIGHT_COUNT_OPTIONS = [
   { value: 4, label: "4 clips" },
@@ -165,6 +166,12 @@ export default function HighlightsPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 container mx-auto px-4 max-w-4xl py-6 sm:py-10" data-testid="highlights-page">
+      <SEO
+        title="Free Highlight Reel Generator - Create Match Highlights Instantly"
+        description="Create stunning highlight reels from your match videos. AI detects the best moments - smashes, rallies, winning points - and combines them with slo-mo and speed overlays. Free, no upload needed."
+        keywords="sports highlight generator, badminton highlight reel, tennis highlights creator, match highlights video, sports video editor"
+        url="https://athlyticai.com/highlights"
+      />
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="mb-8">

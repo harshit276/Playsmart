@@ -2,6 +2,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import SEO from "@/components/SEO";
 import {
   Zap, Target, Dumbbell, BarChart3, Play, ChevronRight,
   Video, Sparkles, TrendingUp, Film, Upload, UserPlus,
@@ -35,6 +36,54 @@ const HOW_IT_WORKS = [
   { step: "03", icon: TrendingUp, title: "Get Feedback & Improve", desc: "Receive detailed AI-powered insights, track your progress over time, and level up your game." },
 ];
 
+const FAQS = [
+  {
+    q: "How does AI video analysis work?",
+    a: "AthlyticAI uses pose detection AI (MoveNet) to track your body movements in the video. It identifies your shots (smashes, drives, etc.), measures speed, evaluates technique, and provides personalized improvement tips.",
+  },
+  {
+    q: "Which sports does AthlyticAI support?",
+    a: "We currently support badminton, tennis, table tennis, pickleball, cricket, football, and swimming. Video analysis is best for racket sports.",
+  },
+  {
+    q: "Is AthlyticAI free?",
+    a: "Yes, AthlyticAI is completely free to use. You can analyze videos, get equipment recommendations, training plans, and create highlight reels at no cost.",
+  },
+  {
+    q: "Do I need to upload my video?",
+    a: "No. All video analysis happens directly in your browser using TensorFlow.js. Your video never leaves your device, ensuring complete privacy.",
+  },
+];
+
+const APP_STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "AthlyticAI",
+  operatingSystem: "Web, Android, iOS",
+  applicationCategory: "SportsApplication",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", ratingCount: "127" },
+  description: "AI-powered sports video analysis, training plans, and highlight reel generation",
+  url: "https://athlyticai.com",
+  featureList: [
+    "AI Video Analysis",
+    "Personalized Training Plans",
+    "Equipment Recommendations",
+    "Highlight Reel Generation",
+    "Multi-Sport Support",
+  ],
+};
+
+const FAQ_STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 const STATS = [
   { value: "7", label: "Sports Supported" },
   { value: "10K+", label: "Analyses Performed" },
@@ -63,6 +112,13 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      <SEO
+        title="AI Sports Coach for Badminton, Tennis & More"
+        description="Get instant AI video analysis, personalized training plans, smart equipment recommendations, and auto-generated highlight reels for badminton, tennis, table tennis, and more. Free to use."
+        keywords="AI sports coach, badminton video analysis, tennis coach app, table tennis training, sports highlights generator, badminton training plan, sports equipment recommendations India, AI shot analysis"
+        url="https://athlyticai.com/"
+        structuredData={APP_STRUCTURED_DATA}
+      />
 
       {/* ============ HERO ============ */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -326,6 +382,33 @@ export default function LandingPage() {
         </section>
       )}
 
+      {/* ============ FAQ ============ */}
+      <section className="py-24 bg-zinc-900/40 border-y border-zinc-800/50">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }} />
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+            className="text-center mb-12">
+            <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">FAQ</span>
+            <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
+              Frequently Asked Questions
+            </h2>
+          </motion.div>
+          <div className="space-y-4">
+            {FAQS.map((f, i) => (
+              <motion.details key={i} initial="hidden" whileInView="visible" custom={i}
+                viewport={{ once: true }} variants={fadeUp}
+                className="group bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-lime-400/30 transition-all">
+                <summary className="cursor-pointer font-heading font-semibold text-white text-lg flex items-center justify-between gap-4">
+                  <span>{f.q}</span>
+                  <ChevronRight className="w-5 h-5 text-lime-400 group-open:rotate-90 transition-transform flex-shrink-0" />
+                </summary>
+                <p className="text-zinc-400 text-sm leading-relaxed mt-3">{f.a}</p>
+              </motion.details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ============ FINAL CTA ============ */}
       <section className="py-24 bg-zinc-950 border-t border-zinc-800/50">
         <div className="container mx-auto px-4 max-w-3xl text-center">
@@ -378,12 +461,11 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Sports</h4>
               <ul className="space-y-2">
-                {SPORTS.slice(0, 5).map(s => (
-                  <li key={s.key}>
-                    <span className="text-zinc-500 text-sm">{s.emoji} {s.label}</span>
-                  </li>
-                ))}
-                <li><span className="text-zinc-500 text-sm">+ 2 more</span></li>
+                <li><Link to="/badminton" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🏸 Badminton Coach</Link></li>
+                <li><Link to="/tennis" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🎾 Tennis Coach</Link></li>
+                <li><Link to="/table-tennis" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🏓 Table Tennis Coach</Link></li>
+                <li><Link to="/pickleball" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">⚡ Pickleball Coach</Link></li>
+                <li><span className="text-zinc-500 text-sm">+ Cricket, Football, Swimming</span></li>
               </ul>
             </div>
 

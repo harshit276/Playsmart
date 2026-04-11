@@ -4530,6 +4530,1097 @@ BLOG_POSTS = [
 </ul>
 <p>Start creating your match highlights today — upload your next match video to AthlyticAI and let AI find your best moments automatically.</p>"""
     },
+    {
+        "id": "increase-badminton-smash-speed",
+        "title": "How to Increase Your Badminton Smash Speed: 10 Pro Tips",
+        "description": "Learn 10 proven techniques to add power and speed to your badminton smash. From grip to wrist snap, master the fundamentals used by pros like Lee Chong Wei and Viktor Axelsen.",
+        "category": "tips",
+        "sport": "badminton",
+        "tags": ["badminton smash", "badminton power", "smash technique", "badminton training"],
+        "published_date": "2026-04-12",
+        "read_time": "9 min read",
+        "thumbnail_emoji": "\U0001f3f8",
+        "content": """<h2>Unleashing the Most Powerful Shot in Badminton</h2>
+<p>The smash is badminton's signature weapon. Tan Boon Heong once hit a smash recorded at 493 km/h, and even club players can comfortably push 200+ km/h with the right technique. Speed doesn't come from brute force; it comes from a chain of small, correct movements. Here are 10 tips, in the order you should work on them, to make your smash faster and harder.</p>
+
+<h3>1. Master Your Grip (Especially the Thumb Release)</h3>
+<p>Hold the racket with a basic forehand grip, like shaking hands with it. The most common beginner mistake is squeezing the handle all the way through the swing. Instead, keep the grip relaxed until the moment of contact, then squeeze hard. That sudden tightening is what transfers energy into the shuttle. If your forearm is sore after a session, your grip is too tight for too long.</p>
+
+<h3>2. Get Behind and Under the Shuttle</h3>
+<p>You can't smash a shuttle that's above or in front of you. Use quick chasse steps or a scissor-kick jump to position yourself so the shuttle is slightly in front and above your hitting shoulder. Watch Viktor Axelsen — he is almost always behind the shuttle before he even thinks about smashing.</p>
+
+<h3>3. Use Full Body Rotation, Not Just Your Arm</h3>
+<p>Power flows from the ground up: legs drive, hips rotate, shoulders rotate, arm whips, wrist snaps. Try this drill: stand side-on to the net, point your non-racket hand at the shuttle, then rotate your whole torso through the shot. If your feet didn't move and your hips didn't turn, you're arming the shot.</p>
+
+<h3>4. The Non-Racket Arm Matters</h3>
+<p>Your non-racket arm is a counterweight. Raise it and point at the shuttle during the preparation phase, then pull it down sharply as you swing. This pulling action rotates your shoulders faster, adding 10-15% to your racket head speed for free.</p>
+
+<h3>5. Wrist Snap and Forearm Pronation</h3>
+<p>This is the single biggest secret to a fast smash. At the moment of contact, your forearm pronates (rotates inward) and your wrist flicks forward. It's not a "wrist smash" in isolation — it's a pronation snap. Practice shadow swings in front of a mirror, focusing on the forearm rotating like you're turning a doorknob at the top.</p>
+
+<h3>6. Hit the Shuttle Flat and Downward</h3>
+<p>A smash should travel in a steep downward line. If the shuttle is floating flat, you're hitting it too late or your contact point is too low. Aim to contact the shuttle as high as you can reach, and angle the racket face slightly downward at impact.</p>
+
+<h3>7. Strength Training for Smash Power</h3>
+<p>You can't separate technique from physical capacity. Add these to your weekly routine:</p>
+<ul>
+<li><strong>Medicine ball slams</strong> (3 x 10) — mimic the whole-body smash chain</li>
+<li><strong>Rotational cable chops</strong> (3 x 12 each side) — hip and core rotation</li>
+<li><strong>Wrist curls and reverse wrist curls</strong> (3 x 15) — forearm strength for wrist snap</li>
+<li><strong>Box jumps</strong> (3 x 8) — explosive leg drive for jump smashes</li>
+</ul>
+
+<h3>8. Shadow Smash Drill (Daily)</h3>
+<p>Stand in your backcourt without a shuttle. Do 3 sets of 15 shadow smashes focusing on: (1) getting behind the shuttle with chasse steps, (2) non-racket arm pointing up, (3) rotating the torso, (4) pronating the forearm, (5) landing with a scissor kick. Technique burned into muscle memory beats random hitting every time.</p>
+
+<h3>9. Fix Your Common Mistakes on Video</h3>
+<p>Most players have no idea what their smash actually looks like. Film yourself from the side and compare with a pro on YouTube. Use our <a href="/analyze?sport=badminton">free AI video analyzer</a> to automatically detect issues like late contact point, no hip rotation, or locked wrist — it tells you exactly what to fix.</p>
+
+<h3>10. Smash Less, Place More</h3>
+<p>Ironically, the fastest path to a faster smash is hitting fewer of them. Rally until the shuttle is high, slightly in front, and you've moved into position. A 280 km/h smash from a bad position is worse than a 220 km/h smash perfectly placed on your opponent's backhand corner. Speed without placement is vanity; placement with speed wins matches.</p>
+
+<h2>Putting It All Together</h2>
+<p>Work on these in order: grip, positioning, rotation, non-racket arm, wrist snap. Spend two weeks on each before moving on. Film every session, compare to the previous week, and let your <a href="/training">training plan</a> track your progress. Within 6-8 weeks, most players see a 15-25% jump in smash speed — and more importantly, fewer injuries from bad mechanics.</p>
+
+<p>Ready to check your smash form? Upload a video to our <a href="/analyze?sport=badminton">AI analyzer</a> and get personalized feedback in under 60 seconds.</p>"""
+    },
+    {
+        "id": "best-badminton-rackets-under-3000",
+        "title": "Best Badminton Rackets Under Rs 3000 in 2026 (Tested and Reviewed)",
+        "description": "The 7 best budget badminton rackets under Rs 3000 in India for 2026. Honest reviews, pros and cons, and who each racket is best for.",
+        "category": "gear",
+        "sport": "badminton",
+        "tags": ["badminton racket", "budget gear", "India", "buying guide", "equipment"],
+        "published_date": "2026-04-12",
+        "read_time": "10 min read",
+        "thumbnail_emoji": "\U0001f3f8",
+        "content": """<h2>Great Badminton Rackets Don't Have to Be Expensive</h2>
+<p>Walking into a sports shop in India, you'll see badminton rackets ranging from Rs 500 to Rs 20,000. The good news: the Rs 1,500-3,000 sweet spot has never been better. Today's budget rackets use full graphite frames, decent string beds, and balanced designs that would have cost twice as much five years ago. Here are the 7 best picks for 2026, tested across club-level play.</p>
+
+<h3>1. Yonex Nanoray Light 18i (Rs 1,800-2,200)</h3>
+<p><strong>Best for:</strong> Beginners and doubles players.</p>
+<p>A 77-gram (5U) head-light racket that's extremely easy to swing. The flexible shaft is forgiving, so even slow swings generate decent shuttle speed. It's the most-sold budget Yonex in India for a reason — it just works.</p>
+<ul>
+<li><strong>Pros:</strong> Very light, great maneuverability, durable T-joint</li>
+<li><strong>Cons:</strong> Limited smash power, not ideal for singles attackers</li>
+</ul>
+
+<h3>2. Li-Ning G-Force Superlite 3900 (Rs 2,400-2,800)</h3>
+<p><strong>Best for:</strong> Intermediate all-round players.</p>
+<p>At 79 grams with even balance, this racket is shockingly good for the price. Li-Ning's G-Force series uses the same graphite blend as their more expensive rackets, just with a simpler paint job. The 30 lbs string tolerance means it can grow with you.</p>
+<ul>
+<li><strong>Pros:</strong> Excellent all-round performance, high tension capacity</li>
+<li><strong>Cons:</strong> Stock string is mediocre — replace it for full potential</li>
+</ul>
+
+<h3>3. Victor Auraspeed 9 (Rs 2,700-3,000)</h3>
+<p><strong>Best for:</strong> Fast doubles players.</p>
+<p>Victor's aero-frame design actually slices through the air, making drives and flat pushes noticeably quicker. Head-light at 84g, it excels in front-court exchanges.</p>
+<ul>
+<li><strong>Pros:</strong> Superb handling for doubles, quality build</li>
+<li><strong>Cons:</strong> Less effective for singles smashers</li>
+</ul>
+
+<h3>4. Yonex Arcsaber Lite (Rs 2,500-2,900)</h3>
+<p><strong>Best for:</strong> Control-focused players.</p>
+<p>An isometric head and even balance make this an accurate, predictable racket. It won't win power contests but shot placement feels dialed in. Great for players who win with deception rather than speed.</p>
+<ul>
+<li><strong>Pros:</strong> Precise, forgiving sweet spot</li>
+<li><strong>Cons:</strong> Underwhelming power</li>
+</ul>
+
+<h3>5. Li-Ning Turbo Charging 75 Instinct (Rs 2,600-2,900)</h3>
+<p><strong>Best for:</strong> Intermediate attackers on a budget.</p>
+<p>This is the cheapest genuinely head-heavy racket that doesn't feel like a brick. 3U weight with a stiff-medium shaft means if you have decent technique, you can generate real smash power. It is the budget attacker's dream.</p>
+<ul>
+<li><strong>Pros:</strong> Real head-heavy smash feel, stiff enough to reward good technique</li>
+<li><strong>Cons:</strong> Demanding for beginners, wrist fatigue possible</li>
+</ul>
+
+<h3>6. Yonex Muscle Power 29 Light (Rs 1,900-2,300)</h3>
+<p><strong>Best for:</strong> First-time buyers upgrading from aluminum.</p>
+<p>Full graphite, extremely durable, 84 grams, flexible shaft. It's not exciting, but if you're buying your first real racket, it's the safest choice in the category. You won't outgrow it for at least a year.</p>
+<ul>
+<li><strong>Pros:</strong> Bulletproof durability, great value</li>
+<li><strong>Cons:</strong> Unremarkable once your level improves</li>
+</ul>
+
+<h3>7. Victor Drive X 7K (Rs 2,800-3,000)</h3>
+<p><strong>Best for:</strong> Intermediate players wanting a do-everything racket.</p>
+<p>Even balance, medium flex, 4U weight, 30 lbs tension tolerance. It attacks well, defends well, and feels premium in hand. If we had to recommend one racket to an intermediate player blindly, this would be it.</p>
+<ul>
+<li><strong>Pros:</strong> Balanced, premium feel, high tension ceiling</li>
+<li><strong>Cons:</strong> None at this price point</li>
+</ul>
+
+<h2>What to Look For When Buying</h2>
+<ul>
+<li><strong>Full graphite construction:</strong> Avoid aluminum or "graphite composite" under Rs 2,000</li>
+<li><strong>String tension rating:</strong> Should handle at least 26 lbs</li>
+<li><strong>T-joint:</strong> Must be seamless — cracked T-joints are the #1 cause of budget racket failure</li>
+<li><strong>Restringing:</strong> Replace stock strings after 20-30 hours with BG65 or similar (Rs 300-400 job)</li>
+</ul>
+
+<h3>Counterfeits Are a Real Problem</h3>
+<p>India has a massive market for fake Yonex and Li-Ning rackets. Always buy from authorized dealers or platforms like Decathlon, Khelmart, or the official brand websites. A Rs 1,200 "Yonex Astrox 99" on a random online store is always fake.</p>
+
+<p>Once you've got your racket, compare your performance over time with our <a href="/progress">progress tracker</a>, or get personalized gear suggestions through the <a href="/equipment">equipment page</a>.</p>"""
+    },
+    {
+        "id": "tennis-serve-speed-tips",
+        "title": "Tennis Serve Speed: How to Hit a Faster Serve (Complete Guide)",
+        "description": "Increase your tennis serve speed with proven mechanics, drills, and training tips. Learn the techniques used by pros to hit serves over 200 km/h.",
+        "category": "tips",
+        "sport": "tennis",
+        "tags": ["tennis serve", "serve technique", "tennis tips", "tennis training"],
+        "published_date": "2026-04-12",
+        "read_time": "9 min read",
+        "thumbnail_emoji": "\U0001f3be",
+        "content": """<h2>The Serve Is the Most Important Shot in Tennis</h2>
+<p>It's the only shot where you have full control — no opponent dictates it. A faster, more reliable serve means free points, shorter rallies, and massive confidence. Isner, Raonic, and Opelka built entire careers on their serves. You don't need to hit 230 km/h to benefit, but adding even 15 km/h to your average serve transforms your game.</p>
+
+<h3>1. Start With the Right Grip</h3>
+<p>Use the Continental grip (the "hammer grip"), not Eastern forehand. Many club players serve with a forehand grip because it feels natural, but it locks out pronation — the single biggest source of serve power. Hold the racket like an axe; the V between thumb and index finger should sit on the top-left bevel.</p>
+
+<h3>2. Nail the Toss (Seriously)</h3>
+<p>A bad toss is the #1 reason serves stall. The ideal toss for a flat serve lands slightly in front of you and to your right (for a righty), about 30-45 cm inside the baseline. Release the ball with an open palm, not with your fingers. Toss height should be at the top of your reach with the racket fully extended — no higher. Practice tossing 50 times a day against a wall without even swinging.</p>
+
+<h3>3. Use the Trophy Pose Correctly</h3>
+<p>At the top of your windup, you should look like a classic trophy: knees bent, racket dropped behind your head, non-racket arm pointing at the toss, shoulders coiled. If you skip this position, you're arming the serve.</p>
+
+<h3>4. Leg Drive: The Engine of a Fast Serve</h3>
+<p>Top pros get 30-40% of their serve speed from their legs. Bend your knees deeply during the toss and explode upward as you swing. You should leave the ground on a proper first serve. Drill: serve a bucket of balls from a dead stop, then serve another bucket with explosive leg drive. The speed difference will shock you.</p>
+
+<h3>5. Shoulder-Over-Shoulder Rotation</h3>
+<p>This is often called "cartwheeling" the shoulders. As you swing up, your non-racket shoulder goes down and your racket shoulder goes up — rotating around your spine. This transfers angular momentum into the racket head.</p>
+
+<h3>6. Pronation: The Real Power Source</h3>
+<p>Forearm pronation — the rotation that turns the palm from facing you to facing away — is what actually accelerates the racket head at contact. Without pronation, even perfect leg drive can't produce speed. Drill: stand at the service line, hold the racket at the trophy pose, and practice throwing the racket head up at the ball using only pronation. No full swing — just feel the rotation.</p>
+
+<h3>7. Contact Point: High and Out in Front</h3>
+<p>Contact should be at or near your maximum reach, with the ball slightly in front of your body. Low contact means you're slapping the ball down and losing speed. Film yourself from the side and check — your contact point should be the highest point of the entire motion.</p>
+
+<h3>8. Relaxation = Speed</h3>
+<p>Counterintuitive but true: tense muscles are slow muscles. Elite servers are loose until the split-second of contact. If you feel your shoulder tightening during the windup, restart the motion. Shake out your arm before each serve.</p>
+
+<h2>Common Mistakes That Kill Serve Speed</h2>
+<ul>
+<li><strong>Arming the serve:</strong> Using only the arm without legs or rotation. Fix: start the motion from the ground up.</li>
+<li><strong>Pushing instead of swinging:</strong> Trying to steer the ball. Fix: commit to a full, fast swing.</li>
+<li><strong>Low toss:</strong> Forces a rushed, chopped motion. Fix: toss higher and more in front.</li>
+<li><strong>Locked wrist:</strong> Blocks pronation. Fix: practice wrist-snap drills isolated from the full motion.</li>
+<li><strong>No follow-through:</strong> The racket should end up near the left hip (for righties), not stopped at the shoulder.</li>
+</ul>
+
+<h2>Training Drills to Add 15-20 km/h</h2>
+<ol>
+<li><strong>Medicine ball throws (3 x 10):</strong> Overhead slam throws mimic the serve chain</li>
+<li><strong>Service box targets:</strong> Set up cones in the corners of the service box and hit 50 serves to each</li>
+<li><strong>Kneeling serve drill:</strong> Serve from your knees to isolate the upper-body motion — forces proper shoulder rotation and pronation</li>
+<li><strong>Radar gun feedback:</strong> Pocket radar guns (Rs 15,000-20,000) give immediate feedback. No gun? Use our <a href="/analyze?sport=tennis">AI serve analyzer</a> to estimate speed and mechanics from video.</li>
+</ol>
+
+<h2>Realistic Expectations</h2>
+<p>A club player averaging 140 km/h can realistically reach 170-180 km/h in 3 months of focused work. Women's club players can gain 15-25 km/h. Past that point, gains slow dramatically and depend on strength training and years of refinement. Don't chase pro speeds — chase reliability first. A consistent 160 km/h first serve beats an erratic 190 km/h serve every single match.</p>
+
+<p>Record your next practice session and upload to our <a href="/analyze?sport=tennis">free AI analyzer</a> — it'll pinpoint exactly which phase of your serve needs work.</p>"""
+    },
+    {
+        "id": "table-tennis-forehand-vs-backhand",
+        "title": "Table Tennis Forehand vs Backhand: Which Should You Master First?",
+        "description": "Forehand or backhand — which side should you develop first in table tennis? A breakdown of technique, tactics, and a training plan for each shot.",
+        "category": "tips",
+        "sport": "table_tennis",
+        "tags": ["table tennis", "ping pong", "forehand", "backhand", "technique"],
+        "published_date": "2026-04-12",
+        "read_time": "8 min read",
+        "thumbnail_emoji": "\U0001f3d3",
+        "content": """<h2>The Classic Dilemma for New Table Tennis Players</h2>
+<p>You've got limited practice time. Should you pour it into perfecting your forehand loop, or build a rock-solid backhand first? The answer depends on your playing style, your age, and what kind of player you want to become. Here's the full breakdown.</p>
+
+<h3>The Case for Forehand First</h3>
+<p>Most Chinese coaches teach forehand first, and for good reason: the forehand is capable of higher speed and heavier spin than the backhand for the vast majority of players. Ma Long, widely considered the greatest of all time, won most of his career points with a forehand loop from the middle of the table.</p>
+<p>A strong forehand gives you:</p>
+<ul>
+<li><strong>Match-ending power:</strong> Forehand loops can generate 2-3x the racket head speed of backhands</li>
+<li><strong>Bigger coverage area:</strong> Skilled players cover 70% of the table with their forehand</li>
+<li><strong>Spin variety:</strong> Forehand can produce heavier topspin, sidespin, and combinations</li>
+</ul>
+
+<h3>The Case for Backhand First</h3>
+<p>The European school (think Timo Boll) traditionally emphasizes a balanced, backhand-first game. Here's why it's tempting:</p>
+<ul>
+<li><strong>Easier to learn:</strong> The backhand has a shorter, simpler motion</li>
+<li><strong>More consistent in rallies:</strong> Beginners struggle to footwork around every ball to use forehand</li>
+<li><strong>Essential for receive:</strong> A weak backhand means your opponent targets it every point</li>
+<li><strong>Modern game demands it:</strong> Today's game has shifted — backhand banana flicks and over-the-table backhand loops are now elite weapons</li>
+</ul>
+
+<h2>Our Recommendation: Backhand Foundation, Forehand Weapon</h2>
+<p>For most club players, the best approach is:</p>
+<ol>
+<li><strong>Months 1-2:</strong> Build a consistent backhand drive and backhand push. These are the shots you'll use in 60% of rallies at beginner level.</li>
+<li><strong>Months 2-4:</strong> Introduce the forehand topspin loop. This is your weapon shot — the one that wins points.</li>
+<li><strong>Months 4-6:</strong> Combine both with footwork, learning when to step around your backhand to hit a forehand (the "pivot").</li>
+</ol>
+
+<h3>Forehand Technique Breakdown</h3>
+<p>The forehand topspin loop:</p>
+<ul>
+<li><strong>Stance:</strong> Right foot slightly back (for righties), knees bent, weight on balls of feet</li>
+<li><strong>Backswing:</strong> Rotate hips and shoulders back, racket drops below table level for heavy topspin</li>
+<li><strong>Swing:</strong> Rotate hips forward first, then shoulders, then arm. Brush up and forward on the ball.</li>
+<li><strong>Contact:</strong> Hit the top-back of the ball with a thin brush for maximum spin</li>
+<li><strong>Follow through:</strong> Racket finishes near your left ear (for righties)</li>
+</ul>
+
+<h3>Backhand Technique Breakdown</h3>
+<p>The backhand drive (your foundation shot):</p>
+<ul>
+<li><strong>Stance:</strong> Square to the table, elbow slightly in front of body</li>
+<li><strong>Backswing:</strong> Small — racket comes back to about belly-button level</li>
+<li><strong>Swing:</strong> Elbow stays as a pivot, forearm snaps forward, wrist adds final acceleration</li>
+<li><strong>Contact:</strong> Meet the ball at the peak of its bounce, slightly in front of your body</li>
+<li><strong>Follow through:</strong> Short — racket ends pointing at your target</li>
+</ul>
+
+<h2>When to Use Each Shot</h2>
+<p>Use the <strong>forehand</strong> when:</p>
+<ul>
+<li>The ball is in the middle or right side of your court (righty)</li>
+<li>You have time to set up and transfer weight</li>
+<li>You want to end the point with a powerful loop</li>
+<li>The opponent serves a long ball to your forehand side</li>
+</ul>
+<p>Use the <strong>backhand</strong> when:</p>
+<ul>
+<li>The ball is to your backhand corner and you don't have time to pivot</li>
+<li>In fast over-the-table exchanges (banana flick receives, backhand-to-backhand rallies)</li>
+<li>Serving short to set up a forehand-pivot third ball attack</li>
+<li>Defending blocks and counter-drives at high speed</li>
+</ul>
+
+<h2>Training Split for Fast Improvement</h2>
+<p>In a 1-hour practice session:</p>
+<ul>
+<li>10 min warm-up (easy backhand-to-backhand rallies)</li>
+<li>15 min backhand drills (consistency, then push, then drive)</li>
+<li>15 min forehand drills (topspin loop against block)</li>
+<li>15 min footwork combining both (figure-8 drill, falkenberg drill)</li>
+<li>5 min serves</li>
+</ul>
+
+<p>Film a few rallies and run them through our <a href="/analyze?sport=table_tennis">AI table tennis analyzer</a> — it'll show you which side you're actually using in matches (vs. which side you think you're using). Often there's a big gap. Pair that with a <a href="/training">structured training plan</a> for fastest progress.</p>
+
+<h2>The Real Answer</h2>
+<p>Don't ask which to master first. Build backhand consistency so you can survive rallies, then develop forehand power so you can win them. You need both, but the order matters: survive first, thrive second.</p>"""
+    },
+    {
+        "id": "badminton-footwork-guide",
+        "title": "The Complete Guide to Badminton Footwork (With Drills)",
+        "description": "Master badminton footwork with this complete guide covering 6-corner movement, split step, recovery, and the best drills to improve court coverage.",
+        "category": "tips",
+        "sport": "badminton",
+        "tags": ["badminton footwork", "court coverage", "badminton drills", "movement"],
+        "published_date": "2026-04-12",
+        "read_time": "10 min read",
+        "thumbnail_emoji": "\U0001f3f8",
+        "content": """<h2>Footwork Wins Badminton Matches</h2>
+<p>Ask any coach what separates club players from competitive players, and they'll say the same thing: footwork. You can have the best smash in the city, but if you can't get to the shuttle in position, you'll lose to players with weaker strokes and better movement. This guide covers everything you need to build pro-level footwork.</p>
+
+<h3>The Base Position (Home Position)</h3>
+<p>Every rally starts and resets here: roughly in the center of the court, about one step behind the short service line. Stand with feet shoulder-width apart, knees bent, weight on the balls of your feet, racket held up in front of you. You should feel springy — ready to explode in any direction.</p>
+
+<h3>The Split Step: Your Most Important Move</h3>
+<p>The split step is a small hop you make the moment your opponent hits the shuttle. You land with knees bent, on the balls of your feet, ready to push off. This tiny movement pre-loads your muscles so your first step is 20-30% faster than from a static stance. Every pro does this on every shot — miss it, and you're always late.</p>
+
+<h3>The 6 Corners of the Court</h3>
+<p>Badminton footwork is organized around 6 positions you must cover:</p>
+<ol>
+<li>Forehand rear (deep, attacking corner)</li>
+<li>Backhand rear (the "weak" corner everyone targets)</li>
+<li>Forehand mid-court (side)</li>
+<li>Backhand mid-court (side)</li>
+<li>Forehand net</li>
+<li>Backhand net</li>
+</ol>
+<p>Your job: reach any corner in 2-3 steps from the base position, play the shot, and recover back to base before your opponent hits again.</p>
+
+<h2>Movement Techniques by Corner</h2>
+
+<h3>Forehand Rear (Smash Corner)</h3>
+<p>Use a <strong>chasse step</strong> turn: pivot on your right foot, bring your left foot back, then push off with a scissor-kick jump. Land on the opposite foot you jumped from. This is the standard movement for jumping smashes.</p>
+
+<h3>Backhand Rear</h3>
+<p>This is the trickiest corner. Most beginners try to reach around with a backhand — it's a guaranteed weak shot. Instead, turn your body using a pivot step: rotate 180 degrees, run to the corner, and hit a forehand round-the-head shot. Pros use this 90% of the time.</p>
+
+<h3>Mid-Court Sides</h3>
+<p>One or two chasse steps are enough. Keep your racket up and ready — these shots usually become drives or pushes.</p>
+
+<h3>Net Shots</h3>
+<p>The <strong>lunge</strong> is your primary move. Push off your back foot, extend your front foot forward into a long lunge (racket-side foot forward), bend the front knee deeply but never past your toes. Get your racket hand out early. Push off the front foot to recover.</p>
+
+<h2>Recovery: The Forgotten Half</h2>
+<p>Moving to the shuttle is only half the job. Recovery — getting back to base position — is what lets you handle the next shot. After every stroke:</p>
+<ol>
+<li>Push off with purpose (don't drift back)</li>
+<li>Move back at an angle that anticipates your opponent's likely reply</li>
+<li>Arrive at base position before they strike</li>
+<li>Execute the split step again</li>
+</ol>
+
+<h2>Essential Footwork Drills</h2>
+
+<h3>1. Shadow 6-Corner Drill (No Shuttle)</h3>
+<p>Coach or partner calls out corners; you move to each with proper technique and recover. Start at 20 seconds, build to 60 seconds. Focus on form, not speed.</p>
+
+<h3>2. Multi-Shuttle Feeding</h3>
+<p>Partner stands on the other side and feeds shuttles rapidly to specific corners. You hit and recover. Build up to 30-shuttle sets.</p>
+
+<h3>3. Shadow Badminton</h3>
+<p>Imagine a full rally — move as if playing points for 60 seconds. Do 5-8 sets. This builds the endurance your footwork needs.</p>
+
+<h3>4. Line Touches</h3>
+<p>Classic conditioning: sprint from baseline to each line and back. 10 reps at match pace. Not sexy, but it builds the engine.</p>
+
+<h3>5. Ladder Drills</h3>
+<p>Agility ladders develop foot speed, coordination, and ankle stability. Do 10-15 minutes of in-and-outs, lateral shuffles, and ickey shuffles 3 times per week.</p>
+
+<h3>6. Skipping Rope</h3>
+<p>Boxers are the best footwork athletes in sports, and every one of them skips rope. 5-10 minutes daily builds calf strength, rhythm, and split-step quickness.</p>
+
+<h2>Common Footwork Mistakes</h2>
+<ul>
+<li><strong>Flat feet:</strong> Standing on your heels kills reaction time. Always be on the balls of your feet.</li>
+<li><strong>Crossing feet:</strong> Crossing your legs when moving laterally is slow and unbalanced. Use chasse steps.</li>
+<li><strong>No recovery:</strong> Staying where you hit the shot leaves huge gaps. Always move back.</li>
+<li><strong>Reaching instead of moving:</strong> Lazy players lean for the shuttle. Pros move their feet into position so they can hit balanced shots.</li>
+<li><strong>Ignoring the split step:</strong> The single biggest cause of "I'm always late" problems.</li>
+</ul>
+
+<h2>How AI Can Help</h2>
+<p>Footwork is hard to self-correct because you can't see yourself. Upload a match video to our <a href="/analyze?sport=badminton">AI analyzer</a> — it tracks your court position, time to reach corners, and recovery patterns. Most club players are shocked when they realize how rarely they actually return to base position.</p>
+
+<p>Add a dedicated footwork session to your <a href="/training">weekly training plan</a>. Twenty minutes, three times a week, will outperform hours of unfocused rally practice within two months.</p>"""
+    },
+    {
+        "id": "ai-sports-training-2026",
+        "title": "How AI Is Changing Sports Training in 2026",
+        "description": "A look at how AI is transforming sports training in 2026 — from video analysis and biomechanics to personalized coaching for amateurs.",
+        "category": "ai",
+        "sport": "general",
+        "tags": ["AI sports", "sports technology", "video analysis", "future of sports", "coaching"],
+        "published_date": "2026-04-12",
+        "read_time": "9 min read",
+        "thumbnail_emoji": "\U0001f916",
+        "content": """<h2>The Coaching Revolution Is Already Here</h2>
+<p>Five years ago, AI in sports was mostly hype: vague "analytics dashboards" for pro teams and not much for the rest of us. In 2026, that's changed dramatically. AI tools now give amateur athletes feedback that would have required a personal coach and a biomechanics lab a decade ago. Here's what's actually happening on the ground in 2026.</p>
+
+<h3>Computer Vision Goes Mainstream</h3>
+<p>The biggest leap has been in pose estimation. Models like MediaPipe, OpenPose, and the newer transformer-based trackers can now extract 30+ body landmarks from a phone video at 60 fps on a mid-range laptop. Once you know where an athlete's joints are at every frame, you can calculate shoulder rotation, knee angles, hip velocity — all the things that used to require motion-capture suits.</p>
+<p>This is the engine behind services like AthlyticAI: you shoot a video with your phone, upload it, and within 30 seconds you get back specific, actionable feedback on your technique. No studio, no sensors, no $20,000 setup.</p>
+
+<h3>Personalized Training Plans Built by LLMs</h3>
+<p>Large language models have quietly become incredible at structuring training plans. Given your skill level, training history, injuries, goals, and weekly availability, an LLM can generate a 4-week plan that rivals what a good coach would produce — and update it weekly based on your feedback. This is not a replacement for elite coaching, but for the 99% of amateur athletes who've never worked with a coach, it's a massive upgrade from "doing whatever drills I saw on YouTube."</p>
+
+<h3>Real-Time Feedback via Edge AI</h3>
+<p>Smart glasses and phone holders with on-device AI can now give you coaching prompts during practice — not after. "Your elbow dropped on that backhand." "Toss was 15 cm behind you." "Recovery to base was 0.3 seconds slow." This is the closest thing to having a coach watching every rep.</p>
+
+<h3>Injury Prevention Through Movement Screening</h3>
+<p>Perhaps the most impactful use of sports AI isn't performance — it's injury prevention. Movement screening apps detect asymmetries, mobility limitations, and load imbalances before they become injuries. Physical therapy clinics now routinely use AI screening for ACL return-to-play protocols, and amateur athletes can run similar screens at home.</p>
+
+<h2>Real-World Examples From the Pro World</h2>
+<ul>
+<li><strong>Tennis:</strong> ATP's Hawk-Eye system now powers real-time stroke analytics. Players see serve speed trends, rally length distributions, and return-depth heatmaps at every changeover.</li>
+<li><strong>Football (soccer):</strong> Clubs use AI vision to track every player's positioning for 90 minutes, generating data sets that would have taken a team of analysts weeks to produce.</li>
+<li><strong>Basketball:</strong> The NBA's player-tracking system feeds into shot-quality models that estimate the expected value of every attempt — information that's now filtering down to college and high school programs.</li>
+<li><strong>Golf:</strong> Launch monitors combined with AI swing analysis give club golfers club-fitting and lesson-quality feedback from their garage.</li>
+</ul>
+
+<h2>What's Different for Amateurs in 2026</h2>
+<p>The shift from "pro-only tools" to "anyone with a phone" is the real story. A decade ago, if you wanted biomechanics feedback on your badminton smash, you needed a sports science department. Today, you film the rally and upload it. The analysis isn't quite as detailed as a lab report, but it's 95% as useful for 0.1% of the cost.</p>
+<p>At AthlyticAI, we designed our analyzer around this principle: the right feedback at the right time beats perfect feedback you never see. You upload a video, you get three things you can fix this week, and you come back next week with a new video to check progress. That feedback loop — not fancy graphics — is what creates improvement.</p>
+
+<h2>The Honest Limitations</h2>
+<p>AI in sports isn't magic. A few things it still doesn't do well:</p>
+<ul>
+<li><strong>Tactical judgment:</strong> AI can tell you your forehand loop has low brush contact, but it won't tell you that you should have played a drop instead of a smash in that moment.</li>
+<li><strong>Emotional coaching:</strong> Motivation, handling pressure, dealing with slumps — human coaches still dominate here.</li>
+<li><strong>Video quality dependence:</strong> Poor lighting, bad angles, and crowded backgrounds degrade analysis quality.</li>
+<li><strong>Subjective preferences:</strong> There are multiple "correct" techniques, and the best model for you depends on body type, style, and level — AI sometimes flattens this into one "ideal."</li>
+</ul>
+
+<h2>What's Coming Next</h2>
+<p>Three trends to watch over the next 18 months:</p>
+<ol>
+<li><strong>Multi-athlete comparison:</strong> AI models that can compare your technique against a specific pro (not just an abstract "ideal") and explain differences</li>
+<li><strong>Sport-specific foundation models:</strong> Rather than generic pose estimation, specialized models trained on millions of hours of tennis, badminton, or table tennis video</li>
+<li><strong>Federated feedback:</strong> Your AI coach learning from the whole user base's improvements — spotting what actually works for people like you</li>
+</ol>
+
+<h2>How to Use AI Without Losing the Plot</h2>
+<p>A few tips for integrating AI tools into your training:</p>
+<ul>
+<li>Film one session a week, not every session — avoid analysis paralysis</li>
+<li>Focus on the top 2-3 issues the AI flags, ignore the rest</li>
+<li>Re-measure after 2-3 weeks to see if changes stuck</li>
+<li>Keep playing for joy. AI is a tool, not the game.</li>
+</ul>
+
+<p>Curious what your technique looks like through AI eyes? Upload a 30-second clip to our <a href="/analyze">free analyzer</a> — no account needed. You'll see exactly what AI sports coaching feels like in 2026.</p>"""
+    },
+    {
+        "id": "7-day-badminton-training-plan-intermediate",
+        "title": "7-Day Badminton Training Plan for Intermediate Players",
+        "description": "A complete day-by-day 7-day badminton training plan for intermediate players. Covers footwork, strokes, fitness, and recovery with specific drills.",
+        "category": "training",
+        "sport": "badminton",
+        "tags": ["badminton training", "training plan", "intermediate", "drills", "schedule"],
+        "published_date": "2026-04-12",
+        "read_time": "10 min read",
+        "thumbnail_emoji": "\U0001f3f8",
+        "content": """<h2>Structured Practice Beats Random Rallies</h2>
+<p>Most intermediate players are stuck not because they don't play enough but because they play unstructured. You show up, rally for an hour, play a few games, and go home. This 7-day plan fixes that by organizing your week around specific technical, physical, and tactical goals. It assumes you can train roughly 1-2 hours per day and have access to a court 4-5 times per week.</p>
+
+<h3>Who This Plan Is For</h3>
+<ul>
+<li>You have basic strokes (clear, drop, smash, net shot) but they're inconsistent</li>
+<li>Your footwork needs work — you're often late to the shuttle</li>
+<li>You play local club or league level and want to break through</li>
+<li>You're injury-free and can do 4-5 sessions per week</li>
+</ul>
+
+<h2>Day 1 (Monday) — Footwork and Fitness Base</h2>
+<p><strong>Goal:</strong> Build the engine. 75 minutes.</p>
+<ul>
+<li>10 min warm-up: jogging, dynamic stretches, skipping</li>
+<li>15 min shadow 6-corner footwork: 6 sets of 45 seconds on, 30 seconds rest</li>
+<li>15 min multi-shuttle: partner feeds 30 shuttles to random corners, you recover between each</li>
+<li>20 min on-court conditioning: line touches, split-step drills, defensive lunges</li>
+<li>10 min cooldown: static stretching, calf release, hip mobility</li>
+</ul>
+
+<h2>Day 2 (Tuesday) — Stroke Technique Day</h2>
+<p><strong>Goal:</strong> Clean up your strokes without fatigue interfering. 90 minutes.</p>
+<ul>
+<li>10 min warm-up</li>
+<li>20 min clear drills: straight clears, cross-court clears, 30 of each with a partner</li>
+<li>20 min drop shot drills: fast drops, slow drops, from forehand and backhand rear court</li>
+<li>20 min net shot drills: tight net shots, net kills, spinning net drops</li>
+<li>15 min smash drills: half-court smashes (easier to repeat), full-court smashes with defense</li>
+<li>5 min cooldown</li>
+</ul>
+
+<h2>Day 3 (Wednesday) — Recovery and Strength</h2>
+<p><strong>Goal:</strong> Get stronger off-court. 60 minutes, no court needed.</p>
+<ul>
+<li>10 min warm-up</li>
+<li>Strength circuit (3 rounds):
+<ul>
+<li>10 goblet squats</li>
+<li>10 medicine ball slams</li>
+<li>10 single-leg glute bridges per side</li>
+<li>15 wrist curls each direction</li>
+<li>12 reverse lunges per side</li>
+<li>30-second plank</li>
+</ul>
+</li>
+<li>10 min core work: Russian twists, dead bugs, bird dogs</li>
+<li>10 min mobility: hips, shoulders, ankles</li>
+</ul>
+
+<h2>Day 4 (Thursday) — Match Simulation</h2>
+<p><strong>Goal:</strong> Apply technique under pressure. 90 minutes.</p>
+<ul>
+<li>10 min warm-up</li>
+<li>15 min half-court singles: forces lateral footwork and consistency</li>
+<li>20 min constraint games: only smashes and drops allowed / only cross-court shots / net-only rallies</li>
+<li>30 min full matches: play 2-3 games to 21, focus on implementing what you worked on Day 2</li>
+<li>10 min video review: film one game and watch it back (30 seconds at a time) to spot issues</li>
+<li>5 min cooldown</li>
+</ul>
+
+<h2>Day 5 (Friday) — Technical Fix Day</h2>
+<p><strong>Goal:</strong> Work on the issues you found Thursday. 75 minutes.</p>
+<ul>
+<li>10 min warm-up</li>
+<li>30 min targeted drills: whatever you identified as weak yesterday (e.g., backhand clear, defensive blocks)</li>
+<li>20 min multi-shuttle focused on that weakness</li>
+<li>10 min serve practice: 30 low serves to each target, 15 high serves</li>
+<li>5 min cooldown</li>
+</ul>
+
+<h2>Day 6 (Saturday) — Competitive Play</h2>
+<p><strong>Goal:</strong> Play real matches. 90-120 minutes.</p>
+<ul>
+<li>15 min warm-up and stroke knock-up</li>
+<li>60-90 min doubles or singles matches against varied opponents</li>
+<li>Between games: review one thing you did well, one thing to fix</li>
+<li>10 min cooldown</li>
+</ul>
+
+<h2>Day 7 (Sunday) — Active Recovery</h2>
+<p><strong>Goal:</strong> Let the body adapt. 30-45 minutes.</p>
+<ul>
+<li>20 min easy cardio: walking, cycling, swimming</li>
+<li>15 min full-body stretching</li>
+<li>10 min video analysis of Saturday's matches using our <a href="/analyze?sport=badminton">AI analyzer</a></li>
+</ul>
+
+<h2>How to Progress Weekly</h2>
+<ul>
+<li><strong>Weeks 1-2:</strong> Focus on form. Do every drill slowly and correctly.</li>
+<li><strong>Weeks 3-4:</strong> Add intensity. Shorter rest intervals, more shuttles per drill.</li>
+<li><strong>Weeks 5-6:</strong> Increase match play proportion. More competitive games.</li>
+<li><strong>Week 7:</strong> Deload. Reduce volume by 40% to let your body absorb the work.</li>
+</ul>
+
+<h2>Tracking What Matters</h2>
+<p>Keep a simple log (phone note is fine):</p>
+<ul>
+<li>How each session felt (1-10)</li>
+<li>One thing you did well</li>
+<li>One thing to fix next time</li>
+<li>Weekly match results</li>
+</ul>
+<p>After 4 weeks, patterns emerge. You'll see which drills actually moved the needle and which were wasted time. You can also auto-generate a personalized version of this plan on our <a href="/training">training page</a> based on your level, schedule, and goals.</p>
+
+<p>Stick to this plan for 6 weeks and you'll see measurable improvement in footwork speed, stroke consistency, and match results. Shortcut it and you'll stay stuck. The plan isn't magic — showing up is.</p>"""
+    },
+    {
+        "id": "best-tennis-racquets-beginners-2026",
+        "title": "Best Tennis Racquets for Beginners in 2026 (Buying Guide)",
+        "description": "The best tennis racquets for beginners in 2026. Reviews of 6 top picks, plus a complete sizing guide and tips on what to look for in your first racquet.",
+        "category": "gear",
+        "sport": "tennis",
+        "tags": ["tennis racquet", "beginner tennis", "buying guide", "equipment", "tennis gear"],
+        "published_date": "2026-04-12",
+        "read_time": "10 min read",
+        "thumbnail_emoji": "\U0001f3be",
+        "content": """<h2>Your First Tennis Racquet Matters More Than You Think</h2>
+<p>The wrong first racquet can cause wrist pain, slow your learning, and push you to quit. The right one makes the ball go where you want with less effort and sets the foundation for good technique. This guide covers the 6 best beginner racquets of 2026 and what actually matters when you're choosing.</p>
+
+<h2>What to Look For in a Beginner Racquet</h2>
+
+<h3>Head Size: Go Big</h3>
+<p>Beginner racquets should have a 100-110 sq inch head. Bigger heads mean a bigger sweet spot — you'll get solid contact even on mis-hits. Small 95-98 sq inch frames are for advanced players with consistent swings.</p>
+
+<h3>Weight: Stay Light</h3>
+<p>Look for racquets between 260-290 grams (unstrung). Lighter racquets are easier to swing and maneuver. You can always graduate to a heavier frame later.</p>
+
+<h3>Balance: Head-Heavy Helps Beginners</h3>
+<p>Beginner racquets are often head-heavy to compensate for slower swing speeds. This gives the ball more "pop" without you having to swing harder.</p>
+
+<h3>Stiffness (RA Rating)</h3>
+<p>Stiffer racquets transfer more power but also more vibration. Beginners should target 62-68 RA — enough power, still comfortable. Above 70 RA can cause tennis elbow in players without developed technique.</p>
+
+<h3>Grip Size</h3>
+<p>Most adults use 4 1/4" or 4 3/8". Rule of thumb: when holding the grip in your dominant hand, you should fit your non-dominant hand's index finger in the gap between your fingertips and the heel of your palm.</p>
+
+<h2>The 6 Best Beginner Racquets of 2026</h2>
+
+<h3>1. Wilson Clash 108 (Best Overall, $229)</h3>
+<p>The Clash's FreeFlex technology creates a unique "flex through contact" feel that's both powerful and arm-friendly. At 108 sq inches and 280g, it's forgiving and maneuverable.</p>
+<ul>
+<li><strong>Pros:</strong> Huge sweet spot, arm-friendly, great feel</li>
+<li><strong>Cons:</strong> Less precision as you improve</li>
+</ul>
+
+<h3>2. Babolat Boost Drive ($129)</h3>
+<p>A true budget champion. 105 sq in, 260g, and pre-strung. It's basic but it works, and the price means you won't feel bad replacing it when you level up.</p>
+<ul>
+<li><strong>Pros:</strong> Very affordable, light, forgiving</li>
+<li><strong>Cons:</strong> Mediocre strings, limited advanced potential</li>
+</ul>
+
+<h3>3. Head Ti.S6 ($99)</h3>
+<p>The legendary beginner racquet. It's been on the market for 20+ years because it works: huge 115 sq inch head, ultra-light 225g frame, head-heavy for easy power. It's the tennis equivalent of the Toyota Corolla.</p>
+<ul>
+<li><strong>Pros:</strong> Cheapest reliable option, extremely easy to swing</li>
+<li><strong>Cons:</strong> Feels cheap to advanced players, stiff</li>
+</ul>
+
+<h3>4. Yonex EZONE 100L ($219)</h3>
+<p>Slightly more refined than pure beginner frames. At 285g and 100 sq in, it's a great "buy once" racquet — you can play on it for years as you improve. Comfortable and powerful.</p>
+<ul>
+<li><strong>Pros:</strong> Long-term value, comfortable, good control</li>
+<li><strong>Cons:</strong> Price</li>
+</ul>
+
+<h3>5. Wilson Blade 104 v9 ($249)</h3>
+<p>A slightly larger version of the classic Blade, designed for players who want advanced control without advanced demands. More for upper-beginner to intermediate.</p>
+<ul>
+<li><strong>Pros:</strong> Beautiful feel, advanced players love the Blade line</li>
+<li><strong>Cons:</strong> Too demanding for true beginners</li>
+</ul>
+
+<h3>6. Prince Textreme Tour 100P ($199)</h3>
+<p>Prince's Textreme frames dampen vibration better than most. Great pick if you're older or have any wrist/elbow concerns. 100 sq in, 290g.</p>
+<ul>
+<li><strong>Pros:</strong> Best comfort for sensitive arms</li>
+<li><strong>Cons:</strong> Less powerful than oversize options</li>
+</ul>
+
+<h2>Strings Matter (A Lot)</h2>
+<p>A good racquet with bad strings plays like a bad racquet. Most pre-strung beginner racquets come with synthetic gut — fine to start. When you need to restring (usually after 20-40 hours), consider:</p>
+<ul>
+<li><strong>Multifilament (Wilson NXT, Head Velocity):</strong> Soft, arm-friendly, good for beginners ($20-30 + stringing)</li>
+<li><strong>Polyester (Luxilon ALU Power, Solinco Hyper-G):</strong> Durable, spin-friendly, but harsh on the arm — skip as a beginner</li>
+<li><strong>Natural gut:</strong> Best feel in the world, but $50+ per set. Not for beginners.</li>
+</ul>
+
+<h2>Common Beginner Buying Mistakes</h2>
+<ul>
+<li><strong>Buying the racquet your favorite pro uses:</strong> Pro racquets are heavy, unforgiving, and designed for technique you don't have yet</li>
+<li><strong>Going too small on grip size:</strong> Too-small grips cause you to squeeze harder, leading to wrist and forearm injuries</li>
+<li><strong>Obsessing over the racquet before lessons:</strong> A $100 racquet in good hands beats a $300 racquet with poor technique every time</li>
+<li><strong>Ignoring comfort:</strong> If it vibrates painfully, you won't play. Always test-swing in the store.</li>
+</ul>
+
+<h2>Our Recommendations</h2>
+<ul>
+<li><strong>Absolute beginner, tight budget:</strong> Head Ti.S6</li>
+<li><strong>Beginner with room to grow:</strong> Wilson Clash 108</li>
+<li><strong>Older beginner / arm concerns:</strong> Prince Textreme Tour 100P</li>
+<li><strong>Planning to stick with tennis seriously:</strong> Yonex EZONE 100L</li>
+</ul>
+
+<p>Once you've got your racquet and you're swinging, upload a few rally clips to our <a href="/analyze?sport=tennis">AI tennis analyzer</a> — it'll tell you if your grip size, swing weight, or technique is creating issues. You can also find more gear recommendations tailored to your level on the <a href="/equipment">equipment page</a>.</p>"""
+    },
+    {
+        "id": "pickleball-basics-getting-started",
+        "title": "Pickleball Basics: Rules, Equipment, and How to Get Started",
+        "description": "A complete beginner's guide to pickleball. Learn the rules, what equipment you need, basic strategy, and how to start playing America's fastest-growing sport.",
+        "category": "tips",
+        "sport": "general",
+        "tags": ["pickleball", "beginner guide", "rules", "equipment", "how to play"],
+        "published_date": "2026-04-12",
+        "read_time": "9 min read",
+        "thumbnail_emoji": "\U0001f3d3",
+        "content": """<h2>Welcome to the Fastest-Growing Sport in the World</h2>
+<p>Pickleball has exploded from a niche backyard game invented in 1965 to the fastest-growing sport in North America. In 2025, there were over 50 million players worldwide. It combines elements of tennis, badminton, and table tennis in a compact, social, low-impact package that appeals to everyone from teenagers to 80-year-olds. Here's everything a beginner needs to know.</p>
+
+<h3>What Is Pickleball, Exactly?</h3>
+<p>Pickleball is played on a court the size of a doubles badminton court (20 x 44 feet) with a solid paddle (bigger than a ping pong paddle, smaller than a tennis racquet) and a perforated plastic ball. It can be played as singles or doubles, though doubles is the standard format.</p>
+
+<h2>The Rules (Simplified)</h2>
+
+<h3>Scoring</h3>
+<ul>
+<li>Games are played to 11 points, win by 2. Tournament games can go to 15 or 21.</li>
+<li>Only the serving team can score points (like old-school badminton)</li>
+<li>Score is called as three numbers: your score, opponent's score, and (in doubles) server number (1 or 2)</li>
+</ul>
+
+<h3>Serving</h3>
+<ul>
+<li>Serves must be underhand, below the waist, made diagonally into the opposite service box</li>
+<li>The ball must clear the "kitchen" (non-volley zone) — serving into the kitchen is a fault</li>
+<li>In doubles, both players on a team serve before the serve switches to the other team (except at the start of the game, where only one player serves first)</li>
+</ul>
+
+<h3>The Two-Bounce Rule (Critical)</h3>
+<p>This is what makes pickleball different from tennis: after the serve, the receiving team must let it bounce before returning. Then the serving team must also let the return bounce before hitting. After those two bounces, volleys are allowed.</p>
+
+<h3>The Kitchen (Non-Volley Zone)</h3>
+<p>The 7-foot zone in front of the net is called the kitchen. You cannot volley (hit the ball out of the air) while standing in the kitchen. You can enter it to hit a ball that has already bounced, but your momentum can't carry you into it after a volley. This rule is the single biggest source of faults for beginners.</p>
+
+<h3>Faults (How You Lose a Point)</h3>
+<ul>
+<li>Ball in the net</li>
+<li>Ball out of bounds</li>
+<li>Volleying from the kitchen</li>
+<li>Violating the two-bounce rule</li>
+<li>Ball bouncing twice on your side</li>
+</ul>
+
+<h2>Equipment: What You Actually Need</h2>
+
+<h3>Paddle ($40-200)</h3>
+<p>Beginners should get a mid-weight (7.5-8.0 oz) composite or graphite paddle. Avoid wood paddles (too heavy, poor control). Good beginner options:</p>
+<ul>
+<li><strong>Selkirk SLK Evo Hybrid ($70):</strong> Great entry paddle</li>
+<li><strong>Head Radical Elite ($80):</strong> Very forgiving</li>
+<li><strong>Paddletek Bantam EX-L ($130):</strong> Step up, great control</li>
+</ul>
+
+<h3>Balls ($3-5 each)</h3>
+<p>Outdoor balls have 40 holes and are harder; indoor balls have 26 larger holes. Don't mix them up — outdoor balls skip off wood floors and indoor balls fly in the wind. Dura Fast 40 is the most popular outdoor ball.</p>
+
+<h3>Shoes</h3>
+<p>Tennis or court shoes — NOT running shoes. Running shoes don't support lateral movement and cause ankle injuries. Any court shoe will do for the first year.</p>
+
+<h3>Clothing</h3>
+<p>Anything comfortable. Pickleball is not a fashion sport.</p>
+
+<h2>Basic Strategy for Beginners</h2>
+
+<h3>Get to the Kitchen Line</h3>
+<p>The #1 rule of pickleball strategy: the team at the kitchen line (both players right behind the non-volley zone) wins 80% of points. Your entire game plan should revolve around advancing to the kitchen line as quickly as possible after your team's serve and return.</p>
+
+<h3>The Third Shot Drop</h3>
+<p>After the return of serve bounces, the serving team hits "the third shot." A good player drops this softly into the opponent's kitchen — a "dink" — so they can advance to the kitchen line without getting attacked. This is the hardest shot to learn and the most important.</p>
+
+<h3>Dinks Win Games</h3>
+<p>"Dinks" are soft shots that land in the opponent's kitchen after bouncing. You cannot volley a dink (it's in the kitchen zone) so it forces a soft exchange. Whoever makes the first error loses the point. Patience beats power.</p>
+
+<h3>Communicate in Doubles</h3>
+<p>Call "mine" and "yours" on shots down the middle. The player with the forehand usually takes middle balls. Move as a unit — if your partner goes to the net, you go with them.</p>
+
+<h2>How to Find Games</h2>
+<ul>
+<li><strong>Local rec centers:</strong> Most offer beginner drop-in pickleball sessions</li>
+<li><strong>Pickleball apps (Places2Play, Pickleball+):</strong> Find courts and open play sessions near you</li>
+<li><strong>USA Pickleball membership ($30/year):</strong> Access to tournaments and leagues</li>
+<li><strong>Tennis clubs:</strong> Many have converted courts to pickleball or offer both</li>
+</ul>
+
+<h2>Common Beginner Mistakes</h2>
+<ul>
+<li><strong>Staying at the baseline:</strong> You need to advance to the kitchen line</li>
+<li><strong>Smashing every ball:</strong> Power gets countered. Learn to dink first.</li>
+<li><strong>Stepping into the kitchen on a volley:</strong> Most common fault. Stay behind the line.</li>
+<li><strong>Trying to hit winners from the baseline:</strong> Patience wins. Dink, dink, dink, then attack.</li>
+<li><strong>Ignoring your partner:</strong> Doubles requires constant communication</li>
+</ul>
+
+<h2>A 30-Day Starter Plan</h2>
+<ol>
+<li><strong>Week 1:</strong> Learn the rules, buy a paddle, play 2-3 games to just feel it out</li>
+<li><strong>Week 2:</strong> Practice the serve and return. Play 3-4 games.</li>
+<li><strong>Week 3:</strong> Work on dinks. Try to rally 10 dinks without a fault. Play 4-5 games.</li>
+<li><strong>Week 4:</strong> Work on the third shot drop. Play 5+ games with focus on kitchen advance.</li>
+</ol>
+
+<p>By the end of 30 days, you'll have a real sense of the game and whether you want to pursue it seriously. Pickleball's appeal is how quickly beginners can play fun rallies — unlike tennis, where the first few months can be frustrating. Grab a paddle, find a court, and you'll see why 50 million people are obsessed.</p>"""
+    },
+    {
+        "id": "tennis-injuries-prevention",
+        "title": "Common Tennis Injuries and How to Prevent Them",
+        "description": "A guide to the most common tennis injuries — tennis elbow, rotator cuff, knee pain — and proven prevention strategies including warm-ups and exercises.",
+        "category": "tips",
+        "sport": "tennis",
+        "tags": ["tennis injury", "tennis elbow", "injury prevention", "warm up", "tennis health"],
+        "published_date": "2026-04-12",
+        "read_time": "9 min read",
+        "thumbnail_emoji": "\U0001f3be",
+        "content": """<h2>Tennis Is Tough on the Body (But Injuries Are Largely Preventable)</h2>
+<p>Tennis combines explosive sprints, overhead throwing motions, awkward lateral pivots, and high-volume repetitive stress. It's no surprise that most serious players eventually deal with some kind of injury. The good news: the vast majority of tennis injuries are preventable with simple habits. Here's what to know about the most common problems and how to avoid them.</p>
+
+<p><em>Disclaimer: This is general information, not medical advice. If you have pain that persists, see a sports physiotherapist or doctor.</em></p>
+
+<h2>1. Tennis Elbow (Lateral Epicondylitis)</h2>
+<p>The classic tennis injury, affecting about 40% of recreational players at some point. It's an overuse injury to the tendons on the outside of the elbow, usually caused by poor backhand technique (leading wrist) and gripping too tightly.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Use a two-handed backhand if possible, or learn proper one-handed form (leading elbow, relaxed wrist)</li>
+<li>Don't overgrip — hold the racquet loosely except at contact</li>
+<li>Use a softer string (multifilament or gut) at lower tension</li>
+<li>Do wrist strengthening: wrist curls, reverse wrist curls, pronation/supination work</li>
+<li>Consider a heavier, more flexible racquet — stiff frames transmit more shock</li>
+</ul>
+<p><strong>If you feel it starting:</strong> Rest, ice, NSAIDs if appropriate, and eccentric wrist strengthening exercises. A "Tyler Twist" with a Flexbar is the gold standard rehab exercise.</p>
+
+<h2>2. Rotator Cuff Injuries</h2>
+<p>The serve is an overhead throwing motion performed thousands of times a season. Over time, this stresses the four small muscles of the rotator cuff, leading to tendinitis or even tears.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Strengthen the rotator cuff: external rotations with light bands or dumbbells (3 x 15, twice a week)</li>
+<li>Strengthen the scapular stabilizers: rows, face pulls, and Y-T-W raises</li>
+<li>Warm up shoulders specifically before serving — arm circles, band pull-aparts</li>
+<li>Don't ramp up serve volume too fast; follow a gradual loading program</li>
+<li>Use proper serve technique — no "dropped elbow" that forces the shoulder to compensate</li>
+</ul>
+
+<h2>3. Tennis Knee (Patellar Tendinitis)</h2>
+<p>The constant squatting, pushing off, and decelerating in tennis stresses the knee, especially the patellar tendon (just below the kneecap). Beginners and older players are most at risk.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Strengthen quads with goblet squats, Bulgarian split squats, and leg press</li>
+<li>Strengthen glutes — weak glutes make the knee compensate. Do hip thrusts and monster walks.</li>
+<li>Work on ankle mobility — stiff ankles force the knee to absorb more load</li>
+<li>Use court shoes designed for your surface (clay shoes have herringbone; hard court shoes have more cushioning)</li>
+<li>Don't play through sharp knee pain — this is how tendinitis becomes a tear</li>
+</ul>
+
+<h2>4. Ankle Sprains</h2>
+<p>Tennis involves constant lateral pivots and sudden changes of direction — a recipe for rolled ankles. The outside of the ankle (inversion sprains) is most commonly injured.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Do balance work: single-leg stands, eyes closed, progressing to unstable surfaces</li>
+<li>Strengthen calves and peroneals (side of lower leg) with heel raises and lateral band work</li>
+<li>Wear proper court shoes — running shoes have no lateral support and dramatically increase sprain risk</li>
+<li>If you've had a previous sprain, consider an ankle brace for 6-12 months</li>
+</ul>
+
+<h2>5. Lower Back Pain</h2>
+<p>The serve's twisting motion and repeated flexion during groundstrokes can strain the lumbar spine. Core weakness is the usual culprit.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Build core strength: planks, dead bugs, Pallof presses, bird dogs</li>
+<li>Don't neglect glute and hip mobility</li>
+<li>Avoid serving with extreme back arching ("can opener" serve)</li>
+<li>Stretch hip flexors and hamstrings regularly</li>
+</ul>
+
+<h2>6. Wrist Injuries</h2>
+<p>Heavy topspin forehands (especially with Western grips) stress the wrist tendons. TFCC injuries (triangular fibrocartilage complex) are common in players who hit with heavy Western grips.</p>
+<p><strong>Prevention:</strong></p>
+<ul>
+<li>Don't over-rotate on topspin forehands — the wrist should stabilize, not whip</li>
+<li>Strengthen forearms and wrists in all directions</li>
+<li>Use multifilament or gut strings to reduce shock</li>
+<li>Tape or brace if you feel any twinges</li>
+</ul>
+
+<h2>The Universal Warm-Up (10 Minutes Before Every Session)</h2>
+<ol>
+<li>3 min light cardio: jog around the court, high knees, butt kicks</li>
+<li>Dynamic stretches: leg swings, arm circles, torso rotations, walking lunges</li>
+<li>Tennis-specific: 2 min of easy mini-tennis at the service line, then gradually move back</li>
+<li>Serve prep: 5 easy serves from the service line, then 5 from halfway, then 5 from the baseline</li>
+</ol>
+<p>Never jump straight into full-speed rallies or hard serves. That's how most acute injuries happen.</p>
+
+<h2>Training Load Management</h2>
+<p>Most overuse injuries come from doing too much too fast. Rules of thumb:</p>
+<ul>
+<li>Increase practice volume by no more than 10% per week</li>
+<li>Take at least one full rest day per week</li>
+<li>Cross-train with low-impact exercise (swimming, cycling) on off days</li>
+<li>If pain persists for more than 3 days, see a physio — don't "push through"</li>
+</ul>
+
+<h2>Recovery Basics</h2>
+<ul>
+<li><strong>Sleep:</strong> 7-9 hours. Non-negotiable for tendon and muscle recovery.</li>
+<li><strong>Hydration and nutrition:</strong> Adequate protein (1.6-2.0 g/kg for active players)</li>
+<li><strong>Foam rolling and stretching:</strong> 10-15 min post-match</li>
+<li><strong>Contrast showers or ice baths:</strong> For heavy training blocks</li>
+</ul>
+
+<p>Staying injury-free is often the difference between a lifelong tennis career and someone who "used to play." Build strength, warm up properly, and listen to your body. You can also run your technique through our <a href="/analyze?sport=tennis">AI tennis analyzer</a> — early detection of biomechanical issues (dropped elbow, wristy backhand) is one of the most effective forms of injury prevention. Pair it with a sensible <a href="/training">training plan</a> that manages your workload.</p>"""
+    },
+    {
+        "id": "choose-table-tennis-rubber-guide",
+        "title": "How to Choose the Right Table Tennis Rubber (2026 Guide)",
+        "description": "A complete guide to choosing table tennis rubbers. Learn the differences between inverted, short pips, long pips, and anti-spin, plus top brand recommendations.",
+        "category": "gear",
+        "sport": "table_tennis",
+        "tags": ["table tennis rubber", "TT equipment", "ping pong gear", "buying guide", "rubber"],
+        "published_date": "2026-04-12",
+        "read_time": "10 min read",
+        "thumbnail_emoji": "\U0001f3d3",
+        "content": """<h2>Rubber Is the Most Important Part of Your Table Tennis Setup</h2>
+<p>You can have the best blade in the world, but if your rubbers are wrong for your style, your game will suffer. Unlike tennis or badminton where strings are minor, table tennis rubbers fundamentally define how the ball behaves — spin, speed, control. A new player choosing rubber feels overwhelming because there are hundreds of options. This guide cuts through the noise.</p>
+
+<h2>The Four Main Rubber Types</h2>
+
+<h3>1. Inverted (Smooth) Rubber — 90% of Players Use These</h3>
+<p>Inverted rubbers have the pimples facing inward and a smooth surface. They grip the ball strongly, allowing heavy spin and fast shots. Virtually every top pro uses inverted on at least one side.</p>
+<p><strong>Good for:</strong> Attacking players, looping, modern all-round play</p>
+<p><strong>Spin:</strong> High. The defining characteristic.</p>
+<p><strong>Speed:</strong> Varies from slow to extremely fast depending on the model</p>
+
+<h3>2. Short Pips (Short Pimples Out)</h3>
+<p>Short pips have the pimples facing outward. Shorter than 2mm. They generate less spin than inverted but absorb incoming spin less, giving more predictable shots.</p>
+<p><strong>Good for:</strong> Aggressive hitters and counter-attackers who don't want spin variation</p>
+<p><strong>Spin:</strong> Medium</p>
+<p><strong>Speed:</strong> High, especially on flat hits</p>
+<p><strong>Famous user:</strong> Ma Long uses short pips on his backhand for close-to-table play (just kidding — he uses inverted. But many pros do go short pips, like Mattias Karlsson).</p>
+
+<h3>3. Long Pips</h3>
+<p>Long pips have long, thin pimples that bend on contact, returning the ball with reversed spin. They're chaos incarnate: if your opponent hits topspin, it comes back as backspin.</p>
+<p><strong>Good for:</strong> Defensive choppers and disruptive styles</p>
+<p><strong>Spin:</strong> Reversed — your opponent's spin becomes your spin</p>
+<p><strong>Speed:</strong> Slow</p>
+<p><strong>Warning:</strong> Extremely hard to use — most beginners should avoid for at least 1-2 years of play</p>
+
+<h3>4. Anti-Spin</h3>
+<p>Smooth, slick rubber that absorbs spin entirely. The ball comes back with almost no spin regardless of input.</p>
+<p><strong>Good for:</strong> Disruptive defensive players who want to neutralize attackers</p>
+<p><strong>Spin:</strong> Near zero</p>
+<p><strong>Speed:</strong> Very slow</p>
+
+<h2>The Three Properties That Matter</h2>
+
+<h3>Speed Rating</h3>
+<p>Usually on a 1-10 or 1-100 scale. Higher means the ball leaves faster. Beginner rubbers should be in the 60-80 range (on a 100 scale). Elite rubbers push 90+ but are nearly impossible to control without pro-level technique.</p>
+
+<h3>Spin Rating</h3>
+<p>How much spin the rubber generates. Modern inverted rubbers can reach 95+ spin ratings. For beginners, aim for 80-90.</p>
+
+<h3>Hardness (Sponge Density)</h3>
+<p>Measured in degrees (e.g., 37.5, 40, 42.5). Harder sponges are faster and better for advanced hitters; softer sponges are more forgiving and generate spin with less effort. Beginners: start with 37-40 degree sponges.</p>
+
+<h2>Top Rubber Recommendations</h2>
+
+<h3>For Beginners (Rs 1,000-1,800 per sheet)</h3>
+<ul>
+<li><strong>Yasaka Mark V:</strong> The all-time classic beginner rubber. Balanced, forgiving, teaches proper technique. If in doubt, start here.</li>
+<li><strong>Butterfly Sriver:</strong> Another legendary beginner sheet. Slightly faster than Mark V.</li>
+<li><strong>DHS Hurricane 3 Neo (boosted or unboosted):</strong> Chinese-style, heavy spin, demanding but rewarding</li>
+</ul>
+
+<h3>For Intermediate Players (Rs 1,800-3,500)</h3>
+<ul>
+<li><strong>Xiom Vega Pro:</strong> Fast, spinny, forgiving — the best all-round intermediate rubber</li>
+<li><strong>Tibhar Evolution MX-P:</strong> Very popular among European attackers</li>
+<li><strong>Yasaka Rakza 7:</strong> Excellent spin and arc, easy to use</li>
+</ul>
+
+<h3>For Advanced Players (Rs 3,500-5,500)</h3>
+<ul>
+<li><strong>Butterfly Tenergy 05:</strong> The benchmark for spinny loops. Used by many pros. Expensive but legendary.</li>
+<li><strong>Butterfly Dignics 09C:</strong> Tenergy's successor, even more control at the top end</li>
+<li><strong>Xiom Omega VII Pro:</strong> Pro-level speed and spin at a slightly lower price</li>
+</ul>
+
+<h2>Boosting and Tuning</h2>
+<p>Many Chinese rubbers (especially DHS Hurricane) are "boosted" — treated with oils to soften the sponge and increase speed. This is legal at amateur levels but banned in ITTF competition. If you're a casual player, boosted rubbers play faster and spinnier; if you compete, stick with factory rubbers.</p>
+
+<h2>Matching Rubber to Your Style</h2>
+<ul>
+<li><strong>All-round attacker:</strong> Inverted on both sides, medium hardness (Mark V, Rakza 7)</li>
+<li><strong>Looping attacker:</strong> Spinny inverted, medium-hard (Tenergy 05, Hurricane 3)</li>
+<li><strong>Close-to-table hitter:</strong> Fast inverted or short pips on backhand</li>
+<li><strong>Defensive chopper:</strong> Slow inverted on forehand, long pips on backhand</li>
+<li><strong>Disruptive defender:</strong> Anti-spin on one side, inverted on the other</li>
+</ul>
+
+<h2>Forehand vs Backhand Setup</h2>
+<p>Most players use different rubbers on each side to match the demands of each stroke. Typical setup:</p>
+<ul>
+<li><strong>Forehand:</strong> Harder, slightly spinnier rubber (for looping power)</li>
+<li><strong>Backhand:</strong> Slightly softer or different type (for over-the-table control)</li>
+</ul>
+
+<h2>How Often to Replace Rubbers</h2>
+<p>Inverted rubbers lose their grip over 2-4 months of regular play as the surface dries out and pips compress. Signs it's time to replace:</p>
+<ul>
+<li>The surface has lost its tacky feel</li>
+<li>You can see visible wear or chipping</li>
+<li>Spin and speed noticeably decrease</li>
+<li>You get more mis-hits than you used to</li>
+</ul>
+
+<h2>Buying Tips</h2>
+<ul>
+<li>Always buy from reputable retailers — counterfeit Butterfly rubbers are a huge problem in India</li>
+<li>Buy one rubber at a time and test before committing to a full setup</li>
+<li>Ask your club's better players what they use — local knowledge beats forum debates</li>
+<li>Don't skip on blade quality — a premium rubber on a $20 blade is wasted</li>
+</ul>
+
+<p>Unsure what matches your style? Upload a match video to our <a href="/analyze?sport=table_tennis">AI table tennis analyzer</a> and it'll identify whether you're a looper, hitter, blocker, or chopper — which directly tells you what rubbers to consider. And check the <a href="/equipment">equipment guide</a> for brand-by-brand breakdowns.</p>"""
+    },
+    {
+        "id": "badminton-mental-game-focus",
+        "title": "Mental Game in Badminton: How to Stay Focused Under Pressure",
+        "description": "Master the mental side of badminton. Learn pre-game routines, visualization, pressure management, and focus techniques used by top players.",
+        "category": "tips",
+        "sport": "badminton",
+        "tags": ["mental game", "sports psychology", "badminton focus", "pressure", "mindset"],
+        "published_date": "2026-04-12",
+        "read_time": "9 min read",
+        "thumbnail_emoji": "\U0001f9e0",
+        "content": """<h2>Badminton Is Played in the Head</h2>
+<p>At club level, technique differences win matches. At competitive level, everyone has technique — the difference is mental. Every badminton player knows the feeling: you're up 18-14 in the third game, and suddenly your arm feels heavy, your feet slow down, and unforced errors pile up. That's not a technique problem. That's a mental problem. Here's how to fix it.</p>
+
+<h3>The Core Problem: You Can't Think Your Way to Good Shots</h3>
+<p>Performance research consistently shows that conscious thinking interferes with trained motor skills. When you're thinking "don't miss the clear, don't miss the clear," you are almost guaranteed to miss the clear. The goal of mental training isn't to think more positively — it's to think less during execution.</p>
+
+<h2>1. Build a Pre-Game Routine</h2>
+<p>Top players do exactly the same things before every match. Routines calm the nervous system, shift you into "ready" mode, and prevent overthinking. A solid pre-match routine:</p>
+<ul>
+<li><strong>45 min before:</strong> Light snack, hydrate, review tactics (not technique)</li>
+<li><strong>30 min before:</strong> Dynamic warm-up — skipping, jogging, mobility work</li>
+<li><strong>15 min before:</strong> Court knock-up, gradually increasing intensity</li>
+<li><strong>5 min before:</strong> Breathing routine (4-7-8 breathing: inhale 4 sec, hold 7, exhale 8)</li>
+<li><strong>Right before first point:</strong> A consistent ritual — bounce, breath, eye contact, go</li>
+</ul>
+<p>The specifics matter less than the consistency. Do it before every match, every time, and it becomes a trigger that puts you in performance mode automatically.</p>
+
+<h2>2. Visualization: The Pro Secret</h2>
+<p>Almost every elite athlete visualizes performances. Not vague "picture winning" nonsense — specific, detailed mental rehearsal. Studies show visualization activates the same brain regions as actual performance, training your nervous system without physical load.</p>
+<p><strong>How to visualize effectively:</strong></p>
+<ul>
+<li>Spend 5-10 minutes the night before a match</li>
+<li>Picture the opponent, the venue, the conditions</li>
+<li>Run through specific rallies: your serve, the return, your reply, the winner</li>
+<li>Include the physical sensations: footwork, grip, the sound of the shuttle</li>
+<li>Visualize handling adversity — what you'll do when you're down 14-18, when you lose a close point, when the opponent starts playing well</li>
+</ul>
+<p>Players who visualize losing close points and recovering from them perform noticeably better in actual close matches. You're pre-training your response.</p>
+
+<h2>3. The Point-by-Point Reset</h2>
+<p>Your emotional state is the #1 predictor of your next point's outcome. If you're furious about the last error, you'll likely make another. The solution is a reset ritual between points.</p>
+<p><strong>Federer's approach (adapted for badminton):</strong></p>
+<ol>
+<li>After losing a point, turn your back to the court for 2 seconds</li>
+<li>Take one deep breath</li>
+<li>Adjust your strings (or tap your racquet)</li>
+<li>Turn around — the previous point no longer exists</li>
+</ol>
+<p>This seems silly until you try it. The physical ritual hijacks the emotional response and forces you back into the present.</p>
+
+<h2>4. Controlling What You Can Control</h2>
+<p>You can't control: the shuttles, the court, the line judges, the opponent's luck, noise from the next court. You can control: your effort, your footwork, your attitude, your routines. Every moment you spend thinking about things you can't control is a moment your opponent is winning. Write this on a sticky note if you have to.</p>
+
+<h2>5. Managing Pressure</h2>
+<p>The classic mental breakdown scenario: you're serving at 19-all in the third game. Your heart rate spikes, your arm feels stiff, your brain floods with "don't lose this." Here's what to do:</p>
+<ul>
+<li><strong>Accept it:</strong> Pressure means you care. Embrace the butterflies instead of fighting them.</li>
+<li><strong>Slow down:</strong> Take an extra 5 seconds before serving. Breathe. Opponents feeling the same pressure rarely slow down with you.</li>
+<li><strong>Narrow your focus:</strong> Instead of "I need to win this point," think of one tiny cue: "see the shuttle," "relax the grip," "split step on contact"</li>
+<li><strong>Default to patterns:</strong> Don't try to invent under pressure. Play your highest-percentage pattern — your bread-and-butter serve to that corner you've hit 1000 times in practice</li>
+</ul>
+
+<h2>6. The Post-Error Protocol</h2>
+<p>Unforced errors are inevitable. What you do in the next 5 seconds determines whether one error becomes three. The protocol:</p>
+<ol>
+<li>Acknowledge it happened ("that was a net shot")</li>
+<li>Identify the cause in one word ("late," "grip," "position")</li>
+<li>Commit to the fix ("step earlier")</li>
+<li>Let it go and move on</li>
+</ol>
+<p>This takes about 3 seconds and prevents the error from hijacking your attention for the next 3 points.</p>
+
+<h2>7. Positive Self-Talk (Done Right)</h2>
+<p>Sports psychology has largely debunked "I am the best" style affirmations. What works better is instructional and process-focused self-talk:</p>
+<ul>
+<li>Not: "I'm going to crush him"</li>
+<li>But: "Low serve, split step, attack the reply"</li>
+<li>Not: "Don't miss the next smash"</li>
+<li>But: "Full rotation, wrist snap, target the corner"</li>
+</ul>
+
+<h2>8. Training the Mental Game Like Technique</h2>
+<p>Mental skills improve with deliberate practice. A few drills:</p>
+<ul>
+<li><strong>Pressure practice:</strong> Play practice games where losing means a penalty (push-ups, court sprints). This creates real pressure in training.</li>
+<li><strong>Score-down drills:</strong> Start practice games at 14-18 down. Practice performing from behind.</li>
+<li><strong>Distraction drills:</strong> Play with loud music, or with someone calling out random numbers, forcing you to maintain focus despite noise</li>
+<li><strong>Video review:</strong> Watch your matches and note emotional reactions. Use our <a href="/analyze?sport=badminton">AI analyzer</a> to see how your body language and pace change when you're under pressure vs. relaxed.</li>
+</ul>
+
+<h2>9. Deal With Losing</h2>
+<p>Even the best players lose 30-40% of their matches. What matters is what you do with losses. Healthy habits:</p>
+<ul>
+<li>Allow 24 hours to feel disappointed</li>
+<li>Then analyze objectively: what would you do differently?</li>
+<li>Extract 1-3 specific things to practice next week</li>
+<li>Move on. The loss already taught you everything it could.</li>
+</ul>
+
+<h2>Mental Training Routine (Daily, 10 Min)</h2>
+<ol>
+<li>3 min breathing / box breathing</li>
+<li>5 min visualization of upcoming training or match</li>
+<li>2 min journaling: one thing that went well, one thing to improve</li>
+</ol>
+<p>Do this consistently for a month and your performance under pressure will measurably improve. The mental game isn't talent — it's a trained skill, exactly like your smash. Add it to your <a href="/training">weekly training plan</a> and watch your results in close matches start to shift.</p>"""
+    },
 ]
 
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/sonner";
 import api from "@/lib/api";
 import Navbar from "@/components/Navbar";
@@ -18,6 +19,10 @@ import HighlightsPage from "@/pages/HighlightsPage";
 import BlogListPage from "@/pages/BlogListPage";
 import BlogPostPage from "@/pages/BlogPostPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import BadmintonPage from "@/pages/BadmintonPage";
+import TennisPage from "@/pages/TennisPage";
+import TableTennisPage from "@/pages/TableTennisPage";
+import PickleballPage from "@/pages/PickleballPage";
 import InstallPrompt from "@/components/InstallPrompt";
 
 const AuthContext = createContext(null);
@@ -89,6 +94,10 @@ function AppRoutes() {
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/badminton" element={<BadmintonPage />} />
+      <Route path="/tennis" element={<TennisPage />} />
+      <Route path="/table-tennis" element={<TableTennisPage />} />
+      <Route path="/pickleball" element={<PickleballPage />} />
       <Route path="/assessment" element={<AssessmentPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/equipment" element={<EquipmentPage />} />
@@ -105,16 +114,18 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <AppRoutes />
-          <Toaster position="bottom-right" />
-          <InstallPrompt />
-        </div>
-      </AuthProvider>
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <div className="min-h-screen bg-background">
+            <Navbar />
+            <AppRoutes />
+            <Toaster position="bottom-right" />
+            <InstallPrompt />
+          </div>
+        </AuthProvider>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
 

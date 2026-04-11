@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Calendar, Clock, Share2, Copy, Check, ArrowRight, Zap } from "lucide-react";
 import api from "@/lib/api";
+import SEO from "@/components/SEO";
 
 const CATEGORY_COLOR = {
   guides: "bg-blue-500/20 text-blue-400",
@@ -93,6 +94,26 @@ export default function BlogPostPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      <SEO
+        title={post.title}
+        description={post.description}
+        keywords={post.tags?.join(", ")}
+        url={`https://athlyticai.com/blog/${post.slug || slug}`}
+        type="article"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: post.title,
+          description: post.description,
+          datePublished: post.published_date,
+          author: { "@type": "Organization", "name": "AthlyticAI" },
+          publisher: {
+            "@type": "Organization",
+            name: "AthlyticAI",
+            logo: { "@type": "ImageObject", url: "https://athlyticai.com/icons/icon-512.png" },
+          },
+        }}
+      />
       {/* Header bar */}
       <div className="border-b border-zinc-800/50 bg-zinc-900/30">
         <div className="container mx-auto px-4 max-w-4xl py-4">
