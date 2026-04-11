@@ -136,10 +136,13 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
   // Reset ffmpeg before clip extraction to start with clean memory
   await resetEditor();
 
-  // Step 2b: Extract individual clips (one at a time, with auto-reset between)
+  // Step 2b: Extract individual clips
+  // Strategy: process in batches of 3, reset ffmpeg between batches
+  // This keeps memory in check while ensuring each clip is a valid playable MP4
   progress(40, `Loading video editor (~25MB on first use)...`);
   const clips = [];
   let firstClipError = null;
+  const BATCH_SIZE = 3;
 
   for (let i = 0; i < moments.length; i++) {
     const moment = moments[i];
@@ -148,19 +151,43 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
       `Extracting clip ${i + 1}/${moments.length}...`
     );
 
+    // Reset ffmpeg between batches to free memory (clips are already in JS heap)
+    if (i > 0 && i % BATCH_SIZE === 0) {
+      console.log("[HighlightGen] Batch reset to free memory");
+      await resetEditor();
+    }
+
     try {
       const blob = await extractClip(videoFile, moment.start_time, moment.end_time, {
         slowMotion: includeSlomo && moment.should_slowmo,
         label: moment.speed_kmh > 0 ? `${Math.round(moment.speed_kmh)} km/h` : null,
+        maxHeight: 720,
       });
 
+      if (!blob || blob.size === 0) {
+        throw new Error("Empty clip produced");
+      }
+
       clips.push({ blob, moment, thumbnail: thumbnails[i] });
-      console.log(`[HighlightGen] Extracted clip ${i + 1}`);
+      console.log(`[HighlightGen] Extracted clip ${i + 1}: ${(blob.size / 1024).toFixed(0)}KB`);
     } catch (err) {
       console.error(`[HighlightGen] Failed to extract clip ${i + 1}:`, err);
       if (!firstClipError) firstClipError = err;
-      // Reset ffmpeg on error to recover memory
-      try { await resetEditor(); } catch {}
+      // Reset ffmpeg on error and retry once
+      try {
+        await resetEditor();
+        const retryBlob = await extractClip(videoFile, moment.start_time, moment.end_time, {
+          slowMotion: false,  // No slo-mo on retry
+          label: null,        // No label on retry
+          maxHeight: 480,     // Lower res on retry
+        });
+        if (retryBlob && retryBlob.size > 0) {
+          clips.push({ blob: retryBlob, moment, thumbnail: thumbnails[i] });
+          console.log(`[HighlightGen] Retry succeeded for clip ${i + 1}`);
+        }
+      } catch (retryErr) {
+        console.error(`[HighlightGen] Retry also failed for clip ${i + 1}:`, retryErr);
+      }
     }
   }
 

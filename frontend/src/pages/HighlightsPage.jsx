@@ -432,12 +432,15 @@ export default function HighlightsPage() {
                 </Button>
               </div>
             </div>
-            <video
-              src={reelUrl}
-              controls
-              className="w-full rounded-xl bg-black"
-              poster={clipUrls[0]?.thumbUrl}
-            />
+            <div className="rounded-xl bg-black overflow-hidden flex items-center justify-center" style={{ maxHeight: "60vh" }}>
+              <video
+                src={reelUrl}
+                controls
+                playsInline
+                className="w-full h-auto max-h-[60vh] object-contain"
+                poster={clipUrls[0]?.thumbUrl}
+              />
+            </div>
             <Button
               onClick={() => downloadBlob(result.reel, "athlyticai_highlights.mp4")}
               className="w-full mt-4 bg-lime-400 text-black hover:bg-lime-500 font-bold"
@@ -484,12 +487,16 @@ export default function HighlightsPage() {
                   transition={{ delay: 0.05 * i }}
                   className="bg-zinc-800/50 rounded-xl overflow-hidden"
                 >
-                  <video
-                    src={clip.url}
-                    controls
-                    poster={clip.thumbUrl}
-                    className="w-full aspect-video bg-black"
-                  />
+                  <div className="bg-black flex items-center justify-center" style={{ aspectRatio: "16/9", maxHeight: "240px" }}>
+                    <video
+                      src={clip.url}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      poster={clip.thumbUrl}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
                   <div className="p-3">
                     <div className="flex items-center justify-between mb-1">
                       <p className="font-medium text-white text-sm capitalize">
