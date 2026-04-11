@@ -2240,22 +2240,38 @@ async def generate_cloudinary_reel(req: HighlightReelRequest):
         target_duration = 30
 
     max_segments = max(1, int(req.target_clips))
-    min_segment = 2  # 2-second minimum per clip
 
+    # Use basic trim transformation (e_preview requires paid Video AI add-on)
+    # Strategy: trim from middle of video where action usually peaks
+    # Format: so_X,du_Y = start at X seconds, duration Y seconds
+    if req.duration_seconds > target_duration:
+        # Start at 25% into the video to skip warmup
+        start_offset = max(0, int(req.duration_seconds * 0.25))
+        # Make sure we don't go past the end
+        if start_offset + target_duration > req.duration_seconds:
+            start_offset = max(0, int(req.duration_seconds - target_duration))
+    else:
+        start_offset = 0
+        target_duration = int(req.duration_seconds)
+
+    # Build transformation: trim + scale + quality + format
+    # Use w_1280 to limit to 720p (saves bandwidth)
     transformations = [
-        f"e_preview:duration_{target_duration}:max_seg_{max_segments}:min_seg_{min_segment}",
+        f"so_{start_offset},du_{target_duration}",
+        "w_1280,c_limit",
         "q_auto:good",
         "f_mp4",
     ]
     transformation_str = "/".join(transformations)
 
+    # public_id already includes the folder from sign-upload, so use it directly
     reel_url = (
         f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}"
         f"/video/upload/{transformation_str}/{req.public_id}.mp4"
     )
     thumbnail_url = (
         f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}"
-        f"/video/upload/so_0,w_640,c_limit,f_jpg/{req.public_id}.jpg"
+        f"/video/upload/so_{start_offset + target_duration // 2},w_640,c_limit,f_jpg/{req.public_id}.jpg"
     )
 
     return {
@@ -2263,6 +2279,7 @@ async def generate_cloudinary_reel(req: HighlightReelRequest):
         "thumbnail_url": thumbnail_url,
         "target_duration": target_duration,
         "max_clips": max_segments,
+        "start_offset": start_offset,
     }
 
 
