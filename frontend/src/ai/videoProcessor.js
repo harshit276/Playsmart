@@ -1117,39 +1117,46 @@ function estimateSpeed(allKeypoints, timestamps, sport, videoInfo) {
  * @param {"right"|"left"} dominantHand
  * @returns {number} Estimated speed in km/h
  */
-function estimateShotSpeed(allKeypoints, timestamps, peakIdx, sport, dominantHand) {
+function estimateShotSpeed(allKeypoints, timestamps, peakIdx, sport, dominantHand, shotType) {
   const wristName = `${dominantHand}_wrist`;
   const shoulderName = `${dominantHand}_shoulder`;
   const hipName = `${dominantHand}_hip`;
-  const windowStart = Math.max(1, peakIdx - 2);
-  const windowEnd = Math.min(allKeypoints.length - 1, peakIdx + 2);
 
-  const speeds = [];
-  for (let i = windowStart; i <= windowEnd; i++) {
-    const prevWrist = getKp(allKeypoints[i - 1], wristName);
-    const currWrist = getKp(allKeypoints[i], wristName);
-    if (!prevWrist || !currWrist) continue;
+  // Use a centered 3-frame difference at the exact peak frame to get the
+  // instantaneous wrist velocity *at* this shot (not a max-over-window, which
+  // was pinning every shot to the ceiling).
+  const lo = Math.max(0, peakIdx - 1);
+  const hi = Math.min(allKeypoints.length - 1, peakIdx + 1);
+  const prevWrist = getKp(allKeypoints[lo], wristName);
+  const nextWrist = getKp(allKeypoints[hi], wristName);
+  const dt = timestamps[hi] - timestamps[lo];
+  if (!prevWrist || !nextWrist || dt <= 0) return 0;
 
-    const dt = timestamps[i] - timestamps[i - 1];
-    if (dt <= 0) continue;
-
-    let torso = 80;
-    const sh = getKp(allKeypoints[i], shoulderName);
-    const hp = getKp(allKeypoints[i], hipName);
-    if (sh && hp) {
-      const t = Math.abs(sh.y - hp.y);
-      if (t > 5) torso = t;
-    }
-
-    const pixelDist = kpDist(prevWrist, currWrist);
-    speeds.push((pixelDist / torso) / dt);
+  // Torso length at the peak frame for normalization
+  let torso = 80;
+  const sh = getKp(allKeypoints[peakIdx], shoulderName);
+  const hp = getKp(allKeypoints[peakIdx], hipName);
+  if (sh && hp) {
+    const t = Math.abs(sh.y - hp.y);
+    if (t > 5) torso = t;
   }
 
-  if (speeds.length === 0) return 0;
+  const pixelDist = kpDist(prevWrist, nextWrist);
+  const peakSpeed = (pixelDist / torso) / dt; // torso-normalized speed for *this* shot
 
-  const peakSpeed = Math.max(...speeds);
   const cal = SPEED_CALIBRATION[sport] || SPEED_CALIBRATION.badminton;
-  const estimated = Math.round(peakSpeed * cal.factor);
+
+  // Shot-type multipliers — a smash is genuinely faster than a drop, so let
+  // the estimated speed reflect the classified shot type instead of being
+  // driven purely by frame-to-frame wrist jitter.
+  const SHOT_MULTIPLIER = {
+    smash: 1.35, drive: 1.05, clear: 0.95, drop: 0.55, net: 0.45, lift: 0.7, serve: 0.85,
+    forehand: 1.0, backhand: 0.9, topspin: 1.1, slice: 0.7, volley: 0.65,
+    dink: 0.4,
+  };
+  const mult = SHOT_MULTIPLIER[shotType] ?? 1.0;
+
+  let estimated = Math.round(peakSpeed * cal.factor * mult);
   return clamp(estimated, cal.minPlausible, cal.maxPlausible);
 }
 
@@ -1458,9 +1465,16 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       const peak = shotPeaks[i];
       const classification = classifySingleShot(allKeypoints, peak.index, dominantHand, sport, timestamps);
       const shotMetrics = computeShotMetrics(allKeypoints, peak.index);
-      const shotSpeed = estimateShotSpeed(allKeypoints, timestamps, peak.index, sport, dominantHand);
+      const shotSpeed = estimateShotSpeed(
+        allKeypoints, timestamps, peak.index, sport, dominantHand, classification.type,
+      );
       const shotScore = shotMetrics.overall;
       const shotGrade = scoreToGrade(shotScore);
+
+      // Per-shot duration: gap to the next peak (or video end) — capped at 3s
+      const nextTime = i + 1 < shotPeaks.length ? shotPeaks[i + 1].time : (timestamps[timestamps.length - 1] ?? peak.time + 1);
+      const prevTime = i > 0 ? shotPeaks[i - 1].time : (timestamps[0] ?? peak.time - 1);
+      const duration = Math.min(3, Math.max(0.3, (nextTime - prevTime) / 2));
 
       detectedShots.push({
         type: classification.type,
@@ -1472,6 +1486,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         grade: shotGrade,
         score: shotScore,
         speed: shotSpeed,
+        duration: Math.round(duration * 10) / 10,
         elbowAngle: classification.elbowAngle,
         metrics: shotMetrics,
       });
@@ -1490,7 +1505,12 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // ── Step 9: Compute overall metrics ──────────────────────────────────
     progress("metrics", 78, "Computing metrics...");
     const metrics = computeMetrics(allKeypoints, segmentData, allKeypoints.length);
-    const overallScore = computeOverallScore(metrics);
+    // Overall score is the AVERAGE of all detected shots' scores. Falls back
+    // to the legacy form-metric score if no shots were detected.
+    const shotScoresArr = detectedShots.map((s) => s.score || 0).filter((s) => s > 0);
+    const overallScore = shotScoresArr.length > 0
+      ? Math.round(shotScoresArr.reduce((a, b) => a + b, 0) / shotScoresArr.length)
+      : computeOverallScore(metrics);
     const grade = scoreToGrade(overallScore);
     // ── Step 10: Build player profile ────────────────────────────────────
     progress("profile", 82, "Building player profile...");
@@ -1546,6 +1566,8 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         grade: s.grade,
         score: s.score,
         speed: s.speed,
+        speed_kmh: s.speed,
+        duration: s.duration,
       })),
 
       // Shot distribution (NEW)

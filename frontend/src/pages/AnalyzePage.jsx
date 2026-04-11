@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
   Clock, BarChart3, Zap, RefreshCw, History, ArrowRight,
   ChevronDown, ChevronUp, ExternalLink, ThumbsUp, Calendar,
   Bot, Lightbulb, Youtube, Download, Share2, Film, Scissors, Copy,
-  Users, Cpu, Cloud
+  Users, Cpu, Cloud, Lock
 } from "lucide-react";
 import api from "@/lib/api";
 import ShareModal from "@/components/ShareModal";
@@ -51,13 +51,53 @@ const FULL_LOADING_STEPS = [
 
 export default function AnalyzePage() {
   const { user, profile, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const isGuest = !user?.id;
+  const showLockedSections = isGuest;
+  const [reminderDue, setReminderDue] = useState(false);
+  const [previousScore, setPreviousScore] = useState(null);
   const [file, setFile] = useState(null);
   const [analysisMode, setAnalysisMode] = useState(searchParams.get("mode") || null);
   const [selectedSport, setSelectedSport] = useState(null);
 
   // Set page title
   useEffect(() => { document.title = "Analyze | AthlyticAI"; }, []);
+
+  // Check for a pending reminder from a prior session
+  useEffect(() => {
+    try {
+      const due = parseInt(localStorage.getItem("next_analysis_reminder") || "0", 10);
+      const lastScore = parseInt(localStorage.getItem("last_analysis_score") || "0", 10);
+      if (due && Date.now() >= due) {
+        setReminderDue(true);
+      }
+      if (lastScore > 0) setPreviousScore(lastScore);
+    } catch {
+      // ignore localStorage errors
+    }
+  }, []);
+
+  // When an analysis completes, persist the score so the next visit can
+  // compute improvement and schedule a reminder for 7 days out.
+  useEffect(() => {
+    if (!result?.success) return;
+    const score =
+      result.shot_analysis?.score ??
+      result.pro_comparison?.overall_score ??
+      0;
+    if (score > 0) {
+      try {
+        localStorage.setItem("last_analysis_score", String(score));
+        localStorage.setItem(
+          "next_analysis_reminder",
+          String(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        );
+      } catch {
+        // ignore
+      }
+    }
+  }, [result]);
 
   const [targetPlayer, setTargetPlayer] = useState("auto");
   const [playerSelectorOpen, setPlayerSelectorOpen] = useState(false);
@@ -813,6 +853,30 @@ export default function AnalyzePage() {
     </motion.div>
   );
 
+  const renderLockedOverlay = (children) => (
+    <div className="relative">
+      <div className="blur-sm pointer-events-none select-none opacity-50">
+        {children}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="bg-zinc-900/95 border border-lime-400/30 rounded-2xl p-5 max-w-sm text-center shadow-2xl">
+          <Lock className="w-8 h-8 text-lime-400 mx-auto mb-3" />
+          <h3 className="font-bold text-white mb-1">Unlock Full Coaching</h3>
+          <p className="text-xs text-zinc-400 mb-4">
+            Sign in to see personalized training plans, pro tips, and track your improvement over time.
+          </p>
+          <Button
+            onClick={() => navigate("/auth")}
+            className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6"
+          >
+            Sign in with Google
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+  const gate = (children) => (showLockedSections ? renderLockedOverlay(children) : children);
+
   const renderResults = () => {
     if (!result) return null;
     const shot = result.shot_analysis || {};
@@ -1010,8 +1074,10 @@ export default function AnalyzePage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3">
-                      {s.speed > 0 && <span className="text-[10px] text-zinc-500">{s.speed} km/h</span>}
-                      <span className="text-[10px] text-zinc-600">{s.timestamp}s</span>
+                      {s.score != null && <span className="text-[10px] text-zinc-500">{s.score}/100</span>}
+                      {s.speed > 0 && <span className="text-[10px] text-lime-400 font-semibold">{s.speed} km/h</span>}
+                      {s.duration > 0 && <span className="text-[10px] text-zinc-600">{s.duration}s</span>}
+                      <span className="text-[10px] text-zinc-600">@{s.timestamp}s</span>
                     </div>
                   </div>
                 ))}
@@ -1138,7 +1204,7 @@ export default function AnalyzePage() {
         )}
 
         {/* ── Top Issues (Coach Style) ── */}
-        {(shot.weaknesses?.length > 0 || coachFeedback.top_issues?.length > 0) && (
+        {(shot.weaknesses?.length > 0 || coachFeedback.top_issues?.length > 0) && gate(
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="space-y-3" data-testid="weaknesses-card">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium flex items-center gap-1">
@@ -1217,6 +1283,25 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
+        {/* ── Progress Reminder Banner ── */}
+        {reminderDue && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4 flex items-start gap-3">
+            <Calendar className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-bold text-white text-sm">Welcome back!</h4>
+              <p className="text-xs text-zinc-400 mb-1">
+                It has been over 7 days since your last analysis{previousScore ? ` (${previousScore}/100)` : ""}. Upload a new video to see your improvement.
+              </p>
+            </div>
+            <button
+              onClick={() => { setReminderDue(false); try { localStorage.removeItem("next_analysis_reminder"); } catch { /* ignore */ } }}
+              className="text-zinc-500 hover:text-white text-xs">
+              Dismiss
+            </button>
+          </motion.div>
+        )}
+
         {/* ── Strengths ── */}
         {(strengths.length > 0 || shot.strengths?.length > 0) && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
@@ -1242,7 +1327,7 @@ export default function AnalyzePage() {
         )}
 
         {/* ── Pro Tips + Player Match ── */}
-        {(pro.pro_tips?.length > 0 || pro.player_match?.player) && (
+        {(pro.pro_tips?.length > 0 || pro.player_match?.player) && gate(
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5" data-testid="pro-comparison-card">
             {pro.pro_tips?.length > 0 && (
@@ -1275,6 +1360,7 @@ export default function AnalyzePage() {
         )}
 
         {/* ── (e) 7-Day Training Plan (dynamic) ── */}
+        {gate(
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
           className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
           <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -1350,6 +1436,7 @@ export default function AnalyzePage() {
             Start Training Plan <ArrowRight className="w-3 h-3" />
           </Link>
         </motion.div>
+        )}
 
         {/* ── Earned Badges ── */}
         {badges.length > 0 && (
