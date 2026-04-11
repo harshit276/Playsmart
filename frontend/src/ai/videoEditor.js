@@ -16,6 +16,8 @@ import { fetchFile, toBlobURL } from "@ffmpeg/util";
 let _ffmpeg = null;
 let _loading = null;
 let _currentSourceKey = null;
+let _fontLoaded = false;
+const FONT_NAME = "roboto.ttf";
 
 /**
  * Lazy-load and initialize ffmpeg.wasm.
@@ -57,6 +59,27 @@ async function getFFmpeg() {
 const SOURCE_NAME = "source.mp4";
 
 /**
+ * Load the Roboto font into ffmpeg's filesystem so drawtext works.
+ * Idempotent — only loads once per ffmpeg session.
+ */
+async function ensureFontLoaded() {
+  if (_fontLoaded && _ffmpeg) return;
+  const ffmpeg = await getFFmpeg();
+  try {
+    const fontUrl = "/roboto.ttf";
+    const fontResp = await fetch(fontUrl);
+    if (fontResp.ok) {
+      const fontBuf = await fontResp.arrayBuffer();
+      await ffmpeg.writeFile(FONT_NAME, new Uint8Array(fontBuf));
+      _fontLoaded = true;
+      console.log("[ffmpeg] Font loaded");
+    }
+  } catch (err) {
+    console.warn("[ffmpeg] Font load failed (text overlays will be skipped):", err);
+  }
+}
+
+/**
  * Ensure source video is loaded into ffmpeg's filesystem.
  * Loads only once per video file.
  */
@@ -64,7 +87,10 @@ async function ensureSourceLoaded(videoFile) {
   const ffmpeg = await getFFmpeg();
   const key = `${videoFile.name}-${videoFile.size}-${videoFile.lastModified}`;
 
-  if (_currentSourceKey === key) return ffmpeg;
+  if (_currentSourceKey === key) {
+    await ensureFontLoaded();
+    return ffmpeg;
+  }
 
   if (_currentSourceKey) {
     try { await ffmpeg.deleteFile(SOURCE_NAME); } catch {}
@@ -74,6 +100,8 @@ async function ensureSourceLoaded(videoFile) {
   await ffmpeg.writeFile(SOURCE_NAME, await fetchFile(videoFile));
   _currentSourceKey = key;
   console.log("[ffmpeg] Source loaded");
+
+  await ensureFontLoaded();
   return ffmpeg;
 }
 
@@ -91,6 +119,7 @@ export async function resetEditor() {
   _ffmpeg = null;
   _loading = null;
   _currentSourceKey = null;
+  _fontLoaded = false;
 }
 
 /**
@@ -125,23 +154,33 @@ export async function extractClip(videoFile, startTime, endTime, options = {}) {
     "-movflags", "+faststart",  // Place moov atom at start for streaming
   ];
 
-  // Build video filter
+  // Build video filter chain
   const filters = [];
 
-  // Always scale down to manage memory (preserves aspect ratio)
+  // Scale down to manage memory (preserves aspect ratio)
   filters.push(`scale=-2:'min(${maxHeight},ih)'`);
 
+  // Slow motion: 0.5x speed (each frame plays for 2x time)
   if (options.slowMotion) {
     filters.push("setpts=2.0*PTS");
   }
 
-  if (options.label) {
-    const escapedLabel = options.label.replace(/'/g, "").replace(/:/g, " ");
+  // Text overlay (speed, shot type) — burn into video
+  if (options.label && _fontLoaded) {
+    const escapedLabel = options.label.replace(/'/g, "").replace(/:/g, " ").replace(/[\\]/g, "");
     filters.push(
-      `drawtext=text='${escapedLabel}':fontcolor=white:fontsize=28:` +
-      `box=1:boxcolor=black@0.6:boxborderw=6:x=(w-text_w)/2:y=h-th-20`
+      `drawtext=fontfile=${FONT_NAME}:text='${escapedLabel}':` +
+      `fontcolor=white:fontsize=36:` +
+      `box=1:boxcolor=black@0.7:boxborderw=12:` +
+      `x=(w-text_w)/2:y=h-th-30`
     );
   }
+
+  // Fade in (0.3s) and fade out (0.3s) for smooth transitions
+  // Calculate fade out start based on actual output duration
+  const outDuration = options.slowMotion ? duration * 2 : duration;
+  const fadeOutStart = Math.max(0, outDuration - 0.3);
+  filters.push(`fade=t=in:st=0:d=0.3,fade=t=out:st=${fadeOutStart.toFixed(2)}:d=0.3`);
 
   if (filters.length > 0) {
     args.push("-vf", filters.join(","));
@@ -250,6 +289,42 @@ export async function concatenateClips(clips, options = {}) {
     throw new Error("Concatenation produced empty file");
   }
 
+  return blob;
+}
+
+/**
+ * Compress a large video to reduce file size before processing.
+ * Useful for files > 500MB.
+ */
+export async function compressVideo(videoFile, options = {}) {
+  const ffmpeg = await ensureSourceLoaded(videoFile);
+  const maxHeight = options.maxHeight || 720;
+  const outputName = `compressed_${Date.now()}.mp4`;
+
+  if (options.onProgress) options.onProgress(10, "Compressing video...");
+
+  await ffmpeg.exec([
+    "-i", SOURCE_NAME,
+    "-c:v", "libx264",
+    "-preset", "ultrafast",
+    "-crf", "30",
+    "-pix_fmt", "yuv420p",
+    "-vf", `scale=-2:'min(${maxHeight},ih)'`,
+    "-c:a", "aac",
+    "-b:a", "64k",
+    "-movflags", "+faststart",
+    outputName,
+  ]);
+
+  if (options.onProgress) options.onProgress(90, "Finalizing compression...");
+
+  const data = await ffmpeg.readFile(outputName);
+  const copied = new Uint8Array(data.length);
+  copied.set(data);
+  const blob = new Blob([copied], { type: "video/mp4" });
+  try { await ffmpeg.deleteFile(outputName); } catch {}
+
+  if (options.onProgress) options.onProgress(100, "Compression done");
   return blob;
 }
 

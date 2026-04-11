@@ -92,9 +92,12 @@ export default function HighlightsPage() {
       toast.error("Unsupported format. Use MP4, AVI, MOV, MKV, or WEBM.");
       return;
     }
-    if (f.size > 500 * 1024 * 1024) {
-      toast.error("File too large. Maximum size is 500 MB.");
+    if (f.size > 1024 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 1 GB.");
       return;
+    }
+    if (f.size > 500 * 1024 * 1024) {
+      toast.info("Large video — we'll compress it before processing.");
     }
     setFile(f);
     setResult(null);
@@ -110,9 +113,12 @@ export default function HighlightsPage() {
         toast.error("Unsupported format.");
         return;
       }
-      if (f.size > 500 * 1024 * 1024) {
-        toast.error("File too large. Maximum 500 MB.");
+      if (f.size > 1024 * 1024 * 1024) {
+        toast.error("File too large. Maximum 1 GB.");
         return;
+      }
+      if (f.size > 500 * 1024 * 1024) {
+        toast.info("Large video — we'll compress it before processing.");
       }
       setFile(f);
       setResult(null);

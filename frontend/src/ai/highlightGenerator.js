@@ -8,7 +8,7 @@
  */
 
 import { detectHighlights } from "./highlightDetector.js";
-import { extractClip, concatenateClips, resetEditor } from "./videoEditor.js";
+import { extractClip, concatenateClips, compressVideo, resetEditor } from "./videoEditor.js";
 
 /**
  * Generate a thumbnail by seeking a hidden video element to the timestamp.
@@ -97,13 +97,34 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
   const { onProgress, maxClips = 8, includeSlomo = true } = options;
   const progress = (pct, msg) => onProgress?.({ percent: pct, message: msg });
 
-  console.log("[HighlightGen] Starting with file:", videoFile?.name, "sport:", sport);
+  console.log("[HighlightGen] Starting with file:", videoFile?.name, "size:", (videoFile?.size / 1024 / 1024).toFixed(1), "MB sport:", sport);
+
+  // Step 0: Compress large videos (>500MB) before processing
+  let workingFile = videoFile;
+  const SIZE_THRESHOLD = 500 * 1024 * 1024; // 500MB
+  if (videoFile.size > SIZE_THRESHOLD) {
+    progress(2, "Large video detected — compressing first...");
+    try {
+      const compressedBlob = await compressVideo(videoFile, {
+        maxHeight: 720,
+        onProgress: ({ percent, message }) => progress(2 + percent * 0.05, message || "Compressing..."),
+      });
+      // Create a File-like object from the compressed blob
+      workingFile = new File([compressedBlob], `compressed_${videoFile.name}`, { type: "video/mp4" });
+      console.log("[HighlightGen] Compressed from", (videoFile.size / 1024 / 1024).toFixed(1), "MB to", (workingFile.size / 1024 / 1024).toFixed(1), "MB");
+      // Reset ffmpeg to free compression memory
+      await resetEditor();
+    } catch (compErr) {
+      console.warn("[HighlightGen] Compression failed, using original:", compErr);
+      workingFile = videoFile;
+    }
+  }
 
   // Step 1: Detect highlight moments
-  progress(5, "Analyzing video for highlight moments...");
+  progress(8, "Analyzing video for highlight moments...");
   let detection;
   try {
-    detection = await detectHighlights(videoFile, sport, {
+    detection = await detectHighlights(workingFile, sport, {
       onProgress: (info) => {
         const pct = 5 + (info.percent || 0) * 0.3;
         progress(pct, info.message || "Detecting moments...");
@@ -128,7 +149,7 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
   for (let i = 0; i < moments.length; i++) {
     const moment = moments[i];
     const thumbTime = (moment.start_time + moment.end_time) / 2;
-    const thumb = await generateThumbnailNative(videoFile, thumbTime);
+    const thumb = await generateThumbnailNative(workingFile, thumbTime);
     thumbnails.push(thumb);
   }
   console.log("[HighlightGen] Generated", thumbnails.filter(t => t).length, "thumbnails");
@@ -158,7 +179,7 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
     }
 
     try {
-      const blob = await extractClip(videoFile, moment.start_time, moment.end_time, {
+      const blob = await extractClip(workingFile, moment.start_time, moment.end_time, {
         slowMotion: includeSlomo && moment.should_slowmo,
         label: moment.speed_kmh > 0 ? `${Math.round(moment.speed_kmh)} km/h` : null,
         maxHeight: 720,
@@ -176,7 +197,7 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
       // Reset ffmpeg on error and retry once
       try {
         await resetEditor();
-        const retryBlob = await extractClip(videoFile, moment.start_time, moment.end_time, {
+        const retryBlob = await extractClip(workingFile, moment.start_time, moment.end_time, {
           slowMotion: false,  // No slo-mo on retry
           label: null,        // No label on retry
           maxHeight: 480,     // Lower res on retry

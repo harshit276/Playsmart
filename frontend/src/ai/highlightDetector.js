@@ -374,10 +374,14 @@ export function scoreHighlight(moment, sport = "badminton") {
  */
 export function shouldSlowMotion(moment) {
   if (!moment) return false;
-  if (moment.type === "smash" || moment.type === "ace" || moment.type === "power_moment") {
+  // Power moments always get slo-mo
+  if (moment.type === "smash" || moment.type === "ace" || moment.type === "power_moment" || moment.type === "winner") {
     return true;
   }
-  if (moment.duration < 2 && moment.score > 75) return true;
+  // Short intense moments get slo-mo
+  if (moment.duration < 3 && moment.score > 60) return true;
+  // High-power detected moments
+  if (moment.stats?.is_power_moment) return true;
   return false;
 }
 
@@ -390,22 +394,23 @@ export function shouldSlowMotion(moment) {
  */
 export function describeMoment(moment, sport) {
   if (!moment) return "Highlight moment";
-  const shots = moment.stats?.shot_count ?? 0;
   const speed = moment.speed_kmh;
 
+  // Don't use shot_count in descriptions — it's unreliable from motion-only detection.
+  // Use generic but accurate descriptions instead.
   switch (moment.type) {
     case "smash":
-      return speed > 0 ? `Power smash at ${speed} km/h` : "Power smash";
+      return speed > 0 ? `Power smash · ${speed} km/h` : "Power smash";
     case "ace":
       return "Service ace";
     case "winner":
-      return speed > 0 ? `Winner at ${speed} km/h` : "Winning shot";
+      return speed > 0 ? `Winner · ${speed} km/h` : "Winning shot";
     case "power_moment":
-      return speed > 0 ? `Power shot at ${speed} km/h` : "Quick winner";
+      return speed > 0 ? `Power shot · ${speed} km/h` : "Quick winner";
     case "rally":
-      return shots > 0 ? `${shots}-shot rally` : "Rally";
+      return "Rally";
     case "long_rally":
-      return shots > 0 ? `Epic ${shots}-shot rally` : "Long rally";
+      return "Long rally";
     default:
       return sport ? `${sport.replace("_", " ")} highlight` : "Highlight moment";
   }
