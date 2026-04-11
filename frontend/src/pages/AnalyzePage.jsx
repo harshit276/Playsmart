@@ -972,14 +972,16 @@ export default function AnalyzePage() {
       {renderModeSelection()}
 
       {/* Tips for best results */}
-      <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 mb-4 text-xs text-zinc-400">
-        <div className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-          <Lightbulb className="w-4 h-4" /> For Best Results
-        </div>
-        <ul className="space-y-1 ml-6 list-disc">
-          <li>Upload a video where you&apos;re clearly visible (15-30 seconds works best)</li>
-          <li>If multiple players are in frame, you can tap to select which one to analyze</li>
-          <li>Side angle works better than front-facing for technique analysis</li>
+      <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 mb-4">
+        <p className="text-xs text-blue-400 font-medium mb-2 flex items-center gap-1">
+          <Lightbulb className="w-3 h-3" /> For Best Results
+        </p>
+        <ul className="text-xs text-zinc-400 space-y-1 ml-4">
+          <li>• Side-angle camera view (90° from player) works best</li>
+          <li>• Player should be clearly visible, full body in frame</li>
+          <li>• 5-30 seconds of clean footage</li>
+          <li>• Good lighting, minimal background motion</li>
+          <li>• 1-3 distinct shots is ideal for accurate analysis</li>
         </ul>
       </div>
 
@@ -1222,7 +1224,57 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── HERO: Grade + Shot + Speed ── */}
+        {/* ── Analysis Quality Indicator ── */}
+        {result.analysis_quality && (
+          <div className={`rounded-2xl border p-4 mb-4 ${
+            result.analysis_quality.confidence_level === 'high' ? 'bg-green-500/5 border-green-500/20' :
+            result.analysis_quality.confidence_level === 'medium' ? 'bg-amber-500/5 border-amber-500/20' :
+            'bg-red-500/5 border-red-500/20'
+          }`}>
+            <div className="flex items-start gap-3">
+              {result.analysis_quality.confidence_level === 'high' ? (
+                <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white">
+                  {result.analysis_quality.confidence_level === 'high' && 'High Quality Analysis'}
+                  {result.analysis_quality.confidence_level === 'medium' && 'Medium Quality Analysis'}
+                  {result.analysis_quality.confidence_level === 'low' && 'Low Quality Analysis'}
+                </p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Analyzed {result.analysis_quality.quality_frames}/{result.analysis_quality.total_frames_extracted} usable frames • Camera: {result.analysis_quality.camera_angle}
+                </p>
+                {result.analysis_quality.warning && (
+                  <p className="text-xs text-amber-400 mt-2">
+                    💡 {result.analysis_quality.warning}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── HERO: Grade + Shot + Speed (or Unknown error state) ── */}
+        {(shot.shot_type === 'unknown' || (shot.confidence != null && shot.confidence < 0.2)) ? (
+          <div className="bg-zinc-900/80 border border-amber-500/20 rounded-2xl p-6 text-center">
+            <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+            <h3 className="font-bold text-white mb-2">Couldn't Analyze This Video</h3>
+            <p className="text-sm text-zinc-400 mb-4">
+              We couldn't clearly detect your shots. This usually happens when:
+            </p>
+            <ul className="text-xs text-zinc-500 text-left max-w-xs mx-auto space-y-1 mb-4">
+              <li>• Video is too short or shaky</li>
+              <li>• Player is too far from camera</li>
+              <li>• Pose is partially hidden</li>
+              <li>• Multiple people are very close together</li>
+            </ul>
+            <Button onClick={() => setActiveTab('upload')} className="bg-lime-400 text-black">
+              Upload Another Video
+            </Button>
+          </div>
+        ) : (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1282,7 +1334,11 @@ export default function AnalyzePage() {
                   )}
                 </div>
                 {(shot.confidence != null && shot.confidence > 0) && (
-                  <p className="text-zinc-500 text-xs">Confidence: {Math.round(shot.confidence * 100)}%</p>
+                  <p className="text-zinc-500 text-xs">
+                    {shot.confidence >= 0.7 ? '🟢 High confidence' :
+                     shot.confidence >= 0.4 ? '🟡 Medium confidence' :
+                     '🔴 Low confidence — try a clearer video'} ({Math.round(shot.confidence * 100)}%)
+                  </p>
                 )}
                 {/* Speed inline */}
                 {result.speed_analysis?.estimated_speed_kmh > 0 && (
@@ -1312,6 +1368,7 @@ export default function AnalyzePage() {
             </div>
           </div>
         </motion.div>
+        )}
 
         {/* ── Multi-Shot Summary (if match video) ── */}
         {result.multi_shot && result.shots?.length > 1 && (

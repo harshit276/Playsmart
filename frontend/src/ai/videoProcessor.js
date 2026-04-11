@@ -270,6 +270,90 @@ function clamp(value, lo, hi) {
   return Math.max(lo, Math.min(hi, value));
 }
 
+// ─── Quality Gates & Camera Angle ──────────────────────────────────────────
+
+/**
+ * Raw keypoint lookup that ignores the global MIN_KEYPOINT_SCORE threshold so
+ * quality-gating can apply its own stricter cutoff.
+ *
+ * @param {import("./poseDetector.js").Keypoint[]} kps
+ * @param {string} name
+ * @returns {import("./poseDetector.js").Keypoint|null}
+ */
+function getRawKp(kps, name) {
+  if (!kps) return null;
+  const kp = kps.find((k) => k.name === name);
+  return kp || null;
+}
+
+/**
+ * Decide whether a single-frame pose is high-enough quality to trust for
+ * classification. Requires torso + dominant arm to be visible at >0.4 score
+ * and body proportions to be within a plausible range.
+ *
+ * Keypoint coordinates are in canvas pixels (0..canvasSize, typically 256),
+ * so we normalize against canvasSize when checking proportional thresholds.
+ *
+ * @param {import("./poseDetector.js").Keypoint[]} keypoints
+ * @param {"right"|"left"} dominantHand
+ * @param {number} [canvasSize=MODEL_INPUT_SIZE]
+ * @returns {boolean}
+ */
+function isQualityFrame(keypoints, dominantHand, canvasSize = MODEL_INPUT_SIZE) {
+  if (!keypoints) return false;
+
+  const required = [
+    "left_shoulder",
+    "right_shoulder",
+    "left_hip",
+    "right_hip",
+    `${dominantHand}_wrist`,
+    `${dominantHand}_elbow`,
+  ];
+
+  for (const name of required) {
+    const kp = getRawKp(keypoints, name);
+    if (!kp || (kp.score || 0) < 0.4) return false;
+  }
+
+  const ls = getRawKp(keypoints, "left_shoulder");
+  const rs = getRawKp(keypoints, "right_shoulder");
+  const lh = getRawKp(keypoints, "left_hip");
+
+  if (ls && rs && lh) {
+    const shoulderWidthN = Math.abs(ls.x - rs.x) / canvasSize;
+    const torsoHeightN = Math.abs(ls.y - lh.y) / canvasSize;
+    if (torsoHeightN < 0.05 || torsoHeightN > 0.9) return false;
+    if (shoulderWidthN < 0.02) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Guess whether the video is shot from the front, side, or angled based on
+ * the average shoulder width relative to the canvas size.
+ *
+ * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
+ * @param {number} [canvasSize=MODEL_INPUT_SIZE]
+ * @returns {"front"|"side"|"angled"|"unknown"}
+ */
+function detectCameraAngle(allKeypoints, canvasSize = MODEL_INPUT_SIZE) {
+  const shoulderWidths = [];
+  for (const kps of allKeypoints) {
+    const ls = getRawKp(kps, "left_shoulder");
+    const rs = getRawKp(kps, "right_shoulder");
+    if (ls && rs && (ls.score || 0) > 0.4 && (rs.score || 0) > 0.4) {
+      shoulderWidths.push(Math.abs(ls.x - rs.x) / canvasSize);
+    }
+  }
+  if (shoulderWidths.length === 0) return "unknown";
+  const avgWidth = shoulderWidths.reduce((a, b) => a + b, 0) / shoulderWidths.length;
+  if (avgWidth > 0.1) return "front";
+  if (avgWidth < 0.05) return "side";
+  return "angled";
+}
+
 // ─── Dominant Hand Detection ───────────────────────────────────────────────
 
 /**
@@ -407,6 +491,132 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
   return peaks;
 }
 
+// ─── Backhand Detection (camera-aware) ─────────────────────────────────────
+
+/**
+ * Camera-aware forehand/backhand detector. Uses body midline on front views
+ * and elbow-vs-wrist vertical offset as a proxy on side views.
+ *
+ * Keypoints are in canvas pixels (typically 0..256). The "-0.05" threshold in
+ * the side-view branch is expressed as a fraction of the canvas size.
+ *
+ * @param {import("./poseDetector.js").Keypoint[]} keypoints
+ * @param {"right"|"left"} dominantHand
+ * @param {"front"|"side"|"angled"|"unknown"} cameraAngle
+ * @param {number} [canvasSize=MODEL_INPUT_SIZE]
+ * @returns {boolean}
+ */
+function isBackhandShot(keypoints, dominantHand, cameraAngle, canvasSize = MODEL_INPUT_SIZE) {
+  const wristName = `${dominantHand}_wrist`;
+  const oppositeShoulder = dominantHand === "right" ? "left_shoulder" : "right_shoulder";
+  const sameShoulder = `${dominantHand}_shoulder`;
+
+  const wrist = getKp(keypoints, wristName);
+  const oppShoulder = getKp(keypoints, oppositeShoulder);
+  const sameShl = getKp(keypoints, sameShoulder);
+
+  if (!wrist || !oppShoulder || !sameShl) return false;
+
+  if (cameraAngle === "front") {
+    const bodyCenter = (oppShoulder.x + sameShl.x) / 2;
+    if (dominantHand === "right") {
+      return wrist.x < bodyCenter;
+    }
+    return wrist.x > bodyCenter;
+  } else if (cameraAngle === "side") {
+    // Side view: elbow-above-wrist is a reasonable backhand proxy.
+    const elbow = getKp(keypoints, `${dominantHand}_elbow`);
+    if (!elbow) return false;
+    // pixel threshold equivalent to 0.05 * canvas
+    const pxThresh = 0.05 * canvasSize;
+    return elbow.y < wrist.y - pxThresh;
+  } else {
+    // Angled / unknown: require a margin past the body midline.
+    const bodyCenter = (oppShoulder.x + sameShl.x) / 2;
+    const margin = Math.abs(oppShoulder.x - sameShl.x) * 0.3;
+    if (dominantHand === "right") {
+      return wrist.x < bodyCenter - margin;
+    }
+    return wrist.x > bodyCenter + margin;
+  }
+}
+
+// ─── Multi-Frame Voting ────────────────────────────────────────────────────
+
+/**
+ * Classify a shot using a 5-frame window around the peak (peak ± 2). Only
+ * frames that pass isQualityFrame() contribute. The winning type is the one
+ * with the highest total confidence.
+ *
+ * @param {import("./poseDetector.js").Keypoint[][]} allKeypoints
+ * @param {number} peakIdx
+ * @param {"right"|"left"} dominantHand
+ * @param {string} sport
+ * @param {number[]} timestamps
+ * @param {"front"|"side"|"angled"|"unknown"} cameraAngle
+ * @returns {{ type: string, name: string, confidence: number, isBackhand: boolean,
+ *   elbowAngle: number, wristSpeed: number, framesAnalyzed: number }}
+ */
+function classifyShotWithVoting(allKeypoints, peakIdx, dominantHand, sport, timestamps, cameraAngle) {
+  const window = [];
+  for (let offset = -2; offset <= 2; offset++) {
+    const idx = peakIdx + offset;
+    if (idx >= 0 && idx < allKeypoints.length) {
+      if (isQualityFrame(allKeypoints[idx], dominantHand)) {
+        window.push(idx);
+      }
+    }
+  }
+
+  if (window.length === 0) {
+    // Fall back to a single-frame classify so we still return *something* when
+    // quality is low, but mark confidence accordingly.
+    const fallback = classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestamps, cameraAngle);
+    return { ...fallback, confidence: Math.min(fallback.confidence, 0.25), framesAnalyzed: 0 };
+  }
+
+  const votes = {};
+  const details = {}; // keep the richest per-type classification for metadata
+  for (const idx of window) {
+    const result = classifySingleShot(allKeypoints, idx, dominantHand, sport, timestamps, cameraAngle);
+    if (result.type && result.type !== "unknown") {
+      votes[result.type] = (votes[result.type] || 0) + result.confidence;
+      if (!details[result.type] || result.confidence > details[result.type].confidence) {
+        details[result.type] = result;
+      }
+    }
+  }
+
+  let bestType = "unknown";
+  let bestScore = 0;
+  for (const [type, score] of Object.entries(votes)) {
+    if (score > bestScore) {
+      bestType = type;
+      bestScore = score;
+    }
+  }
+
+  if (bestType === "unknown") {
+    const fallback = classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestamps, cameraAngle);
+    return { ...fallback, framesAnalyzed: window.length };
+  }
+
+  const maxPossible = window.length;
+  const confidence = Math.min(1, bestScore / maxPossible);
+  const winner = details[bestType];
+  const name = bestType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    type: bestType,
+    name,
+    confidence,
+    isBackhand: winner.isBackhand,
+    elbowAngle: winner.elbowAngle,
+    wristSpeed: winner.wristSpeed,
+    framesAnalyzed: window.length,
+  };
+}
+
 // ─── Single Shot Classification ────────────────────────────────────────────
 
 /**
@@ -417,10 +627,11 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
  * @param {"right"|"left"} dominantHand - Which hand holds the racket
  * @param {string} sport - Sport key
  * @param {number[]} timestamps - Frame timestamps
+ * @param {"front"|"side"|"angled"|"unknown"} [cameraAngle="unknown"]
  * @returns {{ type: string, name: string, confidence: number, isBackhand: boolean,
  *   elbowAngle: number, wristSpeed: number }}
  */
-function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestamps) {
+function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestamps, cameraAngle = "unknown") {
   const wristName = dominantHand === "right" ? "right_wrist" : "left_wrist";
   const shoulderName = dominantHand === "right" ? "right_shoulder" : "left_shoulder";
   const elbowName = dominantHand === "right" ? "right_elbow" : "left_elbow";
@@ -446,22 +657,24 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
   const torsoLength = hip ? Math.abs(shoulder.y - hip.y) : 80;
   const safeTorso = torsoLength > 5 ? torsoLength : 80;
 
-  // Body center X from both shoulders
-  const bodyCenterX = (lShoulder && rShoulder) ? (lShoulder.x + rShoulder.x) / 2 : shoulder.x;
+  // Camera-aware backhand detection
+  const isBackhand = isBackhandShot(peakFrame, dominantHand, cameraAngle);
 
-  // Determine backhand: wrist on opposite side of body center from natural side
-  const backhandMargin = safeTorso * 0.15; // ~15% of torso length (~8-12px on 256px canvas)
-  const isBackhand = dominantHand === "right"
-    ? wrist.x < bodyCenterX - backhandMargin  // right-hander: wrist left of center = backhand
-    : wrist.x > bodyCenterX + backhandMargin; // left-hander: wrist right of center = backhand
+  // Canvas-normalized vertical offset of the wrist w.r.t. the shoulder.
+  // Negative = above shoulder, positive = below. Keypoints are in pixel
+  // coordinates on a MODEL_INPUT_SIZE-square canvas.
+  const canvasSize = MODEL_INPUT_SIZE;
+  const wristShoulderDyNorm = (wrist.y - shoulder.y) / canvasSize;
 
-  // Wrist height relative to shoulder
-  const wristAboveShoulder = wrist.y < shoulder.y - 5;
+  // Wrist height flags
+  const wristAboveShoulder = wristShoulderDyNorm < -0.015;
+  // "Wrist HIGH" — prompt: above shoulder by >0.1 normalized
+  const wristHighAboveShoulder = wristShoulderDyNorm < -0.1;
   const hipY = hip ? hip.y : shoulder.y + 80;
   const wristBelowHip = wrist.y > hipY;
   const wristNearShoulderHeight = Math.abs(wrist.y - shoulder.y) < 20;
 
-  // Wrist velocity direction from neighboring frames
+  // Wrist velocity direction from neighboring frames (torso-normalized)
   let wristVelY = 0;
   let wristVelX = 0;
   let peakSpeed = 0;
@@ -471,6 +684,19 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
     if (prevWrist && nextWrist) {
       wristVelY = (nextWrist.y - prevWrist.y) / safeTorso; // positive = downward
       wristVelX = Math.abs(nextWrist.x - prevWrist.x) / safeTorso;
+    }
+  }
+
+  // Window-based upward wrist motion (canvas-normalized). Useful for TT loop
+  // detection: "wrist y decreases by >0.04 over a 5-frame window".
+  let wristDyWindowNorm = 0;
+  {
+    const lo = Math.max(0, peakIdx - 2);
+    const hi = Math.min(allKeypoints.length - 1, peakIdx + 2);
+    const loW = getKp(allKeypoints[lo], wristName);
+    const hiW = getKp(allKeypoints[hi], wristName);
+    if (loW && hiW) {
+      wristDyWindowNorm = (hiW.y - loW.y) / canvasSize;
     }
   }
 
@@ -488,26 +714,32 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
   // Elbow angle at peak
   const elbowAngle = elbow ? calculateAngle(shoulder, elbow, wrist) : 90;
 
+  const features = {
+    aboveShoulder: wristAboveShoulder,
+    highAboveShoulder: wristHighAboveShoulder,
+    belowHip: wristBelowHip,
+    nearShoulder: wristNearShoulderHeight,
+    isBackhand,
+    velY: wristVelY,
+    velX: wristVelX,
+    elbowAngle,
+    speed: peakSpeed,
+    wristDyWindowNorm,
+    wristShoulderDyNorm,
+  };
+
   // Sport-specific classification
   let type;
   let confidence;
 
   if (sport === "badminton") {
-    ({ type, confidence } = classifyBadmintonShot(
-      wristAboveShoulder, wristBelowHip, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristNearShoulderHeight
-    ));
+    ({ type, confidence } = classifyBadmintonShot(features));
   } else if (sport === "table_tennis") {
-    ({ type, confidence } = classifyTTShot(
-      wristAboveShoulder, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristBelowHip
-    ));
+    ({ type, confidence } = classifyTTShot(features));
   } else if (sport === "tennis") {
-    ({ type, confidence } = classifyTennisShot(
-      wristAboveShoulder, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristBelowHip
-    ));
+    ({ type, confidence } = classifyTennisShot(features));
   } else if (sport === "pickleball") {
-    ({ type, confidence } = classifyPickleballShot(
-      wristAboveShoulder, isBackhand, wristVelY, wristVelX, elbowAngle, peakSpeed, wristBelowHip, wristNearShoulderHeight
-    ));
+    ({ type, confidence } = classifyPickleballShot(features));
   } else {
     type = "unknown";
     confidence = 0.3;
@@ -520,66 +752,51 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
 
 /**
  * Classify a badminton shot from motion features at the peak frame.
+ * Uses the feature bundle built in classifySingleShot().
  *
- * @param {boolean} aboveShoulder - Wrist is above shoulder
- * @param {boolean} belowHip - Wrist is below hip
- * @param {boolean} isBackhand - Wrist is on backhand side
- * @param {number} velY - Normalized vertical velocity (positive=down)
- * @param {number} velX - Normalized horizontal velocity (absolute)
- * @param {number} elbowAngle - Elbow angle in degrees
- * @param {number} speed - Normalized peak speed
- * @param {boolean} nearShoulder - Wrist near shoulder height
+ * @param {object} f - Feature bundle
  * @returns {{ type: string, confidence: number }}
  */
-function classifyBadmintonShot(aboveShoulder, belowHip, isBackhand, velY, velX, elbowAngle, speed, nearShoulder) {
+function classifyBadmintonShot(f) {
+  const { aboveShoulder, highAboveShoulder, belowHip, isBackhand, velY, velX, elbowAngle, speed, nearShoulder } = f;
   // velY/velX are torso-normalized displacements (pixel coords / torsoLength).
   // speed is torso-normalized velocity (pixel dist / torsoLength / dt).
   // Typical ranges on 256px canvas: velY +-0.01..0.5, velX 0..0.3, speed 0.1..5.0
   let type;
   let confidence;
 
-  if (isBackhand) {
-    // Backhand variants
-    if (aboveShoulder && speed > 0.2 && velY > 0.03) {
-      type = "smash"; confidence = 0.72;
-    } else if (aboveShoulder && velY < -0.01) {
-      type = "clear"; confidence = 0.65;
-    } else if (aboveShoulder && speed < 0.15) {
-      type = "drop"; confidence = 0.60;
-    } else if (nearShoulder && velX > 0.03) {
-      type = "drive"; confidence = 0.62;
-    } else if (!aboveShoulder && speed < 0.1) {
-      type = "net_shot"; confidence = 0.58;
-    } else if (belowHip && velY < -0.03) {
-      type = "lift"; confidence = 0.55;
-    } else if (aboveShoulder) {
-      type = speed > 0.15 ? "smash" : "clear";
-      confidence = 0.48;
-    } else {
-      type = "drive"; confidence = 0.45;
-    }
+  // Tightened rules per spec:
+  //   Smash   : wrist HIGH (>0.1 above shoulder, normalized) + fast downward
+  //   Clear   : wrist HIGH + neutral or upward trajectory
+  //   Drop    : wrist HIGH + slow speed
+  //   Drive   : wrist near shoulder height + fast horizontal
+  //   Net shot: wrist BELOW shoulder + slow
+  //   Serve   : wrist BELOW hip + underhand
+  // Forehand gets slightly higher base confidence than backhand.
+  const fhBoost = isBackhand ? 0.0 : 0.08;
+
+  if (belowHip && speed < 0.15) {
+    type = "serve"; confidence = 0.62 + fhBoost;
+  } else if (highAboveShoulder && velY > 0.03 && speed > 0.2) {
+    type = "smash"; confidence = 0.80 + fhBoost;
+  } else if (highAboveShoulder && velY <= 0.01) {
+    type = "clear"; confidence = 0.70 + fhBoost;
+  } else if (highAboveShoulder && speed < 0.15) {
+    type = "drop"; confidence = 0.62 + fhBoost;
+  } else if (nearShoulder && velX > 0.03) {
+    type = "drive"; confidence = 0.66 + fhBoost;
+  } else if (!aboveShoulder && speed < 0.1) {
+    type = "net_shot"; confidence = 0.60 + fhBoost;
+  } else if (belowHip && velY < -0.03) {
+    type = "lift"; confidence = 0.56 + fhBoost;
+  } else if (aboveShoulder && speed > 0.2 && velY > 0.03) {
+    // Overhead but not "high above" — still a smash, lower confidence.
+    type = "smash"; confidence = 0.62 + fhBoost;
+  } else if (aboveShoulder) {
+    type = speed > 0.15 ? "smash" : "clear";
+    confidence = 0.48 + fhBoost;
   } else {
-    // Forehand variants
-    if (aboveShoulder && speed > 0.2 && velY > 0.03) {
-      type = "smash"; confidence = 0.80;
-    } else if (aboveShoulder && velY < -0.01) {
-      type = "clear"; confidence = 0.72;
-    } else if (aboveShoulder && speed < 0.15) {
-      type = "drop"; confidence = 0.65;
-    } else if (nearShoulder && velX > 0.03) {
-      type = "drive"; confidence = 0.68;
-    } else if (!aboveShoulder && speed < 0.1) {
-      type = "net_shot"; confidence = 0.62;
-    } else if (belowHip && velY < -0.03) {
-      type = "lift"; confidence = 0.58;
-    } else if (belowHip && speed < 0.15) {
-      type = "serve"; confidence = 0.60;
-    } else if (aboveShoulder) {
-      type = speed > 0.15 ? "smash" : "clear";
-      confidence = 0.50;
-    } else {
-      type = "drive"; confidence = 0.45;
-    }
+    type = "drive"; confidence = 0.42 + fhBoost;
   }
 
   return { type, confidence };
@@ -588,57 +805,37 @@ function classifyBadmintonShot(aboveShoulder, belowHip, isBackhand, velY, velX, 
 /**
  * Classify a table tennis shot from motion features at the peak frame.
  *
- * @param {boolean} aboveShoulder - Wrist is above shoulder
- * @param {boolean} isBackhand - Wrist is on backhand side of body
- * @param {number} velY - Normalized vertical velocity (positive=down)
- * @param {number} velX - Normalized horizontal velocity (absolute)
- * @param {number} elbowAngle - Elbow angle in degrees
- * @param {number} speed - Normalized peak speed
- * @param {boolean} belowHip - Wrist is below hip
+ * @param {object} f - Feature bundle
  * @returns {{ type: string, confidence: number }}
  */
-function classifyTTShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip) {
-  // velY/velX are torso-normalized displacements, speed is torso-normalized velocity.
+function classifyTTShot(f) {
+  const { aboveShoulder, nearShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip, wristDyWindowNorm } = f;
   let type;
   let confidence;
 
-  // Very fast flat trajectory = smash
-  if (speed > 0.35 && velX > 0.04 && Math.abs(velY) < 0.02) {
-    type = "smash";
-    confidence = 0.75;
-  }
-  // Upward brush motion = loop/topspin
-  else if (velY < -0.02 && speed > 0.15) {
+  // Loop: wrist clearly goes UP across a 5-frame window (dy < -0.04 normalized).
+  // This is a cleaner signal than a single-frame velY.
+  const loopUpward = wristDyWindowNorm < -0.04;
+
+  if (speed > 0.35 && nearShoulder && velX > 0.04 && Math.abs(velY) < 0.02) {
+    // Very fast flat smash, wrist near shoulder height.
+    type = "smash"; confidence = 0.75;
+  } else if (loopUpward && speed > 0.15) {
     type = isBackhand ? "backhand_loop" : "forehand_loop";
     confidence = 0.72;
-  }
-  // Strong downward motion = chop
-  else if (velY > 0.03 && velX < 0.02) {
-    type = "chop";
-    confidence = 0.68;
-  }
-  // Moderate speed forward = drive
-  else if (speed > 0.1 && velX > 0.015) {
+  } else if (velY > 0.03 && velX < 0.02) {
+    type = "chop"; confidence = 0.68;
+  } else if (belowHip && speed < 0.1) {
+    type = "serve"; confidence = 0.64;
+  } else if (nearShoulder && speed > 0.1 && velX > 0.015) {
     type = isBackhand ? "backhand_drive" : "forehand_drive";
-    confidence = 0.65;
-  }
-  // Compact behind-body motion, slow = serve
-  else if (belowHip && speed < 0.1) {
-    type = "serve";
-    confidence = 0.62;
-  }
-  // Very slow, small motion = push or block
-  else if (speed < 0.08) {
+    confidence = 0.66;
+  } else if (speed < 0.08) {
     type = speed < 0.03 ? "block" : "push";
     confidence = 0.55;
-  }
-  // Quick wrist flick at table height = flick
-  else if (speed > 0.18 && elbowAngle > 140) {
-    type = "flick";
-    confidence = 0.58;
-  }
-  // Default: drive based on side
-  else {
+  } else if (speed > 0.18 && elbowAngle > 140) {
+    type = "flick"; confidence = 0.58;
+  } else {
     type = isBackhand ? "backhand_drive" : "forehand_drive";
     confidence = 0.45;
   }
@@ -649,34 +846,31 @@ function classifyTTShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed
 /**
  * Classify a tennis shot from motion features at the peak frame.
  *
- * @param {boolean} aboveShoulder
- * @param {boolean} isBackhand
- * @param {number} velY
- * @param {number} velX
- * @param {number} elbowAngle
- * @param {number} speed
- * @param {boolean} belowHip
+ * @param {object} f - Feature bundle
  * @returns {{ type: string, confidence: number }}
  */
-function classifyTennisShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip) {
+function classifyTennisShot(f) {
+  const { highAboveShoulder, aboveShoulder, nearShoulder, isBackhand, velY, velX, elbowAngle, speed } = f;
   let type;
   let confidence;
 
-  if (aboveShoulder && speed > 0.3 && elbowAngle > 150) {
-    type = "serve"; confidence = 0.78;
-  } else if (aboveShoulder && velY > 0.06) {
-    type = "overhead"; confidence = 0.70;
+  // Serve: wrist VERY HIGH + fast downward + arm fully extended (elbow ~ straight)
+  if (highAboveShoulder && speed > 0.3 && velY > 0.03 && elbowAngle > 150) {
+    type = "serve"; confidence = 0.82;
+  } else if (highAboveShoulder && velY > 0.06) {
+    type = "overhead"; confidence = 0.72;
   } else if (velY > 0.05 && speed < 0.15) {
     type = "slice"; confidence = 0.62;
   } else if (velY < -0.06 && !aboveShoulder) {
     type = "lob"; confidence = 0.60;
   } else if (!aboveShoulder && speed < 0.06) {
     type = "drop_shot"; confidence = 0.55;
-  } else if (speed < 0.1 && !aboveShoulder) {
-    type = "volley"; confidence = 0.55;
+  } else if (nearShoulder && speed < 0.12 && Math.abs(velX) < 0.03) {
+    // Compact motion at shoulder height = volley
+    type = "volley"; confidence = 0.60;
   } else {
     type = isBackhand ? "backhand" : "forehand";
-    confidence = 0.65;
+    confidence = 0.68;
   }
 
   return { type, confidence };
@@ -685,34 +879,31 @@ function classifyTennisShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, s
 /**
  * Classify a pickleball shot from motion features at the peak frame.
  *
- * @param {boolean} aboveShoulder
- * @param {boolean} isBackhand
- * @param {number} velY
- * @param {number} velX
- * @param {number} elbowAngle
- * @param {number} speed
- * @param {boolean} belowHip
- * @param {boolean} nearShoulder
+ * @param {object} f - Feature bundle
  * @returns {{ type: string, confidence: number }}
  */
-function classifyPickleballShot(aboveShoulder, isBackhand, velY, velX, elbowAngle, speed, belowHip, nearShoulder) {
+function classifyPickleballShot(f) {
+  const { highAboveShoulder, aboveShoulder, nearShoulder, velY, velX, speed, belowHip } = f;
   let type;
   let confidence;
 
-  if (aboveShoulder && velY > 0.06) {
-    type = "overhead"; confidence = 0.68;
-  } else if (speed < 0.06 && !aboveShoulder) {
-    type = "dink"; confidence = 0.65;
+  if (highAboveShoulder && velY > 0.06) {
+    type = "overhead"; confidence = 0.70;
   } else if (belowHip && speed < 0.1) {
-    type = "serve"; confidence = 0.62;
-  } else if (speed > 0.15) {
-    type = "drive"; confidence = 0.60;
+    // Underhand from below waist
+    type = "serve"; confidence = 0.66;
+  } else if (nearShoulder && speed < 0.08 && Math.abs(velX) < 0.02) {
+    // Slow, soft, compact motion at net height = dink
+    type = "dink"; confidence = 0.66;
   } else if (velY < -0.06) {
-    type = "lob"; confidence = 0.55;
-  } else if (speed < 0.1 && !aboveShoulder) {
+    type = "lob"; confidence = 0.58;
+  } else if (nearShoulder && speed > 0.1 && velX > 0.02 && speed < 0.2) {
+    // Medium horizontal at net = volley
+    type = "volley"; confidence = 0.58;
+  } else if (speed > 0.15 && velX > 0.02) {
+    type = "drive"; confidence = 0.62;
+  } else if (!aboveShoulder && speed < 0.1) {
     type = "third_shot_drop"; confidence = 0.55;
-  } else if (nearShoulder && speed < 0.15) {
-    type = "volley"; confidence = 0.52;
   } else {
     type = "drop"; confidence = 0.45;
   }
@@ -1453,6 +1644,62 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     const activeKeypoints = allKeypoints.filter((_, i) => isActiveFrame[i]);
     const dominantHand = detectDominantHand(activeKeypoints.length > 0 ? activeKeypoints : allKeypoints);
 
+    // ── Step 5b: Quality gating + camera angle detection ────────────────
+    // Count how many frames pass the quality gate. We DO NOT drop the low-
+    // quality frames from allKeypoints (motion peak detection and metrics
+    // still use the full array) but the classifier uses only quality frames
+    // via the voting helper + isQualityFrame().
+    const qualityFrameFlags = allKeypoints.map((kps) => isQualityFrame(kps, dominantHand));
+    const qualityFrameCount = qualityFrameFlags.filter(Boolean).length;
+    const totalFramesExtracted = allKeypoints.length;
+    const qualityPercentage = totalFramesExtracted > 0
+      ? Math.round((qualityFrameCount / totalFramesExtracted) * 100)
+      : 0;
+    const cameraAngle = detectCameraAngle(allKeypoints);
+
+    // Insufficient data guard — if fewer than 5 quality frames, bail early
+    // with a clear "insufficient data" result. The existing result shape is
+    // preserved so the frontend UI keeps working.
+    if (qualityFrameCount < 5) {
+      progress("complete", 100, "Insufficient data");
+      return {
+        success: false,
+        error: "Insufficient data — not enough clean pose frames to analyze. Try a clearer, better-lit video with the full body visible.",
+        multi_shot: false,
+        total_shots_detected: 0,
+        dominant_hand: dominantHand,
+        shots: [],
+        shot_distribution: {},
+        player_profile: buildPlayerProfile([], dominantHand),
+        skill_level: "Beginner",
+        analysis_mode: mode,
+        shot_analysis: {
+          shot_type: "unknown",
+          shot_name: "Unknown",
+          confidence: 0,
+          grade: "F",
+          score: 0,
+          weaknesses: [],
+          improvement_plan: "Upload a clearer video with the player fully in frame.",
+        },
+        metrics: {},
+        quick_summary: "Insufficient data — not enough clean pose frames to analyze.",
+        frames_analyzed: allKeypoints.length,
+        video_info: videoInfo,
+        sport,
+        target_player: targetPlayer,
+        analysis_quality: {
+          total_frames_extracted: totalFramesExtracted,
+          quality_frames: qualityFrameCount,
+          quality_percentage: qualityPercentage,
+          camera_angle: cameraAngle,
+          confidence_level: "low",
+          warning: "Video quality is too low to produce reliable results. Try a clearer video with the full body visible.",
+        },
+        _client_side: true,
+      };
+    }
+
     // ── Step 6: Find shot moments (motion peaks) ─────────────────────────
     progress("classify", 58, "Finding shot moments...");
     const shotPeaks = findShotMoments(allKeypoints, timestamps, dominantHand);
@@ -1463,7 +1710,9 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
 
     for (let i = 0; i < shotPeaks.length; i++) {
       const peak = shotPeaks[i];
-      const classification = classifySingleShot(allKeypoints, peak.index, dominantHand, sport, timestamps);
+      const classification = classifyShotWithVoting(
+        allKeypoints, peak.index, dominantHand, sport, timestamps, cameraAngle,
+      );
       const shotMetrics = computeShotMetrics(allKeypoints, peak.index);
       const shotSpeed = estimateShotSpeed(
         allKeypoints, timestamps, peak.index, sport, dominantHand, classification.type,
@@ -1648,6 +1897,16 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       training_plan_7day: null,
       earned_badges: [],
       score_comparison: null,
+      analysis_quality: {
+        total_frames_extracted: totalFramesExtracted,
+        quality_frames: qualityFrameCount,
+        quality_percentage: qualityPercentage,
+        camera_angle: cameraAngle,
+        confidence_level: qualityPercentage >= 70 ? "high" : qualityPercentage >= 40 ? "medium" : "low",
+        warning: qualityPercentage < 40
+          ? "Video quality is low. Try a clearer video for better results."
+          : null,
+      },
       _client_side: true,
     };
 
