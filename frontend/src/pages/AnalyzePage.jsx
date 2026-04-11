@@ -14,7 +14,7 @@ import {
   Clock, BarChart3, Zap, RefreshCw, History, ArrowRight,
   ChevronDown, ChevronUp, ExternalLink, ThumbsUp, Calendar,
   Bot, Lightbulb, Youtube, Download, Share2, Film, Scissors, Copy,
-  Users, Cpu, Cloud, Lock
+  Users, Cpu, Cloud, Lock, Footprints, Wind, Activity, Flame, Crosshair
 } from "lucide-react";
 import api from "@/lib/api";
 import ShareModal from "@/components/ShareModal";
@@ -48,6 +48,242 @@ const FULL_LOADING_STEPS = [
   { pct: 85, text: "Generating improvement plan..." },
   { pct: 92, text: "Preparing your coaching report..." },
 ];
+
+// ─── Drill library (client-side) ───────────────────────────────────────
+// A compact catalogue of drills keyed by "theme". Each drill carries
+// enough info for a rich card UI. Themes map from weakness keywords.
+const DRILL_LIBRARY = {
+  balance: [
+    {
+      name: "Single-Leg Stance Hold",
+      type: "balance",
+      difficulty: "easy",
+      duration: "3 x 30s each leg",
+      why: "Builds core and ankle stability — the foundation of every shot.",
+      video: "https://www.youtube.com/results?search_query=single+leg+balance+drill",
+    },
+    {
+      name: "Split-Step Recovery",
+      type: "footwork",
+      difficulty: "medium",
+      duration: "4 sets x 45s",
+      why: "Trains you to re-center after each shot so you never get caught off-balance.",
+      video: "https://www.youtube.com/results?search_query=split+step+badminton+drill",
+    },
+  ],
+  footwork: [
+    {
+      name: "Six-Corner Shadow Footwork",
+      type: "footwork",
+      difficulty: "medium",
+      duration: "4 x 60s",
+      why: "Sharpens court coverage and teaches efficient movement patterns.",
+      video: "https://www.youtube.com/results?search_query=six+corner+footwork+badminton",
+    },
+    {
+      name: "Lateral Shuffle Ladder",
+      type: "footwork",
+      difficulty: "easy",
+      duration: "3 x 40s",
+      why: "Improves lateral quickness so you reach wide shots with time to spare.",
+      video: "https://www.youtube.com/results?search_query=agility+ladder+lateral+shuffle",
+    },
+  ],
+  elbow: [
+    {
+      name: "Wall Elbow-Angle Drill",
+      type: "technique",
+      difficulty: "easy",
+      duration: "3 x 15 reps",
+      why: "Grooves the ideal 90 degree elbow position for a clean overhead.",
+      video: "https://www.youtube.com/results?search_query=elbow+angle+overhead+drill",
+    },
+    {
+      name: "Slow-Mo Swing Shadowing",
+      type: "technique",
+      difficulty: "medium",
+      duration: "4 x 20 swings",
+      why: "Isolates elbow path so muscle memory locks in correct form.",
+      video: "https://www.youtube.com/results?search_query=shadow+swing+technique",
+    },
+  ],
+  form: [
+    {
+      name: "Mirror Shadow Swings",
+      type: "technique",
+      difficulty: "easy",
+      duration: "3 x 20 reps",
+      why: "Visual feedback helps you self-correct posture and swing path.",
+      video: "https://www.youtube.com/results?search_query=shadow+swing+mirror+technique",
+    },
+    {
+      name: "Resistance Band Stroke",
+      type: "technique",
+      difficulty: "medium",
+      duration: "3 x 15 reps",
+      why: "Adds resistance so proper form becomes second nature under load.",
+      video: "https://www.youtube.com/results?search_query=resistance+band+swing+drill",
+    },
+  ],
+  power: [
+    {
+      name: "Explosive Medicine Ball Throw",
+      type: "power",
+      difficulty: "hard",
+      duration: "4 x 8 reps",
+      why: "Trains rotational power — essential for smashes and drives.",
+      video: "https://www.youtube.com/results?search_query=medicine+ball+rotational+throw",
+    },
+    {
+      name: "Jump Smash Progression",
+      type: "power",
+      difficulty: "hard",
+      duration: "3 x 10 reps",
+      why: "Builds vertical leg drive for devastating overhead power.",
+      video: "https://www.youtube.com/results?search_query=jump+smash+drill+badminton",
+    },
+  ],
+  speed: [
+    {
+      name: "Reaction Ball Catches",
+      type: "power",
+      difficulty: "medium",
+      duration: "3 x 60s",
+      why: "Sharpens reaction time so you respond to fast shots instantly.",
+      video: "https://www.youtube.com/results?search_query=reaction+ball+training",
+    },
+    {
+      name: "Short Sprint Intervals",
+      type: "power",
+      difficulty: "hard",
+      duration: "6 x 15s sprints",
+      why: "Raises top-end speed and explosive acceleration on-court.",
+      video: "https://www.youtube.com/results?search_query=short+sprint+intervals+athlete",
+    },
+  ],
+  consistency: [
+    {
+      name: "Wall Rally Challenge",
+      type: "technique",
+      difficulty: "easy",
+      duration: "3 x 2 min",
+      why: "Forces clean, repeatable contact — the bedrock of consistency.",
+      video: "https://www.youtube.com/results?search_query=wall+rally+racket+drill",
+    },
+    {
+      name: "Target Placement Drill",
+      type: "technique",
+      difficulty: "medium",
+      duration: "4 x 20 shots",
+      why: "Trains accuracy so your shots land where you intend, every time.",
+      video: "https://www.youtube.com/results?search_query=target+placement+drill",
+    },
+  ],
+  default: [
+    {
+      name: "Dynamic Warm-Up Flow",
+      type: "technique",
+      difficulty: "easy",
+      duration: "5 min",
+      why: "Primes your body so every training session is safer and more effective.",
+      video: "https://www.youtube.com/results?search_query=athlete+dynamic+warm+up",
+    },
+    {
+      name: "Shadow Footwork Routine",
+      type: "footwork",
+      difficulty: "medium",
+      duration: "3 x 60s",
+      why: "A universal base drill that sharpens movement for any sport.",
+      video: "https://www.youtube.com/results?search_query=shadow+footwork+routine",
+    },
+  ],
+};
+
+const WEAKNESS_THEME_MAP = [
+  { keywords: ["balance", "stabil", "stance"], theme: "balance" },
+  { keywords: ["footwork", "movement", "positioning", "court coverage"], theme: "footwork" },
+  { keywords: ["elbow", "angle", "wrist"], theme: "elbow" },
+  { keywords: ["form", "posture", "technique", "mechanics", "swing"], theme: "form" },
+  { keywords: ["power", "smash", "strength"], theme: "power" },
+  { keywords: ["speed", "reaction", "quick", "explosive"], theme: "speed" },
+  { keywords: ["consisten", "accuracy", "placement", "control"], theme: "consistency" },
+];
+
+function extractWeaknessText(w) {
+  if (!w) return "";
+  if (typeof w === "string") return w;
+  return [w.issue, w.area, w.description, w.title].filter(Boolean).join(" ");
+}
+
+function generateDrillsFromAnalysis(analysis) {
+  if (!analysis) return DRILL_LIBRARY.default.slice(0, 3);
+
+  const weaknessPool = [];
+  const shot = analysis.shot_analysis || {};
+  if (Array.isArray(shot.weaknesses)) weaknessPool.push(...shot.weaknesses);
+  if (Array.isArray(analysis.coach_feedback?.top_issues)) weaknessPool.push(...analysis.coach_feedback.top_issues);
+  if (Array.isArray(analysis.coaching?.issues)) {
+    weaknessPool.push(...analysis.coaching.issues);
+  }
+  if (Array.isArray(analysis.training_priorities)) weaknessPool.push(...analysis.training_priorities);
+  if (Array.isArray(analysis.player_profile?.weaknesses)) weaknessPool.push(...analysis.player_profile.weaknesses);
+
+  const themes = new Set();
+  for (const w of weaknessPool) {
+    const text = extractWeaknessText(w).toLowerCase();
+    if (!text) continue;
+    for (const { keywords, theme } of WEAKNESS_THEME_MAP) {
+      if (keywords.some((k) => text.includes(k))) {
+        themes.add(theme);
+        break;
+      }
+    }
+  }
+
+  // If shot grade is poor, always include form work.
+  if (["C", "D", "F"].includes(shot.grade)) themes.add("form");
+  // If score is low, add power/consistency.
+  const score = shot.score ?? analysis.pro_comparison?.overall_score ?? 0;
+  if (score && score < 60) themes.add("consistency");
+
+  const selected = [];
+  const seen = new Set();
+  for (const theme of themes) {
+    for (const drill of DRILL_LIBRARY[theme] || []) {
+      if (seen.has(drill.name)) continue;
+      seen.add(drill.name);
+      selected.push(drill);
+      if (selected.length >= 5) break;
+    }
+    if (selected.length >= 5) break;
+  }
+
+  // Top up from default if we have fewer than 3.
+  if (selected.length < 3) {
+    for (const drill of DRILL_LIBRARY.default) {
+      if (seen.has(drill.name)) continue;
+      seen.add(drill.name);
+      selected.push(drill);
+      if (selected.length >= 3) break;
+    }
+  }
+
+  return selected.slice(0, 5);
+}
+
+const DRILL_TYPE_ICON = {
+  footwork: Footprints,
+  power: Flame,
+  technique: Crosshair,
+  balance: Activity,
+  speed: Wind,
+};
+
+const DRILL_DIFFICULTY_STYLE = {
+  easy: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+  medium: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+  hard: "bg-red-500/10 text-red-400 border-red-500/30",
+};
 
 export default function AnalyzePage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -165,6 +401,43 @@ export default function AnalyzePage() {
     setViewingHistorical(false);
     setResult(null);
     setActiveTab("history");
+  };
+
+  // Create a profile from the current analysis result. Used when a user
+  // signs in after analyzing a video without first taking the quiz.
+  const createProfileFromAnalysis = async () => {
+    if (!result || !user) return;
+
+    const sport = result.sport || "badminton";
+    const skillLevel = result.skill_level || "Beginner";
+
+    // Derive play style from shot distribution
+    const distribution = result.shot_distribution || {};
+    const totalShots = Object.values(distribution).reduce((a, b) => a + b, 0);
+    let playStyle = "All-round";
+    if (totalShots > 0) {
+      const aggressiveShots = (distribution.smash || 0) + (distribution.drive || 0);
+      const defensiveShots = (distribution.clear || 0) + (distribution.drop || 0) + (distribution.net_shot || 0);
+      if (aggressiveShots > defensiveShots) playStyle = sport === "badminton" ? "Power" : "Offensive";
+      else if (defensiveShots > aggressiveShots * 1.5) playStyle = "Defense";
+    }
+
+    try {
+      await api.post("/profile", {
+        selected_sports: [sport],
+        sports_profiles: {
+          [sport]: { skill_level: skillLevel, play_style: playStyle },
+        },
+        playing_frequency: "1-2 days/week",
+        budget_range: "Medium",
+        injury_history: "none",
+        primary_goal: "Improve technique",
+      });
+      await refreshProfile();
+      toast.success("Profile created from your analysis!");
+    } catch (err) {
+      toast.error("Failed to create profile");
+    }
   };
 
   // Drag & drop handlers
@@ -882,6 +1155,7 @@ export default function AnalyzePage() {
     const shot = result.shot_analysis || {};
     const pro = result.pro_comparison || {};
     const coaching = result.coaching || {};
+    const contextualDrills = generateDrillsFromAnalysis(result);
     const gearTips = result.gear_tips || [];
     const trainingPrios = result.training_priorities || [];
     const strengths = result.coach_feedback?.strengths || result.strengths || coaching?.strengths || [];
@@ -895,6 +1169,40 @@ export default function AnalyzePage() {
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+
+        {/* Profile setup prompt for signed-in users without a profile */}
+        {user && !profile?.active_sport && result && !viewingHistorical && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-5 mb-4"
+          >
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-bold text-white mb-1">Get personalized training</h3>
+                <p className="text-sm text-zinc-400 mb-3">
+                  You haven't set up your profile yet. Choose an option:
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={() => navigate("/assessment")}
+                    className="bg-lime-400 text-black hover:bg-lime-500 font-bold text-xs"
+                  >
+                    Take 1-min Quiz (Best)
+                  </Button>
+                  <Button
+                    onClick={createProfileFromAnalysis}
+                    variant="outline"
+                    className="border-lime-400/30 text-lime-400 hover:bg-lime-400/10 text-xs"
+                  >
+                    Use This Analysis
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Back to History button when viewing a past analysis */}
         {viewingHistorical && (
@@ -1480,24 +1788,74 @@ export default function AnalyzePage() {
               ))}
             </div>
 
-            {coaching?.action_plan?.drills?.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2 flex items-center gap-1">
-                  <Dumbbell className="w-3 h-3" /> Recommended Drills
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {coaching.action_plan.drills.map((drill, i) => (
-                    <motion.div
-                      key={i}
-                      whileHover={{ scale: 1.02 }}
-                      className="bg-zinc-800 text-zinc-300 rounded-xl px-3 py-2 text-xs text-center hover:bg-lime-400 hover:text-black transition-colors cursor-default"
-                    >
-                      {drill}
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
+          </motion.div>
+        )}
+
+        {/* ── Personalized Drills (derived from this video) ── */}
+        {contextualDrills.length > 0 && gate(
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.39 }}
+            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium flex items-center gap-1">
+                <Dumbbell className="w-3 h-3 text-lime-400" /> Drills For You
+              </p>
+              <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px]">
+                Based on this video
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {contextualDrills.map((drill, i) => {
+                const Icon = DRILL_TYPE_ICON[drill.type] || Dumbbell;
+                const diffClass = DRILL_DIFFICULTY_STYLE[drill.difficulty] || DRILL_DIFFICULTY_STYLE.medium;
+                return (
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -2, scale: 1.01 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="group relative bg-zinc-800/40 border border-zinc-800 hover:border-lime-400/40 rounded-2xl p-4 transition-all"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center shrink-0 group-hover:bg-lime-400/20 transition-colors">
+                        <Icon className="w-5 h-5 text-lime-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h4 className="font-heading font-bold text-sm text-white leading-tight">
+                            {drill.name}
+                          </h4>
+                          <Badge
+                            variant="outline"
+                            className={`text-[9px] uppercase font-bold shrink-0 ${diffClass}`}
+                          >
+                            {drill.difficulty}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1 text-[11px] text-zinc-500 mb-2">
+                          <Clock className="w-3 h-3" />
+                          <span>{drill.duration}</span>
+                        </div>
+                        <p className="text-xs text-zinc-400 leading-relaxed mb-3">
+                          {drill.why}
+                        </p>
+                        <a
+                          href={drill.video}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-lime-400 hover:text-lime-300 transition-colors"
+                        >
+                          <Play className="w-3 h-3 fill-current" /> Try It
+                          <ArrowRight className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </motion.div>
         )}
 

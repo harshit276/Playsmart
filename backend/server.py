@@ -1650,40 +1650,9 @@ async def analyze_video_endpoint(
         await db.video_analyses.insert_one(analysis_record)
         analysis_record.pop("_id", None)
 
-        # Update player profile with AI-detected skill data
-        if profile:
-            updates = {}
-            shot_data = ai_result.get("shot_analysis", {})
-
-            ai_strengths = []
-            ai_focus = []
-
-            if shot_data.get("grade") in ["A", "B"]:
-                ai_strengths.append(f"Strong {shot_name} technique")
-            elif shot_data.get("grade") in ["D", "F"]:
-                ai_focus.append(f"Improve {shot_name} form")
-
-            for w in weaknesses_raw[:3]:
-                if isinstance(w, dict):
-                    ai_focus.append(w.get("issue", w.get("area", "")))
-
-            if ai_strengths or ai_focus:
-                existing_strengths = profile.get("strengths", [])
-                existing_focus = profile.get("focus_areas", [])
-                merged_strengths = list(dict.fromkeys(existing_strengths + ai_strengths))[:6]
-                merged_focus = list(dict.fromkeys(existing_focus + ai_focus))[:6]
-                updates["strengths"] = merged_strengths
-                updates["focus_areas"] = merged_focus
-
-            updates["ai_skill_level"] = detected_skill_level
-            updates["last_analysis_date"] = datetime.now(timezone.utc).isoformat()
-            updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-            if updates:
-                await db.player_profiles.update_one(
-                    {"user_id": user["id"]},
-                    {"$set": updates}
-                )
+        # NOTE: Each video analysis is INDEPENDENT and must NOT mutate the
+        # user's profile. The profile is set explicitly via the quiz or via
+        # "Save as my profile" from an analysis — never silently on upload.
 
         # ─── Gamification: Check and award badges ───
         new_badges = await check_and_award_badges(user["id"], analysis_record)
@@ -2072,43 +2041,9 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         analysis_record.pop("_id", None)
         logger.warning("Failed to save analysis to DB (timeout or error)")
 
-    # Update player profile with detected skill data (non-fatal)
-    if profile:
-        try:
-            updates = {}
-            shot_data = ai_result.get("shot_analysis", {})
-
-            ai_strengths = []
-            ai_focus = []
-
-            if shot_data.get("grade") in ["A", "B"]:
-                ai_strengths.append(f"Strong {shot_name} technique")
-            elif shot_data.get("grade") in ["D", "F"]:
-                ai_focus.append(f"Improve {shot_name} form")
-
-            for w in weaknesses_raw[:3]:
-                if isinstance(w, dict):
-                    ai_focus.append(w.get("issue", w.get("area", "")))
-
-            if ai_strengths or ai_focus:
-                existing_s = profile.get("strengths", [])
-                existing_f = profile.get("focus_areas", [])
-                merged_strengths = list(dict.fromkeys(existing_s + ai_strengths))[:6]
-                merged_focus = list(dict.fromkeys(existing_f + ai_focus))[:6]
-                updates["strengths"] = merged_strengths
-                updates["focus_areas"] = merged_focus
-
-            updates["ai_skill_level"] = detected_skill_level
-            updates["last_analysis_date"] = datetime.now(timezone.utc).isoformat()
-            updates["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-            if updates:
-                await asyncio.wait_for(db.player_profiles.update_one(
-                    {"user_id": user["id"]},
-                    {"$set": updates}
-                ), timeout=5.0)
-        except (Exception, asyncio.TimeoutError):
-            logger.warning("Failed to update profile after analysis (timeout or error)")
+    # NOTE: Each video analysis is INDEPENDENT and must NOT mutate the
+    # user's profile. The profile is set explicitly via the quiz or via
+    # "Save as my profile" from an analysis — never silently on upload.
 
     # ─── Gamification (non-fatal) ───
     new_badges = []
