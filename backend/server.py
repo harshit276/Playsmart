@@ -26,8 +26,8 @@ import httpx
 # ─── Cloudinary credentials ───
 # TODO: move these to env vars in Vercel / Railway dashboards.
 CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "dz6anvjej")
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "262276841895161")
-CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "XJryUbbGxuJ23Wg7j1MoMZRuZgU")
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "547874763431433")
+CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "mK2zxGmmzsipNsb1XreEtu4Q0Kk")
 
 # ─── Simple in-memory cache for equipment data ───
 _equipment_cache: dict = {}
