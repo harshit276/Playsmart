@@ -8,7 +8,7 @@
  */
 
 import { detectHighlights } from "./highlightDetector.js";
-import { extractClip, concatenateClips, generateThumbnail } from "./videoEditor.js";
+import { extractClip, concatenateClips, generateThumbnail, resetEditor } from "./videoEditor.js";
 
 /**
  * Generate a complete highlight reel from a video.
