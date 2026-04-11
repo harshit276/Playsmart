@@ -78,27 +78,6 @@ export default function AnalyzePage() {
     }
   }, []);
 
-  // When an analysis completes, persist the score so the next visit can
-  // compute improvement and schedule a reminder for 7 days out.
-  useEffect(() => {
-    if (!result?.success) return;
-    const score =
-      result.shot_analysis?.score ??
-      result.pro_comparison?.overall_score ??
-      0;
-    if (score > 0) {
-      try {
-        localStorage.setItem("last_analysis_score", String(score));
-        localStorage.setItem(
-          "next_analysis_reminder",
-          String(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        );
-      } catch {
-        // ignore
-      }
-    }
-  }, [result]);
-
   const [targetPlayer, setTargetPlayer] = useState("auto");
   const [playerSelectorOpen, setPlayerSelectorOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -122,6 +101,27 @@ export default function AnalyzePage() {
   const [scanResult, setScanResult] = useState(null);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [pendingAnalysisSport, setPendingAnalysisSport] = useState(null);
+
+  // When an analysis completes, persist the score so the next visit can
+  // compute improvement and schedule a reminder for 7 days out.
+  useEffect(() => {
+    if (!result?.success) return;
+    const score =
+      result.shot_analysis?.score ??
+      result.pro_comparison?.overall_score ??
+      0;
+    if (score > 0) {
+      try {
+        localStorage.setItem("last_analysis_score", String(score));
+        localStorage.setItem(
+          "next_analysis_reminder",
+          String(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        );
+      } catch {
+        // ignore
+      }
+    }
+  }, [result]);
 
   const loadHistory = useCallback(async () => {
     if (!user?.id) return;
