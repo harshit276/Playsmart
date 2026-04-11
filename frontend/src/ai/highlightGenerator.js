@@ -30,25 +30,35 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
   const { onProgress, maxClips = 8, includeSlomo = true } = options;
   const progress = (pct, msg) => onProgress?.({ percent: pct, message: msg });
 
+  console.log("[HighlightGen] Starting with file:", videoFile?.name, "sport:", sport);
+
   // Step 1: Detect highlight moments
   progress(5, "Analyzing video for highlight moments...");
-  const detection = await detectHighlights(videoFile, sport, {
-    onProgress: (info) => {
-      const pct = 5 + (info.percent || 0) * 0.3;
-      progress(pct, info.message || "Detecting moments...");
-    },
-    maxHighlights: maxClips,
-  });
+  let detection;
+  try {
+    detection = await detectHighlights(videoFile, sport, {
+      onProgress: (info) => {
+        const pct = 5 + (info.percent || 0) * 0.3;
+        progress(pct, info.message || "Detecting moments...");
+      },
+      maxHighlights: maxClips,
+    });
+    console.log("[HighlightGen] Detected", detection.highlights.length, "moments");
+  } catch (detectErr) {
+    console.error("[HighlightGen] Detection failed:", detectErr);
+    throw new Error(`Could not analyze video: ${detectErr.message}`);
+  }
 
   const moments = detection.highlights.slice(0, maxClips);
 
   if (moments.length === 0) {
-    throw new Error("No highlight-worthy moments detected in this video");
+    throw new Error("No highlight-worthy moments detected in this video. Try a longer video with more action.");
   }
 
   // Step 2: Extract individual clips
-  progress(40, `Extracting ${moments.length} clips...`);
+  progress(40, `Loading video editor (~25MB on first use)...`);
   const clips = [];
+  let firstClipError = null;
 
   for (let i = 0; i < moments.length; i++) {
     const moment = moments[i];
@@ -65,28 +75,48 @@ export async function generateHighlightReel(videoFile, sport, options = {}) {
 
       // Generate thumbnail
       const thumbTime = (moment.start_time + moment.end_time) / 2;
-      const thumbnail = await generateThumbnail(videoFile, thumbTime);
+      let thumbnail;
+      try {
+        thumbnail = await generateThumbnail(videoFile, thumbTime);
+      } catch (thumbErr) {
+        console.warn("Thumbnail failed:", thumbErr);
+        thumbnail = null;
+      }
 
       clips.push({ blob, moment, thumbnail });
+      console.log(`[HighlightGen] Extracted clip ${i + 1}`);
     } catch (err) {
-      console.warn(`Failed to extract clip ${i + 1}:`, err);
+      console.error(`[HighlightGen] Failed to extract clip ${i + 1}:`, err);
+      if (!firstClipError) firstClipError = err;
     }
   }
 
   if (clips.length === 0) {
-    throw new Error("Failed to extract any clips");
+    const msg = firstClipError?.message || "unknown error";
+    throw new Error(`Failed to extract clips. Video editor error: ${msg}. Try a different video format (MP4 recommended).`);
   }
 
-  // Step 3: Concatenate into final reel
-  progress(75, "Combining into highlight reel...");
-  const reel = await concatenateClips(
-    clips.map((c) => c.blob),
-    {
-      onProgress: (pct, msg) => progress(75 + pct * 0.2, msg),
+  // Step 3: Concatenate into final reel (skip if only 1 clip)
+  let reel;
+  if (clips.length === 1) {
+    reel = clips[0].blob;
+    progress(100, "Complete!");
+  } else {
+    progress(75, "Combining into highlight reel...");
+    try {
+      reel = await concatenateClips(
+        clips.map((c) => c.blob),
+        {
+          onProgress: (pct, msg) => progress(75 + pct * 0.2, msg),
+        }
+      );
+    } catch (concatErr) {
+      console.error("[HighlightGen] Concatenation failed:", concatErr);
+      // Fallback: return the first clip as the "reel"
+      reel = clips[0].blob;
     }
-  );
-
-  progress(100, "Complete!");
+    progress(100, "Complete!");
+  }
 
   return {
     reel,

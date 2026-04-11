@@ -21,12 +21,29 @@ async function getFFmpeg() {
   _loading = (async () => {
     const ffmpeg = new FFmpeg();
 
-    // Load core from CDN
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+    // Log to console for debugging
+    ffmpeg.on("log", ({ message }) => console.log("[ffmpeg]", message));
+    ffmpeg.on("progress", ({ progress, time }) => {
+      console.log(`[ffmpeg] progress: ${(progress * 100).toFixed(0)}%`);
     });
+
+    // Use single-thread core (no SharedArrayBuffer/COOP-COEP needed)
+    // This works on Vercel without special headers
+    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+    try {
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      });
+    } catch (loadErr) {
+      console.error("[ffmpeg] Failed to load from unpkg, trying jsdelivr:", loadErr);
+      // Fallback to jsdelivr CDN
+      const fallbackURL = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd";
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`${fallbackURL}/ffmpeg-core.js`, "text/javascript"),
+        wasmURL: await toBlobURL(`${fallbackURL}/ffmpeg-core.wasm`, "application/wasm"),
+      });
+    }
 
     _ffmpeg = ffmpeg;
     return ffmpeg;
