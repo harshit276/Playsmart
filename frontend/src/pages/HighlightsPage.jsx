@@ -1,52 +1,47 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Film, Upload, Download, Scissors, Copy,
-  Video, AlertTriangle, ChevronDown, Info, X,
-  Settings, Sparkles, RefreshCw, Shield
+  Film, Upload, Download, Play, Pause, SkipForward,
+  Video, AlertTriangle, ChevronDown, X,
+  Sparkles, RefreshCw, Scissors, ChevronRight
 } from "lucide-react";
 import { SPORT_LABEL, SPORT_EMOJI } from "@/lib/sportConfig";
 import SEO from "@/components/SEO";
-import { uploadToCloudinary, generateReel, cleanupVideo } from "@/lib/cloudinaryUpload";
-
-const HIGHLIGHT_COUNT_OPTIONS = [
-  { value: 3, label: "3 clips" },
-  { value: 5, label: "5 clips" },
-  { value: 8, label: "8 clips" },
-];
 
 export default function HighlightsPage() {
   const { profile } = useAuth();
   const [file, setFile] = useState(null);
+  const [videoUrl, setVideoUrl] = useState(null);
   const [selectedSport, setSelectedSport] = useState(null);
-  const [maxClips, setMaxClips] = useState(5);
-  const [includeSlomo, setIncludeSlomo] = useState(true);
-
-  // Set page title
-  useEffect(() => { document.title = "Highlights | AthlyticAI"; }, []);
-
-  const [generating, setGenerating] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState("");
-  const [result, setResult] = useState(null);
+  const [highlights, setHighlights] = useState(null);
   const [error, setError] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
+
+  // Reel playback state
+  const [isPlayingReel, setIsPlayingReel] = useState(false);
+  const [currentClipIndex, setCurrentClipIndex] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState(null);
+
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordedChunksRef = useRef([]);
   const fileRef = useRef(null);
-  const dropRef = useRef(null);
+
+  useEffect(() => { document.title = "Highlights | AthlyticAI"; }, []);
 
   const activeSport = profile?.active_sport || "badminton";
+  useEffect(() => { if (!selectedSport) setSelectedSport(activeSport); }, [activeSport, selectedSport]);
 
-  useEffect(() => {
-    if (!selectedSport) setSelectedSport(activeSport);
-  }, [activeSport, selectedSport]);
-
-  // With the Cloudinary flow the result already contains direct URLs; no blob
-  // bookkeeping needed.
-  const reelUrl = result?.reel_url || null;
+  // Clean up video URL on unmount
+  useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl); }, [videoUrl]);
 
   const handleFile = (e) => {
     const f = e.target.files?.[0];
@@ -56,196 +51,242 @@ export default function HighlightsPage() {
       toast.error("Unsupported format. Use MP4, AVI, MOV, MKV, or WEBM.");
       return;
     }
-    if (f.size > 1024 * 1024 * 1024) {
-      toast.error("File too large. Maximum size is 1 GB.");
-      return;
-    }
-    if (f.size > 500 * 1024 * 1024) {
-      toast.info("Large video — we'll compress it before processing.");
-    }
     setFile(f);
-    setResult(null);
+    setHighlights(null);
     setError(null);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files?.[0];
-    if (f) {
-      const ext = f.name.split(".").pop()?.toLowerCase();
-      if (!["mp4", "avi", "mov", "mkv", "webm"].includes(ext)) {
-        toast.error("Unsupported format.");
-        return;
-      }
-      if (f.size > 1024 * 1024 * 1024) {
-        toast.error("File too large. Maximum 1 GB.");
-        return;
-      }
-      if (f.size > 500 * 1024 * 1024) {
-        toast.info("Large video — we'll compress it before processing.");
-      }
-      setFile(f);
-      setResult(null);
-      setError(null);
-    }
-  };
-
-  const generateHighlights = async () => {
-    if (!file) return;
-    setGenerating(true);
-    setProgress(0);
-    setError(null);
-    setResult(null);
-    setLoadingText("Uploading video...");
-
-    let publicId = null;
-
-    try {
-      // Step 1: upload to Cloudinary (auto-compresses if large)
-      const uploaded = await uploadToCloudinary(file, {
-        onProgress: ({ percent, message }) => {
-          if (typeof percent === "number") setProgress(percent);
-          if (message) setLoadingText(message);
-        },
-      });
-      publicId = uploaded.public_id;
-
-      // Step 2: Detect highlights locally in the browser
-      setLoadingText("Analyzing video for best moments...");
-      setProgress(78);
-
-      let moments = [];
-      try {
-        const { detectHighlights } = await import("@/ai/highlightDetector");
-        const detection = await detectHighlights(file, selectedSport || activeSport, {
-          maxHighlights: maxClips,
-          onProgress: ({ percent, message }) => {
-            setProgress(78 + (percent || 0) * 0.1);
-            if (message) setLoadingText(message);
-          },
-        });
-        moments = detection.highlights || [];
-      } catch (detectErr) {
-        console.warn("Client detection failed, using basic trim:", detectErr);
-        // Continue without moments — backend will use basic trim fallback
-      }
-
-      // Step 3: Send moments + public_id to backend for URL generation
-      setLoadingText("Generating highlight reel...");
-      setProgress(90);
-
-      const reel = await generateReel(
-        publicId,
-        selectedSport || activeSport,
-        uploaded.duration,
-        {
-          target_clips: maxClips,
-          include_speed_overlay: includeSlomo,
-          moments: moments.map((m) => ({
-            start_time: m.start_time,
-            end_time: m.end_time,
-            type: m.type,
-            speed_kmh: m.speed_kmh || 0,
-            should_slowmo: m.should_slowmo || false,
-            description: m.description || "",
-            score: m.score || 50,
-          })),
-        }
-      );
-
-      setProgress(100);
-      setLoadingText("Done!");
-      setResult({
-        ...reel,
-        original_duration: uploaded.duration,
-        public_id: publicId,
-      });
-
-      toast.success("Highlight reel generated!");
-
-      // Cleanup uploaded video after 5 minutes
-      setTimeout(() => cleanupVideo(publicId), 5 * 60 * 1000);
-    } catch (err) {
-      console.error("Highlight generation failed:", err);
-      const msg = err?.response?.data?.detail || err?.message || "Highlight generation failed";
-      setError(msg);
-      toast.error(msg);
-      if (publicId) cleanupVideo(publicId);
-    } finally {
-      setGenerating(false);
-    }
+    setRecordedBlob(null);
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    setVideoUrl(URL.createObjectURL(f));
   };
 
   const resetForm = () => {
     setFile(null);
-    setResult(null);
+    setHighlights(null);
     setError(null);
-    setProgress(0);
-    setLoadingText("");
+    setRecordedBlob(null);
+    setIsPlayingReel(false);
+    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    setVideoUrl(null);
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  // ─── Analyze video for highlights ───
+  const analyzeVideo = async () => {
+    if (!file) return;
+    setAnalyzing(true);
+    setProgress(0);
+    setError(null);
+    setHighlights(null);
+
+    try {
+      const { detectHighlights } = await import("@/ai/highlightDetector");
+      const result = await detectHighlights(file, selectedSport || activeSport, {
+        maxHighlights: 8,
+        onProgress: ({ percent, message }) => {
+          setProgress(percent || 0);
+          if (message) setLoadingText(message);
+        },
+      });
+
+      if (result.highlights.length === 0) {
+        setError("No highlight moments found. Try a longer video with more action.");
+      } else {
+        setHighlights(result);
+        toast.success(`Found ${result.highlights.length} highlight moments!`);
+      }
+    } catch (err) {
+      console.error("Analysis failed:", err);
+      setError(err.message || "Analysis failed");
+    }
+    setAnalyzing(false);
   };
 
+  // ─── Play highlight reel (seeks through moments) ───
+  const playHighlightReel = useCallback(() => {
+    if (!highlights?.highlights?.length || !videoRef.current) return;
+    setCurrentClipIndex(0);
+    setIsPlayingReel(true);
+    const firstMoment = highlights.highlights[0];
+    videoRef.current.currentTime = firstMoment.start_time;
+    videoRef.current.play();
+  }, [highlights]);
+
+  const stopReel = useCallback(() => {
+    setIsPlayingReel(false);
+    if (videoRef.current) videoRef.current.pause();
+  }, []);
+
+  // Handle timeupdate during reel playback
+  const handleTimeUpdate = useCallback(() => {
+    if (!isPlayingReel || !highlights?.highlights?.length || !videoRef.current) return;
+
+    const current = highlights.highlights[currentClipIndex];
+    if (!current) { stopReel(); return; }
+
+    if (videoRef.current.currentTime >= current.end_time) {
+      const nextIdx = currentClipIndex + 1;
+      if (nextIdx < highlights.highlights.length) {
+        setCurrentClipIndex(nextIdx);
+        videoRef.current.currentTime = highlights.highlights[nextIdx].start_time;
+        videoRef.current.play();
+      } else {
+        stopReel();
+        toast.success("Highlight reel complete!");
+      }
+    }
+  }, [isPlayingReel, currentClipIndex, highlights, stopReel]);
+
+  // ─── Record reel using MediaRecorder + Canvas ───
+  const downloadReel = async () => {
+    if (!highlights?.highlights?.length || !videoRef.current) return;
+
+    setIsRecording(true);
+    recordedChunksRef.current = [];
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+
+    // Create MediaRecorder from canvas stream
+    const stream = canvas.captureStream(30);
+    // Also capture audio from the video if available
+    try {
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaElementSource(video);
+      const dest = audioCtx.createMediaStreamDestination();
+      source.connect(dest);
+      source.connect(audioCtx.destination);
+      dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
+    } catch (e) {
+      // Audio capture not supported or no audio track — continue silently
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : MediaRecorder.isTypeSupported("video/webm")
+        ? "video/webm"
+        : "video/mp4";
+
+    const recorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 2500000,
+    });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+      setRecordedBlob(blob);
+      setIsRecording(false);
+      toast.success("Highlight reel recorded! Click download.");
+    };
+
+    recorder.start(100);
+
+    // Draw frames to canvas in a loop
+    let clipIdx = 0;
+    const moments = highlights.highlights;
+    video.currentTime = moments[0].start_time;
+    video.muted = false;
+
+    const drawFrame = () => {
+      if (
+        !mediaRecorderRef.current ||
+        mediaRecorderRef.current.state !== "recording"
+      )
+        return;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      if (video.currentTime >= moments[clipIdx].end_time) {
+        clipIdx++;
+        if (clipIdx < moments.length) {
+          video.currentTime = moments[clipIdx].start_time;
+          video.play();
+        } else {
+          video.pause();
+          recorder.stop();
+          return;
+        }
+      }
+      requestAnimationFrame(drawFrame);
+    };
+
+    video.onseeked = () => {
+      video.play();
+      requestAnimationFrame(drawFrame);
+    };
+    video.currentTime = moments[0].start_time;
+  };
+
+  // ─── Play individual moment ───
+  const playMoment = (moment) => {
+    if (!videoRef.current) return;
+    setIsPlayingReel(false);
+    videoRef.current.currentTime = moment.start_time;
+    videoRef.current.play();
+    const checkEnd = () => {
+      if (videoRef.current && videoRef.current.currentTime >= moment.end_time) {
+        videoRef.current.pause();
+        videoRef.current.removeEventListener("timeupdate", checkEnd);
+      }
+    };
+    videoRef.current.addEventListener("timeupdate", checkEnd);
+  };
+
+  // Calculate total highlight duration
+  const totalHighlightDuration =
+    highlights?.highlights?.reduce((sum, m) => sum + m.duration, 0) || 0;
+
   return (
-    <div className="min-h-screen bg-zinc-950 container mx-auto px-4 max-w-4xl py-6 sm:py-10" data-testid="highlights-page">
+    <div
+      className="container mx-auto px-4 max-w-3xl py-6 sm:py-10 min-h-screen bg-zinc-950"
+      data-testid="highlights-page"
+    >
       <SEO
-        title="Free Highlight Reel Generator - Create Match Highlights Instantly"
-        description="Create stunning highlight reels from your match videos. AI detects the best moments - smashes, rallies, winning points - and combines them with slo-mo and speed overlays. Free, no upload needed."
-        keywords="sports highlight generator, badminton highlight reel, tennis highlights creator, match highlights video, sports video editor"
-        url="https://athlyticai.com/highlights"
+        title="Free Highlight Reel Generator"
+        description="Create highlight reels from your match videos. AI detects the best moments right in your browser."
       />
+
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-        className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-            <Film className="w-5 h-5 text-purple-400" />
-          </div>
-          <div>
-            <h1 className="font-heading font-bold text-2xl text-white">Highlights</h1>
-            <p className="text-sm text-zinc-400">Create highlight reels from your match videos</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Info Banner */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-        className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-3 mb-4 flex items-center gap-3">
-        <Info className="w-4 h-4 text-purple-400 shrink-0" />
-        <p className="text-xs text-zinc-400">
-          Upload a match video (MP4, MOV, etc.) up to <span className="text-white font-medium">500 MB</span> to auto-generate highlights.
-        </p>
-      </motion.div>
-
-      {/* First-Use Info */}
-      {!generating && !result && (
-        <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 mb-6 flex items-start gap-2">
-          <Shield className="w-4 h-4 shrink-0 mt-0.5" />
-          <p>
-            Your video is uploaded securely to the cloud, a highlight reel is generated, and the
-            original upload is automatically deleted within a minute.
+      <div className="flex items-center gap-3 mb-6">
+        <Film className="w-6 h-6 text-purple-400" />
+        <div>
+          <h1 className="font-heading font-bold text-xl text-white">
+            Highlights
+          </h1>
+          <p className="text-xs text-zinc-400">
+            Create highlight reels from your match videos
           </p>
         </div>
-      )}
+      </div>
 
-      {/* Upload + Settings Section */}
-      {!result && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          {/* Upload Area */}
+      {/* Upload Area (if no highlights yet) */}
+      {!highlights && !analyzing && (
+        <div>
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 mb-4 text-xs text-zinc-400">
+            <p className="text-blue-300 font-medium mb-1">
+              100% on-device processing
+            </p>
+            <p>
+              Your video never leaves your phone. We analyze it right here in
+              your browser.
+            </p>
+          </div>
+
           <div
-            ref={dropRef}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            onClick={() => !generating && fileRef.current?.click()}
-            className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+            onClick={() => fileRef.current?.click()}
+            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
               file
                 ? "border-purple-500/40 bg-purple-500/5"
-                : "border-zinc-700 hover:border-purple-500/30 hover:bg-zinc-900/50"
-            } ${generating ? "pointer-events-none opacity-60" : ""}`}
+                : "border-zinc-700 hover:border-purple-500/30"
+            }`}
           >
             <input
               ref={fileRef}
@@ -253,323 +294,270 @@ export default function HighlightsPage() {
               accept=".mp4,.avi,.mov,.mkv,.webm"
               className="hidden"
               onChange={handleFile}
-              disabled={generating}
             />
-
             {!file ? (
               <>
-                <Upload className="w-10 h-10 text-zinc-500 mx-auto mb-3" />
-                <p className="text-sm text-zinc-300 font-medium mb-1">Drop your match video here</p>
-                <p className="text-xs text-zinc-500">or click to browse</p>
+                <Upload className="w-8 h-8 text-zinc-500 mx-auto mb-2" />
+                <p className="text-sm text-zinc-300">
+                  Tap to select your match video
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  MP4, MOV, AVI, MKV, WEBM
+                </p>
               </>
             ) : (
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                    <Video className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-sm text-white font-medium truncate max-w-[200px] sm:max-w-[300px]">{file.name}</p>
-                    <p className="text-xs text-zinc-500">{formatFileSize(file.size)}</p>
+                <div className="flex items-center gap-3 text-left">
+                  <Video className="w-8 h-8 text-purple-400" />
+                  <div>
+                    <p className="text-sm text-white font-medium truncate max-w-[200px]">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {(file.size / 1024 / 1024).toFixed(1)} MB
+                    </p>
                   </div>
                 </div>
-                {!generating && (
-                  <Button size="sm" variant="ghost"
-                    className="text-zinc-400 hover:text-red-400 h-8 w-8 p-0"
-                    onClick={(e) => { e.stopPropagation(); resetForm(); }}>
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-zinc-400 h-8 w-8 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resetForm();
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
             )}
           </div>
 
-          {/* Sport + Settings Row */}
-          {file && !generating && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="mt-4 space-y-4">
-              {/* Sport Selection */}
-              <div>
-                <label className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2 block">Sport</label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(SPORT_LABEL).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => setSelectedSport(key)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        selectedSport === key
-                          ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                          : "bg-zinc-800/50 text-zinc-400 border border-zinc-700/50 hover:border-zinc-600"
-                      }`}
-                    >
-                      <span>{SPORT_EMOJI[key]}</span> {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Settings Toggle */}
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span>Highlight preferences</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${showSettings ? "rotate-180" : ""}`} />
-              </button>
-
-              {/* Expanded Settings */}
-              <AnimatePresence>
-                {showSettings && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 space-y-4">
-                      {/* Max Clips */}
-                      <div>
-                        <label className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2 block">
-                          Max Clips
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                          {HIGHLIGHT_COUNT_OPTIONS.map((d) => (
-                            <button
-                              key={d.value}
-                              onClick={() => setMaxClips(d.value)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                maxClips === d.value
-                                  ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                                  : "bg-zinc-800/50 text-zinc-400 border border-zinc-700/50 hover:border-zinc-600"
-                              }`}
-                            >
-                              {d.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Slo-mo Toggle */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-zinc-300 font-medium">Include slo-mo on power moments</p>
-                          <p className="text-[10px] text-zinc-500">Slow-motion on high-speed shots</p>
-                        </div>
-                        <button
-                          onClick={() => setIncludeSlomo(!includeSlomo)}
-                          className={`relative w-10 h-5 rounded-full transition-colors ${
-                            includeSlomo ? "bg-purple-500" : "bg-zinc-700"
-                          }`}
-                        >
-                          <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                              includeSlomo ? "translate-x-5" : ""
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Generate Button */}
-              <Button
-                onClick={generateHighlights}
-                className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl h-12 text-sm"
-              >
-                <Scissors className="w-4 h-4 mr-2" />
-                Generate Highlights
-              </Button>
-            </motion.div>
+          {file && (
+            <Button
+              onClick={analyzeVideo}
+              className="w-full mt-4 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl h-12"
+            >
+              <Scissors className="w-4 h-4 mr-2" /> Find Highlights
+            </Button>
           )}
 
-          {/* Loading State */}
-          {generating && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6">
-              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                    <RefreshCw className="w-4 h-4 text-purple-400 animate-spin" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white font-medium">{loadingText || "Working..."}</p>
-                    <p className="text-xs text-zinc-500">This may take a few minutes</p>
-                  </div>
-                </div>
-                <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
-                </div>
-                <p className="text-[10px] text-zinc-600 mt-2 text-center">{Math.round(progress)}%</p>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Error State */}
           {error && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
-              <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 mt-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5" />
                 <div>
-                  <p className="text-sm text-red-400 font-medium">Highlight generation failed</p>
-                  <p className="text-xs text-zinc-400 mt-1">{error}</p>
-                  <Button size="sm" variant="outline"
-                    className="mt-3 h-7 text-xs border-red-500/20 text-red-400 hover:bg-red-500/10"
-                    onClick={resetForm}>
+                  <p className="text-sm text-red-400">{error}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={resetForm}
+                    className="text-red-400 mt-2 h-7 text-xs"
+                  >
                     Try Again
                   </Button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </motion.div>
+        </div>
       )}
 
-      {/* Results Section */}
-      {result && reelUrl && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="space-y-6">
-
-          {/* Main Reel Player */}
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <h3 className="font-bold text-white text-lg">Your Highlight Reel</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20">
-                  {result.target_duration}s reel
-                </Badge>
-                <Button size="sm" variant="outline"
-                  className="h-7 text-xs border-zinc-700 text-zinc-400 hover:bg-zinc-800"
-                  onClick={resetForm}>
-                  <RefreshCw className="w-3 h-3 mr-1" /> New Video
-                </Button>
-              </div>
+      {/* Loading/Analyzing */}
+      {analyzing && (
+        <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <RefreshCw className="w-5 h-5 text-purple-400 animate-spin" />
+            <div>
+              <p className="text-sm text-white font-medium">
+                {loadingText || "Analyzing..."}
+              </p>
+              <p className="text-xs text-zinc-500">
+                This runs entirely on your device
+              </p>
             </div>
-            <div className="rounded-xl bg-black overflow-hidden flex items-center justify-center" style={{ maxHeight: "60vh" }}>
+          </div>
+          <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-full bg-purple-500 rounded-full transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-xs text-zinc-500 mt-2 text-center">
+            {Math.round(progress)}%
+          </p>
+        </div>
+      )}
+
+      {/* Results */}
+      {highlights && highlights.highlights.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          {/* Video Player */}
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl overflow-hidden">
+            <div className="relative bg-black" style={{ maxHeight: "50vh" }}>
               <video
-                src={reelUrl}
-                controls
+                ref={videoRef}
+                src={videoUrl}
+                controls={!isPlayingReel}
                 playsInline
-                poster={result.thumbnail_url}
-                className="w-full h-auto max-h-[60vh] object-contain"
+                onTimeUpdate={handleTimeUpdate}
+                className="w-full h-auto max-h-[50vh] object-contain"
               />
+              {/* Hidden canvas for recording */}
+              <canvas ref={canvasRef} className="hidden" />
+
+              {/* Reel overlay when playing */}
+              {isPlayingReel && (
+                <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                  <Badge className="bg-red-500/90 text-white border-none animate-pulse">
+                    Playing Reel · {currentClipIndex + 1}/
+                    {highlights.highlights.length}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    onClick={stopReel}
+                    className="bg-black/60 text-white h-7 text-xs"
+                  >
+                    Stop
+                  </Button>
+                </div>
+              )}
             </div>
 
-            {result.original_duration > 0 && (
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-zinc-500">Original</p>
-                  <p className="text-white font-bold">{Math.round(result.original_duration)}s</p>
+            <div className="p-4">
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="bg-zinc-800/50 rounded-xl p-2 text-center">
+                  <p className="text-lg font-bold text-purple-400">
+                    {highlights.highlights.length}
+                  </p>
+                  <p className="text-[10px] text-zinc-500">Moments</p>
                 </div>
-                <div className="bg-zinc-800/50 rounded-xl p-3 text-center">
-                  <p className="text-xs text-zinc-500">Highlight</p>
-                  <p className="text-lime-400 font-bold">{result.target_duration}s</p>
+                <div className="bg-zinc-800/50 rounded-xl p-2 text-center">
+                  <p className="text-lg font-bold text-purple-400">
+                    {Math.round(totalHighlightDuration)}s
+                  </p>
+                  <p className="text-[10px] text-zinc-500">Highlight</p>
+                </div>
+                <div className="bg-zinc-800/50 rounded-xl p-2 text-center">
+                  <p className="text-lg font-bold text-zinc-400">
+                    {Math.round(highlights.video_info.duration)}s
+                  </p>
+                  <p className="text-[10px] text-zinc-500">Original</p>
                 </div>
               </div>
-            )}
 
-            <Button
-              onClick={() => {
-                const a = document.createElement("a");
-                a.href = result.reel_url;
-                a.download = "athlyticai_highlights.mp4";
-                a.target = "_blank";
-                a.rel = "noopener";
-                a.click();
-              }}
-              className="w-full mt-4 bg-lime-400 text-black hover:bg-lime-500 font-bold"
-            >
-              <Download className="w-4 h-4 mr-2" /> Download Highlight Reel
-            </Button>
-
-            {/* Share / Copy */}
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
-              <span className="text-[10px] text-zinc-500">
-                {result.moments_used ? "AI-detected highlights" : "Powered by Cloudinary"}
-              </span>
-              <div className="flex gap-2">
-                <Button size="sm" variant="ghost"
-                  className="h-6 text-[10px] text-zinc-400 hover:text-purple-400 px-2"
-                  onClick={() => {
-                    const text = `Check out my match highlights on AthlyticAI! ${window.location.origin}/highlights`;
-                    const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-                    window.open(waUrl, "_blank");
-                  }}>
-                  Share on WhatsApp
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <Button
+                  onClick={playHighlightReel}
+                  disabled={isPlayingReel || isRecording}
+                  className="bg-purple-500 hover:bg-purple-600 text-white font-bold h-11"
+                >
+                  <Play className="w-4 h-4 mr-1" /> Play Reel
                 </Button>
-                <Button size="sm" variant="ghost"
-                  className="h-6 text-[10px] text-zinc-400 hover:text-purple-400 px-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(result.reel_url);
-                    toast.success("Reel link copied!");
-                  }}>
-                  <Copy className="w-3 h-3 mr-1" /> Copy Link
+                <Button
+                  onClick={downloadReel}
+                  disabled={isRecording}
+                  variant="outline"
+                  className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10 h-11"
+                >
+                  {isRecording ? (
+                    <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-1" />
+                  )}
+                  {isRecording ? "Recording..." : "Record Reel"}
                 </Button>
               </div>
+
+              {/* Download recorded reel */}
+              {recordedBlob && (
+                <Button
+                  onClick={() => {
+                    const url = URL.createObjectURL(recordedBlob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "athlyticai_highlights.webm";
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  }}
+                  className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold h-11 mb-3"
+                >
+                  <Download className="w-4 h-4 mr-2" /> Download Highlight Reel
+                  ({(recordedBlob.size / 1024 / 1024).toFixed(1)} MB)
+                </Button>
+              )}
+
+              {/* New Video button */}
+              <Button
+                variant="ghost"
+                onClick={resetForm}
+                className="w-full text-zinc-400 text-xs h-8"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" /> Upload Different Video
+              </Button>
             </div>
           </div>
 
-          {/* Individual Clips (if moments were detected) */}
-          {result.clips && result.clips.length > 1 && (
-            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
-              <h3 className="font-bold text-white mb-3">Individual Clips</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {result.clips.map((clip, i) => (
-                  <div key={i} className="bg-zinc-800/50 rounded-xl overflow-hidden">
-                    <div className="bg-black" style={{ aspectRatio: "16/9" }}>
-                      <video
-                        src={clip.url}
-                        controls
-                        playsInline
-                        poster={clip.thumbnail_url}
-                        className="w-full h-full object-contain"
-                        preload="metadata"
-                      />
-                    </div>
-                    <div className="p-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-xs font-medium text-white capitalize">
-                          {String(clip.type || "moment").replace(/_/g, " ")}
-                        </p>
-                        {clip.speed_kmh > 0 && (
-                          <span className="text-[10px] text-amber-400">{Math.round(clip.speed_kmh)} km/h</span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                        <span>{clip.duration?.toFixed(1)}s</span>
-                        {clip.should_slowmo && <span className="text-blue-400">Slo-mo</span>}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full mt-1 h-7 text-[10px] border-zinc-700 text-zinc-300"
-                        onClick={() => {
-                          const a = document.createElement("a");
-                          a.href = clip.url;
-                          a.download = `clip_${i + 1}.mp4`;
-                          a.target = "_blank";
-                          a.click();
-                        }}
-                      >
-                        <Download className="w-3 h-3 mr-1" /> Download
-                      </Button>
-                    </div>
+          {/* Individual Moments */}
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
+            <h3 className="font-bold text-white text-sm mb-3">
+              Detected Moments
+            </h3>
+            <div className="space-y-2">
+              {highlights.highlights.map((moment, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => playMoment(moment)}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 cursor-pointer transition-all group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0 group-hover:bg-purple-500/30">
+                    <Play className="w-3.5 h-3.5 text-purple-400" />
                   </div>
-                ))}
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white capitalize">
+                      {String(moment.type || "moment").replace(/_/g, " ")}
+                    </p>
+                    <p className="text-[10px] text-zinc-500">
+                      {formatTime(moment.start_time)} —{" "}
+                      {formatTime(moment.end_time)} · {moment.duration}s
+                    </p>
+                  </div>
+                  <Badge
+                    className={`text-[9px] shrink-0 ${
+                      moment.score > 70
+                        ? "bg-lime-400/10 text-lime-400 border-lime-400/20"
+                        : moment.score > 40
+                        ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
+                        : "bg-zinc-700 text-zinc-300 border-zinc-600"
+                    }`}
+                  >
+                    {moment.score}/100
+                  </Badge>
+                  {moment.should_slowmo && (
+                    <span className="text-[9px] text-blue-400">SloMo</span>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 shrink-0" />
+                </motion.div>
+              ))}
             </div>
-          )}
-
+          </div>
         </motion.div>
       )}
     </div>
   );
+}
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
