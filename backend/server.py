@@ -2183,6 +2183,8 @@ class HighlightReelRequest(BaseModel):
     duration_seconds: float = 0  # Total video duration
     target_clips: int = 5
     include_speed_overlay: bool = True
+    # Client-detected timestamps from highlightDetector.js
+    moments: list = []  # [{start_time, end_time, type, speed_kmh, should_slowmo, description, score}]
 
 
 def _cloudinary_sign(params: dict) -> str:
@@ -2229,11 +2231,85 @@ async def sign_cloudinary_upload(request: Request):
 @api_router.post("/highlights/generate-reel")
 async def generate_cloudinary_reel(req: HighlightReelRequest):
     """
-    Generate a highlight reel URL using Cloudinary's e_preview transformation,
-    which auto-detects the most interesting moments in the video.
+    Generate highlight reel URLs using Cloudinary.
+
+    If client provides detected moments (timestamps), we build per-clip URLs
+    and a concatenated reel URL. Otherwise, fall back to basic trim.
     """
-    # Target reel length: 20% of original, clamped to [20s, 60s]. If duration
-    # is unknown, default to 30s.
+    cloud = CLOUDINARY_CLOUD_NAME
+    pid = req.public_id
+
+    if req.moments and len(req.moments) > 0:
+        # ── Client-detected moments: build individual clip URLs ──────
+        clips = []
+        for i, m in enumerate(req.moments[:req.target_clips]):
+            start = max(0, round(m.get("start_time", 0), 1))
+            duration = max(1, round(m.get("end_time", start + 2) - start, 1))
+
+            # Build transformation per clip
+            parts = [f"so_{start}", f"du_{duration}"]
+
+            # Scale to 720p
+            parts.append("w_1280,c_limit")
+
+            # Quality
+            parts.append("q_auto:good")
+
+            # Slow motion for power moments
+            if m.get("should_slowmo") and req.include_speed_overlay:
+                parts.append("e_accelerate:-50")  # 0.5x speed
+
+            trans = "/".join(parts)
+            clip_url = f"https://res.cloudinary.com/{cloud}/video/upload/{trans}/{pid}.mp4"
+
+            # Thumbnail from middle of clip
+            thumb_time = round(start + duration / 2, 1)
+            thumb_url = f"https://res.cloudinary.com/{cloud}/video/upload/so_{thumb_time},w_320,c_limit,f_jpg/{pid}.jpg"
+
+            clips.append({
+                "url": clip_url,
+                "thumbnail_url": thumb_url,
+                "start_time": start,
+                "duration": duration,
+                "type": m.get("type", "moment"),
+                "description": m.get("description", ""),
+                "speed_kmh": m.get("speed_kmh", 0),
+                "should_slowmo": m.get("should_slowmo", False),
+                "score": m.get("score", 50),
+            })
+
+        # Build reel URL
+        if len(clips) == 1:
+            reel_url = clips[0]["url"]
+        else:
+            # Trim from first moment start to last moment end
+            first_start = clips[0]["start_time"]
+            last_end = max(c["start_time"] + c["duration"] for c in clips)
+            total_dur = min(60, round(last_end - first_start, 1))
+
+            reel_url = (
+                f"https://res.cloudinary.com/{cloud}/video/upload/"
+                f"so_{first_start},du_{total_dur},w_1280,c_limit,q_auto:good/{pid}.mp4"
+            )
+
+        # Total highlight duration
+        total_duration = round(sum(c["duration"] for c in clips), 1)
+
+        # Thumbnail from best moment
+        best_clip = max(clips, key=lambda c: c.get("score", 0))
+        thumbnail_url = best_clip["thumbnail_url"]
+
+        return {
+            "reel_url": reel_url,
+            "clips": clips,
+            "thumbnail_url": thumbnail_url,
+            "target_duration": total_duration,
+            "max_clips": len(clips),
+            "start_offset": clips[0]["start_time"] if clips else 0,
+            "moments_used": True,
+        }
+
+    # ── Fallback: basic trim (no client-detected moments) ────────────
     if req.duration_seconds > 0:
         target_duration = max(20, min(60, int(req.duration_seconds * 0.20)))
     else:
@@ -2241,21 +2317,14 @@ async def generate_cloudinary_reel(req: HighlightReelRequest):
 
     max_segments = max(1, int(req.target_clips))
 
-    # Use basic trim transformation (e_preview requires paid Video AI add-on)
-    # Strategy: trim from middle of video where action usually peaks
-    # Format: so_X,du_Y = start at X seconds, duration Y seconds
     if req.duration_seconds > target_duration:
-        # Start at 25% into the video to skip warmup
         start_offset = max(0, int(req.duration_seconds * 0.25))
-        # Make sure we don't go past the end
         if start_offset + target_duration > req.duration_seconds:
             start_offset = max(0, int(req.duration_seconds - target_duration))
     else:
         start_offset = 0
         target_duration = int(req.duration_seconds)
 
-    # Build transformation: trim + scale + quality + format
-    # Use w_1280 to limit to 720p (saves bandwidth)
     transformations = [
         f"so_{start_offset},du_{target_duration}",
         "w_1280,c_limit",
@@ -2264,22 +2333,23 @@ async def generate_cloudinary_reel(req: HighlightReelRequest):
     ]
     transformation_str = "/".join(transformations)
 
-    # public_id already includes the folder from sign-upload, so use it directly
     reel_url = (
-        f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}"
-        f"/video/upload/{transformation_str}/{req.public_id}.mp4"
+        f"https://res.cloudinary.com/{cloud}"
+        f"/video/upload/{transformation_str}/{pid}.mp4"
     )
     thumbnail_url = (
-        f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}"
-        f"/video/upload/so_{start_offset + target_duration // 2},w_640,c_limit,f_jpg/{req.public_id}.jpg"
+        f"https://res.cloudinary.com/{cloud}"
+        f"/video/upload/so_{start_offset + target_duration // 2},w_640,c_limit,f_jpg/{pid}.jpg"
     )
 
     return {
         "reel_url": reel_url,
+        "clips": [],
         "thumbnail_url": thumbnail_url,
         "target_duration": target_duration,
         "max_clips": max_segments,
         "start_offset": start_offset,
+        "moments_used": False,
     }
 
 

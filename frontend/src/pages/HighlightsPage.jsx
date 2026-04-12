@@ -110,31 +110,61 @@ export default function HighlightsPage() {
       });
       publicId = uploaded.public_id;
 
-      // Step 2: ask backend to build a highlight reel URL
+      // Step 2: Detect highlights locally in the browser
+      setLoadingText("Analyzing video for best moments...");
+      setProgress(78);
+
+      let moments = [];
+      try {
+        const { detectHighlights } = await import("@/ai/highlightDetector");
+        const detection = await detectHighlights(file, selectedSport || activeSport, {
+          maxHighlights: maxClips,
+          onProgress: ({ percent, message }) => {
+            setProgress(78 + (percent || 0) * 0.1);
+            if (message) setLoadingText(message);
+          },
+        });
+        moments = detection.highlights || [];
+      } catch (detectErr) {
+        console.warn("Client detection failed, using basic trim:", detectErr);
+        // Continue without moments — backend will use basic trim fallback
+      }
+
+      // Step 3: Send moments + public_id to backend for URL generation
       setLoadingText("Generating highlight reel...");
-      setProgress(80);
+      setProgress(90);
+
       const reel = await generateReel(
         publicId,
         selectedSport || activeSport,
         uploaded.duration,
-        { target_clips: maxClips, include_speed_overlay: includeSlomo }
+        {
+          target_clips: maxClips,
+          include_speed_overlay: includeSlomo,
+          moments: moments.map((m) => ({
+            start_time: m.start_time,
+            end_time: m.end_time,
+            type: m.type,
+            speed_kmh: m.speed_kmh || 0,
+            should_slowmo: m.should_slowmo || false,
+            description: m.description || "",
+            score: m.score || 50,
+          })),
+        }
       );
 
       setProgress(100);
       setLoadingText("Done!");
       setResult({
-        reel_url: reel.reel_url,
-        thumbnail_url: reel.thumbnail_url,
-        target_duration: reel.target_duration,
-        max_clips: reel.max_clips,
+        ...reel,
         original_duration: uploaded.duration,
         public_id: publicId,
       });
 
       toast.success("Highlight reel generated!");
 
-      // Cleanup after 1 minute so Cloudinary storage stays cheap
-      setTimeout(() => cleanupVideo(publicId), 60 * 1000);
+      // Cleanup uploaded video after 5 minutes
+      setTimeout(() => cleanupVideo(publicId), 5 * 60 * 1000);
     } catch (err) {
       console.error("Highlight generation failed:", err);
       const msg = err?.response?.data?.detail || err?.message || "Highlight generation failed";
@@ -463,7 +493,7 @@ export default function HighlightsPage() {
             {/* Share / Copy */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
               <span className="text-[10px] text-zinc-500">
-                Powered by Cloudinary video AI
+                {result.moments_used ? "AI-detected highlights" : "Powered by Cloudinary"}
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="ghost"
@@ -486,6 +516,57 @@ export default function HighlightsPage() {
               </div>
             </div>
           </div>
+
+          {/* Individual Clips (if moments were detected) */}
+          {result.clips && result.clips.length > 1 && (
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
+              <h3 className="font-bold text-white mb-3">Individual Clips</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {result.clips.map((clip, i) => (
+                  <div key={i} className="bg-zinc-800/50 rounded-xl overflow-hidden">
+                    <div className="bg-black" style={{ aspectRatio: "16/9" }}>
+                      <video
+                        src={clip.url}
+                        controls
+                        playsInline
+                        poster={clip.thumbnail_url}
+                        className="w-full h-full object-contain"
+                        preload="metadata"
+                      />
+                    </div>
+                    <div className="p-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-medium text-white capitalize">
+                          {String(clip.type || "moment").replace(/_/g, " ")}
+                        </p>
+                        {clip.speed_kmh > 0 && (
+                          <span className="text-[10px] text-amber-400">{Math.round(clip.speed_kmh)} km/h</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                        <span>{clip.duration?.toFixed(1)}s</span>
+                        {clip.should_slowmo && <span className="text-blue-400">Slo-mo</span>}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-1 h-7 text-[10px] border-zinc-700 text-zinc-300"
+                        onClick={() => {
+                          const a = document.createElement("a");
+                          a.href = clip.url;
+                          a.download = `clip_${i + 1}.mp4`;
+                          a.target = "_blank";
+                          a.click();
+                        }}
+                      >
+                        <Download className="w-3 h-3 mr-1" /> Download
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         </motion.div>
       )}

@@ -101,6 +101,7 @@ export async function generateReel(public_id, sport, duration, options = {}) {
     duration_seconds: duration,
     target_clips: options.target_clips || 5,
     include_speed_overlay: options.include_speed_overlay !== false,
+    moments: options.moments || [],
   });
   return data;
 }
