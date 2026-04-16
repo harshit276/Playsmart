@@ -302,19 +302,39 @@ function getRawKp(kps, name) {
 function isQualityFrame(keypoints, dominantHand, canvasSize = MODEL_INPUT_SIZE) {
   if (!keypoints) return false;
 
-  const required = [
+  // Critical keypoints require higher confidence (0.4)
+  const critical = [
     "left_shoulder",
     "right_shoulder",
-    "left_hip",
-    "right_hip",
     `${dominantHand}_wrist`,
     `${dominantHand}_elbow`,
   ];
+  // Optional keypoints (hips) use lower threshold (0.2)
+  const optional = ["left_hip", "right_hip"];
 
-  for (const name of required) {
+  let passCount = 0;
+  let hasBothShoulders = true;
+  let hasDominantWrist = false;
+
+  for (const name of critical) {
     const kp = getRawKp(keypoints, name);
-    if (!kp || (kp.score || 0) < 0.4) return false;
+    if (kp && (kp.score || 0) >= 0.4) {
+      passCount++;
+      if (name === `${dominantHand}_wrist`) hasDominantWrist = true;
+    } else {
+      if (name === "left_shoulder" || name === "right_shoulder") hasBothShoulders = false;
+    }
   }
+
+  for (const name of optional) {
+    const kp = getRawKp(keypoints, name);
+    if (kp && (kp.score || 0) >= 0.2) {
+      passCount++;
+    }
+  }
+
+  // Need at least 4/6 keypoints, must include both shoulders + dominant wrist
+  if (passCount < 4 || !hasBothShoulders || !hasDominantWrist) return false;
 
   const ls = getRawKp(keypoints, "left_shoulder");
   const rs = getRawKp(keypoints, "right_shoulder");
@@ -323,8 +343,8 @@ function isQualityFrame(keypoints, dominantHand, canvasSize = MODEL_INPUT_SIZE) 
   if (ls && rs && lh) {
     const shoulderWidthN = Math.abs(ls.x - rs.x) / canvasSize;
     const torsoHeightN = Math.abs(ls.y - lh.y) / canvasSize;
-    if (torsoHeightN < 0.05 || torsoHeightN > 0.9) return false;
-    if (shoulderWidthN < 0.02) return false;
+    if (torsoHeightN < 0.03 || torsoHeightN > 0.9) return false;
+    if (shoulderWidthN < 0.01) return false;
   }
 
   return true;
@@ -340,17 +360,73 @@ function isQualityFrame(keypoints, dominantHand, canvasSize = MODEL_INPUT_SIZE) 
  */
 function detectCameraAngle(allKeypoints, canvasSize = MODEL_INPUT_SIZE) {
   const shoulderWidths = [];
+  const hipWidths = [];
+  let bothEarsCount = 0;
+  let oneEarCount = 0;
+  let earFrames = 0;
+
   for (const kps of allKeypoints) {
     const ls = getRawKp(kps, "left_shoulder");
     const rs = getRawKp(kps, "right_shoulder");
     if (ls && rs && (ls.score || 0) > 0.4 && (rs.score || 0) > 0.4) {
       shoulderWidths.push(Math.abs(ls.x - rs.x) / canvasSize);
     }
+
+    // Hip width signal (hips rotate less than shoulders)
+    const lh = getRawKp(kps, "left_hip");
+    const rh = getRawKp(kps, "right_hip");
+    if (lh && rh && (lh.score || 0) > 0.2 && (rh.score || 0) > 0.2) {
+      hipWidths.push(Math.abs(lh.x - rh.x) / canvasSize);
+    }
+
+    // Ear visibility signal
+    const le = getRawKp(kps, "left_ear");
+    const re = getRawKp(kps, "right_ear");
+    const leVisible = le && (le.score || 0) > 0.3;
+    const reVisible = re && (re.score || 0) > 0.3;
+    if (leVisible || reVisible) {
+      earFrames++;
+      if (leVisible && reVisible) bothEarsCount++;
+      else oneEarCount++;
+    }
   }
+
   if (shoulderWidths.length === 0) return "unknown";
-  const avgWidth = shoulderWidths.reduce((a, b) => a + b, 0) / shoulderWidths.length;
-  if (avgWidth > 0.1) return "front";
-  if (avgWidth < 0.05) return "side";
+
+  // Use median instead of mean for shoulder width (resists swing-rotation outliers)
+  const sortedShoulders = [...shoulderWidths].sort((a, b) => a - b);
+  const medianShoulderWidth = sortedShoulders[Math.floor(sortedShoulders.length / 2)];
+
+  const sortedHips = [...hipWidths].sort((a, b) => a - b);
+  const medianHipWidth = sortedHips.length > 0 ? sortedHips[Math.floor(sortedHips.length / 2)] : null;
+
+  // Shoulder score: front if > 0.07, side if < 0.05
+  let shoulderScore = 0; // -1 = side, 0 = angled, 1 = front
+  if (medianShoulderWidth > 0.07) shoulderScore = 1;
+  else if (medianShoulderWidth < 0.05) shoulderScore = -1;
+
+  // Hip score
+  let hipScore = 0;
+  if (medianHipWidth !== null) {
+    if (medianHipWidth > 0.06) hipScore = 1;
+    else if (medianHipWidth < 0.04) hipScore = -1;
+  }
+
+  // Ear score: both ears visible = front, one ear = side
+  let earScore = 0;
+  if (earFrames > 0) {
+    const bothRatio = bothEarsCount / earFrames;
+    const oneRatio = oneEarCount / earFrames;
+    if (bothRatio > 0.5) earScore = 1;
+    else if (oneRatio > 0.5) earScore = -1;
+  }
+
+  // Weighted voting
+  const totalScore = shoulderScore + hipScore + earScore;
+  if (totalScore >= 2) return "front";
+  if (totalScore <= -2) return "side";
+  if (shoulderScore === 1) return "front";
+  if (shoulderScore === -1) return "side";
   return "angled";
 }
 
@@ -378,28 +454,83 @@ function detectDominantHand(allKeypoints) {
     const ld = (prevLW && currLW) ? kpDist(prevLW, currLW) : 0;
     const rd = (prevRW && currRW) ? kpDist(prevRW, currRW) : 0;
 
-    leftMotion += ld;
-    rightMotion += rd;
     leftMotions.push(ld);
     rightMotions.push(rd);
   }
 
+  // Weight active frames (top 30% motion) 3x more than passive frames
+  const totalSpeeds = leftMotions.map((l, i) => l + rightMotions[i]);
+  const sortedSpeeds = [...totalSpeeds].sort((a, b) => b - a);
+  const activeThreshold = sortedSpeeds[Math.floor(sortedSpeeds.length * 0.3)] || 0;
+
+  for (let i = 0; i < leftMotions.length; i++) {
+    const weight = (totalSpeeds[i] >= activeThreshold) ? 3 : 1;
+    leftMotion += leftMotions[i] * weight;
+    rightMotion += rightMotions[i] * weight;
+  }
+
   const cumulativeResult = rightMotion > leftMotion ? "right" : "left";
 
-  // Cross-validate: at the fastest frame(s), which wrist moved more?
-  // The playing hand should be the fastest at impact points.
+  // Wrist-above-shoulder signal: racket hand goes higher in overhead sports
+  let leftAboveCount = 0;
+  let rightAboveCount = 0;
+  for (const kps of allKeypoints) {
+    const lw = getKp(kps, "left_wrist");
+    const ls = getKp(kps, "left_shoulder");
+    const rw = getKp(kps, "right_wrist");
+    const rs = getKp(kps, "right_shoulder");
+    if (lw && ls && lw.y < ls.y - 10) leftAboveCount++;
+    if (rw && rs && rw.y < rs.y - 10) rightAboveCount++;
+  }
+  const aboveResult = rightAboveCount > leftAboveCount ? "right" : "left";
+
+  // Cross-validate with top-5 peak frames
   if (leftMotions.length > 0) {
-    const wristSpeeds = leftMotions.map((l, i) => l + rightMotions[i]);
-    const fastestIdx = wristSpeeds.indexOf(Math.max(...wristSpeeds));
-    const fastLeft = leftMotions[fastestIdx] || 0;
-    const fastRight = rightMotions[fastestIdx] || 0;
+    const wristSpeeds = leftMotions.map((l, i) => ({ idx: i, total: l + rightMotions[i] }));
+    wristSpeeds.sort((a, b) => b.total - a.total);
+    const topN = Math.min(5, wristSpeeds.length);
+    let peakLeft = 0;
+    let peakRight = 0;
+    for (let k = 0; k < topN; k++) {
+      const idx = wristSpeeds[k].idx;
+      peakLeft += leftMotions[idx];
+      peakRight += rightMotions[idx];
+    }
+    const peakResult = peakRight > peakLeft ? "right" : "left";
 
-    const peakResult = fastRight > fastLeft ? "right" : "left";
+    // Elbow extension signal at peaks: higher average elbow angle = racket arm
+    let leftElbowSum = 0, rightElbowSum = 0, elbowCount = 0;
+    for (let k = 0; k < topN; k++) {
+      const frameIdx = Math.min(wristSpeeds[k].idx + 1, allKeypoints.length - 1);
+      const kps = allKeypoints[frameIdx];
+      const lShl = getKp(kps, "left_shoulder");
+      const lElb = getKp(kps, "left_elbow");
+      const lWr = getKp(kps, "left_wrist");
+      const rShl = getKp(kps, "right_shoulder");
+      const rElb = getKp(kps, "right_elbow");
+      const rWr = getKp(kps, "right_wrist");
+      if (lShl && lElb && lWr) leftElbowSum += calculateAngle(lShl, lElb, lWr);
+      if (rShl && rElb && rWr) rightElbowSum += calculateAngle(rShl, rElb, rWr);
+      elbowCount++;
+    }
+    const elbowResult = (elbowCount > 0 && rightElbowSum > leftElbowSum) ? "right" : "left";
 
-    // If the fastest frame contradicts cumulative AND the margin is close (<20%), trust fastest frame
+    // Voting: cumulative + peak + above-shoulder + elbow extension
+    let rightVotes = 0;
+    let leftVotes = 0;
+    if (cumulativeResult === "right") rightVotes++; else leftVotes++;
+    if (peakResult === "right") rightVotes++; else leftVotes++;
+    if (aboveResult === "right") rightVotes++; else leftVotes++;
+    if (elbowResult === "right") rightVotes++; else leftVotes++;
+
+    if (rightVotes !== leftVotes) {
+      return rightVotes > leftVotes ? "right" : "left";
+    }
+
+    // Tie-break: if peak contradicts cumulative and margin is close, trust peak
     if (peakResult !== cumulativeResult) {
       const ratio = Math.min(leftMotion, rightMotion) / Math.max(leftMotion, rightMotion);
-      if (ratio > 0.8) {
+      if (ratio > 0.6) {
         return peakResult;
       }
     }
@@ -506,7 +637,10 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
  * @param {number} [canvasSize=MODEL_INPUT_SIZE]
  * @returns {boolean}
  */
-function isBackhandShot(keypoints, dominantHand, cameraAngle, canvasSize = MODEL_INPUT_SIZE) {
+/**
+ * Determine backhand for a single frame.
+ */
+function isBackhandShotSingleFrame(keypoints, dominantHand, cameraAngle, canvasSize = MODEL_INPUT_SIZE) {
   const wristName = `${dominantHand}_wrist`;
   const oppositeShoulder = dominantHand === "right" ? "left_shoulder" : "right_shoulder";
   const sameShoulder = `${dominantHand}_shoulder`;
@@ -524,21 +658,66 @@ function isBackhandShot(keypoints, dominantHand, cameraAngle, canvasSize = MODEL
     }
     return wrist.x > bodyCenter;
   } else if (cameraAngle === "side") {
-    // Side view: elbow-above-wrist is a reasonable backhand proxy.
     const elbow = getKp(keypoints, `${dominantHand}_elbow`);
     if (!elbow) return false;
-    // pixel threshold equivalent to 0.05 * canvas
     const pxThresh = 0.05 * canvasSize;
     return elbow.y < wrist.y - pxThresh;
   } else {
-    // Angled / unknown: require a margin past the body midline.
+    // Angled / unknown: require a margin past the body midline (0.4 of shoulder width).
     const bodyCenter = (oppShoulder.x + sameShl.x) / 2;
-    const margin = Math.abs(oppShoulder.x - sameShl.x) * 0.3;
+    const margin = Math.abs(oppShoulder.x - sameShl.x) * 0.4;
     if (dominantHand === "right") {
       return wrist.x < bodyCenter - margin;
     }
     return wrist.x > bodyCenter + margin;
   }
+}
+
+/**
+ * Multi-frame voting backhand detection: check peak-2, peak-1, and peak.
+ * Also checks wrist trajectory direction: if wrist is moving FROM dominant
+ * side TOWARD center, it's a forehand follow-through, not backhand.
+ */
+function isBackhandShot(allKeypoints, peakIdx, dominantHand, cameraAngle, canvasSize = MODEL_INPUT_SIZE) {
+  // If allKeypoints is a single frame array (backward compat), use single frame
+  if (!Array.isArray(allKeypoints[0]) && allKeypoints.length > 0 && allKeypoints[0]?.name !== undefined) {
+    return isBackhandShotSingleFrame(allKeypoints, dominantHand, cameraAngle, canvasSize);
+  }
+
+  let backhandVotes = 0;
+  let forehandVotes = 0;
+
+  // Check frames at peak-2, peak-1, peak (pre-impact frames are more indicative)
+  for (let offset = -2; offset <= 0; offset++) {
+    const idx = peakIdx + offset;
+    if (idx >= 0 && idx < allKeypoints.length) {
+      const result = isBackhandShotSingleFrame(allKeypoints[idx], dominantHand, cameraAngle, canvasSize);
+      if (result) backhandVotes++;
+      else forehandVotes++;
+    }
+  }
+
+  // Wrist trajectory direction check: if wrist moves from dominant side toward center,
+  // it's likely a forehand follow-through, not a backhand
+  if (peakIdx > 0 && peakIdx < allKeypoints.length) {
+    const wristName = `${dominantHand}_wrist`;
+    const prevWrist = getKp(allKeypoints[Math.max(0, peakIdx - 1)], wristName);
+    const peakWrist = getKp(allKeypoints[peakIdx], wristName);
+    const sameShoulder = getKp(allKeypoints[peakIdx], `${dominantHand}_shoulder`);
+    const oppShoulder = getKp(allKeypoints[peakIdx], dominantHand === "right" ? "left_shoulder" : "right_shoulder");
+
+    if (prevWrist && peakWrist && sameShoulder && oppShoulder) {
+      const bodyCenter = (sameShoulder.x + oppShoulder.x) / 2;
+      const movingTowardCenter = dominantHand === "right"
+        ? (prevWrist.x > peakWrist.x && prevWrist.x > bodyCenter) // right hand moving left toward center
+        : (prevWrist.x < peakWrist.x && prevWrist.x < bodyCenter); // left hand moving right toward center
+      if (movingTowardCenter) {
+        forehandVotes++; // forehand follow-through
+      }
+    }
+  }
+
+  return backhandVotes > forehandVotes;
 }
 
 // ─── Multi-Frame Voting ────────────────────────────────────────────────────
@@ -559,7 +738,7 @@ function isBackhandShot(keypoints, dominantHand, cameraAngle, canvasSize = MODEL
  */
 function classifyShotWithVoting(allKeypoints, peakIdx, dominantHand, sport, timestamps, cameraAngle) {
   const window = [];
-  for (let offset = -2; offset <= 2; offset++) {
+  for (let offset = -3; offset <= 3; offset++) {
     const idx = peakIdx + offset;
     if (idx >= 0 && idx < allKeypoints.length) {
       if (isQualityFrame(allKeypoints[idx], dominantHand)) {
@@ -657,8 +836,8 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
   const torsoLength = hip ? Math.abs(shoulder.y - hip.y) : 80;
   const safeTorso = torsoLength > 5 ? torsoLength : 80;
 
-  // Camera-aware backhand detection
-  const isBackhand = isBackhandShot(peakFrame, dominantHand, cameraAngle);
+  // Camera-aware backhand detection with multi-frame voting
+  const isBackhand = isBackhandShot(allKeypoints, peakIdx, dominantHand, cameraAngle);
 
   // Canvas-normalized vertical offset of the wrist w.r.t. the shoulder.
   // Negative = above shoulder, positive = below. Keypoints are in pixel
@@ -668,8 +847,8 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
 
   // Wrist height flags
   const wristAboveShoulder = wristShoulderDyNorm < -0.015;
-  // "Wrist HIGH" — prompt: above shoulder by >0.1 normalized
-  const wristHighAboveShoulder = wristShoulderDyNorm < -0.1;
+  // "Wrist HIGH" — above shoulder by >0.05 normalized (relaxed from -0.1)
+  const wristHighAboveShoulder = wristShoulderDyNorm < -0.05;
   const hipY = hip ? hip.y : shoulder.y + 80;
   const wristBelowHip = wrist.y > hipY;
   const wristNearShoulderHeight = Math.abs(wrist.y - shoulder.y) < 20;
@@ -714,9 +893,24 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
   // Elbow angle at peak
   const elbowAngle = elbow ? calculateAngle(shoulder, elbow, wrist) : 90;
 
+  // "Was above" lookback: check if wrist was above shoulder in any of the 3 frames before peak
+  let wasAboveShoulder = false;
+  for (let lookback = 1; lookback <= 3; lookback++) {
+    const prevIdx = peakIdx - lookback;
+    if (prevIdx >= 0) {
+      const prevW = getKp(allKeypoints[prevIdx], wristName);
+      const prevS = getKp(allKeypoints[prevIdx], shoulderName);
+      if (prevW && prevS && (prevW.y - prevS.y) / canvasSize < -0.015) {
+        wasAboveShoulder = true;
+        break;
+      }
+    }
+  }
+
   const features = {
     aboveShoulder: wristAboveShoulder,
     highAboveShoulder: wristHighAboveShoulder,
+    wasAboveShoulder,
     belowHip: wristBelowHip,
     nearShoulder: wristNearShoulderHeight,
     isBackhand,
@@ -740,6 +934,8 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
     ({ type, confidence } = classifyTennisShot(features));
   } else if (sport === "pickleball") {
     ({ type, confidence } = classifyPickleballShot(features));
+  } else if (sport === "cricket") {
+    ({ type, confidence } = classifyCricketShot(features));
   } else {
     type = "unknown";
     confidence = 0.3;
@@ -758,38 +954,37 @@ function classifySingleShot(allKeypoints, peakIdx, dominantHand, sport, timestam
  * @returns {{ type: string, confidence: number }}
  */
 function classifyBadmintonShot(f) {
-  const { aboveShoulder, highAboveShoulder, belowHip, isBackhand, velY, velX, elbowAngle, speed, nearShoulder } = f;
+  const { aboveShoulder, highAboveShoulder, wasAboveShoulder, belowHip, isBackhand, velY, velX, elbowAngle, speed, nearShoulder } = f;
   // velY/velX are torso-normalized displacements (pixel coords / torsoLength).
   // speed is torso-normalized velocity (pixel dist / torsoLength / dt).
   // Typical ranges on 256px canvas: velY +-0.01..0.5, velX 0..0.3, speed 0.1..5.0
   let type;
   let confidence;
 
-  // Tightened rules per spec:
-  //   Smash   : wrist HIGH (>0.1 above shoulder, normalized) + fast downward
-  //   Clear   : wrist HIGH + neutral or upward trajectory
-  //   Drop    : wrist HIGH + slow speed
-  //   Drive   : wrist near shoulder height + fast horizontal
-  //   Net shot: wrist BELOW shoulder + slow
-  //   Serve   : wrist BELOW hip + underhand
+  // "Was above" or currently high above counts as overhead
+  const isOverhead = highAboveShoulder || wasAboveShoulder;
+
   // Forehand gets slightly higher base confidence than backhand.
   const fhBoost = isBackhand ? 0.0 : 0.08;
 
   if (belowHip && speed < 0.15) {
     type = "serve"; confidence = 0.62 + fhBoost;
-  } else if (highAboveShoulder && velY > 0.03 && speed > 0.2) {
+  } else if (isOverhead && velY > 0.02 && speed > 0.2) {
     type = "smash"; confidence = 0.80 + fhBoost;
-  } else if (highAboveShoulder && velY <= 0.01) {
+  } else if (isOverhead && velY <= 0.01) {
     type = "clear"; confidence = 0.70 + fhBoost;
-  } else if (highAboveShoulder && speed < 0.15) {
+  } else if (isOverhead && speed < 0.15) {
     type = "drop"; confidence = 0.62 + fhBoost;
+  } else if (aboveShoulder && velY > 0.04 && speed > 0.12) {
+    // Smash fallback: above shoulder with downward velocity and decent speed
+    type = "smash"; confidence = 0.70 + fhBoost;
   } else if (nearShoulder && velX > 0.03) {
     type = "drive"; confidence = 0.66 + fhBoost;
   } else if (!aboveShoulder && speed < 0.1) {
     type = "net_shot"; confidence = 0.60 + fhBoost;
   } else if (belowHip && velY < -0.03) {
     type = "lift"; confidence = 0.56 + fhBoost;
-  } else if (aboveShoulder && speed > 0.2 && velY > 0.03) {
+  } else if (aboveShoulder && speed > 0.2 && velY > 0.02) {
     // Overhead but not "high above" — still a smash, lower confidence.
     type = "smash"; confidence = 0.62 + fhBoost;
   } else if (aboveShoulder) {
@@ -813,23 +1008,25 @@ function classifyTTShot(f) {
   let type;
   let confidence;
 
-  // Loop: wrist clearly goes UP across a 5-frame window (dy < -0.04 normalized).
-  // This is a cleaner signal than a single-frame velY.
-  const loopUpward = wristDyWindowNorm < -0.04;
+  // Forehand/backhand confidence boost for TT
+  const fhBoost = isBackhand ? 0.0 : 0.06;
+
+  // Loop: wrist clearly goes UP across a 5-frame window (relaxed from -0.04 to -0.025).
+  const loopUpward = wristDyWindowNorm < -0.025;
 
   if (speed > 0.35 && nearShoulder && velX > 0.04 && Math.abs(velY) < 0.02) {
     // Very fast flat smash, wrist near shoulder height.
     type = "smash"; confidence = 0.75;
   } else if (loopUpward && speed > 0.15) {
     type = isBackhand ? "backhand_loop" : "forehand_loop";
-    confidence = 0.72;
+    confidence = 0.72 + fhBoost;
   } else if (velY > 0.03 && velX < 0.02) {
     type = "chop"; confidence = 0.68;
   } else if (belowHip && speed < 0.1) {
     type = "serve"; confidence = 0.64;
-  } else if (nearShoulder && speed > 0.1 && velX > 0.015) {
+  } else if (nearShoulder && speed > 0.06 && velX > 0.015) {
     type = isBackhand ? "backhand_drive" : "forehand_drive";
-    confidence = 0.66;
+    confidence = 0.66 + fhBoost;
   } else if (speed < 0.08) {
     type = speed < 0.03 ? "block" : "push";
     confidence = 0.55;
@@ -837,7 +1034,7 @@ function classifyTTShot(f) {
     type = "flick"; confidence = 0.58;
   } else {
     type = isBackhand ? "backhand_drive" : "forehand_drive";
-    confidence = 0.45;
+    confidence = 0.45 + fhBoost;
   }
 
   return { type, confidence };
@@ -906,6 +1103,61 @@ function classifyPickleballShot(f) {
     type = "third_shot_drop"; confidence = 0.55;
   } else {
     type = "drop"; confidence = 0.45;
+  }
+
+  return { type, confidence };
+}
+
+/**
+ * Classify a cricket shot from motion features at the peak frame.
+ *
+ * @param {object} f - Feature bundle
+ * @returns {{ type: string, confidence: number }}
+ */
+function classifyCricketShot(f) {
+  const { aboveShoulder, highAboveShoulder, wasAboveShoulder, belowHip, nearShoulder, isBackhand, velY, velX, elbowAngle, speed, wristShoulderDyNorm } = f;
+  let type;
+  let confidence;
+
+  // Bowling action: full arm rotation + high speed + arm above shoulder + extended elbow
+  if ((highAboveShoulder || wasAboveShoulder) && speed > 0.25 && elbowAngle > 150) {
+    type = "bowling_action"; confidence = 0.75;
+  }
+  // Pull: horizontal swing from behind body + wrist above hip level + fast
+  else if (nearShoulder && velX > 0.04 && speed > 0.15 && !aboveShoulder) {
+    type = "pull"; confidence = 0.68;
+  }
+  // Cut: horizontal swing + wrist near shoulder + compact motion
+  else if (nearShoulder && velX > 0.03 && speed > 0.1 && !aboveShoulder) {
+    type = "cut"; confidence = 0.65;
+  }
+  // Sweep: wrist goes low + horizontal motion
+  else if (belowHip && velX > 0.02 && speed > 0.08) {
+    type = "sweep"; confidence = 0.62;
+  }
+  // Drives: wrist high + downward arc
+  else if (aboveShoulder && velY > 0.02 && speed > 0.12) {
+    // Straight drive vs cover drive: cover drive has more lateral motion
+    if (velX > 0.03) {
+      type = "cover_drive"; confidence = 0.68;
+    } else {
+      type = "straight_drive"; confidence = 0.70;
+    }
+  }
+  // Forward defense: wrist low + compact + slow
+  else if (!aboveShoulder && speed < 0.08 && velY > 0) {
+    type = "forward_defense"; confidence = 0.64;
+  }
+  // Back foot defense: compact + slightly above or at shoulder + slow
+  else if (!aboveShoulder && speed < 0.1 && velY <= 0) {
+    type = "back_foot_defense"; confidence = 0.60;
+  }
+  // Fallback: if wrist is high, probably a drive; otherwise defense
+  else if (aboveShoulder) {
+    type = speed > 0.1 ? "straight_drive" : "forward_defense";
+    confidence = 0.45;
+  } else {
+    type = "forward_defense"; confidence = 0.40;
   }
 
   return { type, confidence };
@@ -1216,6 +1468,7 @@ const SPEED_CALIBRATION = {
   table_tennis: { factor: 30,  minPlausible: 5,  maxPlausible: 100 },
   tennis:       { factor: 55,  minPlausible: 20, maxPlausible: 200 },
   pickleball:   { factor: 35,  minPlausible: 10, maxPlausible: 80  },
+  cricket:      { factor: 50,  minPlausible: 15, maxPlausible: 160 },
 };
 
 /**
@@ -1344,6 +1597,9 @@ function estimateShotSpeed(allKeypoints, timestamps, peakIdx, sport, dominantHan
     smash: 1.35, drive: 1.05, clear: 0.95, drop: 0.55, net: 0.45, lift: 0.7, serve: 0.85,
     forehand: 1.0, backhand: 0.9, topspin: 1.1, slice: 0.7, volley: 0.65,
     dink: 0.4,
+    // Cricket
+    straight_drive: 1.1, cover_drive: 1.05, pull: 1.15, cut: 1.0,
+    sweep: 0.85, forward_defense: 0.4, back_foot_defense: 0.45, bowling_action: 1.3,
   };
   const mult = SHOT_MULTIPLIER[shotType] ?? 1.0;
 
@@ -1660,7 +1916,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // Insufficient data guard — if fewer than 5 quality frames, bail early
     // with a clear "insufficient data" result. The existing result shape is
     // preserved so the frontend UI keeps working.
-    if (qualityFrameCount < 5) {
+    if (qualityFrameCount < Math.max(3, Math.floor(totalFramesExtracted * 0.05))) {
       progress("complete", 100, "Insufficient data");
       return {
         success: false,

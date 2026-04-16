@@ -84,7 +84,7 @@ SUPPORTED_SPORTS = {
         "name": "Cricket",
         "icon": "Disc",
         "color": "blue",
-        "video_analysis": False,
+        "video_analysis": True,
         "play_styles": [
             {"value": "Aggressive Batsman", "label": "Aggressive Batsman", "desc": "Big shots, fast scoring, dominate bowling"},
             {"value": "Anchor Batsman", "label": "Anchor Batsman", "desc": "Steady innings, build partnerships"},

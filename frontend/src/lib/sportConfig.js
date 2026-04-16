@@ -33,7 +33,7 @@ export const SPORT_COLOR = {
 };
 
 /** Sports that currently support AI video analysis */
-export const VIDEO_ANALYSIS_SPORTS = new Set(["badminton", "tennis", "table_tennis", "pickleball"]);
+export const VIDEO_ANALYSIS_SPORTS = new Set(["badminton", "tennis", "table_tennis", "pickleball", "cricket"]);
 
 export function hasVideoAnalysis(sport) {
   return VIDEO_ANALYSIS_SPORTS.has(sport);

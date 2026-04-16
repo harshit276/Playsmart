@@ -45,6 +45,13 @@ export const SUPPORTED_SPORTS = {
     targetFrames: 30,
     quickFrames: 15,
   },
+  cricket: {
+    name: "Cricket",
+    videoAnalysis: true,
+    targetFps: 8,
+    targetFrames: 30,
+    quickFrames: 15,
+  },
 };
 
 // ─── Shot Types per Sport ───────────────────────────────────────────────────
@@ -93,6 +100,16 @@ export const SHOT_TYPES = {
     "overhead",
     "third_shot_drop",
   ],
+  cricket: [
+    "forward_defense",
+    "back_foot_defense",
+    "straight_drive",
+    "cover_drive",
+    "pull",
+    "cut",
+    "sweep",
+    "bowling_action",
+  ],
 };
 
 // ─── Speed Thresholds (km/h) ───────────────────────────────────────────────
@@ -111,6 +128,7 @@ export const SPEED_THRESHOLDS = {
   table_tennis: { beginner: 30, intermediate: 60, advanced: 90, elite: 120 },
   tennis: { beginner: 80, intermediate: 140, advanced: 190, elite: 230 },
   pickleball: { beginner: 30, intermediate: 50, advanced: 70, elite: 90 },
+  cricket: { beginner: 60, intermediate: 100, advanced: 130, elite: 160 },
 };
 
 // ─── Skill Level Thresholds (based on overall score 0-100) ──────────────────
@@ -130,6 +148,7 @@ export const SPEED_SKILL_BOOST = {
   table_tennis: { pro: 60, advanced: 40, intermediate: 25 },
   tennis: { pro: 130, advanced: 90, intermediate: 60 },
   pickleball: { pro: 50, advanced: 35, intermediate: 22 },
+  cricket: { pro: 120, advanced: 85, intermediate: 55 },
 };
 
 // ─── Grade Thresholds (based on overall score 0-100) ────────────────────────
