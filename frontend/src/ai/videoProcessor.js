@@ -302,51 +302,23 @@ function getRawKp(kps, name) {
 function isQualityFrame(keypoints, dominantHand, canvasSize = MODEL_INPUT_SIZE) {
   if (!keypoints) return false;
 
-  // Critical keypoints require higher confidence (0.4)
-  const critical = [
-    "left_shoulder",
-    "right_shoulder",
-    `${dominantHand}_wrist`,
-    `${dominantHand}_elbow`,
-  ];
-  // Optional keypoints (hips) use lower threshold (0.2)
-  const optional = ["left_hip", "right_hip"];
-
-  let passCount = 0;
-  let hasBothShoulders = true;
-  let hasDominantWrist = false;
-
-  for (const name of critical) {
-    const kp = getRawKp(keypoints, name);
-    if (kp && (kp.score || 0) >= 0.4) {
-      passCount++;
-      if (name === `${dominantHand}_wrist`) hasDominantWrist = true;
-    } else {
-      if (name === "left_shoulder" || name === "right_shoulder") hasBothShoulders = false;
-    }
+  // Minimum requirement: the dominant wrist must be visible
+  const wrist = getRawKp(keypoints, `${dominantHand}_wrist`);
+  if (!wrist || (wrist.score || 0) < 0.3) {
+    // Try the other wrist as fallback
+    const otherHand = dominantHand === "right" ? "left" : "right";
+    const otherWrist = getRawKp(keypoints, `${otherHand}_wrist`);
+    if (!otherWrist || (otherWrist.score || 0) < 0.3) return false;
   }
 
-  for (const name of optional) {
-    const kp = getRawKp(keypoints, name);
-    if (kp && (kp.score || 0) >= 0.2) {
-      passCount++;
-    }
-  }
-
-  // Need at least 4/6 keypoints, must include both shoulders + dominant wrist
-  if (passCount < 4 || !hasBothShoulders || !hasDominantWrist) return false;
-
+  // At least ONE shoulder must be visible (for body reference)
   const ls = getRawKp(keypoints, "left_shoulder");
   const rs = getRawKp(keypoints, "right_shoulder");
-  const lh = getRawKp(keypoints, "left_hip");
+  const hasAnyShoulder = (ls && (ls.score || 0) >= 0.3) || (rs && (rs.score || 0) >= 0.3);
+  if (!hasAnyShoulder) return false;
 
-  if (ls && rs && lh) {
-    const shoulderWidthN = Math.abs(ls.x - rs.x) / canvasSize;
-    const torsoHeightN = Math.abs(ls.y - lh.y) / canvasSize;
-    if (torsoHeightN < 0.03 || torsoHeightN > 0.9) return false;
-    if (shoulderWidthN < 0.01) return false;
-  }
-
+  // That's it — wrist + shoulder = enough to analyze a shot
+  // Hips, elbows, etc. are BONUS data, not required
   return true;
 }
 
@@ -440,6 +412,25 @@ function detectCameraAngle(allKeypoints, canvasSize = MODEL_INPUT_SIZE) {
  * @returns {"right"|"left"}
  */
 function detectDominantHand(allKeypoints) {
+  // FIRST: Check which wrist is MORE VISIBLE (higher average confidence).
+  // In sports videos, the playing arm is the one you see most clearly.
+  let leftVisibleCount = 0, rightVisibleCount = 0;
+  let leftConfidenceSum = 0, rightConfidenceSum = 0;
+  for (const kps of allKeypoints) {
+    const lw = getRawKp(kps, "left_wrist");
+    const rw = getRawKp(kps, "right_wrist");
+    if (lw && (lw.score || 0) > 0.3) { leftVisibleCount++; leftConfidenceSum += lw.score; }
+    if (rw && (rw.score || 0) > 0.3) { rightVisibleCount++; rightConfidenceSum += rw.score; }
+  }
+
+  // If one wrist is visible in significantly more frames, that's likely the dominant hand
+  const visibilityRatio = Math.max(leftVisibleCount, rightVisibleCount) / Math.max(1, Math.min(leftVisibleCount, rightVisibleCount));
+  if (visibilityRatio > 2) {
+    // One wrist is 2x+ more visible — strong signal
+    return rightVisibleCount > leftVisibleCount ? "right" : "left";
+  }
+
+  // If both are similarly visible, use motion-based detection
   let leftMotion = 0;
   let rightMotion = 0;
   const leftMotions = [];
@@ -967,31 +958,35 @@ function classifyBadmintonShot(f) {
   // Forehand gets slightly higher base confidence than backhand.
   const fhBoost = isBackhand ? 0.0 : 0.08;
 
+  // SIMPLE RULE: In badminton, arm position is the strongest signal.
+  // Overhead (wrist above shoulder) = smash/clear/drop. NOT a drive.
+  // Drive = arm at shoulder height (horizontal shot)
+  // Below = net shot, serve, lift
+
   if (belowHip && speed < 0.15) {
-    type = "serve"; confidence = 0.62 + fhBoost;
-  } else if (isOverhead && velY > 0.02 && speed > 0.2) {
-    type = "smash"; confidence = 0.80 + fhBoost;
-  } else if (isOverhead && velY <= 0.01) {
-    type = "clear"; confidence = 0.70 + fhBoost;
-  } else if (isOverhead && speed < 0.15) {
-    type = "drop"; confidence = 0.62 + fhBoost;
-  } else if (aboveShoulder && velY > 0.04 && speed > 0.12) {
-    // Smash fallback: above shoulder with downward velocity and decent speed
-    type = "smash"; confidence = 0.70 + fhBoost;
-  } else if (nearShoulder && velX > 0.03) {
+    type = "serve"; confidence = 0.65 + fhBoost;
+  } else if (belowHip && velY < -0.02) {
+    type = "lift"; confidence = 0.58 + fhBoost;
+  } else if (isOverhead || aboveShoulder) {
+    // ARM IS UP = overhead shot. Now distinguish smash vs clear vs drop.
+    if (velY > 0.01 && speed > 0.1) {
+      // Downward velocity + speed = SMASH (most common overhead shot)
+      type = "smash"; confidence = 0.80 + fhBoost;
+    } else if (speed < 0.08) {
+      // Slow overhead = drop shot
+      type = "drop"; confidence = 0.65 + fhBoost;
+    } else {
+      // Not clearly downward, not slow = clear
+      type = "clear"; confidence = 0.68 + fhBoost;
+    }
+  } else if (nearShoulder && velX > 0.02) {
+    // Arm at shoulder height + horizontal motion = DRIVE
     type = "drive"; confidence = 0.66 + fhBoost;
-  } else if (!aboveShoulder && speed < 0.1) {
+  } else if (!aboveShoulder && speed < 0.08) {
     type = "net_shot"; confidence = 0.60 + fhBoost;
-  } else if (belowHip && velY < -0.03) {
-    type = "lift"; confidence = 0.56 + fhBoost;
-  } else if (aboveShoulder && speed > 0.2 && velY > 0.02) {
-    // Overhead but not "high above" — still a smash, lower confidence.
-    type = "smash"; confidence = 0.62 + fhBoost;
-  } else if (aboveShoulder) {
-    type = speed > 0.15 ? "smash" : "clear";
-    confidence = 0.48 + fhBoost;
   } else {
-    type = "drive"; confidence = 0.42 + fhBoost;
+    // Default to drive for shoulder-height shots
+    type = "drive"; confidence = 0.45 + fhBoost;
   }
 
   return { type, confidence };
@@ -2163,9 +2158,9 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         quality_frames: qualityFrameCount,
         quality_percentage: qualityPercentage,
         camera_angle: cameraAngle,
-        confidence_level: qualityPercentage >= 70 ? "high" : qualityPercentage >= 40 ? "medium" : "low",
-        warning: qualityPercentage < 40
-          ? "Video quality is low. Try a clearer video for better results."
+        confidence_level: qualityPercentage >= 50 ? "high" : qualityPercentage >= 20 ? "medium" : "low",
+        warning: qualityPercentage < 20
+          ? "Limited pose data detected. Results may vary — try filming with full body visible."
           : null,
       },
       _client_side: true,
