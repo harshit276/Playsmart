@@ -1742,7 +1742,9 @@ function buildPlayerProfile(detectedShots, dominantHand) {
  *   videoHeight: number,
  * }>}
  */
-export async function scanVideoForPlayers(videoFile) {
+export async function scanVideoForPlayers(videoFile, onProgress) {
+  const report = (msg) => { if (onProgress) onProgress(msg); };
+
   const video = document.createElement("video");
   const objectUrl = URL.createObjectURL(videoFile);
   video.src = objectUrl;
@@ -1763,6 +1765,7 @@ export async function scanVideoForPlayers(videoFile) {
   }
 
   // Pre-load multi-pose model
+  report("Loading AI model...");
   await initMultiPoseModel();
 
   const videoWidth = video.videoWidth;
@@ -1777,7 +1780,9 @@ export async function scanVideoForPlayers(videoFile) {
   const sampleTimes = [duration * 0.25, duration * 0.5, duration * 0.75];
   const sampleFrames = [];
 
-  for (const time of sampleTimes) {
+  for (let si = 0; si < sampleTimes.length; si++) {
+    const time = sampleTimes[si];
+    report(`Scanning frame ${si + 1}/${sampleTimes.length}...`);
     video.currentTime = Math.min(time, duration - 0.01);
     await new Promise((resolve) => {
       video.onseeked = resolve;
@@ -1847,12 +1852,12 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     const videoDuration = tempVideo.duration;
     URL.revokeObjectURL(tempUrl);
 
-    // Scale frame count by duration: ~3fps sampling, clamped 30-100
+    // Scale frame count by duration: ~5fps sampling, clamped 40-150
     let targetFrameCount;
     if (mode === "quick") {
       targetFrameCount = sportConfig.quickFrames;
     } else {
-      targetFrameCount = Math.min(100, Math.max(30, Math.floor(videoDuration * 3)));
+      targetFrameCount = Math.min(150, Math.max(40, Math.floor(videoDuration * 5)));
     }
 
     // ── Step 3: Extract frames ───────────────────────────────────────────

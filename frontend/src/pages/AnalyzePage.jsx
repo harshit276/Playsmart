@@ -486,7 +486,9 @@ export default function AnalyzePage() {
       try {
         const mod = await import("@/ai/videoProcessor");
         if (typeof mod.scanVideoForPlayers === "function") {
-          const scan = await mod.scanVideoForPlayers(file);
+          const scan = await mod.scanVideoForPlayers(file, (msg) => {
+            setLoadingText(msg);
+          });
           const maxPeople = Math.max(0, ...scan.frames.map((f) => f.people.length));
           if (maxPeople >= 1) {
             // Show confirmation modal — for 1 player just confirm, for 2+ let them choose
@@ -547,6 +549,8 @@ export default function AnalyzePage() {
         customCropBox,
         onProgress: (info) => {
           // videoProcessor sends { step, percent, message }
+          // Once real progress arrives, stop the fake interval steps
+          clearInterval(interval);
           const pct = typeof info === "number" ? info : info?.percent;
           const msg = typeof info === "string" ? info : info?.message;
           if (pct != null) setProgress(pct);

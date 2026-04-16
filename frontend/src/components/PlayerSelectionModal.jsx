@@ -29,13 +29,17 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
     return best;
   }, [scanResult]);
 
-  const [selectedFrameIdx, setSelectedFrameIdx] = useState(bestFrameIdx);
+  const [selectedFrameIdx, setSelectedFrameIdx] = useState(null);
 
   if (!isOpen || !scanResult || !scanResult.frames?.length) return null;
 
-  const frame = scanResult.frames[selectedFrameIdx] || scanResult.frames[bestFrameIdx];
-  const isSinglePlayer = frame.people.length === 1;
-  const noPlayers = frame.people.length === 0;
+  // Use best frame by default; user can override via frame switcher
+  const activeFrameIdx = selectedFrameIdx != null ? selectedFrameIdx : bestFrameIdx;
+  const frame = scanResult.frames[activeFrameIdx] || scanResult.frames[bestFrameIdx];
+  // Show the max player count across ALL frames for the title
+  const maxPlayers = Math.max(0, ...scanResult.frames.map((f) => f.people.length));
+  const isSinglePlayer = maxPlayers === 1;
+  const noPlayers = maxPlayers === 0;
 
   return (
     <AnimatePresence>
@@ -67,7 +71,7 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
                   ? "No Player Detected"
                   : isSinglePlayer
                     ? "1 Player Detected"
-                    : `${frame.people.length} Players Detected`}
+                    : `${maxPlayers} Players Detected`}
               </h3>
             </div>
             <button
@@ -128,20 +132,21 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
             </div>
           </div>
 
-          {/* Frame selection (if multiple frames) */}
+          {/* Frame selection — compact, only when multiple frames */}
           {scanResult.frames.length > 1 && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xs text-zinc-500">Frame:</span>
               {scanResult.frames.map((f, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedFrameIdx(idx)}
-                  className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
-                    idx === selectedFrameIdx
+                  className={`text-xs w-7 h-7 rounded-full transition-colors ${
+                    idx === activeFrameIdx
                       ? "bg-lime-400 text-black font-semibold"
                       : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
                   }`}
                 >
-                  Frame {idx + 1} ({f.people.length})
+                  {idx + 1}
                 </button>
               ))}
             </div>

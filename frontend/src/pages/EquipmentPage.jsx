@@ -19,10 +19,11 @@ import { getSportEmoji, getSportLabel, SPORT_LABEL } from "@/lib/sportConfig";
 import SEO from "@/components/SEO";
 
 const BUDGET_RANGES = {
-  Low: { label: "Budget", min: 0, max: 3000 },
-  Medium: { label: "Mid Range", min: 3000, max: 8000 },
-  High: { label: "Performance", min: 8000, max: 15000 },
-  Premium: { label: "Premium", min: 15000, max: 50000 },
+  "Under 2k": { min: 0, max: 2000, label: "Under \u20B92k" },
+  "2k-4k": { min: 2000, max: 4000, label: "\u20B92k-4k" },
+  "4k-8k": { min: 4000, max: 8000, label: "\u20B94k-8k" },
+  "8k-12k": { min: 8000, max: 12000, label: "\u20B98k-12k" },
+  "12k+": { min: 12000, max: 50000, label: "\u20B912k+" },
 };
 
 function ScoreCircle({ score, size = 64 }) {
@@ -504,10 +505,11 @@ const QUIZ_STEPS = [
   },
   { key: "budget_range", title: "What's your equipment budget?", type: "options",
     options: [
-      { value: "Low", label: "Budget (Under Rs.3,000)", desc: "Good quality essentials" },
-      { value: "Medium", label: "Mid Range (Rs.3,000-8,000)", desc: "Balanced performance and value" },
-      { value: "High", label: "Performance (Rs.8,000-15,000)", desc: "High-end equipment" },
-      { value: "Premium", label: "Premium (Rs.15,000+)", desc: "Top-tier professional gear" },
+      { value: "Under 2k", label: "Under \u20B92,000", desc: "Good quality essentials" },
+      { value: "2k-4k", label: "\u20B92,000-4,000", desc: "Great value picks" },
+      { value: "4k-8k", label: "\u20B94,000-8,000", desc: "Balanced performance and value" },
+      { value: "8k-12k", label: "\u20B98,000-12,000", desc: "High-end equipment" },
+      { value: "12k+", label: "\u20B912,000+", desc: "Top-tier professional gear" },
     ]
   },
 ];
@@ -708,6 +710,7 @@ export default function EquipmentPage() {
   const [racketData, setRacketData] = useState(null);
   const [shoeData, setShoeData] = useState(null);
   const [gearData, setGearData] = useState(null);
+  const [stringsData, setStringsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailsTab, setDetailsTab] = useState(null);
 
@@ -727,13 +730,13 @@ export default function EquipmentPage() {
 
   // Determine the budget for the currently viewed sport
   const sportSpecificBudget = sportsProfiles[selectedSport]?.budget_range;
-  const defaultBudget = sportSpecificBudget || profile?.budget_range || "Medium";
+  const defaultBudget = sportSpecificBudget || profile?.budget_range || "2k-4k";
   const [selectedBudget, setSelectedBudget] = useState(defaultBudget);
   const budgetRange = selectedBudget;
 
   // Sync selectedBudget when sport or profile changes
   useEffect(() => {
-    const newDefault = sportsProfiles[selectedSport]?.budget_range || profile?.budget_range || "Medium";
+    const newDefault = sportsProfiles[selectedSport]?.budget_range || profile?.budget_range || "2k-4k";
     setSelectedBudget(newDefault);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSport, profile?.budget_range, sportSpecificBudget]);
@@ -754,9 +757,10 @@ export default function EquipmentPage() {
     setRacketData(null);
     setShoeData(null);
     setGearData(null);
+    setStringsData(null);
     const sportParam = sport ? `&sport=${sport}` : '';
     const sportQuery = sport ? `?sport=${sport}` : '';
-    const budgetKey = budget || selectedBudget || "Medium";
+    const budgetKey = budget || selectedBudget || "2k-4k";
     const bRange = BUDGET_RANGES[budgetKey];
     const budgetParam = bRange ? `&budget_min=${bRange.min}&budget_max=${bRange.max}` : '';
     // Fire all requests and show data progressively as each arrives
@@ -767,7 +771,14 @@ export default function EquipmentPage() {
       .then(res => { setShoeData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
     const r3 = api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 20000 })
       .then(res => { setGearData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
-    await Promise.allSettled([r1, r2, r3]);
+    const requests = [r1, r2, r3];
+    // Fetch strings data for badminton
+    if (sport === "badminton") {
+      const r4 = api.get(`/recommendations/equipment/${userId}?category=strings&sport=badminton${budgetParam}`, { timeout: 20000 })
+        .then(res => { setStringsData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+      requests.push(r4);
+    }
+    await Promise.allSettled(requests);
     if (!anySuccess) setFetchError(true);
     setLoading(false);
   }, [user?.id, selectedBudget]);
@@ -899,11 +910,7 @@ export default function EquipmentPage() {
               <div>
                 <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium">Your Budget</p>
                 <p className="text-sm font-bold text-white">
-                  {budgetRange === "Low" ? "Under \u20B93,000"
-                    : budgetRange === "Medium" ? "\u20B93,000 - \u20B98,000"
-                    : budgetRange === "High" ? "\u20B98,000 - \u20B915,000"
-                    : budgetRange === "Premium" ? "\u20B915,000+"
-                    : budgetRange}
+                  {BUDGET_RANGES[budgetRange]?.label || budgetRange}
                 </p>
               </div>
             </div>
@@ -918,8 +925,7 @@ export default function EquipmentPage() {
                       : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:border-zinc-500 hover:text-zinc-300"
                   }`}
                 >
-                  {key === "Low" ? "Under \u20B93k" : key === "Medium" ? "\u20B93k-8k" : key === "High" ? "\u20B98k-15k" : "\u20B915k+"}
-                  <span className="ml-1 text-[10px] opacity-70">{label}</span>
+                  {label}
                 </button>
               ))}
             </div>
@@ -927,8 +933,10 @@ export default function EquipmentPage() {
         </motion.div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="animate-pulse bg-zinc-800 rounded-2xl h-48" />
+            ))}
           </div>
         ) : fetchError ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -941,13 +949,18 @@ export default function EquipmentPage() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-zinc-800 border-zinc-700 mb-6 w-full grid grid-cols-3" data-testid="equipment-category-tabs">
+            <TabsList className={`bg-zinc-800 border-zinc-700 mb-6 w-full grid ${selectedSport === "badminton" ? "grid-cols-4" : "grid-cols-3"}`} data-testid="equipment-category-tabs">
               <TabsTrigger value="rackets" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
                 <Target className="w-4 h-4 mr-1.5" /> {SPORT_TAB_LABELS[activeSportForLabels]?.primary || "Rackets"}
               </TabsTrigger>
               <TabsTrigger value="shoes" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
                 <Footprints className="w-4 h-4 mr-1.5" /> {SPORT_TAB_LABELS[activeSportForLabels]?.secondary || "Shoes"}
               </TabsTrigger>
+              {selectedSport === "badminton" && (
+                <TabsTrigger value="strings" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
+                  <Sparkles className="w-4 h-4 mr-1.5" /> Strings
+                </TabsTrigger>
+              )}
               <TabsTrigger value="gear" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
                 <Package className="w-4 h-4 mr-1.5" /> Gear
               </TabsTrigger>
@@ -960,7 +973,7 @@ export default function EquipmentPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle2 className="w-4 h-4 text-lime-400" />
                     <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide">
-                      Recommended for Your Budget ({budgetRange === "Low" ? "Under \u20B93,000" : budgetRange === "Medium" ? "\u20B93,000-\u20B98,000" : budgetRange === "High" ? "\u20B98,000-\u20B915,000" : "\u20B915,000+"})
+                      Recommended for Your Budget ({BUDGET_RANGES[budgetRange]?.label || budgetRange})
                     </h3>
                   </div>
                 )}
@@ -999,7 +1012,7 @@ export default function EquipmentPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle2 className="w-4 h-4 text-lime-400" />
                     <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide">
-                      Recommended for Your Budget ({budgetRange === "Low" ? "Under \u20B93,000" : budgetRange === "Medium" ? "\u20B93,000-\u20B98,000" : budgetRange === "High" ? "\u20B98,000-\u20B915,000" : "\u20B915,000+"})
+                      Recommended for Your Budget ({BUDGET_RANGES[budgetRange]?.label || budgetRange})
                     </h3>
                   </div>
                 )}
@@ -1030,6 +1043,45 @@ export default function EquipmentPage() {
                 )}
               </div>
             </TabsContent>
+
+            {/* Strings (badminton only) */}
+            {selectedSport === "badminton" && (
+              <TabsContent value="strings">
+                <div className="space-y-4">
+                  {(stringsData?.recommendations || []).length > 0 && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="w-4 h-4 text-lime-400" />
+                      <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide">
+                        Recommended Strings ({BUDGET_RANGES[budgetRange]?.label || budgetRange})
+                      </h3>
+                    </div>
+                  )}
+                  {(stringsData?.recommendations || []).map((rec, i) => (
+                    <RecCard key={rec.equipment.id} rec={rec} i={i} showShoeSpecs={false} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
+                  ))}
+                  {(stringsData?.recommendations || []).length === 0 && (stringsData?.also_explore || []).length === 0 && (
+                    <p className="text-zinc-500 text-center py-8">No string recommendations found.</p>
+                  )}
+                  {(stringsData?.also_explore || []).length > 0 && (
+                    <div className="mt-8">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Star className="w-4 h-4 text-amber-400" />
+                        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
+                          You Might Also Like
+                        </h3>
+                        <span className="text-xs text-zinc-600">({(stringsData?.also_explore || []).length} above budget)</span>
+                      </div>
+                      <Separator className="bg-zinc-800 mb-4" />
+                      <div className="space-y-4">
+                        {(stringsData?.also_explore || []).map((rec, i) => (
+                          <RecCard key={rec.equipment.id} rec={rec} i={i + (stringsData?.recommendations || []).length} showShoeSpecs={false} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            )}
 
             {/* Essential Gear */}
             <TabsContent value="gear">
