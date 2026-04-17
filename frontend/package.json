@@ -68,7 +68,33 @@
   "scripts": {
     "start": "craco start",
     "build": "CI=false craco build",
+    "build:snap": "CI=false craco build && react-snap",
     "test": "craco test"
+  },
+  "_reactSnapNote": "react-snap was evaluated 2026-04-17 but is incompatible with our modern JS bundle (React 19 + deps emit optional chaining/nullish coalescing that the puppeteer@1.x Chromium bundled with react-snap cannot parse — every prerender threw `SyntaxError: Unexpected token '.'` and produced identical empty shells). Falling back to react-helmet-async meta tags + Googlebot rendering. Run `npm run build:snap` only after react-snap (or our toolchain) supports a modern Chromium, or migrate to Vite SSG / Next.js for true prerender.",
+  "reactSnap": {
+    "include": [
+      "/",
+      "/blog",
+      "/badminton",
+      "/tennis",
+      "/table-tennis",
+      "/pickleball",
+      "/equipment",
+      "/training",
+      "/highlights",
+      "/analyze",
+      "/privacy"
+    ],
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ],
+    "skipThirdPartyRequests": true,
+    "minifyHtml": {
+      "collapseWhitespace": false,
+      "removeComments": true
+    }
   },
   "browserslist": {
     "production": [
@@ -94,6 +120,8 @@
     "eslint-plugin-react-hooks": "5.2.0",
     "globals": "15.15.0",
     "postcss": "^8.4.49",
+    "puppeteer": "^24.41.0",
+    "react-snap": "^1.23.0",
     "tailwindcss": "^3.4.17"
   },
   "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"

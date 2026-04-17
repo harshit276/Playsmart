@@ -316,6 +316,30 @@ export default function BadmintonPage() {
         </div>
       </section>
 
+      {/* Related Articles */}
+      <section className="py-12 px-4 max-w-5xl mx-auto">
+        <h2 className="text-2xl font-heading font-bold text-white mb-6 text-center">
+          Related Articles
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link to="/blog/increase-badminton-smash-speed" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 transition-all">
+            <Badge className="mb-2 bg-lime-400/10 text-lime-400">Training</Badge>
+            <h3 className="font-bold text-white mb-1">How to Increase Your Badminton Smash Speed</h3>
+            <p className="text-xs text-zinc-400">Drills and technique fixes to add power to every smash</p>
+          </Link>
+          <Link to="/blog/best-badminton-shoes-india-under-5000" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 transition-all">
+            <Badge className="mb-2 bg-lime-400/10 text-lime-400">Gear</Badge>
+            <h3 className="font-bold text-white mb-1">Best Badminton Shoes in India Under ₹5000</h3>
+            <p className="text-xs text-zinc-400">Top picks for grip, cushioning, and lateral support</p>
+          </Link>
+          <Link to="/blog/badminton-footwork-drills-indian-pros" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 transition-all">
+            <Badge className="mb-2 bg-lime-400/10 text-lime-400">Training</Badge>
+            <h3 className="font-bold text-white mb-1">Footwork Drills Used by Indian Badminton Pros</h3>
+            <p className="text-xs text-zinc-400">Court coverage drills that improve speed and balance</p>
+          </Link>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-24 px-4 text-center">
         <div className="max-w-2xl mx-auto">

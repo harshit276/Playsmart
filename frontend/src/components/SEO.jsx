@@ -2,6 +2,8 @@ import { Helmet } from "react-helmet-async";
 
 /**
  * Per-page SEO component. Sets title, meta description, OG tags, structured data.
+ * `structuredData` may be a single object or an array of objects (each rendered
+ * as its own JSON-LD <script> tag).
  */
 export default function SEO({
   title,
@@ -16,6 +18,12 @@ export default function SEO({
   const fullTitle = title ? `${title} | AthlyticAI` : "AthlyticAI - Your AI Sports Coach";
   const canonicalUrl =
     url || (typeof window !== "undefined" ? window.location.href : "https://athlyticai.com");
+
+  const structuredDataArray = Array.isArray(structuredData)
+    ? structuredData
+    : structuredData
+    ? [structuredData]
+    : [];
 
   return (
     <Helmet>
@@ -40,9 +48,11 @@ export default function SEO({
 
       {noindex && <meta name="robots" content="noindex,nofollow" />}
 
-      {structuredData && (
-        <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
-      )}
+      {structuredDataArray.map((data, idx) => (
+        <script key={idx} type="application/ld+json">
+          {JSON.stringify(data)}
+        </script>
+      ))}
     </Helmet>
   );
 }

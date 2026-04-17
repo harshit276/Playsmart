@@ -315,6 +315,30 @@ export default function TableTennisPage() {
         </div>
       </section>
 
+      {/* Related Articles */}
+      <section className="py-12 px-4 max-w-5xl mx-auto">
+        <h2 className="text-2xl font-heading font-bold text-white mb-6 text-center">
+          Related Articles
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link to="/blog/best-table-tennis-paddle-under-3000-india" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-sky-400/30 transition-all">
+            <Badge className="mb-2 bg-sky-400/10 text-sky-400">Gear</Badge>
+            <h3 className="font-bold text-white mb-1">Best Table Tennis Paddles Under ₹3000 in India</h3>
+            <p className="text-xs text-zinc-400">Top-rated bats for control, spin, and speed</p>
+          </Link>
+          <Link to="/blog/table-tennis-spin-guide-beginners" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-sky-400/30 transition-all">
+            <Badge className="mb-2 bg-sky-400/10 text-sky-400">Training</Badge>
+            <h3 className="font-bold text-white mb-1">Table Tennis Spin Guide for Beginners</h3>
+            <p className="text-xs text-zinc-400">Master topspin, backspin, and sidespin from scratch</p>
+          </Link>
+          <Link to="/blog/choose-table-tennis-rubber-guide" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-sky-400/30 transition-all">
+            <Badge className="mb-2 bg-sky-400/10 text-sky-400">Gear</Badge>
+            <h3 className="font-bold text-white mb-1">How to Choose the Right Table Tennis Rubber</h3>
+            <p className="text-xs text-zinc-400">Match rubber to your style for better spin and speed</p>
+          </Link>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-24 px-4 text-center">
         <div className="max-w-2xl mx-auto">

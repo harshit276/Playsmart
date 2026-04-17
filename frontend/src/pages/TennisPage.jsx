@@ -316,6 +316,30 @@ export default function TennisPage() {
         </div>
       </section>
 
+      {/* Related Articles */}
+      <section className="py-12 px-4 max-w-5xl mx-auto">
+        <h2 className="text-2xl font-heading font-bold text-white mb-6 text-center">
+          Related Articles
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link to="/blog/tennis-serve-speed-tips" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-amber-400/30 transition-all">
+            <Badge className="mb-2 bg-amber-400/10 text-amber-400">Training</Badge>
+            <h3 className="font-bold text-white mb-1">How to Increase Your Tennis Serve Speed</h3>
+            <p className="text-xs text-zinc-400">Mechanics and drills for a faster, more accurate serve</p>
+          </Link>
+          <Link to="/blog/best-tennis-racquet-under-5000-india" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-amber-400/30 transition-all">
+            <Badge className="mb-2 bg-amber-400/10 text-amber-400">Gear</Badge>
+            <h3 className="font-bold text-white mb-1">Best Tennis Racquets Under ₹5000 in India</h3>
+            <p className="text-xs text-zinc-400">Affordable racquets for beginners and intermediate players</p>
+          </Link>
+          <Link to="/blog/tennis-injuries-prevention" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-amber-400/30 transition-all">
+            <Badge className="mb-2 bg-amber-400/10 text-amber-400">Health</Badge>
+            <h3 className="font-bold text-white mb-1">Common Tennis Injuries & How to Prevent Them</h3>
+            <p className="text-xs text-zinc-400">Protect your shoulder, elbow, and knees on court</p>
+          </Link>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-24 px-4 text-center">
         <div className="max-w-2xl mx-auto">

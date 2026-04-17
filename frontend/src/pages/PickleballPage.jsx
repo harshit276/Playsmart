@@ -314,6 +314,30 @@ export default function PickleballPage() {
         </div>
       </section>
 
+      {/* Related Articles */}
+      <section className="py-12 px-4 max-w-5xl mx-auto">
+        <h2 className="text-2xl font-heading font-bold text-white mb-6 text-center">
+          Related Articles
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link to="/blog/pickleball-basics-getting-started" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-emerald-400/30 transition-all">
+            <Badge className="mb-2 bg-emerald-400/10 text-emerald-400">Guide</Badge>
+            <h3 className="font-bold text-white mb-1">Pickleball Basics: Getting Started</h3>
+            <p className="text-xs text-zinc-400">Rules, scoring, and beginner shots in one quick read</p>
+          </Link>
+          <Link to="/blog/ai-video-analysis-sports-performance" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-emerald-400/30 transition-all">
+            <Badge className="mb-2 bg-emerald-400/10 text-emerald-400">Tutorial</Badge>
+            <h3 className="font-bold text-white mb-1">How AI Video Analysis Improves Your Game</h3>
+            <p className="text-xs text-zinc-400">See exactly where pose AI catches mistakes you miss</p>
+          </Link>
+          <Link to="/blog/why-athletes-need-training-plan" className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-emerald-400/30 transition-all">
+            <Badge className="mb-2 bg-emerald-400/10 text-emerald-400">Training</Badge>
+            <h3 className="font-bold text-white mb-1">Why Every Athlete Needs a Training Plan</h3>
+            <p className="text-xs text-zinc-400">Structured practice beats random play every time</p>
+          </Link>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-24 px-4 text-center">
         <div className="max-w-2xl mx-auto">

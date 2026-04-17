@@ -92,6 +92,35 @@ export default function BlogPostPage() {
 
   const sportLabel = post.sport === "table-tennis" ? "Table Tennis" : post.sport;
 
+  const articleStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.description,
+    datePublished: post.published_date,
+    author: { "@type": "Organization", "name": "AthlyticAI" },
+    publisher: {
+      "@type": "Organization",
+      name: "AthlyticAI",
+      logo: { "@type": "ImageObject", url: "https://athlyticai.com/icons/icon-512.png" },
+    },
+  };
+
+  const breadcrumbStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://athlyticai.com/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://athlyticai.com/blog" },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: post.title,
+        item: `https://athlyticai.com/blog/${post.slug || slug}`,
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950">
       <SEO
@@ -100,19 +129,7 @@ export default function BlogPostPage() {
         keywords={post.tags?.join(", ")}
         url={`https://athlyticai.com/blog/${post.slug || slug}`}
         type="article"
-        structuredData={{
-          "@context": "https://schema.org",
-          "@type": "Article",
-          headline: post.title,
-          description: post.description,
-          datePublished: post.published_date,
-          author: { "@type": "Organization", "name": "AthlyticAI" },
-          publisher: {
-            "@type": "Organization",
-            name: "AthlyticAI",
-            logo: { "@type": "ImageObject", url: "https://athlyticai.com/icons/icon-512.png" },
-          },
-        }}
+        structuredData={[articleStructuredData, breadcrumbStructuredData]}
       />
       {/* Header bar */}
       <div className="border-b border-zinc-800/50 bg-zinc-900/30">
@@ -127,6 +144,15 @@ export default function BlogPostPage() {
       {/* Article */}
       <article className="container mx-auto px-4 max-w-4xl pt-8 sm:pt-12 pb-12">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          {/* Breadcrumb */}
+          <nav aria-label="Breadcrumb" className="text-xs text-zinc-500 mb-4">
+            <Link to="/" className="hover:text-zinc-300">Home</Link>
+            <span className="mx-1">›</span>
+            <Link to="/blog" className="hover:text-zinc-300">Blog</Link>
+            <span className="mx-1">›</span>
+            <span className="text-zinc-400">{post.title}</span>
+          </nav>
+
           {/* Meta badges */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className={`text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${CATEGORY_COLOR[post.category] || "bg-zinc-700 text-zinc-300"}`}>

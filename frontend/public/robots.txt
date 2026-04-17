@@ -2,5 +2,10 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /auth
+Disallow: /dashboard
+Disallow: /progress
+Disallow: /community
+Disallow: /card
+Disallow: /assessment
 
 Sitemap: https://athlyticai.com/sitemap.xml
