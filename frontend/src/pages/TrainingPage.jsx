@@ -128,23 +128,10 @@ export default function TrainingPage() {
     const userId = user?.id || "guest";
     setFetchError(false);
     setLoading(true);
-
-    // If user just signed in, wait briefly for the auth token to be stored
-    if (userId !== "guest") {
-      let tokenReady = !!localStorage.getItem("playsmart_token");
-      if (!tokenReady) {
-        // Wait up to 1.5s for token to appear (auth state may propagate before localStorage write)
-        for (let i = 0; i < 6 && !tokenReady; i++) {
-          await new Promise(r => setTimeout(r, 250));
-          tokenReady = !!localStorage.getItem("playsmart_token");
-        }
-      }
-    }
-
     try {
       const results = await Promise.allSettled([
-        api.get(`/recommendations/training/${userId}`, { timeout: 15000 }),
-        api.get(`/progress/${userId}`, { timeout: 15000 }),
+        api.get(`/recommendations/training/${userId}`, { timeout: 8000 }),
+        api.get(`/progress/${userId}`, { timeout: 8000 }),
       ]);
 
       if (results[0].status === "fulfilled") setPlanData(results[0].value.data);

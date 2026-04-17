@@ -295,7 +295,7 @@ export default function AnalyzePage() {
   const [reminderDue, setReminderDue] = useState(false);
   const [previousScore, setPreviousScore] = useState(null);
   const [file, setFile] = useState(null);
-  const [analysisMode, setAnalysisMode] = useState(searchParams.get("mode") || null);
+  const [analysisMode, setAnalysisMode] = useState(searchParams.get("mode") || "full");
   const [selectedSport, setSelectedSport] = useState(null);
 
   // Set page title
@@ -334,7 +334,9 @@ export default function AnalyzePage() {
   const [newBadge, setNewBadge] = useState(null);
   const [viewingHistorical, setViewingHistorical] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [processingMode, setProcessingMode] = useState("client"); // "client" or "server"
+  // Server-side analysis is disabled — TF.js client-side handles everything.
+  const processingMode = "client";
+  const setProcessingMode = () => {}; // no-op for any leftover callers
   const [scanResult, setScanResult] = useState(null);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [pendingAnalysisSport, setPendingAnalysisSport] = useState(null);
@@ -536,9 +538,9 @@ export default function AnalyzePage() {
         const mod = await import("@/ai/videoProcessor");
         analyzeVideo = mod.analyzeVideo;
       } catch (importErr) {
-        toast.error("On-device AI not available. Switching to server mode...");
         clearInterval(interval);
-        setProcessingMode("server");
+        setError("On-device AI failed to load. Try a different browser or refresh.");
+        toast.error("AI model failed to load");
         setAnalyzing(false);
         return;
       }
@@ -964,9 +966,6 @@ export default function AnalyzePage() {
 
   const renderUpload = () => (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-      {/* Processing Mode Toggle */}
-      {renderProcessingModeToggle()}
-
       {/* Sport Selection */}
       {renderSportSelector()}
 
@@ -1103,12 +1102,6 @@ export default function AnalyzePage() {
             <Button size="sm" onClick={clearFile} className="text-xs border-zinc-700 text-zinc-400 hover:text-lime-400" variant="outline">
               <RefreshCw className="w-3 h-3 mr-1" /> Try Again
             </Button>
-            {processingMode === "client" && (
-              <Button size="sm" onClick={() => { setError(null); setProcessingMode("server"); toast.info("Switched to Server mode. Try analyzing again."); }}
-                className="text-xs bg-sky-500 hover:bg-sky-600 text-white">
-                <Cloud className="w-3 h-3 mr-1" /> Try Server Mode
-              </Button>
-            )}
           </div>
         </motion.div>
       )}

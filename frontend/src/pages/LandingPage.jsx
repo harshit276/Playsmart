@@ -102,7 +102,9 @@ export default function LandingPage() {
   const [blogPosts, setBlogPosts] = useState([]);
 
   useEffect(() => {
-    api.get("/api/blog/posts?limit=3").then(r => setBlogPosts(r.data?.posts || [])).catch(() => {});
+    api.get("/blog", { timeout: 5000 })
+      .then(r => setBlogPosts((r.data || []).slice(0, 3)))
+      .catch(() => {});
   }, []);
 
   const handleCTA = () => {

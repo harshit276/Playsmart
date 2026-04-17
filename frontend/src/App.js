@@ -1,31 +1,33 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, lazy, Suspense } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/sonner";
 import api from "@/lib/api";
 import Navbar from "@/components/Navbar";
-import LandingPage from "@/pages/LandingPage";
-import AuthPage from "@/pages/AuthPage";
-import AssessmentPage from "@/pages/AssessmentPage";
-import DashboardPage from "@/pages/DashboardPage";
-import EquipmentPage from "@/pages/EquipmentPage";
-import TrainingPage from "@/pages/TrainingPage";
-import ProgressPage from "@/pages/ProgressPage";
-import PlayerCardPage from "@/pages/PlayerCardPage";
-import AnalyzePage from "@/pages/AnalyzePage";
-import CommunityPage from "@/pages/CommunityPage";
-import HighlightsPage from "@/pages/HighlightsPage";
-import BlogListPage from "@/pages/BlogListPage";
-import BlogPostPage from "@/pages/BlogPostPage";
-import PrivacyPage from "@/pages/PrivacyPage";
-import BadmintonPage from "@/pages/BadmintonPage";
-import TennisPage from "@/pages/TennisPage";
-import TableTennisPage from "@/pages/TableTennisPage";
-import PickleballPage from "@/pages/PickleballPage";
+import LandingPage from "@/pages/LandingPage"; // Eager — first paint
 import InstallPrompt from "@/components/InstallPrompt";
 import VirtualCoach from "@/components/VirtualCoach";
-import LabelPage from "@/pages/LabelPage";
+
+// Code-split — each page loads on demand
+const AuthPage = lazy(() => import("@/pages/AuthPage"));
+const AssessmentPage = lazy(() => import("@/pages/AssessmentPage"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
+const EquipmentPage = lazy(() => import("@/pages/EquipmentPage"));
+const TrainingPage = lazy(() => import("@/pages/TrainingPage"));
+const ProgressPage = lazy(() => import("@/pages/ProgressPage"));
+const PlayerCardPage = lazy(() => import("@/pages/PlayerCardPage"));
+const AnalyzePage = lazy(() => import("@/pages/AnalyzePage"));
+const CommunityPage = lazy(() => import("@/pages/CommunityPage"));
+const HighlightsPage = lazy(() => import("@/pages/HighlightsPage"));
+const BlogListPage = lazy(() => import("@/pages/BlogListPage"));
+const BlogPostPage = lazy(() => import("@/pages/BlogPostPage"));
+const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
+const BadmintonPage = lazy(() => import("@/pages/BadmintonPage"));
+const TennisPage = lazy(() => import("@/pages/TennisPage"));
+const TableTennisPage = lazy(() => import("@/pages/TableTennisPage"));
+const PickleballPage = lazy(() => import("@/pages/PickleballPage"));
+const LabelPage = lazy(() => import("@/pages/LabelPage"));
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -33,19 +35,23 @@ export const useAuth = () => useContext(AuthContext);
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   const fetchMe = useCallback(async () => {
     const token = localStorage.getItem("playsmart_token");
-    if (!token) { setLoading(false); return; }
+    if (!token) return;
     try {
-      const { data } = await api.get("/auth/me");
+      const { data } = await api.get("/auth/me", { timeout: 6000 });
       setUser(data.user);
       setProfile(data.profile);
-    } catch { localStorage.removeItem("playsmart_token"); }
-    setLoading(false);
+    } catch (err) {
+      // Only drop the token on 401/403 — keep it on network/timeout errors
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem("playsmart_token");
+      }
+    }
   }, []);
 
+  // Hydrate auth in the background — never block initial render
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
   const login = (token, userData, hasProfile) => {
@@ -64,19 +70,13 @@ function AuthProvider({ children }) {
 
   const refreshProfile = async () => {
     try {
-      const { data } = await api.get("/auth/me");
+      const { data } = await api.get("/auth/me", { timeout: 6000 });
       setProfile(data.profile);
       setUser(data.user);
     } catch {}
   };
 
   const isGuest = !user && localStorage.getItem("guest_mode") === "true";
-
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
 
   return (
     <AuthContext.Provider value={{ user, profile, login, logout, refreshProfile, isAuthenticated: !!user, isGuest }}>
@@ -88,8 +88,17 @@ function AuthProvider({ children }) {
 // All routes are public - guests can browse everything
 // Auth is only needed for saving/writing data
 
+function PageFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-7 h-7 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 function AppRoutes() {
   return (
+    <Suspense fallback={<PageFallback />}>
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/blog" element={<BlogListPage />} />
@@ -112,6 +121,7 @@ function AppRoutes() {
       <Route path="/label" element={<LabelPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 
