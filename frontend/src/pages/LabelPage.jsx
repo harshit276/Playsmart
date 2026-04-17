@@ -4,15 +4,17 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
-  Upload, ChevronLeft, ChevronRight, Check, SkipForward,
-  Save, Download, Loader2, Film, Tag, Trash2, Play, Pause, RotateCcw,
+  Upload, ChevronLeft, ChevronRight, Save, Download, Loader2, Film, Tag,
+  Trash2, RotateCcw, Star, ExternalLink, Search, Youtube,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { extractShotMoments, computeVideoHash } from "@/ai/shotMomentExtractor";
 import { SHOT_TYPES, SUPPORTED_SPORTS } from "@/ai/constants";
+import { buildSearchPrompts, DOWNLOADER_URL } from "@/ai/searchPrompts";
 
-const STORAGE_KEY = "athlytic_label_drafts_v1";
+const STORAGE_KEY = "athlytic_label_drafts_v2";
+const PLAYER_LEVELS = ["beginner", "intermediate", "advanced", "pro"];
 
 function loadDrafts() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
@@ -21,17 +23,26 @@ function saveDrafts(map) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(map)); } catch {}
 }
 
+// Normalize legacy v1 string labels to object form
+function normalizeLabel(v) {
+  if (!v) return null;
+  if (typeof v === "string") return { label: v };
+  return v;
+}
+
 export default function LabelPage() {
   const [videoFile, setVideoFile] = useState(null);
   const [videoUrl, setVideoUrl] = useState(null);
   const [videoHash, setVideoHash] = useState(null);
+  const [sourceUrl, setSourceUrl] = useState("");
   const [sport, setSport] = useState("badminton");
 
   const [extracting, setExtracting] = useState(false);
   const [progress, setProgress] = useState({ percent: 0, message: "" });
 
-  const [clips, setClips] = useState([]);          // [{id, peak, start, end, score}]
-  const [labels, setLabels] = useState({});        // { clipId: labelString }
+  const [clips, setClips] = useState([]);
+  // labels shape: { clipId: { label, speed_kmh?, player_level?, player_rating? } }
+  const [labels, setLabels] = useState({});
   const [currentIdx, setCurrentIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,7 +55,17 @@ export default function LabelPage() {
     return [...types, "rally", "skip"];
   }, [sport]);
 
-  const labeledCount = Object.values(labels).filter((l) => l && l !== "skip").length;
+  const searchPrompts = useMemo(() => buildSearchPrompts(sport), [sport]);
+  const promptGroups = useMemo(() => {
+    const out = {};
+    for (const p of searchPrompts) {
+      out[p.group] = out[p.group] || [];
+      out[p.group].push(p);
+    }
+    return out;
+  }, [searchPrompts]);
+
+  const labeledCount = Object.values(labels).filter((l) => l && l.label && l.label !== "skip").length;
   const totalCount = clips.length;
 
   useEffect(() => {
@@ -58,9 +79,16 @@ export default function LabelPage() {
   useEffect(() => {
     if (videoHash) {
       const drafts = loadDrafts();
-      if (drafts[videoHash]) {
-        setLabels(drafts[videoHash].labels || {});
-        toast.info(`Restored ${Object.keys(drafts[videoHash].labels || {}).length} draft labels`);
+      const draft = drafts[videoHash];
+      if (draft) {
+        const restored = {};
+        for (const [k, v] of Object.entries(draft.labels || {})) {
+          restored[k] = normalizeLabel(v);
+        }
+        setLabels(restored);
+        if (draft.sourceUrl) setSourceUrl(draft.sourceUrl);
+        if (draft.sport) setSport(draft.sport);
+        toast.info(`Restored ${Object.keys(restored).length} draft labels`);
       }
     }
   }, [videoHash]);
@@ -69,11 +97,11 @@ export default function LabelPage() {
   useEffect(() => {
     if (!videoHash || Object.keys(labels).length === 0) return;
     const drafts = loadDrafts();
-    drafts[videoHash] = { labels, sport, savedAt: Date.now() };
+    drafts[videoHash] = { labels, sport, sourceUrl, savedAt: Date.now() };
     saveDrafts(drafts);
-  }, [labels, videoHash, sport]);
+  }, [labels, videoHash, sport, sourceUrl]);
 
-  // Auto-play current clip from peak start to peak end
+  // Auto-play current clip
   useEffect(() => {
     const v = videoRef.current;
     if (!v || clips.length === 0) return;
@@ -84,8 +112,7 @@ export default function LabelPage() {
       v.currentTime = clip.start;
       v.play().catch(() => {});
       if (playStopTimerRef.current) clearTimeout(playStopTimerRef.current);
-      const dur = (clip.end - clip.start) * 1000;
-      playStopTimerRef.current = setTimeout(() => { v.pause(); }, dur + 100);
+      playStopTimerRef.current = setTimeout(() => { v.pause(); }, (clip.end - clip.start) * 1000 + 100);
     };
 
     if (v.readyState >= 2) onLoaded();
@@ -119,11 +146,8 @@ export default function LabelPage() {
     if (!videoFile) return;
     setExtracting(true);
     setProgress({ percent: 0, message: "Starting…" });
-
     try {
-      const result = await extractShotMoments(videoFile, {
-        onProgress: setProgress,
-      });
+      const result = await extractShotMoments(videoFile, { onProgress: setProgress });
       if (result.clips.length === 0) {
         toast.error("No shot moments detected. Try a video with clearer rallies.");
       } else {
@@ -139,14 +163,24 @@ export default function LabelPage() {
     }
   };
 
-  const setCurrentLabel = (label) => {
+  const updateCurrent = (patch) => {
     const clip = clips[currentIdx];
     if (!clip) return;
-    setLabels((prev) => ({ ...prev, [clip.id]: label }));
-    // Auto-advance
-    if (currentIdx < clips.length - 1) {
-      setTimeout(() => setCurrentIdx(currentIdx + 1), 120);
+    setLabels((prev) => ({
+      ...prev,
+      [clip.id]: { ...(prev[clip.id] || {}), ...patch },
+    }));
+  };
+
+  const setCurrentLabel = (label) => {
+    updateCurrent({ label });
+    if (label === "skip") {
+      // For skip, advance immediately
+      if (currentIdx < clips.length - 1) {
+        setTimeout(() => setCurrentIdx(currentIdx + 1), 100);
+      }
     }
+    // For real labels, don't auto-advance — user may want to add speed/level/rating
   };
 
   const removeLabel = () => {
@@ -174,12 +208,19 @@ export default function LabelPage() {
     }
 
     const shots = clips
-      .map((c) => ({
-        start: c.start,
-        end: c.end,
-        label: labels[c.id],
-      }))
-      .filter((s) => s.label && s.label !== "skip");
+      .map((c) => {
+        const meta = labels[c.id];
+        if (!meta || !meta.label || meta.label === "skip") return null;
+        return {
+          start: c.start,
+          end: c.end,
+          label: meta.label,
+          ...(meta.speed_kmh != null ? { speed_kmh: Number(meta.speed_kmh) } : {}),
+          ...(meta.player_level ? { player_level: meta.player_level } : {}),
+          ...(meta.player_rating ? { player_rating: Number(meta.player_rating) } : {}),
+        };
+      })
+      .filter(Boolean);
 
     if (shots.length === 0) {
       toast.error("All your labels are 'skip' — nothing to upload.");
@@ -191,19 +232,19 @@ export default function LabelPage() {
       const { data } = await api.post("/labels/save", {
         video_hash: videoHash,
         video_filename: videoFile?.name,
+        source_url: sourceUrl || null,
         sport,
         duration: videoRef.current?.duration || null,
         shots,
       });
-      toast.success(`Saved ${data.shot_count} labeled shots — thanks for contributing!`);
+      toast.success(`Saved ${data.shot_count} labeled shots — thanks!`);
       setSaved(true);
-      // Clear local draft
       const drafts = loadDrafts();
       delete drafts[videoHash];
       saveDrafts(drafts);
     } catch (err) {
       console.error(err);
-      toast.error("Could not save labels: " + (err.response?.data?.detail || err.message));
+      toast.error("Could not save: " + (err.response?.data?.detail || err.message));
     } finally {
       setSubmitting(false);
     }
@@ -211,11 +252,16 @@ export default function LabelPage() {
 
   const exportLocal = () => {
     const shots = clips
-      .map((c) => ({ start: c.start, end: c.end, label: labels[c.id] || null }))
-      .filter((s) => s.label);
+      .map((c) => {
+        const meta = labels[c.id];
+        if (!meta || !meta.label) return null;
+        return { start: c.start, end: c.end, ...meta };
+      })
+      .filter(Boolean);
     const payload = {
       video_filename: videoFile?.name,
       video_hash: videoHash,
+      source_url: sourceUrl || null,
       sport,
       duration: videoRef.current?.duration || null,
       shots,
@@ -237,7 +283,8 @@ export default function LabelPage() {
   useEffect(() => {
     if (clips.length === 0) return;
     const handler = (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
       if (e.key === "ArrowLeft") goPrev();
       else if (e.key === "ArrowRight") goNext();
       else if (e.key === " ") { e.preventDefault(); replayClip(); }
@@ -251,7 +298,7 @@ export default function LabelPage() {
   }, [clips.length, currentIdx, labelOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentClip = clips[currentIdx];
-  const currentLabel = currentClip ? labels[currentClip.id] : null;
+  const current = currentClip ? labels[currentClip.id] : null;
 
   return (
     <div className="min-h-screen bg-background text-zinc-100 pt-20 pb-12 px-4">
@@ -268,60 +315,103 @@ export default function LabelPage() {
               Shot Labeling Tool
             </h1>
             <p className="text-sm text-zinc-400 mt-1">
-              Upload a match video, label each shot, build the AI training dataset.
+              Search YouTube → download clips → upload here → label → train.
             </p>
           </div>
           <Link to="/" className="text-xs text-zinc-500 hover:text-zinc-300">← Back to app</Link>
         </div>
 
-        {/* Step 1: Upload */}
-        {!videoFile && (
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-            <Film className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
-            <p className="text-white font-medium mb-2">Upload a sports match video</p>
-            <p className="text-xs text-zinc-500 mb-6">
-              MP4, MOV, WEBM — any length. Longer videos = more shots to label = better training data.
-            </p>
-            <label className="inline-flex items-center gap-2 px-5 py-3 bg-lime-400 hover:bg-lime-300 text-black font-semibold rounded-xl cursor-pointer">
-              <Upload className="w-4 h-4" />
-              Choose video
-              <input
-                type="file"
-                accept="video/*"
-                className="hidden"
-                onChange={(e) => handleFile(e.target.files?.[0])}
-              />
-            </label>
+        {/* Step 0: Sport picker (always visible) */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 mb-4">
+          <p className="text-xs text-zinc-500 mb-2">Sport</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(SUPPORTED_SPORTS).map(([key, cfg]) => (
+              <button
+                key={key}
+                onClick={() => !videoFile && setSport(key)}
+                disabled={!!videoFile}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  sport === key
+                    ? "bg-lime-400 text-black border-lime-400"
+                    : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-600 disabled:opacity-50"
+                }`}>
+                {cfg.name}
+              </button>
+            ))}
           </div>
+        </div>
+
+        {/* Step 1: Search prompts (before upload) */}
+        {!videoFile && (
+          <>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-4">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                  <Search className="w-5 h-5 text-lime-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">1. Find clips on YouTube</p>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Click any prompt to open YouTube. Pick a Short or short clip, copy its URL,
+                    paste into <a href={DOWNLOADER_URL} target="_blank" rel="noopener noreferrer"
+                    className="text-lime-400 hover:underline inline-flex items-center gap-0.5">
+                      ytshortsdl.io <ExternalLink className="w-3 h-3" />
+                    </a> to download the MP4.
+                  </p>
+                </div>
+              </div>
+
+              {Object.entries(promptGroups).map(([group, items]) => (
+                <div key={group} className="mb-4 last:mb-0">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">{group}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {items.map((p) => (
+                      <a
+                        key={p.label}
+                        href={p.shorts_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-lime-400/40 text-zinc-300 hover:text-white transition-colors flex items-center gap-1">
+                        <Youtube className="w-3 h-3 text-red-400" />
+                        {p.label}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
+              <Film className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
+              <p className="text-white font-medium mb-2">2. Upload the downloaded video</p>
+              <p className="text-xs text-zinc-500 mb-6">MP4, MOV, WEBM — any length.</p>
+              <input
+                type="text"
+                placeholder="Optional: paste source YouTube URL"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                className="w-full max-w-md mx-auto block bg-zinc-800 border border-zinc-700 focus:border-lime-400/60 focus:outline-none rounded-xl px-3 py-2 text-xs text-white placeholder:text-zinc-500 mb-4"
+              />
+              <label className="inline-flex items-center gap-2 px-5 py-3 bg-lime-400 hover:bg-lime-300 text-black font-semibold rounded-xl cursor-pointer">
+                <Upload className="w-4 h-4" />
+                Choose video
+                <input type="file" accept="video/*" className="hidden"
+                  onChange={(e) => handleFile(e.target.files?.[0])} />
+              </label>
+            </div>
+          </>
         )}
 
-        {/* Step 2: Sport + extract */}
+        {/* Step 2: Sport confirmed + extract */}
         {videoFile && clips.length === 0 && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5">
             <div>
               <p className="text-xs text-zinc-500 mb-2">Video loaded</p>
               <p className="text-sm text-white truncate">{videoFile.name}</p>
               <p className="text-[11px] text-zinc-500 mt-0.5">
-                {(videoFile.size / 1024 / 1024).toFixed(1)} MB · hash: {videoHash?.slice(0, 12)}…
+                {(videoFile.size / 1024 / 1024).toFixed(1)} MB · hash {videoHash?.slice(0, 12)}…
+                {sourceUrl && <> · source: <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 underline">{sourceUrl.slice(0, 40)}…</a></>}
               </p>
-            </div>
-
-            <div>
-              <p className="text-xs text-zinc-500 mb-2">Which sport is this?</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(SUPPORTED_SPORTS).map(([key, cfg]) => (
-                  <button
-                    key={key}
-                    onClick={() => setSport(key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                      sport === key
-                        ? "bg-lime-400 text-black border-lime-400"
-                        : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-600"
-                    }`}>
-                    {cfg.name}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {extracting ? (
@@ -334,14 +424,12 @@ export default function LabelPage() {
               </div>
             ) : (
               <div className="flex gap-2">
-                <Button
-                  onClick={runExtraction}
+                <Button onClick={runExtraction}
                   className="bg-lime-400 hover:bg-lime-300 text-black font-semibold">
                   Extract shot moments →
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => { setVideoFile(null); setVideoUrl(null); setVideoHash(null); }}
+                <Button variant="ghost"
+                  onClick={() => { setVideoFile(null); setVideoUrl(null); setVideoHash(null); setSourceUrl(""); }}
                   className="text-zinc-400 hover:text-white">
                   Change video
                 </Button>
@@ -352,34 +440,29 @@ export default function LabelPage() {
 
         {/* Step 3: Label clips */}
         {clips.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4">
             <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-4">
-              {/* Video player */}
+              {/* Player */}
               <div className="relative bg-black rounded-xl overflow-hidden aspect-video">
-                <video
-                  ref={videoRef}
-                  src={videoUrl}
+                <video ref={videoRef} src={videoUrl}
                   className="w-full h-full object-contain"
-                  playsInline
-                  muted
-                  controls={false}
-                />
+                  playsInline muted controls={false} />
                 <div className="absolute top-2 left-2 bg-black/70 text-white text-[11px] px-2 py-1 rounded font-mono">
                   Shot {currentIdx + 1} / {clips.length} · {currentClip?.start.toFixed(1)}s – {currentClip?.end.toFixed(1)}s
                 </div>
-                {currentLabel && currentLabel !== "skip" && (
+                {current?.label && current.label !== "skip" && (
                   <div className="absolute top-2 right-2 bg-lime-400 text-black text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wider">
-                    {currentLabel}
+                    {current.label}
                   </div>
                 )}
-                {currentLabel === "skip" && (
+                {current?.label === "skip" && (
                   <div className="absolute top-2 right-2 bg-zinc-700 text-zinc-300 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wider">
                     skipped
                   </div>
                 )}
               </div>
 
-              {/* Controls */}
+              {/* Nav controls */}
               <div className="flex items-center justify-center gap-2">
                 <Button variant="ghost" size="sm" onClick={goPrev} disabled={currentIdx === 0}
                   className="text-zinc-400 hover:text-white">
@@ -395,19 +478,17 @@ export default function LabelPage() {
                 </Button>
               </div>
 
-              {/* Label buttons */}
+              {/* Shot label buttons */}
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
-                  Label this shot — press 1-{labelOptions.length} on keyboard
+                  Shot type — press 1-{labelOptions.length}
                 </p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {labelOptions.map((opt, i) => {
-                    const active = currentLabel === opt;
+                    const active = current?.label === opt;
                     const isSkip = opt === "skip";
                     return (
-                      <button
-                        key={opt}
-                        onClick={() => setCurrentLabel(opt)}
+                      <button key={opt} onClick={() => setCurrentLabel(opt)}
                         className={`px-2 py-2 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center gap-1 ${
                           active
                             ? isSkip
@@ -421,68 +502,144 @@ export default function LabelPage() {
                     );
                   })}
                 </div>
-                {currentLabel && (
-                  <button
-                    onClick={removeLabel}
-                    className="mt-2 text-[11px] text-zinc-500 hover:text-red-400 flex items-center gap-1">
-                    <Trash2 className="w-3 h-3" /> Clear label
-                  </button>
-                )}
               </div>
+
+              {/* Extra metadata: speed + level + rating (only if labeled, not skip) */}
+              {current?.label && current.label !== "skip" && (
+                <div className="space-y-3 pt-2 border-t border-zinc-800">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Speed */}
+                    <div>
+                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">
+                        Estimated speed (km/h, optional)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="500"
+                        step="1"
+                        placeholder="e.g. 280"
+                        value={current.speed_kmh ?? ""}
+                        onChange={(e) => updateCurrent({
+                          speed_kmh: e.target.value === "" ? null : Number(e.target.value),
+                        })}
+                        className="w-full bg-zinc-800 border border-zinc-700 focus:border-lime-400/60 focus:outline-none rounded-lg px-3 py-1.5 text-sm text-white placeholder:text-zinc-600"
+                      />
+                    </div>
+
+                    {/* Player rating */}
+                    <div>
+                      <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">
+                        Player rating (skill)
+                      </label>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => updateCurrent({
+                              player_rating: current.player_rating === r ? null : r,
+                            })}
+                            className="p-1 hover:scale-110 transition-transform"
+                            aria-label={`${r} star${r > 1 ? "s" : ""}`}>
+                            <Star
+                              className={`w-5 h-5 ${
+                                (current.player_rating || 0) >= r
+                                  ? "text-lime-400 fill-lime-400"
+                                  : "text-zinc-600"
+                              }`}
+                            />
+                          </button>
+                        ))}
+                        {current.player_rating && (
+                          <span className="text-xs text-zinc-500 ml-1">{current.player_rating}/5</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Player level */}
+                  <div>
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">
+                      Player level
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {PLAYER_LEVELS.map((lvl) => (
+                        <button
+                          key={lvl}
+                          onClick={() => updateCurrent({
+                            player_level: current.player_level === lvl ? null : lvl,
+                          })}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors capitalize ${
+                            current.player_level === lvl
+                              ? "bg-lime-400 text-black border-lime-400"
+                              : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500"
+                          }`}>
+                          {lvl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Done & advance */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button onClick={removeLabel}
+                      className="text-[11px] text-zinc-500 hover:text-red-400 flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" /> Clear all metadata
+                    </button>
+                    <Button size="sm" onClick={goNext} disabled={currentIdx === clips.length - 1}
+                      className="h-7 text-xs bg-zinc-800 hover:bg-zinc-700 text-white">
+                      Done · Next →
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Side panel: progress + actions */}
+            {/* Side panel */}
             <div className="space-y-3">
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
                 <p className="text-xs text-zinc-500 mb-1">Progress</p>
                 <p className="text-2xl font-bold text-white">
                   {labeledCount} <span className="text-zinc-500 text-sm font-normal">/ {totalCount}</span>
                 </p>
-                <Progress
-                  value={totalCount ? (labeledCount / totalCount) * 100 : 0}
-                  className="h-1.5 bg-zinc-800 mt-2"
-                />
-                <p className="text-[10px] text-zinc-500 mt-2">
-                  Sport: <span className="text-zinc-300 capitalize">{sport.replace("_", " ")}</span>
+                <Progress value={totalCount ? (labeledCount / totalCount) * 100 : 0}
+                  className="h-1.5 bg-zinc-800 mt-2" />
+                <p className="text-[10px] text-zinc-500 mt-2 capitalize">
+                  Sport: <span className="text-zinc-300">{sport.replace("_", " ")}</span>
                 </p>
               </div>
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
-                <Button
-                  onClick={saveAll}
-                  disabled={submitting || labeledCount === 0}
+                <Button onClick={saveAll} disabled={submitting || labeledCount === 0}
                   className="w-full bg-lime-400 hover:bg-lime-300 text-black font-semibold">
                   {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   {saved ? "Saved ✓" : `Upload ${labeledCount} labels`}
                 </Button>
-                <Button
-                  onClick={exportLocal}
-                  variant="ghost"
+                <Button onClick={exportLocal} variant="ghost"
                   disabled={labeledCount === 0}
                   className="w-full text-zinc-400 hover:text-white">
                   <Download className="w-4 h-4 mr-2" /> Export JSON
                 </Button>
                 <p className="text-[10px] text-zinc-500 leading-relaxed">
-                  Drafts auto-save in your browser. Upload sends labels to MongoDB for training.
+                  Drafts auto-save in browser. Upload sends labels + metadata to MongoDB.
                 </p>
               </div>
 
-              {/* Mini timeline of clip labels */}
+              {/* Mini grid of clips */}
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 max-h-64 overflow-y-auto">
                 <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Clips</p>
                 <div className="grid grid-cols-8 sm:grid-cols-6 lg:grid-cols-5 gap-1">
                   {clips.map((c, i) => {
-                    const lab = labels[c.id];
+                    const meta = labels[c.id];
+                    const lab = meta?.label;
                     const colorClass = !lab
                       ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-500"
                       : lab === "skip"
                       ? "bg-zinc-700 text-zinc-400"
                       : "bg-lime-400/80 text-black";
                     return (
-                      <button
-                        key={c.id}
-                        onClick={() => setCurrentIdx(i)}
-                        title={`${c.start.toFixed(1)}s — ${lab || "unlabeled"}`}
+                      <button key={c.id} onClick={() => setCurrentIdx(i)}
+                        title={`${c.start.toFixed(1)}s — ${lab || "unlabeled"}${meta?.speed_kmh ? ` · ${meta.speed_kmh}km/h` : ""}`}
                         className={`text-[9px] font-mono px-1 py-1.5 rounded ${colorClass} ${
                           i === currentIdx ? "ring-2 ring-white" : ""
                         }`}>
@@ -495,7 +652,7 @@ export default function LabelPage() {
 
               <div className="text-[10px] text-zinc-600 px-1 leading-relaxed">
                 <p className="mb-1"><strong className="text-zinc-400">Shortcuts:</strong></p>
-                <p>← / → navigate · Space replay · 1-{labelOptions.length} label</p>
+                <p>← / → navigate · Space replay · 1-{labelOptions.length} pick shot type</p>
               </div>
             </div>
           </div>

@@ -7650,12 +7650,16 @@ class LabeledShot(BaseModel):
     start: float = Field(..., description="Clip start time in seconds")
     end: float = Field(..., description="Clip end time in seconds")
     label: str = Field(..., max_length=40, description="Shot label (smash/clear/drop/drive/...)")
+    speed_kmh: Optional[float] = Field(None, ge=0, le=500, description="Estimated shot speed in km/h")
+    player_level: Optional[str] = Field(None, max_length=20, description="beginner|intermediate|advanced|pro")
+    player_rating: Optional[int] = Field(None, ge=1, le=5, description="Subjective skill rating 1-5")
     keypoints: Optional[list] = Field(None, description="Optional pose keypoints sequence for this shot")
 
 
 class LabelSaveRequest(BaseModel):
     video_hash: str = Field(..., min_length=4, max_length=64)
     video_filename: Optional[str] = None
+    source_url: Optional[str] = Field(None, max_length=500, description="Original YouTube/source URL the video came from")
     sport: str = Field(..., max_length=32)
     shots: List[LabeledShot]
     labeler_id: Optional[str] = None  # email or guest id (optional)
@@ -7673,6 +7677,7 @@ async def save_labels(req: LabelSaveRequest):
         "id": str(uuid.uuid4()),
         "video_hash": req.video_hash,
         "video_filename": req.video_filename,
+        "source_url": req.source_url,
         "sport": req.sport,
         "duration": req.duration,
         "labeler_id": req.labeler_id,
