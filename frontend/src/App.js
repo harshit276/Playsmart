@@ -24,6 +24,8 @@ import TennisPage from "@/pages/TennisPage";
 import TableTennisPage from "@/pages/TableTennisPage";
 import PickleballPage from "@/pages/PickleballPage";
 import InstallPrompt from "@/components/InstallPrompt";
+import VirtualCoach from "@/components/VirtualCoach";
+import LabelPage from "@/pages/LabelPage";
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -107,6 +109,7 @@ function AppRoutes() {
       <Route path="/highlights" element={<HighlightsPage />} />
       <Route path="/community" element={<CommunityPage />} />
       <Route path="/card" element={<PlayerCardPage />} />
+      <Route path="/label" element={<LabelPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -122,6 +125,7 @@ function App() {
             <AppRoutes />
             <Toaster position="bottom-right" />
             <InstallPrompt />
+            <VirtualCoach />
           </div>
         </AuthProvider>
       </BrowserRouter>

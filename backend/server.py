@@ -7310,6 +7310,432 @@ BLOG_POSTS = [
 ]
 
 
+# ═══════════════════════════════════════════════════════════════
+# Virtual Coach (RAG-powered chat: equipment / training / general)
+# ═══════════════════════════════════════════════════════════════
+
+from research_loader import (
+    get_all_equipment_categories,
+    get_all_skills,
+    get_research_sports,
+)
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+_COACH_CORPUS_CACHE: list = []
+_COACH_BLOG_SNIPPETS_CACHE: list = []
+
+_COACH_SYSTEM_PROMPT = (
+    "You are AthlyticAI's Virtual Coach — a helpful, concise sports advisor. "
+    "You ONLY answer questions about: (a) sports equipment (rackets, paddles, balls, shoes, strings, grips), "
+    "(b) training plans and technique tips, (c) general sports knowledge (rules, players, history, "
+    "tournaments, India-specific context). "
+    "If a user asks about anything outside this scope (coding help, personal advice, medical, politics, etc.), "
+    "politely say you only help with sports questions and suggest a sports-related topic.\n\n"
+    "Rules:\n"
+    "1. Answer in 3-6 short paragraphs or a concise bulleted list. Keep it scannable.\n"
+    "2. When the CONTEXT contains relevant equipment items with buy_links, recommend 1-3 specific products by name "
+    "and include the product URL in the form of a markdown link like [Product Name](url).\n"
+    "3. When the CONTEXT contains relevant blog posts, cite them with links like [Read more](/blog/slug).\n"
+    "4. Prefer Indian brands and INR prices when the user is India-based (assume yes unless stated).\n"
+    "5. Never invent products, prices, or URLs not in the CONTEXT.\n"
+    "6. If the CONTEXT has no relevant items, answer from general sports knowledge but skip product links.\n"
+    "7. End with a one-sentence next step CTA pointing to /analyze, /training, or /equipment when relevant."
+)
+
+
+def _build_coach_corpus():
+    """Build a lightweight retrieval corpus once. Each doc: {kind, text, meta}."""
+    global _COACH_CORPUS_CACHE, _COACH_BLOG_SNIPPETS_CACHE
+    if _COACH_CORPUS_CACHE:
+        return _COACH_CORPUS_CACHE
+
+    docs = []
+
+    # Blog posts: title + description + tags (content is too long — strip HTML and keep first 500 chars)
+    import re as _re
+    blog_snippets = []
+    for p in BLOG_POSTS:
+        raw = p.get("content", "")
+        stripped = _re.sub(r"<[^>]+>", " ", raw)
+        stripped = _re.sub(r"\s+", " ", stripped).strip()
+        snippet = stripped[:400]
+        blog_text = (
+            f"BLOG: {p['title']}\n{p.get('description','')}\n"
+            f"Tags: {', '.join(p.get('tags', []))}\nExcerpt: {snippet}"
+        )
+        docs.append({
+            "kind": "blog",
+            "text": blog_text,
+            "meta": {
+                "title": p["title"],
+                "slug": p["id"],
+                "sport": p.get("sport"),
+                "url": f"/blog/{p['id']}",
+            },
+        })
+        blog_snippets.append(p["id"])
+
+    # Equipment items (all sports, all categories)
+    for sport in get_research_sports():
+        cats = get_all_equipment_categories(sport)
+        for cat_name, items in cats.items():
+            for item in items:
+                inr = item.get("price_ranges", {}).get("INR", {})
+                price_str = ""
+                if inr:
+                    price_str = f"Rs {inr.get('min','?')}-{inr.get('max','?')}"
+                buy_links = item.get("buy_links", {})
+                primary_url = (
+                    buy_links.get("amazon") or buy_links.get("flipkart") or
+                    (buy_links.get("india", [{}])[0].get("url") if buy_links.get("india") else None)
+                    or ""
+                )
+                specs = item.get("specs", {})
+                specs_str = ", ".join(f"{k}: {v}" for k, v in list(specs.items())[:4])
+                text = (
+                    f"PRODUCT [{sport} {cat_name}]: {item.get('name','?')} by {item.get('brand','?')}. "
+                    f"Level: {item.get('level','any')}. Price: {price_str}. "
+                    f"Specs: {specs_str}. "
+                    f"{item.get('description','')}"
+                )
+                docs.append({
+                    "kind": "product",
+                    "text": text,
+                    "meta": {
+                        "name": item.get("name"),
+                        "brand": item.get("brand"),
+                        "sport": sport,
+                        "category": cat_name,
+                        "level": item.get("level"),
+                        "price_inr": inr,
+                        "url": primary_url,
+                    },
+                })
+
+    # Skill areas (short summaries)
+    for sport in get_research_sports():
+        sk = get_all_skills(sport)
+        for skill in sk.get("skill_areas", []):
+            text = (
+                f"SKILL [{sport}]: {skill.get('name','?')} ({skill.get('level','any')}). "
+                f"{skill.get('description','')[:300]}"
+            )
+            docs.append({
+                "kind": "skill",
+                "text": text,
+                "meta": {
+                    "sport": sport,
+                    "skill_id": skill.get("id"),
+                    "name": skill.get("name"),
+                    "level": skill.get("level"),
+                },
+            })
+
+    _COACH_CORPUS_CACHE = docs
+    _COACH_BLOG_SNIPPETS_CACHE = blog_snippets
+    logger.info(f"Coach corpus built: {len(docs)} docs "
+                f"({sum(1 for d in docs if d['kind']=='blog')} blog, "
+                f"{sum(1 for d in docs if d['kind']=='product')} products, "
+                f"{sum(1 for d in docs if d['kind']=='skill')} skills)")
+    return docs
+
+
+def _keyword_score(query: str, text: str) -> float:
+    """Simple TF overlap score — lowercased word-level."""
+    q_words = {w for w in query.lower().split() if len(w) > 2}
+    if not q_words:
+        return 0.0
+    t_lower = text.lower()
+    hits = sum(1 for w in q_words if w in t_lower)
+    # Boost exact phrase matches for multi-word substrings
+    phrase_bonus = 0
+    for n in (3, 2):
+        for i in range(len(query.split()) - n + 1):
+            phrase = " ".join(query.lower().split()[i:i + n])
+            if len(phrase) > 6 and phrase in t_lower:
+                phrase_bonus += n
+    return hits + phrase_bonus
+
+
+def _retrieve_top_docs(query: str, k: int = 8) -> list:
+    corpus = _build_coach_corpus()
+    scored = [(_keyword_score(query, d["text"]), d) for d in corpus]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    # Keep only docs with any hit
+    return [d for s, d in scored[:k] if s > 0]
+
+
+SPORT_SYNONYMS = {
+    "bat": "cricket", "wicket": "cricket", "odi": "cricket", "ipl": "cricket",
+    "racquet": "tennis", "atp": "tennis", "wta": "tennis", "grand slam": "tennis",
+    "shuttle": "badminton", "shuttlecock": "badminton", "smash": "badminton",
+    "paddle": "table_tennis", "ping pong": "table_tennis",
+    "pickle": "pickleball",
+}
+
+OFF_TOPIC_HINTS = [
+    "code", "python", "javascript", "recipe", "medical", "doctor", "stock",
+    "invest", "crypto", "movie", "song", "relationship", "dating",
+]
+
+
+def _detect_sport(query: str) -> Optional[str]:
+    q = query.lower()
+    for sport in ["badminton", "tennis", "pickleball", "cricket", "football", "swimming"]:
+        if sport in q:
+            return sport
+    if "table tennis" in q or "tt " in q or q.startswith("tt"):
+        return "table_tennis"
+    for hint, sport in SPORT_SYNONYMS.items():
+        if hint in q:
+            return sport
+    return None
+
+
+def _is_off_topic(query: str) -> bool:
+    q = query.lower()
+    # If any strong off-topic signal AND no sport/equipment signal, treat as off-topic
+    has_sport_signal = any(s in q for s in [
+        "sport", "racket", "racquet", "paddle", "shuttle", "ball", "shoe",
+        "train", "coach", "play", "serve", "smash", "drive", "forehand", "backhand",
+        "badminton", "tennis", "cricket", "table tennis", "pickleball", "ping pong",
+    ])
+    return any(h in q for h in OFF_TOPIC_HINTS) and not has_sport_signal
+
+
+def _format_context_for_llm(docs: list) -> str:
+    if not docs:
+        return "(no relevant context found — answer from general sports knowledge)"
+    lines = []
+    for i, d in enumerate(docs, 1):
+        meta = d["meta"]
+        if d["kind"] == "product":
+            lines.append(
+                f"[{i}] {d['text']}\n    BUY_LINK: {meta.get('url','(no link)')}\n"
+            )
+        elif d["kind"] == "blog":
+            lines.append(
+                f"[{i}] {d['text']}\n    URL: {meta.get('url')}\n"
+            )
+        else:
+            lines.append(f"[{i}] {d['text']}\n")
+    return "\n".join(lines)
+
+
+class CoachAskRequest(BaseModel):
+    question: str = Field(..., min_length=2, max_length=500)
+    sport: Optional[str] = None
+
+
+@api_router.post("/coach/ask")
+async def coach_ask(req: CoachAskRequest):
+    q = req.question.strip()
+
+    if _is_off_topic(q):
+        return {
+            "answer": (
+                "I'm AthlyticAI's Virtual Coach — I only help with sports questions "
+                "(equipment, training, technique, rules, players). "
+                "Try asking me something like _\"best badminton racket under 2000 rupees\"_ "
+                "or _\"how do I improve my tennis serve?\"_"
+            ),
+            "sources": [],
+            "off_topic": True,
+        }
+
+    # Retrieve top context docs
+    sport_hint = req.sport or _detect_sport(q)
+    docs = _retrieve_top_docs(q, k=8)
+
+    # If sport detected, prefer docs from that sport
+    if sport_hint:
+        docs.sort(key=lambda d: 0 if d["meta"].get("sport") == sport_hint else 1)
+
+    context = _format_context_for_llm(docs[:6])
+
+    user_message = (
+        f"USER QUESTION: {q}\n\n"
+        f"CONTEXT FROM OUR DATABASE:\n{context}\n\n"
+        "Respond following the system rules. If you recommend a product, use its BUY_LINK as the markdown href."
+    )
+
+    # Call Groq (OpenAI-compatible)
+    if not GROQ_API_KEY:
+        # Fallback: return retrieval-only response (no LLM)
+        fallback = _retrieval_only_answer(q, docs[:3])
+        return {
+            "answer": fallback,
+            "sources": [d["meta"] for d in docs[:3]],
+            "mode": "retrieval_only_no_key",
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                GROQ_URL,
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": [
+                        {"role": "system", "content": _COACH_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_message},
+                    ],
+                    "temperature": 0.5,
+                    "max_tokens": 700,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            answer = data["choices"][0]["message"]["content"].strip()
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Groq API error: {e.response.status_code} {e.response.text}")
+        answer = _retrieval_only_answer(q, docs[:3])
+    except Exception as e:
+        logger.error(f"Coach LLM call failed: {e}")
+        answer = _retrieval_only_answer(q, docs[:3])
+
+    return {
+        "answer": answer,
+        "sources": [
+            {
+                "kind": d["kind"],
+                "title": d["meta"].get("name") or d["meta"].get("title"),
+                "url": d["meta"].get("url"),
+                "sport": d["meta"].get("sport"),
+            }
+            for d in docs[:4]
+        ],
+    }
+
+
+def _retrieval_only_answer(q: str, docs: list) -> str:
+    """Formatter for when LLM is unavailable — shows raw retrieval so user isn't blocked."""
+    if not docs:
+        return (
+            "I couldn't find anything specific in our database for that question. "
+            "Try asking about badminton/tennis/table tennis equipment, or visit "
+            "[our equipment guide](/equipment) or [training plans](/training)."
+        )
+    lines = [f"Here's what I found for: _{q}_\n"]
+    for d in docs:
+        meta = d["meta"]
+        if d["kind"] == "product":
+            name = meta.get("name")
+            url = meta.get("url")
+            price = meta.get("price_inr", {})
+            price_str = f" (Rs {price.get('min','?')}-{price.get('max','?')})" if price else ""
+            if url:
+                lines.append(f"- **[{name}]({url})**{price_str} — {meta.get('sport','')} {meta.get('category','')}")
+            else:
+                lines.append(f"- **{name}**{price_str}")
+        elif d["kind"] == "blog":
+            lines.append(f"- [{meta.get('title')}]({meta.get('url')})")
+        else:
+            lines.append(f"- {meta.get('name')} ({meta.get('sport')})")
+    lines.append("\nVisit [/equipment](/equipment) for personalised picks or [/training](/training) for drills.")
+    return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Shot Labeling Tool (dataset collection for future classifier)
+# ═══════════════════════════════════════════════════════════════
+
+class LabeledShot(BaseModel):
+    start: float = Field(..., description="Clip start time in seconds")
+    end: float = Field(..., description="Clip end time in seconds")
+    label: str = Field(..., max_length=40, description="Shot label (smash/clear/drop/drive/...)")
+    keypoints: Optional[list] = Field(None, description="Optional pose keypoints sequence for this shot")
+
+
+class LabelSaveRequest(BaseModel):
+    video_hash: str = Field(..., min_length=4, max_length=64)
+    video_filename: Optional[str] = None
+    sport: str = Field(..., max_length=32)
+    shots: List[LabeledShot]
+    labeler_id: Optional[str] = None  # email or guest id (optional)
+    duration: Optional[float] = None
+
+
+@api_router.post("/labels/save")
+async def save_labels(req: LabelSaveRequest):
+    if not req.shots:
+        raise HTTPException(status_code=400, detail="No shots provided")
+    if len(req.shots) > 500:
+        raise HTTPException(status_code=400, detail="Too many shots in one batch (max 500)")
+
+    doc = {
+        "id": str(uuid.uuid4()),
+        "video_hash": req.video_hash,
+        "video_filename": req.video_filename,
+        "sport": req.sport,
+        "duration": req.duration,
+        "labeler_id": req.labeler_id,
+        "shots": [s.model_dump() for s in req.shots],
+        "shot_count": len(req.shots),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await db.shot_labels.insert_one(doc)
+    except Exception as e:
+        logger.error(f"Failed to save labels: {e}")
+        raise HTTPException(status_code=500, detail="Could not save labels")
+
+    return {"ok": True, "id": doc["id"], "shot_count": doc["shot_count"]}
+
+
+@api_router.get("/labels/stats")
+async def label_stats():
+    """Aggregate stats for the training dataset."""
+    try:
+        total_sessions = await db.shot_labels.count_documents({})
+        pipeline_sport = [
+            {"$group": {"_id": "$sport", "sessions": {"$sum": 1}, "shots": {"$sum": "$shot_count"}}},
+            {"$sort": {"shots": -1}},
+        ]
+        by_sport = await db.shot_labels.aggregate(pipeline_sport).to_list(50)
+
+        pipeline_label = [
+            {"$unwind": "$shots"},
+            {"$group": {"_id": {"sport": "$sport", "label": "$shots.label"}, "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 100},
+        ]
+        by_label = await db.shot_labels.aggregate(pipeline_label).to_list(100)
+
+        total_shots = sum(b.get("shots", 0) for b in by_sport)
+        return {
+            "total_sessions": total_sessions,
+            "total_shots": total_shots,
+            "by_sport": [{"sport": b["_id"], "sessions": b["sessions"], "shots": b["shots"]} for b in by_sport],
+            "by_label": [
+                {"sport": b["_id"]["sport"], "label": b["_id"]["label"], "count": b["count"]}
+                for b in by_label
+            ],
+        }
+    except Exception as e:
+        logger.error(f"Label stats failed: {e}")
+        return {"total_sessions": 0, "total_shots": 0, "by_sport": [], "by_label": []}
+
+
+@api_router.get("/labels/export")
+async def labels_export(sport: Optional[str] = Query(None), limit: int = Query(1000, le=5000)):
+    """Export labeled sessions as JSON (for training)."""
+    q = {"sport": sport} if sport else {}
+    try:
+        cursor = db.shot_labels.find(q, {"_id": 0}).limit(limit)
+        docs = await cursor.to_list(limit)
+        return {"count": len(docs), "sessions": docs}
+    except Exception as e:
+        logger.error(f"Label export failed: {e}")
+        raise HTTPException(status_code=500, detail="Export failed")
+
+
 @api_router.get("/blog")
 async def list_blog_posts(
     category: Optional[str] = Query(None),
