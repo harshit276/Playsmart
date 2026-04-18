@@ -76,20 +76,37 @@ def main():
     test_acc = model.score(X_test, y_test)
     print(f"\n[acc] train={train_acc:.3f}  test={test_acc:.3f}")
 
+    # Save FIRST so tiny-dataset report glitches don't wipe the model.
+    joblib.dump({"model": model, "labels": labels}, args.out)
+    print(f"[ok] saved model to {args.out}")
+
     y_pred = model.predict(X_test)
     print("\n[report]")
-    print(classification_report(y_test, y_pred, target_names=labels, zero_division=0))
+    all_label_idx = list(range(len(labels)))
+    # Pass labels=all_label_idx so classes missing from the tiny test split
+    # (common with <20 samples) don't raise "number of classes doesn't match".
+    print(classification_report(
+        y_test, y_pred,
+        labels=all_label_idx,
+        target_names=labels,
+        zero_division=0,
+    ))
 
-    cm = confusion_matrix(y_test, y_pred, labels=list(range(len(labels))))
+    cm = confusion_matrix(y_test, y_pred, labels=all_label_idx)
     print("\n[confusion matrix]   (rows=true, cols=pred)")
     header = " " * 16 + "".join(f"{l[:8]:>10}" for l in labels)
     print(header)
     for i, row in enumerate(cm):
         print(f"{labels[i][:14]:>14}  " + "".join(f"{int(v):>10}" for v in row))
 
-    joblib.dump({"model": model, "labels": labels}, args.out)
-    print(f"\n[ok] saved model to {args.out}")
-    print("     to predict:")
+    if len(X) < 50:
+        print(
+            "\n[note] Very small dataset — train accuracy hits 1.0 because the model "
+            "has memorised the few samples. Test accuracy is essentially noise. "
+            "Label 30+ clips per class before reading into the numbers."
+        )
+
+    print("\n     to predict:")
     print("     >>> import joblib")
     print(f"     >>> bundle = joblib.load('{args.out}')")
     print("     >>> bundle['model'].predict(X)  # X shape: [N, 612]  (12 frames x 17 kp x 3)")
