@@ -114,3 +114,8 @@ Thumbs.db
 training/labels_*.json
 training/features.npz
 training/*.joblib
+# Recursive — labels can live in subdirs like training/dataset/
+training/**/labels_*.json
+training/**/*.task
+training/**/features.npz
+training/**/*.joblib
