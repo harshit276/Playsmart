@@ -14,6 +14,13 @@ cd training
 pip install -r requirements.txt
 ```
 
+If you already have an environment with `numpy>=2`, force-downgrade
+first or you'll see `numpy.core.multiarray failed to import` when
+mediapipe loads:
+```bash
+pip install "numpy<2" --force-reinstall
+```
+
 ## Workflow
 
 ### 1. Label clips on the website

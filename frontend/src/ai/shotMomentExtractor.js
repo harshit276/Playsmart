@@ -1,23 +1,25 @@
 /**
  * @module shotMomentExtractor
- * Extracts individual shot moments (single hits) from a long sports video
- * for the labeling tool. Returns short clips centered on motion peaks.
+ * Extracts shot moments from a sports video for the labeling tool.
  *
  * Strategy:
- *   1. Sample frames at 5fps
- *   2. Compute pixel-difference motion scores
- *   3. Detect local maxima (each peak ~ one shot)
- *   4. Filter peaks too close together (min gap 0.6s)
- *   5. Around each peak, return [peak-1.0s, peak+1.0s]
+ *   1. Sample frames at 8fps, compute per-frame motion via pixel diff.
+ *   2. Smooth, then pick local maxima above an adaptive percentile-based
+ *      threshold (Q75 + 0.3·IQR, but never below median × 1.2).
+ *   3. Enforce a min-gap so adjacent peaks merge to the strongest one.
+ *   4. Fallback: if too few peaks were found (very static video, replays,
+ *      slow-motion footage), top up with evenly spaced clips at the
+ *      highest-motion windows so the user always has something to label.
+ *   5. Around each chosen moment, return [t-clipPad, t+clipPad].
  */
 
 export async function extractShotMoments(videoFile, options = {}) {
   const {
     onProgress,
-    sampleFps = 5,
-    clipPad = 1.0,         // seconds before/after the peak
+    sampleFps = 8,
+    clipPad = 1.0,
     minGapBetweenPeaks = 0.6,
-    minPeakRatio = 1.5,    // peak must be >= median * this
+    targetMinClips = 12,         // top up with fallback if fewer than this
     maxClips = 200,
   } = options;
 
@@ -37,8 +39,8 @@ export async function extractShotMoments(videoFile, options = {}) {
   const width = video.videoWidth;
   const height = video.videoHeight;
 
-  const totalSamples = Math.min(2000, Math.ceil(duration * sampleFps));
-  const interval = duration / totalSamples;
+  const totalSamples = Math.min(2400, Math.ceil(duration * sampleFps));
+  const interval = duration / Math.max(1, totalSamples);
 
   const canvas = document.createElement("canvas");
   canvas.width = 128;
@@ -60,10 +62,18 @@ export async function extractShotMoments(videoFile, options = {}) {
 
     if (prev) {
       let total = 0;
-      for (let p = 0; p < data.length; p += 4) {
+      // Weight the centre of the frame more — players are usually mid-frame
+      // and we want to ignore camera-edge motion (scoreboards, crowd).
+      for (let p = 0, idx = 0; p < data.length; p += 4, idx++) {
+        const px = idx % 128;
+        const py = (idx / 128) | 0;
+        const dx = px - 64;
+        const dy = py - 64;
+        const r = Math.sqrt(dx * dx + dy * dy);
+        const w = r < 32 ? 1.4 : r < 56 ? 1.0 : 0.5;
         const a = (prev[p] + prev[p + 1] + prev[p + 2]) / 3;
         const b = (data[p] + data[p + 1] + data[p + 2]) / 3;
-        total += Math.abs(a - b);
+        total += Math.abs(a - b) * w;
       }
       motion[i] = total / (data.length / 4);
     }
@@ -80,46 +90,67 @@ export async function extractShotMoments(videoFile, options = {}) {
 
   URL.revokeObjectURL(video.src);
 
-  // Smooth (window 3 — keeps peaks sharp)
   const smoothed = smooth(motion, 3);
 
-  // Compute median of non-trivial frames
-  const nonZero = smoothed.filter((s) => s > 0.5).slice().sort((a, b) => a - b);
-  if (nonZero.length === 0) {
-    onProgress?.({ percent: 100, message: "No motion detected" });
+  // Adaptive threshold via percentiles (more robust than mean × constant)
+  const sorted = smoothed.slice().sort((a, b) => a - b);
+  if (sorted.length === 0 || sorted[sorted.length - 1] < 0.2) {
+    onProgress?.({ percent: 100, message: "Video appears static — no clips" });
     return { clips: [], duration, width, height };
   }
-  const median = nonZero[Math.floor(nonZero.length / 2)];
-  const minPeakValue = median * minPeakRatio;
+  const q25 = sorted[Math.floor(sorted.length * 0.25)] || 0;
+  const q50 = sorted[Math.floor(sorted.length * 0.50)] || 0;
+  const q75 = sorted[Math.floor(sorted.length * 0.75)] || 0;
+  const iqr = Math.max(0, q75 - q25);
 
-  // Find local maxima
+  // Threshold: comfortably above the body of the distribution but not
+  // hopelessly above it. 1.2× median catches lots of real shots.
+  const minPeakValue = Math.max(q75 + iqr * 0.3, q50 * 1.2, 0.4);
+
+  // Local maxima — relaxed: just check immediate neighbours.
   const peaks = [];
-  for (let i = 2; i < smoothed.length - 2; i++) {
+  for (let i = 1; i < smoothed.length - 1; i++) {
     if (
       smoothed[i] >= minPeakValue &&
       smoothed[i] >= smoothed[i - 1] &&
-      smoothed[i] >= smoothed[i + 1] &&
-      smoothed[i] > smoothed[i - 2] &&
-      smoothed[i] > smoothed[i + 2]
+      smoothed[i] >= smoothed[i + 1]
     ) {
       peaks.push({ idx: i, t: times[i], score: smoothed[i] });
     }
   }
 
-  // Enforce min gap (pick the strongest within each window)
+  // Enforce min gap (strongest wins inside a window)
   peaks.sort((a, b) => a.t - b.t);
-  const filtered = [];
+  let filtered = [];
   for (const p of peaks) {
     const last = filtered[filtered.length - 1];
     if (!last || p.t - last.t >= minGapBetweenPeaks) {
       filtered.push(p);
     } else if (p.score > last.score) {
-      // Replace the weaker neighbour
       filtered[filtered.length - 1] = p;
     }
   }
 
-  // Build clips
+  // Fallback: if peak detection found very few clips, top up with the
+  // top-N motion frames spaced at least minGapBetweenPeaks apart. This
+  // covers slow-motion footage, replays, or videos with continuous motion
+  // (no clear peaks) where the user still wants clips to label.
+  if (filtered.length < targetMinClips) {
+    const allByScore = smoothed
+      .map((s, i) => ({ idx: i, t: times[i], score: s }))
+      .filter((p) => p.score > q50 * 0.9)
+      .sort((a, b) => b.score - a.score);
+
+    const taken = [...filtered];
+    for (const cand of allByScore) {
+      if (taken.length >= targetMinClips * 2) break;
+      const tooClose = taken.some((t) => Math.abs(t.t - cand.t) < minGapBetweenPeaks);
+      if (!tooClose) taken.push(cand);
+    }
+    taken.sort((a, b) => a.t - b.t);
+    filtered = taken;
+  }
+
   const clips = filtered.slice(0, maxClips).map((p, i) => ({
     id: `shot_${i}`,
     peak: round(p.t),
@@ -128,7 +159,12 @@ export async function extractShotMoments(videoFile, options = {}) {
     score: round(p.score),
   }));
 
-  onProgress?.({ percent: 100, message: `Found ${clips.length} shot moments` });
+  onProgress?.({
+    percent: 100,
+    message: clips.length
+      ? `Found ${clips.length} clip${clips.length === 1 ? "" : "s"} to label`
+      : "No clips detected",
+  });
   return { clips, duration, width, height };
 }
 
@@ -149,8 +185,8 @@ function smooth(arr, w) {
 function round(v) { return Math.round(v * 100) / 100; }
 
 /**
- * Compute a hash for a video file — uses size + name + lastModified.
- * Cheap and stable enough to deduplicate uploads in our labels DB.
+ * Stable hash from filename + size + lastModified — cheap, no crypto needed
+ * for de-duplication purposes.
  */
 export async function computeVideoHash(file) {
   const str = `${file.name}-${file.size}-${file.lastModified || 0}`;
@@ -159,7 +195,6 @@ export async function computeVideoHash(file) {
     const hash = await crypto.subtle.digest("SHA-1", buf);
     return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
   }
-  // Fallback: simple djb2
   let h = 5381;
   for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
   return Math.abs(h).toString(16);

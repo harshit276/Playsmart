@@ -1,7 +1,11 @@
+# numpy pinned <2 because mediapipe + matplotlib wheels were
+# compiled against numpy 1.x ABI. Upgrading to numpy 2 breaks
+# `import mediapipe`.
+numpy>=1.24,<2
 mediapipe>=0.10.0
 opencv-python>=4.8.0
-numpy>=1.24
+matplotlib<3.9
 scikit-learn>=1.3
-pandas>=2.0
+pandas>=2.0,<3
 joblib>=1.3
 requests>=2.31
