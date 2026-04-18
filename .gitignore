@@ -109,3 +109,8 @@ ssh-key-*
 
 # OS
 Thumbs.db
+---
+# User-downloaded labeling data (not source control)
+training/labels_*.json
+training/features.npz
+training/*.joblib
