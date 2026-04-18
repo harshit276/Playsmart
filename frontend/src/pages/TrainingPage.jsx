@@ -130,8 +130,8 @@ export default function TrainingPage() {
     setLoading(true);
     try {
       const results = await Promise.allSettled([
-        api.get(`/recommendations/training/${userId}`, { timeout: 8000 }),
-        api.get(`/progress/${userId}`, { timeout: 8000 }),
+        api.get(`/recommendations/training/${userId}`, { timeout: 15000 }),
+        api.get(`/progress/${userId}`, { timeout: 15000 }),
       ]);
 
       if (results[0].status === "fulfilled") setPlanData(results[0].value.data);

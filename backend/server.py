@@ -533,11 +533,14 @@ async def get_equipment_recommendations(
         # Use explicit sport param first, then latest analysis sport, then profile active_sport
         if sport:
             active_sport = sport
+        elif user_id == "guest":
+            # No DB lookup needed for guests
+            active_sport = profile.get("active_sport", "badminton")
         else:
             try:
                 latest_analysis_for_sport = await asyncio.wait_for(db.video_analyses.find_one(
                     {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
-                ), timeout=5.0)
+                ), timeout=3.0)
             except (Exception, asyncio.TimeoutError):
                 latest_analysis_for_sport = None
             active_sport = (latest_analysis_for_sport or {}).get("sport") or profile.get("active_sport", "badminton")
@@ -567,6 +570,10 @@ async def get_equipment_recommendations(
             _equipment_cache[db_cache_key] = {"data": fetched, "ts": _time.time()}
             return fetched
 
+        # Map the public category name to a DB collection category and decide
+        # whether we have a scoring rule for it. Anything not in this map (e.g.
+        # strings, grips, balls, accessories) is sourced purely from the
+        # research data — top_recs stays empty.
         if category == "shoes":
             db_category = cat_map.get("shoes", "shoes")
             items = await _get_db_items(db_category)
@@ -576,7 +583,7 @@ async def get_equipment_recommendations(
                 top_recs = _generic_score_equipment(profile, items, top_n=3)
             else:
                 top_recs = []
-        else:
+        elif category in ("racket", "racquet", "primary"):
             db_category = cat_map.get("primary", "racket")
             items = await _get_db_items(db_category)
             if active_sport == "badminton" and items:
@@ -585,6 +592,21 @@ async def get_equipment_recommendations(
                 top_recs = _generic_score_equipment(profile, items, top_n=3)
             else:
                 top_recs = []
+        else:
+            # Research-only categories: strings, grips, shuttlecocks, balls,
+            # accessories, etc. Map "strings" -> internal "string" so the
+            # research_cat_map lookup downstream finds research data correctly.
+            secondary_map = {
+                "strings": "string", "string": "string",
+                "grips": "grip", "grip": "grip",
+                "shuttlecocks": "shuttlecock", "shuttlecock": "shuttlecock",
+                "balls": "ball", "ball": "ball",
+                "rubbers": "tt_rubber", "rubber": "tt_rubber",
+                "blades": "tt_blade", "blade": "tt_blade",
+            }
+            db_category = secondary_map.get(category, category)
+            items = []
+            top_recs = []
 
         # ─── Merge research equipment data ───
         budget_range = profile.get("budget_range", "Medium")
@@ -649,14 +671,17 @@ async def get_equipment_recommendations(
             )
             _equipment_cache[all_cache_key] = {"data": all_research_items, "ts": _time.time()}
 
-        # Get latest analysis weaknesses for personalized "why_this_fits"
-        try:
-            latest_analysis = await asyncio.wait_for(db.video_analyses.find_one(
-                {"user_id": user_id}, {"_id": 0, "shot_analysis": 1, "coach_feedback": 1},
-                sort=[("date", -1)]
-            ), timeout=5.0)
-        except (Exception, asyncio.TimeoutError):
-            latest_analysis = None
+        # Get latest analysis weaknesses for personalized "why_this_fits".
+        # Skip for guests — they have no analyses.
+        latest_analysis = None
+        if user_id != "guest":
+            try:
+                latest_analysis = await asyncio.wait_for(db.video_analyses.find_one(
+                    {"user_id": user_id}, {"_id": 0, "shot_analysis": 1, "coach_feedback": 1},
+                    sort=[("date", -1)]
+                ), timeout=3.0)
+            except (Exception, asyncio.TimeoutError):
+                latest_analysis = None
         detected_weaknesses = []
         if latest_analysis:
             sa = latest_analysis.get("shot_analysis") or {}
@@ -664,15 +689,28 @@ async def get_equipment_recommendations(
                 if isinstance(w, dict):
                     detected_weaknesses.append(w.get("issue", w.get("area", "")))
 
+        # Batch-fetch prices for all top_recs in one query (was N serial queries)
+        eq_ids = [rec["equipment"]["id"] for rec in top_recs]
+        prices_by_id = {}
+        if eq_ids:
+            try:
+                all_prices = await asyncio.wait_for(
+                    db.equipment_prices.find({"product_id": {"$in": eq_ids}}, {"_id": 0}).to_list(50),
+                    timeout=3.0,
+                )
+                for p in all_prices:
+                    prices_by_id.setdefault(p.get("product_id"), []).append(p)
+            except (Exception, asyncio.TimeoutError):
+                pass
+
         results = []
         for rec in top_recs:
             eq = rec["equipment"]
             sc = rec["score"]
-            # Ensure 'name' field exists (DB items use 'model')
             if not eq.get("name") and eq.get("model"):
                 eq["name"] = f"{eq.get('brand', '')} {eq['model']}".strip()
             explanation = await generate_explanation(profile, eq, sc)
-            prices = await db.equipment_prices.find({"product_id": eq["id"]}, {"_id": 0}).to_list(10)
+            prices = prices_by_id.get(eq["id"], [])
 
             why_this_fits = _build_why_this_fits(eq, profile, detected_weaknesses)
 

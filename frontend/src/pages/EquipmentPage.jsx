@@ -765,16 +765,16 @@ export default function EquipmentPage() {
     const budgetParam = bRange ? `&budget_min=${bRange.min}&budget_max=${bRange.max}` : '';
     // Fire all requests and show data progressively as each arrives
     let anySuccess = false;
-    const r1 = api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`, { timeout: 8000 })
+    const r1 = api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`, { timeout: 15000 })
       .then(res => { setRacketData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
-    const r2 = api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`, { timeout: 8000 })
+    const r2 = api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`, { timeout: 15000 })
       .then(res => { setShoeData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
-    const r3 = api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 8000 })
+    const r3 = api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 15000 })
       .then(res => { setGearData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
     const requests = [r1, r2, r3];
     // Fetch strings data for badminton
     if (sport === "badminton") {
-      const r4 = api.get(`/recommendations/equipment/${userId}?category=strings&sport=badminton${budgetParam}`, { timeout: 8000 })
+      const r4 = api.get(`/recommendations/equipment/${userId}?category=strings&sport=badminton${budgetParam}`, { timeout: 15000 })
         .then(res => { setStringsData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
       requests.push(r4);
     }
