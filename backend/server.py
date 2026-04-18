@@ -52,11 +52,9 @@ else:
 import certifi
 
 mongo_url = os.environ['MONGO_URL']
-# Use system CA bundle (not certifi) — certifi was sending a CA chain
-# that some Atlas shard members rejected with TLSV1_ALERT_INTERNAL_ERROR
-# on Vercel. Generous timeouts for cold starts.
 client = AsyncIOMotorClient(
     mongo_url,
+    tlsCAFile=certifi.where(),
     serverSelectionTimeoutMS=20000,
     connectTimeoutMS=15000,
     socketTimeoutMS=20000,
