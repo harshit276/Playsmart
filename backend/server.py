@@ -648,16 +648,24 @@ async def get_equipment_recommendations(
             "fins": "fins", "pull_buoy": "pull_buoys",
         }
         research_category = research_cat_map.get(db_category, db_category)
+        # Accessories (strings, grips, shuttlecocks, balls, gear) cost much less than the
+        # primary equipment — they should not be excluded by the budget LOWER bound. Only
+        # respect the upper bound for those.
+        ACCESSORY_CATEGORIES = {
+            "strings", "grips", "shuttlecocks", "balls",
+            "tt_balls", "tennis_balls", "tennis_strings",
+        }
+        is_accessory = research_category in ACCESSORY_CATEGORIES
+        effective_bmin = 0 if is_accessory else bmin
         # Don't filter research equipment by level — show all budget-appropriate items
-        # (an advanced player can still use beginner-friendly equipment)
         # Use in-memory cache for research equipment (static data)
-        cache_key = f"{active_sport}_{research_category}_{bmin}_{bmax}"
+        cache_key = f"{active_sport}_{research_category}_{effective_bmin}_{bmax}"
         cached = _equipment_cache.get(cache_key)
         if cached and (_time.time() - cached["ts"]) < _EQUIPMENT_CACHE_TTL:
             research_items = cached["data"]
         else:
             research_items = get_equipment_by_budget(
-                active_sport, research_category, bmin, bmax, level=None
+                active_sport, research_category, effective_bmin, bmax, level=None
             )
             _equipment_cache[cache_key] = {"data": research_items, "ts": _time.time()}
         # Also fetch ALL research items (no budget filter) for "also_explore" section
