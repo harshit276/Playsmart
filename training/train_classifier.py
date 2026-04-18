@@ -92,7 +92,7 @@ def main():
     print("     to predict:")
     print("     >>> import joblib")
     print(f"     >>> bundle = joblib.load('{args.out}')")
-    print("     >>> bundle['model'].predict(X)  # X shape: [N, 1584]  (12 frames x 33 kp x 4)")
+    print("     >>> bundle['model'].predict(X)  # X shape: [N, 612]  (12 frames x 17 kp x 3)")
 
 
 if __name__ == "__main__":

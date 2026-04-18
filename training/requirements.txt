@@ -1,11 +1,17 @@
-# numpy pinned <2 because mediapipe + matplotlib wheels were
-# compiled against numpy 1.x ABI. Upgrading to numpy 2 breaks
-# `import mediapipe`.
+# numpy pinned <2 because tensorflow + matplotlib wheels are
+# compiled against numpy 1.x ABI.
 numpy>=1.24,<2
-mediapipe>=0.10.0
 opencv-python>=4.8.0
 matplotlib<3.9
 scikit-learn>=1.3
 pandas>=2.0,<3
 joblib>=1.3
 requests>=2.31
+
+# MoveNet via TF Hub — same model the browser uses, so training
+# features = inference features.
+tensorflow>=2.13,<2.17
+tensorflow-hub>=0.14
+# (mediapipe is no longer required — kept commented in case you
+# want to compare 33-kp vs 17-kp features later.)
+# mediapipe>=0.10,<0.11

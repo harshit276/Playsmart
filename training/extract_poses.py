@@ -1,5 +1,8 @@
 """
-Extract pose features from labeled clips.
+Extract pose features from labeled clips using MoveNet — the same pose
+model the browser uses (@tensorflow-models/pose-detection). Keeping the
+feature extractor aligned means a model trained here can be deployed to
+the browser without retraining.
 
 Inputs (pick ONE source for labels):
   --labels: path to a labels_*.json downloaded from /label
@@ -10,9 +13,10 @@ Videos must be on local disk in --videos-dir (matched by video_filename).
 
 Output:
   features.npz: arrays {X: [N, F], y: [N], labels: [...], meta: [...]}
+  where F = FRAMES_PER_CLIP × 17 keypoints × 3 (y, x, confidence) = 612.
 
 Run examples:
-  # local-first (recommended) — just put labels_*.json next to your videos
+  # local-first — drop labels_*.json into the videos folder
   python extract_poses.py --videos-dir "C:/path/to/clips"
 
   # explicit labels file
@@ -27,50 +31,37 @@ import argparse
 import json
 import os
 import sys
-import urllib.request
 from pathlib import Path
 from typing import Optional
 
 import cv2
-import mediapipe as mp
 import numpy as np
 import requests
 
-from mediapipe.tasks import python as mp_python
-from mediapipe.tasks.python import vision as mp_vision
+# Quiet TensorFlow's chatty info logs before importing it.
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 
-NUM_LANDMARKS = 33  # pose has 33 keypoints
+import tensorflow as tf
+import tensorflow_hub as hub
+
+NUM_KEYPOINTS = 17                  # MoveNet returns 17
 FRAMES_PER_CLIP = 12
+FEATURE_DIM = FRAMES_PER_CLIP * NUM_KEYPOINTS * 3   # 612
 
-# Pose Landmarker lite — small (~5MB), fast. Downloaded once and cached.
-POSE_MODEL_URL = (
-    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
-    "pose_landmarker_lite/float16/latest/pose_landmarker_lite.task"
-)
-POSE_MODEL_PATH = Path(__file__).parent / "pose_landmarker_lite.task"
-
-
-def ensure_model() -> Path:
-    if POSE_MODEL_PATH.exists() and POSE_MODEL_PATH.stat().st_size > 1_000_000:
-        return POSE_MODEL_PATH
-    print(f"[model] downloading pose_landmarker_lite.task → {POSE_MODEL_PATH}")
-    POSE_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    urllib.request.urlretrieve(POSE_MODEL_URL, POSE_MODEL_PATH)
-    print(f"[model] ok, {POSE_MODEL_PATH.stat().st_size // 1024} KB")
-    return POSE_MODEL_PATH
+# MoveNet SinglePose Lightning — small (~3MB), 192×192 input, fast on CPU.
+# This is the SAME model the browser uses via @tensorflow-models/pose-detection.
+MOVENET_HANDLE = "https://tfhub.dev/google/movenet/singlepose/lightning/4"
+MOVENET_INPUT_SIZE = 192
 
 
-def make_landmarker():
-    model_path = ensure_model()
-    options = mp_vision.PoseLandmarkerOptions(
-        base_options=mp_python.BaseOptions(model_asset_path=str(model_path)),
-        running_mode=mp_vision.RunningMode.VIDEO,
-        num_poses=1,
-        min_pose_detection_confidence=0.3,
-        min_pose_presence_confidence=0.3,
-        min_tracking_confidence=0.3,
-    )
-    return mp_vision.PoseLandmarker.create_from_options(options)
+def load_movenet():
+    """Load MoveNet from TF Hub (cached after first call)."""
+    print(f"[model] loading MoveNet SinglePose Lightning")
+    module = hub.load(MOVENET_HANDLE)
+    movenet = module.signatures["serving_default"]
+    print("[model] ok")
+    return movenet
 
 
 def fetch_labels_api(api: str, sport: Optional[str] = None) -> list[dict]:
@@ -125,21 +116,42 @@ def sample_frame_times(start: float, end: float, n: int) -> list[float]:
     return list(np.linspace(start, end, n))
 
 
+def detect_pose(movenet, frame_bgr: np.ndarray) -> np.ndarray:
+    """Run MoveNet on one BGR frame. Returns [17, 3] = (y, x, confidence)
+    in normalized [0,1] image coordinates."""
+    rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    h, w = rgb.shape[:2]
+    # MoveNet wants the longer side to be MOVENET_INPUT_SIZE, padded square
+    scale = MOVENET_INPUT_SIZE / max(h, w)
+    new_h, new_w = int(round(h * scale)), int(round(w * scale))
+    resized = cv2.resize(rgb, (new_w, new_h))
+    pad_h = MOVENET_INPUT_SIZE - new_h
+    pad_w = MOVENET_INPUT_SIZE - new_w
+    padded = cv2.copyMakeBorder(resized, 0, pad_h, 0, pad_w, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+    inp = tf.cast(tf.convert_to_tensor(padded[None, ...]), dtype=tf.int32)
+    out = movenet(inp)
+    kp = out["output_0"].numpy()[0, 0]  # [17, 3]
+    return kp
+
+
 def normalize_keypoints(kp: np.ndarray) -> np.ndarray:
-    """Center on torso midpoint, scale by shoulder width."""
-    # indices: 11 = left_shoulder, 12 = right_shoulder
-    if kp[11, 3] < 0.2 or kp[12, 3] < 0.2:
-        return kp
-    mid = (kp[11, :2] + kp[12, :2]) / 2.0
-    scale = np.linalg.norm(kp[11, :2] - kp[12, :2]) + 1e-6
+    """Center on torso midpoint, scale by shoulder width.
+    MoveNet keypoint indices:
+      5 = left_shoulder, 6 = right_shoulder
+    """
+    if kp[5, 2] < 0.2 or kp[6, 2] < 0.2:
+        return kp.copy()
+    mid_y = (kp[5, 0] + kp[6, 0]) / 2.0
+    mid_x = (kp[5, 1] + kp[6, 1]) / 2.0
+    scale = max(1e-6, np.sqrt((kp[5, 0] - kp[6, 0]) ** 2 + (kp[5, 1] - kp[6, 1]) ** 2))
     out = kp.copy()
-    out[:, 0] = (kp[:, 0] - mid[0]) / scale
-    out[:, 1] = (kp[:, 1] - mid[1]) / scale
+    out[:, 0] = (kp[:, 0] - mid_y) / scale
+    out[:, 1] = (kp[:, 1] - mid_x) / scale
     return out
 
 
 def extract_clip_features(
-    landmarker,
+    movenet,
     video_path: Path,
     start: float,
     end: float,
@@ -151,7 +163,7 @@ def extract_clip_features(
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
     sampled_times = sample_frame_times(start, end, FRAMES_PER_CLIP)
     frame_kps: list[np.ndarray] = []
-    last_valid = np.zeros((NUM_LANDMARKS, 4), dtype=np.float32)
+    last_valid = np.zeros((NUM_KEYPOINTS, 3), dtype=np.float32)
 
     for t in sampled_times:
         cap.set(cv2.CAP_PROP_POS_FRAMES, int(t * fps))
@@ -159,34 +171,21 @@ def extract_clip_features(
         if not ok:
             frame_kps.append(last_valid.copy())
             continue
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-        # Tasks API expects timestamps in ms, strictly increasing per landmarker instance
-        ts_ms = int(t * 1000)
         try:
-            result = landmarker.detect_for_video(mp_image, ts_ms)
+            kp = detect_pose(movenet, frame)
         except Exception:
             frame_kps.append(last_valid.copy())
             continue
-
-        if result.pose_landmarks and len(result.pose_landmarks) > 0:
-            lm = result.pose_landmarks[0]
-            kp = np.array(
-                [(p.x, p.y, p.z, p.visibility) for p in lm],
-                dtype=np.float32,
-            )
-            kp = normalize_keypoints(kp)
-            frame_kps.append(kp)
-            last_valid = kp
-        else:
-            frame_kps.append(last_valid.copy())
+        kp = normalize_keypoints(kp.astype(np.float32))
+        frame_kps.append(kp)
+        last_valid = kp
 
     cap.release()
 
     if not frame_kps:
         return None
 
-    arr = np.stack(frame_kps, axis=0)
+    arr = np.stack(frame_kps, axis=0)   # [FRAMES, 17, 3]
     return arr.flatten()
 
 
@@ -213,7 +212,6 @@ def main():
     elif args.api:
         sessions = fetch_labels_api(args.api, args.sport)
     else:
-        # Default: auto-discover in videos_dir
         sessions = collect_local_labels(None, args.videos_dir)
 
     if not sessions:
@@ -223,7 +221,7 @@ def main():
         print("        3) Use --api https://athlyticai.com if you uploaded labels", file=sys.stderr)
         sys.exit(2)
 
-    landmarker = make_landmarker()
+    movenet = load_movenet()
 
     X: list[np.ndarray] = []
     y: list[str] = []
@@ -238,7 +236,7 @@ def main():
         shots = [s for s in session.get("shots", []) if s.get("label") and s["label"] not in ("skip", "discard")]
         print(f"[video] {vid.name}  {len(shots)} usable shots")
         for shot in shots:
-            feats = extract_clip_features(landmarker, vid, shot["start"], shot["end"])
+            feats = extract_clip_features(movenet, vid, shot["start"], shot["end"])
             if feats is None:
                 continue
             X.append(feats)
@@ -253,8 +251,6 @@ def main():
                 "player_level": shot.get("player_level"),
                 "player_rating": shot.get("player_rating"),
             })
-
-    landmarker.close()
 
     if not X:
         print("[error] no features extracted. Did you label any non-skip/non-discard shots?", file=sys.stderr)
@@ -273,7 +269,7 @@ def main():
         meta=np.array([json.dumps(m) for m in meta]),
     )
     print(f"\n[ok] saved {args.out}")
-    print(f"     samples: {len(X_arr)}  feature_dim: {X_arr.shape[1]}")
+    print(f"     samples: {len(X_arr)}  feature_dim: {X_arr.shape[1]}  (12 frames × 17 kp × 3)")
     print(f"     classes: {labels_unique}")
     counts = {l: y.count(l) for l in labels_unique}
     print(f"     counts:  {counts}")

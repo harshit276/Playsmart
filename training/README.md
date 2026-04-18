@@ -67,7 +67,9 @@ You'll see train/test accuracy, a per-class report, and a confusion matrix.
 import joblib
 bundle = joblib.load("shot_classifier.joblib")
 model, labels = bundle["model"], bundle["labels"]
-# X has shape [N, 1584]  -> 12 frames × 33 keypoints × 4 (x, y, z, vis)
+# X has shape [N, 612]  -> 12 frames × 17 keypoints × 3 (y, x, confidence)
+# Same MoveNet keypoints the browser produces, so this model can be
+# deployed in-browser later (via TF.js or backend inference).
 preds = model.predict(X)
 print([labels[i] for i in preds])
 ```
