@@ -929,10 +929,23 @@ def _score_research_item(item: dict, profile: dict, bmin: float, bmax: float) ->
 @api_router.get("/recommendations/gear/{user_id}")
 async def get_gear_recommendations(user_id: str, sport: Optional[str] = None):
     if user_id == "guest":
-        return {"gear": [], "sport": sport or "badminton"}
-    profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        profile = _guest_default_profile()
+        if sport:
+            profile["active_sport"] = sport
+    else:
+        try:
+            profile = await asyncio.wait_for(
+                db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}),
+                timeout=5.0,
+            )
+        except (Exception, asyncio.TimeoutError) as e:
+            logger.warning(f"gear: profile fetch failed for {user_id[:8]}: {e}")
+            profile = None
+        if not profile:
+            # Fall back to guest defaults rather than 404 — keeps the page useful
+            profile = _guest_default_profile()
+            if sport:
+                profile["active_sport"] = sport
 
     skill = profile.get("skill_level", "Beginner")
     budget = profile.get("budget_range", "Medium")
@@ -940,10 +953,18 @@ async def get_gear_recommendations(user_id: str, sport: Optional[str] = None):
     # Use explicit sport param first, then latest analysis sport, then profile active_sport
     if sport:
         active_sport = sport
+    elif user_id == "guest":
+        active_sport = profile.get("active_sport", "badminton")
     else:
-        latest_analysis_for_sport = await db.video_analyses.find_one(
-            {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
-        )
+        try:
+            latest_analysis_for_sport = await asyncio.wait_for(
+                db.video_analyses.find_one(
+                    {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
+                ),
+                timeout=3.0,
+            )
+        except (Exception, asyncio.TimeoutError):
+            latest_analysis_for_sport = None
         active_sport = (latest_analysis_for_sport or {}).get("sport") or profile.get("active_sport", "badminton")
 
     # Sport-specific gear categories
@@ -1061,10 +1082,21 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
 
     try:
         profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
-    except (Exception, asyncio.TimeoutError):
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"training: profile fetch failed for {user_id[:8]}: {e}")
         profile = None
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        # Don't 404 — degrade gracefully to guest data so the page still renders
+        active_sport = sport or "badminton"
+        skills = get_all_skills(active_sport)
+        videos = get_all_videos(active_sport)
+        return {
+            "plan": None,
+            "drills": {},
+            "videos": videos,
+            "skills": skills,
+            "training_videos": list(videos.values())[:10] if isinstance(videos, dict) else (videos[:10] if isinstance(videos, list) else []),
+        }
 
     skill = profile.get("skill_level", "Beginner")
 
@@ -1252,7 +1284,14 @@ async def get_training_plan(level: str):
 async def get_progress(user_id: str):
     if user_id == "guest":
         return {"completed_days": 0, "total_days": 30, "progress_percentage": 0, "current_streak": 0, "entries": []}
-    entries = await db.training_progress.find({"user_id": user_id}, {"_id": 0}).to_list(100)
+    try:
+        entries = await asyncio.wait_for(
+            db.training_progress.find({"user_id": user_id}, {"_id": 0}).to_list(100),
+            timeout=5.0,
+        )
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"progress: fetch failed for {user_id[:8]}: {e}")
+        entries = []
 
     completed_days = len(entries)
     total_days = 30
