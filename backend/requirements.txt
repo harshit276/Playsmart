@@ -121,3 +121,7 @@ watchfiles==1.1.1
 websockets==16.0
 yarl==1.23.0
 zipp==3.23.0
+
+# Shot classifier inference (loads training/shot_classifier.joblib)
+scikit-learn>=1.4,<1.6
+joblib>=1.3

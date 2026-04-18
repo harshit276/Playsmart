@@ -7817,6 +7817,113 @@ async def save_labels(req: LabelSaveRequest):
     return {"ok": True, "id": doc["id"], "shot_count": doc["shot_count"]}
 
 
+# ─── Trained shot classifier inference ─────────────────────────────────────
+# Loads training/shot_classifier.joblib lazily on first request. Until you've
+# trained and committed a model, the endpoint returns 503 with a clear message.
+
+_SHOT_MODEL_BUNDLE = None
+_SHOT_MODEL_TRIED = False
+_SHOT_MODEL_ERROR: Optional[str] = None
+_SHOT_MODEL_PATH = ROOT_DIR / "models" / "shot_classifier.joblib"
+
+
+def _load_shot_model():
+    global _SHOT_MODEL_BUNDLE, _SHOT_MODEL_TRIED, _SHOT_MODEL_ERROR
+    if _SHOT_MODEL_TRIED:
+        return _SHOT_MODEL_BUNDLE
+    _SHOT_MODEL_TRIED = True
+    if not _SHOT_MODEL_PATH.exists():
+        _SHOT_MODEL_ERROR = (
+            f"shot_classifier.joblib not found at {_SHOT_MODEL_PATH}. "
+            "Train one locally (training/train_classifier.py) and copy "
+            "shot_classifier.joblib into backend/models/, then redeploy."
+        )
+        return None
+    try:
+        import joblib  # noqa: WPS433  — deferred import keeps cold start cheap
+        _SHOT_MODEL_BUNDLE = joblib.load(_SHOT_MODEL_PATH)
+        logger.info(
+            f"shot model loaded: classes={list(_SHOT_MODEL_BUNDLE.get('labels', []))}"
+        )
+    except Exception as e:
+        _SHOT_MODEL_ERROR = f"failed to load model: {type(e).__name__}: {e}"
+        logger.error(_SHOT_MODEL_ERROR, exc_info=True)
+    return _SHOT_MODEL_BUNDLE
+
+
+class PredictShotRequest(BaseModel):
+    # 12 frames × 17 keypoints × 3 (y, x, confidence) = 612 floats
+    keypoints: List[List[List[float]]] = Field(
+        ..., description="Pose sequence shape [frames=12, kp=17, 3]"
+    )
+
+
+@api_router.get("/predict-shot/status")
+async def predict_shot_status():
+    """Tells the frontend whether the model is available — saves a 503 round-trip."""
+    bundle = _load_shot_model()
+    if not bundle:
+        return {"loaded": False, "error": _SHOT_MODEL_ERROR}
+    return {
+        "loaded": True,
+        "classes": list(bundle.get("labels", [])),
+        "feature_dim": 12 * 17 * 3,
+    }
+
+
+@api_router.post("/predict-shot")
+async def predict_shot(req: PredictShotRequest):
+    bundle = _load_shot_model()
+    if not bundle:
+        raise HTTPException(status_code=503, detail=_SHOT_MODEL_ERROR or "Model not loaded")
+
+    try:
+        import numpy as np
+    except ImportError:
+        raise HTTPException(status_code=500, detail="numpy not available")
+
+    arr = np.array(req.keypoints, dtype=np.float32)
+    if arr.shape != (12, 17, 3):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expected keypoints shape [12, 17, 3], got {list(arr.shape)}",
+        )
+
+    # Same per-frame normalization the trainer applied (centered torso, scaled by shoulders).
+    out = arr.copy()
+    for i in range(arr.shape[0]):
+        kp = arr[i]
+        if kp[5, 2] >= 0.2 and kp[6, 2] >= 0.2:
+            mid_y = (kp[5, 0] + kp[6, 0]) / 2.0
+            mid_x = (kp[5, 1] + kp[6, 1]) / 2.0
+            scale = max(1e-6, ((kp[5, 0] - kp[6, 0]) ** 2 + (kp[5, 1] - kp[6, 1]) ** 2) ** 0.5)
+            out[i, :, 0] = (kp[:, 0] - mid_y) / scale
+            out[i, :, 1] = (kp[:, 1] - mid_x) / scale
+
+    X = out.flatten().reshape(1, -1)
+    model = bundle["model"]
+    labels = list(bundle["labels"])
+
+    pred_idx = int(model.predict(X)[0])
+    pred_label = labels[pred_idx]
+
+    confidence = None
+    ranked = []
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(X)[0].tolist()
+        confidence = float(proba[pred_idx])
+        ranked = sorted(
+            [{"label": l, "p": float(p)} for l, p in zip(labels, proba)],
+            key=lambda d: -d["p"],
+        )
+
+    return {
+        "label": pred_label,
+        "confidence": confidence,
+        "top": ranked[:5],
+    }
+
+
 @api_router.get("/labels/stats")
 async def label_stats():
     """Aggregate stats for the training dataset."""

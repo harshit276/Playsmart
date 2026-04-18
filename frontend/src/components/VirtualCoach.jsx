@@ -114,7 +114,7 @@ export default function VirtualCoach() {
   const inputRef = useRef(null);
 
   // Hide on routes where it would be in the way
-  const HIDDEN_ROUTES = ["/auth", "/label"];
+  const HIDDEN_ROUTES = ["/auth", "/label", "/test-model"];
   const hidden = HIDDEN_ROUTES.some((p) => location.pathname.startsWith(p));
 
   useEffect(() => { saveHistory(messages); }, [messages]);
