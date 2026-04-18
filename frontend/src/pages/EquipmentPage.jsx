@@ -763,19 +763,20 @@ export default function EquipmentPage() {
     const budgetKey = budget || selectedBudget || "2k-4k";
     const bRange = BUDGET_RANGES[budgetKey];
     const budgetParam = bRange ? `&budget_min=${bRange.min}&budget_max=${bRange.max}` : '';
-    // Fire all requests and show data progressively as each arrives
+    // Fire all requests in parallel. Don't drop the skeleton until they
+    // all settle — partial empty tabs (e.g. clicking "Gear" while still
+    // loading) used to look broken.
     let anySuccess = false;
     const r1 = api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`, { timeout: 15000 })
-      .then(res => { setRacketData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+      .then(res => { setRacketData(res.data); anySuccess = true; }).catch(() => {});
     const r2 = api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`, { timeout: 15000 })
-      .then(res => { setShoeData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+      .then(res => { setShoeData(res.data); anySuccess = true; }).catch(() => {});
     const r3 = api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 15000 })
-      .then(res => { setGearData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+      .then(res => { setGearData(res.data); anySuccess = true; }).catch(() => {});
     const requests = [r1, r2, r3];
-    // Fetch strings data for badminton
     if (sport === "badminton") {
       const r4 = api.get(`/recommendations/equipment/${userId}?category=strings&sport=badminton${budgetParam}`, { timeout: 15000 })
-        .then(res => { setStringsData(res.data); anySuccess = true; setLoading(false); }).catch(() => {});
+        .then(res => { setStringsData(res.data); anySuccess = true; }).catch(() => {});
       requests.push(r4);
     }
     await Promise.allSettled(requests);

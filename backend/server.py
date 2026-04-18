@@ -7732,10 +7732,13 @@ async def save_labels(req: LabelSaveRequest):
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     try:
-        await db.shot_labels.insert_one(doc)
+        await asyncio.wait_for(db.shot_labels.insert_one(doc), timeout=8.0)
+    except asyncio.TimeoutError:
+        logger.error("save_labels: MongoDB insert timed out after 8s")
+        raise HTTPException(status_code=504, detail="Database timed out saving labels")
     except Exception as e:
-        logger.error(f"Failed to save labels: {e}")
-        raise HTTPException(status_code=500, detail="Could not save labels")
+        logger.error(f"save_labels: insert failed: {type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Save failed: {type(e).__name__}: {str(e)[:200]}")
 
     return {"ok": True, "id": doc["id"], "shot_count": doc["shot_count"]}
 

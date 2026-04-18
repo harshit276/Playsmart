@@ -462,19 +462,19 @@ export default function LabelPage() {
                 )}
               </div>
 
-              {/* Nav controls */}
-              <div className="flex items-center justify-center gap-2">
-                <Button variant="ghost" size="sm" onClick={goPrev} disabled={currentIdx === 0}
-                  className="text-zinc-400 hover:text-white">
-                  <ChevronLeft className="w-4 h-4" /> Prev
+              {/* Nav controls — prominent Next button */}
+              <div className="grid grid-cols-3 gap-2">
+                <Button variant="outline" onClick={goPrev} disabled={currentIdx === 0}
+                  className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Prev
                 </Button>
-                <Button variant="ghost" size="sm" onClick={replayClip}
-                  className="text-zinc-400 hover:text-white">
+                <Button variant="outline" onClick={replayClip}
+                  className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white">
                   <RotateCcw className="w-4 h-4 mr-1" /> Replay
                 </Button>
-                <Button variant="ghost" size="sm" onClick={goNext} disabled={currentIdx === clips.length - 1}
-                  className="text-zinc-400 hover:text-white">
-                  Next <ChevronRight className="w-4 h-4" />
+                <Button onClick={goNext} disabled={currentIdx === clips.length - 1}
+                  className="bg-lime-400 hover:bg-lime-300 text-black font-bold disabled:opacity-30">
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
 
