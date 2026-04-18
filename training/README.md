@@ -62,7 +62,19 @@ python train_classifier.py --features features.npz --out shot_classifier.joblib
 
 You'll see train/test accuracy, a per-class report, and a confusion matrix.
 
-### 4. Use the trained model
+### 4. Try predictions locally (sanity check)
+```bash
+# predict the labelled clips back — eyeball whether the model gets them right
+python test_predict.py --labels "labels_abc.json" --videos-dir .
+
+# predict a single clip from a video
+python test_predict.py --video match.mp4 --start 12.3 --end 14.5
+
+# scan a whole video, predict at every 3-second window
+python test_predict.py --auto-extract match.mp4 --min-conf 0.4
+```
+
+### 5. Use the trained model
 ```python
 import joblib
 bundle = joblib.load("shot_classifier.joblib")
