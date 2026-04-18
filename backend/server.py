@@ -981,15 +981,44 @@ async def get_gear_recommendations(user_id: str, sport: Optional[str] = None):
 
     results = {}
     for cat in gear_categories:
-        items = await db.equipment.find({"category": cat}, {"_id": 0}).to_list(50)
+        try:
+            items = await asyncio.wait_for(
+                db.equipment.find({"category": cat}, {"_id": 0}).to_list(50),
+                timeout=4.0,
+            )
+        except (Exception, asyncio.TimeoutError) as e:
+            logger.warning(f"gear: db.equipment fetch failed for cat={cat}: {e}")
+            items = []
+
         matched = []
+        # Batch prices for all items in this category in one query
+        eligible = []
         for item in items:
             rec_levels = item.get("recommended_skill_level", [])
             if isinstance(rec_levels, str):
                 rec_levels = [rec_levels]
             if skill in rec_levels or not rec_levels:
-                prices = await db.equipment_prices.find({"product_id": item["id"]}, {"_id": 0}).to_list(10)
-                matched.append({"equipment": item, "prices": prices, "reason": _gear_reason(item, skill, budget)})
+                eligible.append(item)
+
+        prices_by_id: dict = {}
+        if eligible:
+            try:
+                eq_ids = [it["id"] for it in eligible]
+                all_prices = await asyncio.wait_for(
+                    db.equipment_prices.find({"product_id": {"$in": eq_ids}}, {"_id": 0}).to_list(100),
+                    timeout=3.0,
+                )
+                for p in all_prices:
+                    prices_by_id.setdefault(p.get("product_id"), []).append(p)
+            except (Exception, asyncio.TimeoutError):
+                pass
+
+        for item in eligible:
+            matched.append({
+                "equipment": item,
+                "prices": prices_by_id.get(item["id"], []),
+                "reason": _gear_reason(item, skill, budget),
+            })
         results[cat] = matched[:2]
 
     return {"gear": results, "profile_level": skill, "active_sport": active_sport}
