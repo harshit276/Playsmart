@@ -36,6 +36,9 @@ export default function LabelPage() {
   const [videoHash, setVideoHash] = useState(null);
   const [sourceUrl, setSourceUrl] = useState("");
   const [sport, setSport] = useState("badminton");
+  // For doubles videos: which quadrant the player you're labelling is in.
+  // "auto" = let MoveNet pick the most prominent person (singles default).
+  const [playerPosition, setPlayerPosition] = useState("auto");
 
   const [extracting, setExtracting] = useState(false);
   const [progress, setProgress] = useState({ percent: 0, message: "" });
@@ -238,6 +241,7 @@ export default function LabelPage() {
         video_filename: videoFile?.name,
         source_url: sourceUrl || null,
         sport,
+        player_position: playerPosition,
         duration: videoRef.current?.duration || null,
         shots,
       });
@@ -267,6 +271,7 @@ export default function LabelPage() {
       video_hash: videoHash,
       source_url: sourceUrl || null,
       sport,
+      player_position: playerPosition,
       duration: videoRef.current?.duration || null,
       shots,
       exported_at: new Date().toISOString(),
@@ -416,6 +421,53 @@ export default function LabelPage() {
                 {(videoFile.size / 1024 / 1024).toFixed(1)} MB · hash {videoHash?.slice(0, 12)}…
                 {sourceUrl && <> · source: <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="text-zinc-400 underline">{sourceUrl.slice(0, 40)}…</a></>}
               </p>
+            </div>
+
+            {/* Player position — for doubles videos, tells the trainer which player to crop to */}
+            <div>
+              <p className="text-xs text-zinc-500 mb-1">Which player are you labelling?</p>
+              <p className="text-[10px] text-zinc-600 mb-2">
+                Singles → leave on Auto. Doubles → pick the quadrant where the player you'll
+                label most often is positioned.
+              </p>
+              <div className="grid grid-cols-3 gap-1.5 max-w-sm">
+                <button onClick={() => setPlayerPosition("top-left")}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    playerPosition === "top-left"
+                      ? "bg-lime-400 text-black border-lime-400"
+                      : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500"
+                  }`}>Far · Left</button>
+                <div />
+                <button onClick={() => setPlayerPosition("top-right")}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    playerPosition === "top-right"
+                      ? "bg-lime-400 text-black border-lime-400"
+                      : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500"
+                  }`}>Far · Right</button>
+
+                <div />
+                <button onClick={() => setPlayerPosition("auto")}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    playerPosition === "auto"
+                      ? "bg-lime-400 text-black border-lime-400"
+                      : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500"
+                  }`}>Auto<br /><span className="text-[9px] opacity-70">singles</span></button>
+                <div />
+
+                <button onClick={() => setPlayerPosition("bottom-left")}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    playerPosition === "bottom-left"
+                      ? "bg-lime-400 text-black border-lime-400"
+                      : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500"
+                  }`}>Near · Left</button>
+                <div />
+                <button onClick={() => setPlayerPosition("bottom-right")}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                    playerPosition === "bottom-right"
+                      ? "bg-lime-400 text-black border-lime-400"
+                      : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500"
+                  }`}>Near · Right</button>
+              </div>
             </div>
 
             {extracting ? (

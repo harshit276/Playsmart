@@ -7776,8 +7776,12 @@ class LabelSaveRequest(BaseModel):
     video_filename: Optional[str] = None
     source_url: Optional[str] = Field(None, max_length=500, description="Original YouTube/source URL the video came from")
     sport: str = Field(..., max_length=32)
+    player_position: Optional[str] = Field(
+        None, max_length=20,
+        description="auto / top-left / top-right / bottom-left / bottom-right — for doubles videos",
+    )
     shots: List[LabeledShot]
-    labeler_id: Optional[str] = None  # email or guest id (optional)
+    labeler_id: Optional[str] = None
     duration: Optional[float] = None
 
 
@@ -7794,6 +7798,7 @@ async def save_labels(req: LabelSaveRequest):
         "video_filename": req.video_filename,
         "source_url": req.source_url,
         "sport": req.sport,
+        "player_position": req.player_position,
         "duration": req.duration,
         "labeler_id": req.labeler_id,
         "shots": [s.model_dump() for s in req.shots],

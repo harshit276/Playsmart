@@ -116,12 +116,40 @@ def sample_frame_times(start: float, end: float, n: int) -> list[float]:
     return list(np.linspace(start, end, n))
 
 
-def detect_pose(movenet, frame_bgr: np.ndarray) -> np.ndarray:
+def crop_to_quadrant(frame_bgr: np.ndarray, position: str) -> np.ndarray:
+    """For doubles videos: crop to the quadrant where the labelled player is.
+    Returns the original frame for 'auto' or unknown positions."""
+    if not position or position == "auto":
+        return frame_bgr
+    h, w = frame_bgr.shape[:2]
+    half_h, half_w = h // 2, w // 2
+    crops = {
+        "top-left":     (0, half_h, 0, half_w),
+        "top-right":    (0, half_h, half_w, w),
+        "bottom-left":  (half_h, h, 0, half_w),
+        "bottom-right": (half_h, h, half_w, w),
+    }
+    box = crops.get(position)
+    if not box:
+        return frame_bgr
+    y1, y2, x1, x2 = box
+    # Add 10% padding so the player isn't clipped at the edge of the quadrant
+    pad_y = int((y2 - y1) * 0.1)
+    pad_x = int((x2 - x1) * 0.1)
+    y1 = max(0, y1 - pad_y)
+    y2 = min(h, y2 + pad_y)
+    x1 = max(0, x1 - pad_x)
+    x2 = min(w, x2 + pad_x)
+    return frame_bgr[y1:y2, x1:x2]
+
+
+def detect_pose(movenet, frame_bgr: np.ndarray, player_position: str = "auto") -> np.ndarray:
     """Run MoveNet on one BGR frame. Returns [17, 3] = (y, x, confidence)
-    in normalized [0,1] image coordinates."""
-    rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    in normalized [0,1] image coordinates. If player_position is set,
+    crops to that quadrant first so MoveNet picks the intended player."""
+    cropped = crop_to_quadrant(frame_bgr, player_position)
+    rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
     h, w = rgb.shape[:2]
-    # MoveNet wants the longer side to be MOVENET_INPUT_SIZE, padded square
     scale = MOVENET_INPUT_SIZE / max(h, w)
     new_h, new_w = int(round(h * scale)), int(round(w * scale))
     resized = cv2.resize(rgb, (new_w, new_h))
@@ -155,6 +183,7 @@ def extract_clip_features(
     video_path: Path,
     start: float,
     end: float,
+    player_position: str = "auto",
 ) -> Optional[np.ndarray]:
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -172,7 +201,7 @@ def extract_clip_features(
             frame_kps.append(last_valid.copy())
             continue
         try:
-            kp = detect_pose(movenet, frame)
+            kp = detect_pose(movenet, frame, player_position)
         except Exception:
             frame_kps.append(last_valid.copy())
             continue
@@ -234,9 +263,11 @@ def main():
             missing.append(session.get("video_filename") or session.get("video_hash"))
             continue
         shots = [s for s in session.get("shots", []) if s.get("label") and s["label"] not in ("skip", "discard")]
-        print(f"[video] {vid.name}  {len(shots)} usable shots")
+        position = session.get("player_position") or "auto"
+        pos_note = f" [crop={position}]" if position != "auto" else ""
+        print(f"[video] {vid.name}  {len(shots)} usable shots{pos_note}")
         for shot in shots:
-            feats = extract_clip_features(movenet, vid, shot["start"], shot["end"])
+            feats = extract_clip_features(movenet, vid, shot["start"], shot["end"], player_position=position)
             if feats is None:
                 continue
             X.append(feats)
@@ -247,6 +278,7 @@ def main():
                 "end": shot["end"],
                 "label": shot["label"],
                 "sport": session.get("sport"),
+                "player_position": position,
                 "speed_kmh": shot.get("speed_kmh"),
                 "player_level": shot.get("player_level"),
                 "player_rating": shot.get("player_rating"),
