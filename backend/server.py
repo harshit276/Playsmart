@@ -52,16 +52,15 @@ else:
 import certifi
 
 mongo_url = os.environ['MONGO_URL']
-# Serverless cold starts on Vercel sometimes take 5-10s for the MongoDB
-# Atlas TLS handshake. Tight timeouts caused intermittent
-# ServerSelectionTimeoutError on the first request. Generous on serverless,
-# tight locally.
+# Generous timeouts — MongoDB Atlas TLS handshake on a fresh Vercel
+# function can take 5-10s. Intermittent ServerSelectionTimeoutError /
+# SSL handshake failures traced back to timeouts being too tight.
 client = AsyncIOMotorClient(
     mongo_url,
     tlsCAFile=certifi.where(),
-    serverSelectionTimeoutMS=20000 if IS_SERVERLESS else 5000,
-    connectTimeoutMS=15000 if IS_SERVERLESS else 5000,
-    socketTimeoutMS=20000 if IS_SERVERLESS else 10000,
+    serverSelectionTimeoutMS=20000,
+    connectTimeoutMS=15000,
+    socketTimeoutMS=20000,
     maxPoolSize=5 if IS_SERVERLESS else 50,
     retryWrites=True,
 )
