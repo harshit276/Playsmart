@@ -1,6 +1,8 @@
 # Shot Classifier Training
 
-End-to-end pipeline: labeled clips on the website → trained shot classifier on your laptop.
+Local-first pipeline: label clips on the website → download a JSON → train on your laptop.
+
+No MongoDB upload required.
 
 ## Prerequisites
 - Python 3.10+
@@ -15,19 +17,36 @@ pip install -r requirements.txt
 ## Workflow
 
 ### 1. Label clips on the website
-Go to `https://athlyticai.com/label`, upload videos, label shots, click **Upload**. Repeat for 5-10 videos.
+1. Go to `https://athlyticai.com/label`
+2. Upload a video, label each shot (or click **Discard** for ambiguous / multi-shot clips)
+3. Click the green **Download labels.json** button
+4. Save the file **next to the source video** (same folder)
+5. Repeat for 5-10 videos. Each downloads `labels_<hash>.json`.
 
-### 2. Pull labels and extract pose features
-Point `--videos-dir` at the folder where you keep the source videos. Filenames must match what you uploaded (the tool stores the filename with each label session).
+You'll end up with:
+```
+my_clips/
+  match1.mp4
+  labels_a3f1b2c4.json
+  match2.mp4
+  labels_e8d9f0a1.json
+  ...
+```
 
+### 2. Extract pose features
+Point `--videos-dir` at that folder. The script auto-discovers all `labels_*.json` files there.
+```bash
+python extract_poses.py --videos-dir "C:/Users/mundr/Videos/badminton_clips"
+```
+
+Or pass a single labels file explicitly:
 ```bash
 python extract_poses.py \
   --videos-dir "C:/Users/mundr/Videos/badminton_clips" \
-  --sport badminton \
-  --out features.npz
+  --labels "C:/Users/mundr/Videos/badminton_clips/labels_a3f1b2c4.json"
 ```
 
-This pulls every labeled session via the public `/api/labels/export` endpoint, finds the matching local video, runs MediaPipe Pose on each labeled clip, and writes a feature matrix to `features.npz`.
+(Optional: `--api https://athlyticai.com` to pull from the server if you also clicked "Upload to server".)
 
 ### 3. Train the classifier
 ```bash
@@ -38,7 +57,7 @@ You'll see train/test accuracy, a per-class report, and a confusion matrix.
 
 ### 4. Use the trained model
 ```python
-import joblib, numpy as np
+import joblib
 bundle = joblib.load("shot_classifier.joblib")
 model, labels = bundle["model"], bundle["labels"]
 # X has shape [N, 1584]  -> 12 frames × 33 keypoints × 4 (x, y, z, vis)
@@ -47,11 +66,11 @@ print([labels[i] for i in preds])
 ```
 
 ## What to expect with small datasets
-- **<50 clips**: random-forest still trains, but accuracy is noisy and the confusion matrix dominates the signal. Useful as a sanity check.
-- **100-300 clips/class**: meaningful accuracy starts to emerge. Try `--model mlp` for non-linear boundaries.
-- **1000+ clips/class**: time to swap to a temporal model (1D CNN over frame sequences). The current pipeline flattens time — fine for proof of concept, suboptimal for fast shots.
+- **<50 clips**: random-forest still trains, but accuracy is noisy. Useful as a sanity check.
+- **100-300 clips/class**: meaningful accuracy starts to emerge. Try `--model mlp`.
+- **1000+ clips/class**: time to swap to a temporal model (1D CNN). The current pipeline flattens time.
 
 ## Tips
-- Label diverse camera angles and player skill levels — the metadata fields (player_level, player_rating, speed_kmh) you tagged in the labeling tool are saved in `meta` inside `features.npz` for downstream filtering.
-- If a clip doesn't extract features (no person detected), it's silently skipped. Use clips with clear body visibility.
-- Keep the original filenames you uploaded — that's how the script matches local files to label sessions.
+- **Discard liberally.** If a clip has two shots, bad framing, or you're unsure, click **Discard**. Quality > quantity.
+- **Keep filenames intact** — that's how the script matches local files to label sessions.
+- Metadata you tagged (player_level, player_rating, speed_kmh) lives in the `meta` array inside `features.npz` for downstream filtering.

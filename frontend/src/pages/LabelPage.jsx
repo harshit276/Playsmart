@@ -50,9 +50,10 @@ export default function LabelPage() {
   const videoRef = useRef(null);
   const playStopTimerRef = useRef(null);
 
+  // Just the actual shot types — discard is rendered as a separate prominent button.
   const labelOptions = useMemo(() => {
     const types = SHOT_TYPES[sport] || [];
-    return [...types, "rally", "skip"];
+    return [...types, "rally"];
   }, [sport]);
 
   const searchPrompts = useMemo(() => buildSearchPrompts(sport), [sport]);
@@ -65,7 +66,10 @@ export default function LabelPage() {
     return out;
   }, [searchPrompts]);
 
-  const labeledCount = Object.values(labels).filter((l) => l && l.label && l.label !== "skip").length;
+  // "Useful" labels: real shot types, not skip/discard
+  const labeledCount = Object.values(labels).filter(
+    (l) => l && l.label && l.label !== "skip" && l.label !== "discard"
+  ).length;
   const totalCount = clips.length;
 
   useEffect(() => {
@@ -174,8 +178,8 @@ export default function LabelPage() {
 
   const setCurrentLabel = (label) => {
     updateCurrent({ label });
-    if (label === "skip") {
-      // For skip, advance immediately
+    if (label === "skip" || label === "discard") {
+      // No metadata to add for skip/discard — auto-advance
       if (currentIdx < clips.length - 1) {
         setTimeout(() => setCurrentIdx(currentIdx + 1), 100);
       }
@@ -210,7 +214,7 @@ export default function LabelPage() {
     const shots = clips
       .map((c) => {
         const meta = labels[c.id];
-        if (!meta || !meta.label || meta.label === "skip") return null;
+        if (!meta || !meta.label || (meta.label === "skip" || meta.label === "discard")) return null;
         return {
           start: c.start,
           end: c.end,
@@ -450,7 +454,7 @@ export default function LabelPage() {
                 <div className="absolute top-2 left-2 bg-black/70 text-white text-[11px] px-2 py-1 rounded font-mono">
                   Shot {currentIdx + 1} / {clips.length} · {currentClip?.start.toFixed(1)}s – {currentClip?.end.toFixed(1)}s
                 </div>
-                {current?.label && current.label !== "skip" && (
+                {current?.label && current.label !== "skip" && current.label !== "discard" && (
                   <div className="absolute top-2 right-2 bg-lime-400 text-black text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wider">
                     {current.label}
                   </div>
@@ -458,6 +462,11 @@ export default function LabelPage() {
                 {current?.label === "skip" && (
                   <div className="absolute top-2 right-2 bg-zinc-700 text-zinc-300 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wider">
                     skipped
+                  </div>
+                )}
+                {current?.label === "discard" && (
+                  <div className="absolute top-2 right-2 bg-red-500/30 text-red-200 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+                    discarded
                   </div>
                 )}
               </div>
@@ -486,14 +495,11 @@ export default function LabelPage() {
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {labelOptions.map((opt, i) => {
                     const active = current?.label === opt;
-                    const isSkip = opt === "skip";
                     return (
                       <button key={opt} onClick={() => setCurrentLabel(opt)}
                         className={`px-2 py-2 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center gap-1 ${
                           active
-                            ? isSkip
-                              ? "bg-zinc-700 text-white border-zinc-600"
-                              : "bg-lime-400 text-black border-lime-400"
+                            ? "bg-lime-400 text-black border-lime-400"
                             : "bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500"
                         }`}>
                         <span className="text-[9px] text-zinc-500 font-mono">{i + 1}</span>
@@ -502,10 +508,21 @@ export default function LabelPage() {
                     );
                   })}
                 </div>
+                {/* Discard — for ambiguous clips, multi-shot frames, bad framing, etc. */}
+                <button
+                  onClick={() => setCurrentLabel("discard")}
+                  className={`w-full mt-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors flex items-center justify-center gap-2 ${
+                    current?.label === "discard"
+                      ? "bg-red-500/20 text-red-300 border-red-500/40"
+                      : "bg-zinc-800/60 text-zinc-400 border-zinc-700 hover:border-red-500/40 hover:text-red-300"
+                  }`}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Discard this clip (ambiguous / multi-shot / bad frame)
+                </button>
               </div>
 
               {/* Extra metadata: speed + level + rating (only if labeled, not skip) */}
-              {current?.label && current.label !== "skip" && (
+              {current?.label && current.label !== "skip" && current.label !== "discard" && (
                 <div className="space-y-3 pt-2 border-t border-zinc-800">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Speed */}
@@ -610,19 +627,24 @@ export default function LabelPage() {
               </div>
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
-                <Button onClick={saveAll} disabled={submitting || labeledCount === 0}
-                  className="w-full bg-lime-400 hover:bg-lime-300 text-black font-semibold">
-                  {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                  {saved ? "Saved ✓" : `Upload ${labeledCount} labels`}
-                </Button>
-                <Button onClick={exportLocal} variant="ghost"
+                <Button onClick={exportLocal}
                   disabled={labeledCount === 0}
-                  className="w-full text-zinc-400 hover:text-white">
-                  <Download className="w-4 h-4 mr-2" /> Export JSON
+                  className="w-full bg-lime-400 hover:bg-lime-300 text-black font-semibold">
+                  <Download className="w-4 h-4 mr-2" /> Download labels.json
                 </Button>
                 <p className="text-[10px] text-zinc-500 leading-relaxed">
-                  Drafts auto-save in browser. Upload sends labels + metadata to MongoDB.
+                  Save the JSON next to your video files, then run the
+                  training script (see <code className="text-zinc-400">training/README.md</code>).
                 </p>
+                <details className="text-[10px] text-zinc-600 pt-1">
+                  <summary className="cursor-pointer hover:text-zinc-400">Optional: also upload to server</summary>
+                  <Button onClick={saveAll} disabled={submitting || labeledCount === 0}
+                    variant="ghost"
+                    className="w-full mt-2 text-zinc-400 hover:text-white text-xs">
+                    {submitting ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Save className="w-3 h-3 mr-2" />}
+                    {saved ? "Uploaded ✓" : `Upload ${labeledCount} to server`}
+                  </Button>
+                </details>
               </div>
 
               {/* Mini grid of clips */}
@@ -634,6 +656,8 @@ export default function LabelPage() {
                     const lab = meta?.label;
                     const colorClass = !lab
                       ? "bg-zinc-800 hover:bg-zinc-700 text-zinc-500"
+                      : lab === "discard"
+                      ? "bg-red-500/30 text-red-200"
                       : lab === "skip"
                       ? "bg-zinc-700 text-zinc-400"
                       : "bg-lime-400/80 text-black";

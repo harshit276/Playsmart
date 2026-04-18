@@ -1,21 +1,27 @@
 """
 Extract pose features from labeled clips.
 
-Inputs:
-  - Labels are pulled from the live API: GET /api/labels/export
-  - Source videos must be on your local disk in --videos-dir
-    (matched by `video_filename` from the label session)
+Inputs (pick ONE source for labels):
+  --labels: path to a labels.json downloaded from the /label tool (preferred)
+  --labels-dir: directory containing multiple labels_*.json files (concatenated)
+  --api: live API base URL — pulls all labels from /api/labels/export
+
+Source videos must be on your local disk in --videos-dir
+(matched by `video_filename` from each label session).
 
 Output:
-  - features.npz: arrays {X: [N, F], y: [N], labels: [...], meta: [...]}
-    where F is the flattened pose-feature vector for each clip.
+  features.npz: arrays {X: [N, F], y: [N], labels: [...], meta: [...]}
+  where F is the flattened pose-feature vector for each clip.
 
-Run:
-  python extract_poses.py \
-      --videos-dir "C:/Users/mundr/Videos/badminton_clips" \
-      --api https://athlyticai.com \
-      --sport badminton \
-      --out features.npz
+Run examples:
+  # local-first (recommended): one or more labels_*.json files in the same folder as videos
+  python extract_poses.py --videos-dir "C:/Users/mundr/Videos/badminton_clips" --labels-dir "C:/Users/mundr/Videos/badminton_clips"
+
+  # single file
+  python extract_poses.py --videos-dir "./videos" --labels "./labels_abc12345.json"
+
+  # API-backed (only if you uploaded labels)
+  python extract_poses.py --videos-dir "./videos" --api https://athlyticai.com --sport badminton
 """
 from __future__ import annotations
 
@@ -37,15 +43,34 @@ FRAMES_PER_CLIP = 12  # uniform sample within [start, end]
 mp_pose = mp.solutions.pose
 
 
-def fetch_labels(api: str, sport: Optional[str] = None) -> list[dict]:
+def fetch_labels_api(api: str, sport: Optional[str] = None) -> list[dict]:
     url = f"{api.rstrip('/')}/api/labels/export"
     params = {"sport": sport} if sport else {}
-    print(f"[fetch] GET {url} {params}")
+    print(f"[api] GET {url} {params}")
     r = requests.get(url, params=params, timeout=30)
     r.raise_for_status()
     data = r.json()
     sessions = data.get("sessions", [])
-    print(f"[fetch] {len(sessions)} sessions, {sum(s.get('shot_count', 0) for s in sessions)} total shots")
+    print(f"[api] {len(sessions)} sessions, {sum(s.get('shot_count', 0) for s in sessions)} total shots")
+    return sessions
+
+
+def load_labels_file(path: Path) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def collect_local_labels(labels_arg: Optional[Path], labels_dir: Optional[Path]) -> list[dict]:
+    """Load one or more labels_*.json exports from disk and return them in
+    the same shape as the API returns (list of session dicts)."""
+    sessions: list[dict] = []
+    if labels_arg:
+        sessions.append(load_labels_file(labels_arg))
+        print(f"[local] loaded {labels_arg.name}")
+    if labels_dir:
+        for p in sorted(labels_dir.glob("labels_*.json")):
+            sessions.append(load_labels_file(p))
+            print(f"[local] loaded {p.name}")
     return sessions
 
 
@@ -134,8 +159,13 @@ def extract_clip_features(
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--videos-dir", required=True, type=Path)
-    ap.add_argument("--api", default="https://athlyticai.com")
-    ap.add_argument("--sport", default=None, help="Filter by sport (badminton/tennis/...)")
+    ap.add_argument("--labels", default=None, type=Path,
+                    help="Path to a single labels_*.json downloaded from /label")
+    ap.add_argument("--labels-dir", default=None, type=Path,
+                    help="Folder containing labels_*.json files (loads all)")
+    ap.add_argument("--api", default=None,
+                    help="API base URL (only used if --labels and --labels-dir are not given)")
+    ap.add_argument("--sport", default=None, help="API mode: filter by sport")
     ap.add_argument("--out", default="features.npz", type=Path)
     args = ap.parse_args()
 
@@ -143,9 +173,19 @@ def main():
         print(f"[error] videos dir does not exist: {args.videos_dir}", file=sys.stderr)
         sys.exit(2)
 
-    sessions = fetch_labels(args.api, args.sport)
+    if args.labels or args.labels_dir:
+        sessions = collect_local_labels(args.labels, args.labels_dir)
+    elif args.api:
+        sessions = fetch_labels_api(args.api, args.sport)
+    else:
+        # Default: look for labels_*.json in the videos dir itself
+        sessions = collect_local_labels(None, args.videos_dir)
+
     if not sessions:
-        print("[error] no labeled sessions returned. Label some clips first via /label.", file=sys.stderr)
+        print("[error] no labeled sessions found. Either:", file=sys.stderr)
+        print("        1) Download labels.json from /label and pass --labels FILE", file=sys.stderr)
+        print("        2) Drop labels_*.json into --videos-dir", file=sys.stderr)
+        print("        3) Use --api https://athlyticai.com if you uploaded labels", file=sys.stderr)
         sys.exit(2)
 
     pose = mp_pose.Pose(
@@ -168,7 +208,7 @@ def main():
         print(f"[video] {vid.name}  shots={len(session.get('shots', []))}")
         for shot in session.get("shots", []):
             label = shot.get("label")
-            if not label or label == "skip":
+            if not label or label in ("skip", "discard"):
                 continue
             feats = extract_clip_features(pose, vid, shot["start"], shot["end"])
             if feats is None:
