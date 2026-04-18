@@ -52,13 +52,18 @@ else:
 import certifi
 
 mongo_url = os.environ['MONGO_URL']
+# Serverless cold starts on Vercel sometimes take 5-10s for the MongoDB
+# Atlas TLS handshake. Tight timeouts caused intermittent
+# ServerSelectionTimeoutError on the first request. Generous on serverless,
+# tight locally.
 client = AsyncIOMotorClient(
     mongo_url,
     tlsCAFile=certifi.where(),
-    serverSelectionTimeoutMS=5000,
-    connectTimeoutMS=5000,
-    socketTimeoutMS=10000,
+    serverSelectionTimeoutMS=20000 if IS_SERVERLESS else 5000,
+    connectTimeoutMS=15000 if IS_SERVERLESS else 5000,
+    socketTimeoutMS=20000 if IS_SERVERLESS else 10000,
     maxPoolSize=5 if IS_SERVERLESS else 50,
+    retryWrites=True,
 )
 db = client[os.environ.get('DB_NAME', 'athlyticai').strip()]
 
@@ -7732,9 +7737,9 @@ async def save_labels(req: LabelSaveRequest):
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     try:
-        await asyncio.wait_for(db.shot_labels.insert_one(doc), timeout=8.0)
+        await asyncio.wait_for(db.shot_labels.insert_one(doc), timeout=22.0)
     except asyncio.TimeoutError:
-        logger.error("save_labels: MongoDB insert timed out after 8s")
+        logger.error("save_labels: MongoDB insert timed out after 22s")
         raise HTTPException(status_code=504, detail="Database timed out saving labels")
     except Exception as e:
         logger.error(f"save_labels: insert failed: {type(e).__name__}: {e}", exc_info=True)
