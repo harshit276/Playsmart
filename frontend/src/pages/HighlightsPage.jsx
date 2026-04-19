@@ -28,6 +28,7 @@ export default function HighlightsPage() {
   const [currentClipIndex, setCurrentClipIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
+  const [addMusic, setAddMusic] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -155,93 +156,33 @@ export default function HighlightsPage() {
     }
   }, [isPlayingReel, currentClipIndex, highlights, stopReel]);
 
-  // ─── Record reel using MediaRecorder + Canvas ───
+  // ─── Compose polished reel: title card + crossfades + overlay + music ───
   const downloadReel = async () => {
-    if (!highlights?.highlights?.length || !videoRef.current) return;
-
+    if (!highlights?.highlights?.length || !file) return;
     setIsRecording(true);
-    recordedChunksRef.current = [];
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    const ctx = canvas.getContext("2d");
-
-    // Create MediaRecorder from canvas stream
-    const stream = canvas.captureStream(30);
-    // Also capture audio from the video if available
+    setRecordedBlob(null);
+    setLoadingText("Composing reel…");
     try {
-      const audioCtx = new AudioContext();
-      const source = audioCtx.createMediaElementSource(video);
-      const dest = audioCtx.createMediaStreamDestination();
-      source.connect(dest);
-      source.connect(audioCtx.destination);
-      dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
-    } catch (e) {
-      // Audio capture not supported or no audio track — continue silently
-    }
-
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-      ? "video/webm;codecs=vp9"
-      : MediaRecorder.isTypeSupported("video/webm")
-        ? "video/webm"
-        : "video/mp4";
-
-    const recorder = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: 2500000,
-    });
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordedChunksRef.current.push(e.data);
-    };
-
-    recorder.onstop = () => {
-      const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+      const { composeReel } = await import("@/ai/reelComposer");
+      const blob = await composeReel({
+        file,
+        moments: highlights.highlights,
+        title: profile?.username ? `${profile.username}'s Highlights` : "Highlights",
+        subtitle: new Date().toLocaleDateString(),
+        addMusic,
+        onProgress: ({ percent, message }) => {
+          setProgress(percent || 0);
+          if (message) setLoadingText(message);
+        },
+      });
       setRecordedBlob(blob);
+      toast.success("Highlight reel ready!");
+    } catch (err) {
+      console.error("Reel compose failed:", err);
+      toast.error("Reel generation failed: " + (err.message || "unknown"));
+    } finally {
       setIsRecording(false);
-      toast.success("Highlight reel recorded! Click download.");
-    };
-
-    recorder.start(100);
-
-    // Draw frames to canvas in a loop
-    let clipIdx = 0;
-    const moments = highlights.highlights;
-    video.currentTime = moments[0].start_time;
-    video.muted = false;
-
-    const drawFrame = () => {
-      if (
-        !mediaRecorderRef.current ||
-        mediaRecorderRef.current.state !== "recording"
-      )
-        return;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      if (video.currentTime >= moments[clipIdx].end_time) {
-        clipIdx++;
-        if (clipIdx < moments.length) {
-          video.currentTime = moments[clipIdx].start_time;
-          video.play();
-        } else {
-          video.pause();
-          recorder.stop();
-          return;
-        }
-      }
-      requestAnimationFrame(drawFrame);
-    };
-
-    video.onseeked = () => {
-      video.play();
-      requestAnimationFrame(drawFrame);
-    };
-    video.currentTime = moments[0].start_time;
+    }
   };
 
   // ─── Play individual moment ───
@@ -471,7 +412,7 @@ export default function HighlightsPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="grid grid-cols-2 gap-2 mb-2">
                 <Button
                   onClick={playHighlightReel}
                   disabled={isPlayingReel || isRecording}
@@ -490,9 +431,27 @@ export default function HighlightsPage() {
                   ) : (
                     <Download className="w-4 h-4 mr-1" />
                   )}
-                  {isRecording ? "Recording..." : "Record Reel"}
+                  {isRecording ? "Recording…" : "Record Reel"}
                 </Button>
               </div>
+              <label className="flex items-center gap-2 mb-3 px-1 text-xs text-zinc-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={addMusic}
+                  onChange={(e) => setAddMusic(e.target.checked)}
+                  disabled={isRecording}
+                  className="accent-lime-400"
+                />
+                Mix in background music (drop a file in <code className="text-zinc-500 mx-0.5">public/audio/highlights-music.mp3</code> first)
+              </label>
+              {isRecording && (
+                <div className="mb-3 px-1">
+                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-400 transition-all" style={{ width: `${progress}%` }} />
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-1">{loadingText}</p>
+                </div>
+              )}
 
               {/* Download recorded reel */}
               {recordedBlob && (
