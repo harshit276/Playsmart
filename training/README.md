@@ -62,7 +62,37 @@ python train_classifier.py --features features.npz --out shot_classifier.joblib
 
 You'll see train/test accuracy, a per-class report, and a confusion matrix.
 
-### 4. Try predictions locally (sanity check)
+### 4. Auto-label new videos (skip manual labeling)
+After you have a working classifier, use it to PRE-LABEL new videos in bulk:
+
+```bash
+python auto_label.py --videos-dir "C:/path/to/new_videos"
+```
+
+For each video the script:
+- Detects shot moments (same algo as the browser tool)
+- Runs the trained classifier on each moment
+- Writes `labels_<hash>.json` next to the video with predictions
+  pre-filled (high-confidence) or blank (low-confidence — needs review)
+
+Then on the website at `/label`:
+1. Upload the same video
+2. Click **Load auto-labeled JSON** and pick the matching `labels_*.json`
+3. You see the predictions — just **correct the wrong ones** instead of labeling all from scratch
+
+This typically cuts manual labeling time **3-5×** once the model is decent (~50+ samples per class).
+
+**Bootstrap (when our model is too weak to auto-label):**
+For the first batch, you can use someone else's pre-trained model. The
+[RichardPinter/badminton_shot_type](https://github.com/RichardPinter/badminton_shot_type)
+repo ships LSTM weights trained on 15 pro matches with 6 shot classes.
+- Clone it, run their `app.py` against your videos, convert their CSV
+  output to our `labels_*.json` format (a 30-line script).
+- ⚠️ Their repo has no LICENSE — fine for local use to seed our own
+  labels, but do **not** redistribute their weights with our app.
+- Once we have ~500 corrected labels, retrain ours and stop using theirs.
+
+### 5. Try predictions locally (sanity check)
 ```bash
 # predict the labelled clips back — eyeball whether the model gets them right
 python test_predict.py --labels "labels_abc.json" --videos-dir .

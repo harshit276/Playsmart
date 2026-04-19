@@ -170,6 +170,55 @@ export default function LabelPage() {
     }
   };
 
+  /**
+   * Load a labels_*.json produced by training/auto_label.py — the file
+   * contains pre-detected clip ranges + model-predicted labels. We turn
+   * them into clips + a labels map so the user just reviews/corrects.
+   */
+  const loadExistingLabelsFile = async (file) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const incoming = Array.isArray(data.shots) ? data.shots : [];
+      if (!incoming.length) {
+        toast.error("That JSON has no shots");
+        return;
+      }
+      const newClips = incoming.map((s, i) => ({
+        id: `shot_${i}`,
+        peak: (s.start + s.end) / 2,
+        start: s.start,
+        end: s.end,
+        score: 0,
+      }));
+      const newLabels = {};
+      incoming.forEach((s, i) => {
+        if (s.label) {
+          newLabels[`shot_${i}`] = {
+            label: s.label,
+            ...(s.speed_kmh != null ? { speed_kmh: s.speed_kmh } : {}),
+            ...(s.player_level ? { player_level: s.player_level } : {}),
+            ...(s.player_rating ? { player_rating: s.player_rating } : {}),
+          };
+        }
+      });
+      setClips(newClips);
+      setLabels(newLabels);
+      setCurrentIdx(0);
+      if (data.sport) setSport(data.sport);
+      if (data.player_position) setPlayerPosition(data.player_position);
+      const reviewable = incoming.filter((s) => !s.label).length;
+      const auto = data.auto_labeled
+        ? `auto-labeled — ${reviewable} need review, ${incoming.length - reviewable} pre-filled`
+        : `loaded ${incoming.length} clips`;
+      toast.success(auto);
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not parse labels JSON: " + err.message);
+    }
+  };
+
   const updateCurrent = (patch) => {
     const clip = clips[currentIdx];
     if (!clip) return;
@@ -479,16 +528,28 @@ export default function LabelPage() {
                 </p>
               </div>
             ) : (
-              <div className="flex gap-2">
-                <Button onClick={runExtraction}
-                  className="bg-lime-400 hover:bg-lime-300 text-black font-semibold">
-                  Extract shot moments →
-                </Button>
-                <Button variant="ghost"
-                  onClick={() => { setVideoFile(null); setVideoUrl(null); setVideoHash(null); setSourceUrl(""); }}
-                  className="text-zinc-400 hover:text-white">
-                  Change video
-                </Button>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Button onClick={runExtraction}
+                    className="bg-lime-400 hover:bg-lime-300 text-black font-semibold">
+                    Extract shot moments →
+                  </Button>
+                  <label className="inline-flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium border border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-lime-400/50 hover:text-white cursor-pointer">
+                    Load auto-labeled JSON
+                    <input type="file" accept=".json,application/json" className="hidden"
+                      onChange={(e) => loadExistingLabelsFile(e.target.files?.[0])} />
+                  </label>
+                  <Button variant="ghost"
+                    onClick={() => { setVideoFile(null); setVideoUrl(null); setVideoHash(null); setSourceUrl(""); }}
+                    className="text-zinc-400 hover:text-white">
+                    Change video
+                  </Button>
+                </div>
+                <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  <strong>Auto-labeling:</strong> run <code className="text-zinc-400">python training/auto_label.py</code> on
+                  a folder of videos. Drop the resulting <code className="text-zinc-400">labels_*.json</code> here to review
+                  predictions instead of starting from scratch.
+                </p>
               </div>
             )}
           </div>
