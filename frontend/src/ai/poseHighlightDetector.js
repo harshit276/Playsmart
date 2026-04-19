@@ -19,7 +19,7 @@
  *   end   = contact + 0.8s  (follow-through)
  */
 
-import { ensureDetector } from "@/ai/poseDetector";
+import { initModel } from "@/ai/poseDetector";
 
 // MoveNet keypoint indices
 const KP = {
@@ -66,7 +66,7 @@ export async function detectPoseHighlights(videoFile, sport, options = {}) {
 
   // ─── Set up MoveNet ────────────────────────────────────────────
   onProgress?.({ percent: 2, message: "Loading pose model…" });
-  const detector = await ensureDetector();
+  const detector = await initModel();
 
   // Render at modest resolution — pose accuracy is fine at 480px wide
   const targetW = Math.min(width, 480);
