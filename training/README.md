@@ -62,6 +62,29 @@ python train_classifier.py --features features.npz --out shot_classifier.joblib
 
 You'll see train/test accuracy, a per-class report, and a confusion matrix.
 
+### One-shot end-to-end pipeline (recommended)
+The simplest workflow: drop your videos in a folder (one named `*test*` for evaluation), run one command, get a trained model + accuracy report.
+
+```bash
+# Set your free Groq API key (https://console.groq.com/keys)
+set GROQ_API_KEY=gsk_xxx
+
+cd training
+python full_pipeline.py --videos-dir "C:/path/to/videos"
+```
+
+This:
+1. Auto-labels every non-test video using **two backends** in parallel:
+   - **Groq Vision LLM** (cloud, no install — fast)
+   - **GitHub LSTM** (RichardPinter/badminton_shot_type — clones + tries to install ~10 GB of deps)
+2. Filters labels with confidence ≥ 0.5
+3. Extracts MoveNet pose features
+4. Trains a RandomForest classifier per backend
+5. Runs each trained model on `test_video` and prints accuracy comparison
+
+Use `--skip-github` if you don't want the heavy install (~5 minutes vs hours).
+Use `--skip-groq` if you don't have a key.
+
 ### 4. Auto-label new videos (skip manual labeling)
 After you have a working classifier, use it to PRE-LABEL new videos in bulk:
 
