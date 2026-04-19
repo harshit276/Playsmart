@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
   Upload, ChevronLeft, ChevronRight, Save, Download, Loader2, Film, Tag,
-  Trash2, RotateCcw, Star, ExternalLink, Search, Youtube,
+  Trash2, RotateCcw, Star, ExternalLink, Search, Youtube, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -50,6 +50,11 @@ export default function LabelPage() {
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Auto-prediction state
+  const [autoPredicting, setAutoPredicting] = useState(false);
+  const [autoPredictProgress, setAutoPredictProgress] = useState({ done: 0, total: 0 });
+  const [modelStatus, setModelStatus] = useState(null); // null=unknown, true=loaded, false=missing
+
   const videoRef = useRef(null);
   const playStopTimerRef = useRef(null);
 
@@ -81,6 +86,14 @@ export default function LabelPage() {
       if (playStopTimerRef.current) clearTimeout(playStopTimerRef.current);
     };
   }, [videoUrl]);
+
+  // Check whether the trained classifier is loaded on the server (so we
+  // know whether to show the "Auto-predict" button at all).
+  useEffect(() => {
+    api.get("/predict-shot/status", { timeout: 30000 })
+      .then((r) => setModelStatus(!!r.data?.loaded))
+      .catch(() => setModelStatus(false));
+  }, []);
 
   // Restore draft labels for this video
   useEffect(() => {
@@ -168,6 +181,130 @@ export default function LabelPage() {
     } finally {
       setExtracting(false);
     }
+  };
+
+  /**
+   * Auto-predict labels for every extracted clip using the deployed
+   * shot classifier. Extracts MoveNet keypoints in-browser, posts to
+   * /api/predict-shot, fills the labels map. High-confidence predictions
+   * (≥ MIN_CONF) get the model's label; low-confidence stay blank so the
+   * user knows to look at them.
+   */
+  const runAutoPredict = async () => {
+    if (!videoFile || clips.length === 0 || autoPredicting) return;
+    if (!modelStatus) {
+      toast.error("Model not loaded on server. Train + push a classifier first.");
+      return;
+    }
+    const MIN_CONF = 0.30;
+    const FRAMES = 12;
+    const KP = 17;
+
+    setAutoPredicting(true);
+    setAutoPredictProgress({ done: 0, total: clips.length });
+
+    let detector = null;
+    try {
+      const tf = await import("@tensorflow/tfjs");
+      const poseDetection = await import("@tensorflow-models/pose-detection");
+      await tf.ready();
+      try { await tf.setBackend("webgpu"); } catch {}
+      if (tf.getBackend() !== "webgpu") {
+        try { await tf.setBackend("webgl"); } catch { await tf.setBackend("cpu"); }
+      }
+      detector = await poseDetection.createDetector(
+        poseDetection.SupportedModels.MoveNet,
+        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING }
+      );
+    } catch (err) {
+      toast.error("Could not load pose model: " + err.message);
+      setAutoPredicting(false);
+      return;
+    }
+
+    const v = videoRef.current;
+    if (!v) {
+      detector.dispose();
+      setAutoPredicting(false);
+      return;
+    }
+    v.muted = true;
+    if (playStopTimerRef.current) clearTimeout(playStopTimerRef.current);
+
+    const w = v.videoWidth || 640;
+    const h = v.videoHeight || 360;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+
+    const newLabels = { ...labels };
+    let filled = 0;
+
+    for (let i = 0; i < clips.length; i++) {
+      const clip = clips[i];
+      // Skip clips the user has already labeled
+      if (newLabels[clip.id]?.label) {
+        setAutoPredictProgress({ done: i + 1, total: clips.length });
+        continue;
+      }
+
+      // Sample 12 frames evenly across the clip
+      const times = [];
+      for (let k = 0; k < FRAMES; k++) {
+        times.push(clip.start + (clip.end - clip.start) * (k / (FRAMES - 1)));
+      }
+
+      const keypoints = [];
+      let lastValid = Array.from({ length: KP }, () => [0, 0, 0]);
+      for (const t of times) {
+        v.currentTime = t;
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => { v.onseeked = r; });
+        ctx.drawImage(v, 0, 0, w, h);
+        // eslint-disable-next-line no-await-in-loop
+        const poses = await detector.estimatePoses(canvas);
+        if (poses?.[0]?.keypoints) {
+          const kps = poses[0].keypoints.map((kp) => [
+            kp.y / h, kp.x / w, kp.score ?? 0,
+          ]);
+          keypoints.push(kps);
+          lastValid = kps;
+        } else {
+          keypoints.push(lastValid);
+        }
+      }
+
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const { data } = await api.post("/predict-shot", { keypoints }, { timeout: 30000 });
+        if (data && (data.confidence == null || data.confidence >= MIN_CONF)) {
+          newLabels[clip.id] = {
+            label: data.label,
+            _predicted: data.label,
+            _confidence: data.confidence,
+          };
+          filled++;
+        } else if (data) {
+          // store the prediction for display but leave label blank for review
+          newLabels[clip.id] = {
+            label: "",
+            _predicted: data.label,
+            _confidence: data.confidence,
+          };
+        }
+      } catch (err) {
+        // skip this clip — user will label manually
+        console.warn("predict-shot failed for clip", clip.id, err);
+      }
+
+      setAutoPredictProgress({ done: i + 1, total: clips.length });
+      setLabels({ ...newLabels });
+    }
+
+    detector.dispose();
+    setAutoPredicting(false);
+    toast.success(`Auto-predicted ${filled}/${clips.length} clips. Review the rest manually.`);
   };
 
   /**
@@ -584,6 +721,29 @@ export default function LabelPage() {
                 )}
               </div>
 
+              {/* Auto-predict bar — only shows if a model is loaded on the server */}
+              {modelStatus && (
+                <div className="bg-lime-400/5 border border-lime-400/30 rounded-xl p-3 flex items-center gap-3 flex-wrap">
+                  <Sparkles className="w-4 h-4 text-lime-400 shrink-0" />
+                  <div className="flex-1 min-w-[180px]">
+                    <p className="text-xs text-white font-semibold leading-tight">
+                      Let the AI fill these in
+                    </p>
+                    <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">
+                      {autoPredicting
+                        ? `Predicting ${autoPredictProgress.done}/${autoPredictProgress.total}…`
+                        : "Predicts every unlabeled clip — review only the wrong ones."}
+                    </p>
+                  </div>
+                  <Button size="sm" onClick={runAutoPredict} disabled={autoPredicting}
+                    className="bg-lime-400 hover:bg-lime-300 text-black font-semibold">
+                    {autoPredicting
+                      ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Working</>
+                      : <>Auto-predict</>}
+                  </Button>
+                </div>
+              )}
+
               {/* Nav controls — prominent Next button */}
               <div className="grid grid-cols-3 gap-2">
                 <Button variant="outline" onClick={goPrev} disabled={currentIdx === 0}
@@ -602,9 +762,19 @@ export default function LabelPage() {
 
               {/* Shot label buttons */}
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
-                  Shot type — press 1-{labelOptions.length}
-                </p>
+                <div className="flex items-baseline justify-between mb-2">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+                    Shot type — press 1-{labelOptions.length}
+                  </p>
+                  {current?._predicted && (
+                    <p className="text-[10px] text-lime-400/80">
+                      AI guess: <span className="capitalize text-lime-400 font-semibold">{current._predicted}</span>
+                      {current._confidence != null && (
+                        <span className="text-zinc-500 ml-1">({Math.round(current._confidence * 100)}%)</span>
+                      )}
+                    </p>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {labelOptions.map((opt, i) => {
                     const active = current?.label === opt;
