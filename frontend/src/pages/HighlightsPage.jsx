@@ -79,14 +79,33 @@ export default function HighlightsPage() {
     setHighlights(null);
 
     try {
-      const { detectHighlights } = await import("@/ai/highlightDetector");
-      const result = await detectHighlights(file, selectedSport || activeSport, {
-        maxHighlights: 8,
-        onProgress: ({ percent, message }) => {
-          setProgress(percent || 0);
-          if (message) setLoadingText(message);
-        },
-      });
+      // Pose-based detector picks actual SHOT moments via wrist-acceleration
+      // peaks. Falls back to motion-based detection if MoveNet fails.
+      let result = null;
+      try {
+        const { detectPoseHighlights } = await import("@/ai/poseHighlightDetector");
+        result = await detectPoseHighlights(file, selectedSport || activeSport, {
+          maxHighlights: 8,
+          onProgress: ({ percent, message }) => {
+            setProgress(percent || 0);
+            if (message) setLoadingText(message);
+          },
+        });
+      } catch (poseErr) {
+        console.warn("Pose detector failed, falling back to motion-based:", poseErr);
+      }
+
+      // Fallback: pixel-motion detector if pose detector found nothing
+      if (!result || result.highlights.length === 0) {
+        const { detectHighlights } = await import("@/ai/highlightDetector");
+        result = await detectHighlights(file, selectedSport || activeSport, {
+          maxHighlights: 8,
+          onProgress: ({ percent, message }) => {
+            setProgress(percent || 0);
+            if (message) setLoadingText(message);
+          },
+        });
+      }
 
       if (result.highlights.length === 0) {
         setError("No highlight moments found. Try a longer video with more action.");

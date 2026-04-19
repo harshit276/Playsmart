@@ -58,6 +58,13 @@ import requests
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 
+# Windows cmd defaults to cp1252 which chokes on emoji in video filenames.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 # Reuse our pose-feature pipeline so the trained classifier stays
 # byte-compatible with the deployed /api/predict-shot endpoint.
 from extract_poses import (
@@ -74,7 +81,7 @@ SHOT_LABELS = ["smash", "clear", "drop", "drive", "net", "lob"]
 # Shared: shot moment detection (Python port of shotMomentExtractor.js)
 # ────────────────────────────────────────────────────────────────────
 
-def detect_shot_moments(video_path: Path, min_clips: int = 12, max_clips: int = 200) -> list[dict]:
+def detect_shot_moments(video_path: Path, min_clips: int = 12, max_clips: int = 80) -> list[dict]:
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         return []
@@ -339,10 +346,10 @@ def auto_label_groq(videos: list[Path], api_key: str, out_dir: Path) -> dict[Pat
                 "label": res["label"],
                 "confidence": res["confidence"],
             })
-            if (i + 1) % 10 == 0:
-                print(f"    {i + 1}/{len(moments)} clips labelled")
-            # gentle rate limit (free tier ~30 rpm)
-            time.sleep(0.25)
+            if (i + 1) % 5 == 0:
+                print(f"    {i + 1}/{len(moments)} clips labelled (last: {res['label']} @ {res['confidence']:.0%})")
+            # rate limit — free tier is 30 rpm, so ≥2s between calls
+            time.sleep(2.0)
         out[vid] = labelled
         # persist intermediate
         out_path = out_dir / f"groq_labels_{video_hash(vid)[:8]}.json"
