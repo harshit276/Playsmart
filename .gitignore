@@ -119,3 +119,18 @@ training/**/labels_*.json
 training/**/*.task
 training/**/features.npz
 training/**/*.joblib
+# Training artifacts (generated, large, or cached)
+training/external/
+training/pipeline_out/
+training/sports/**/labels/
+training/sports/**/videos/
+training/*.log
+training/compare_backends.py
+training/prep_videos.py
+training/salvage_run.py
+training/github_compare.log
+training/github_run.log
+training/github_4videos.log
+training/github_remaining.log
+training/u19_run.log
+training/compare.log
