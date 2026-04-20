@@ -1,0 +1,118 @@
+C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\__init__.py:61: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tf_keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
+
+Carolina (GitHub labels): 50 high-conf clips
+[model] loading MoveNet SinglePose Lightning
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+[model] ok
+  extracted 10/50
+  extracted 20/50
+  extracted 30/50
+  extracted 40/50
+  extracted 50/50
+Extracted: 50 samples
+Distribution: {'clear': 38, 'drive': 6, 'lob': 5, 'net': 1}
+train_acc: 100.0%  test_acc: 60.0%
+              precision    recall  f1-score   support
+
+       clear       0.60      1.00      0.75         6
+       drive       0.00      0.00      0.00         2
+         lob       0.00      0.00      0.00         1
+         net       0.00      0.00      0.00         1
+
+    accuracy                           0.60        10
+   macro avg       0.15      0.25      0.19        10
+weighted avg       0.36      0.60      0.45        10
+
+saved: pipeline_out\shot_classifier_github.joblib
+
+[test_video] 55 predictions
+distribution: {'clear': 55}
+avg conf: 76%
+high-conf (>=70%): 36/55
+
+Sample predictions:
+  t=  0.0s  clear     69%
+  t=  0.6s  clear     75%
+  t=  1.3s  clear     78%
+  t=  2.0s  clear     75%
+  t=  2.5s  clear     76%
+  t=  3.0s  clear     82%
+  t=  3.8s  clear     67%
+  t= 21.8s  clear     86%
+  t= 22.9s  clear     52%
+  t= 37.5s  clear     92%
+  t= 39.0s  clear     95%
+  t= 40.2s  clear     86%
+  t= 41.0s  clear     66%
+  t= 46.8s  clear     92%
+  t= 47.4s  clear     72%
+  t= 47.8s  clear     61%
+  t= 71.5s  clear     61%
+  t= 72.8s  clear     83%
+  t= 73.6s  clear     68%
+  t= 74.4s  clear     76%
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1d7ae59c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc022c0] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure
+[h264 @ 000001b1cfc01e00] mmco: unref short failure

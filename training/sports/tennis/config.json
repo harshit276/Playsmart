@@ -1,0 +1,7 @@
+{
+  "sport": "tennis",
+  "shot_types": ["forehand", "backhand", "serve", "volley", "overhead", "drop_shot", "slice"],
+  "lstm_weights": null,
+  "labeler_priority": ["groq"],
+  "groq_prompt": "You are looking at 3 sequential frames from a tennis match showing a single shot being played.\n\nIdentify the shot from this list:\n- serve: starting shot from baseline, racket overhead, ball toss above\n- forehand: groundstroke hit from the dominant-hand side after the bounce\n- backhand: groundstroke hit from the non-dominant side, often two-handed\n- volley: hit before the ball bounces, usually near the net\n- overhead: smash motion from a high ball above the player\n- drop_shot: soft touch that lands just over the net\n- slice: low spin shot, racket cuts under the ball\n\nRespond in EXACTLY this format, nothing else:\nSHOT: <one of: serve|forehand|backhand|volley|overhead|drop_shot|slice|unknown>\nCONFIDENCE: <number from 0.0 to 1.0>\n\nUse 0.9+ when very obvious, 0.7-0.9 when likely, 0.5-0.7 when plausible, below 0.5 when uncertain. Use 'unknown' with 0.0 only if no shot is being played."
+}

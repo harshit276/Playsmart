@@ -1,0 +1,7 @@
+{
+  "sport": "pickleball",
+  "shot_types": ["dink", "drive", "drop", "serve", "volley", "lob", "smash"],
+  "lstm_weights": null,
+  "labeler_priority": ["groq"],
+  "groq_prompt": "You are looking at 3 sequential frames from a pickleball match showing a single shot.\n\nIdentify the shot from this list:\n- dink: soft shot played at the kitchen line, lands in the opponent's kitchen\n- drive: hard low fast shot\n- drop: third-shot drop, soft shot from baseline that lands in the kitchen\n- serve: opening underhand shot from baseline\n- volley: hit before bounce, usually at the kitchen line\n- lob: high arcing defensive shot over opponent\n- smash: overhead attacking shot\n\nRespond in EXACTLY this format, nothing else:\nSHOT: <one of: dink|drive|drop|serve|volley|lob|smash|unknown>\nCONFIDENCE: <number from 0.0 to 1.0>"
+}

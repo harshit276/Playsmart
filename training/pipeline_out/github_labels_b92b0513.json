@@ -1,0 +1,487 @@
+{
+  "video_filename": "Carolina Marin and Pusarla V. Sindhu put up a fight for a finals spot - BWF TV (1080p, h264).mp4",
+  "video_hash": "b92b0513c82ee79857a95baf9daf900eded44057",
+  "backend": "github_lstm",
+  "shots": [
+    {
+      "start": 5.12,
+      "end": 7.12,
+      "label": "clear",
+      "confidence": 0.9998754262924194
+    },
+    {
+      "start": 6.44,
+      "end": 8.44,
+      "label": "clear",
+      "confidence": 0.9957394599914551
+    },
+    {
+      "start": 7.52,
+      "end": 9.52,
+      "label": "clear",
+      "confidence": 0.9844300746917725
+    },
+    {
+      "start": 8.12,
+      "end": 10.12,
+      "label": "clear",
+      "confidence": 0.9472241997718811
+    },
+    {
+      "start": 8.84,
+      "end": 10.84,
+      "label": "clear",
+      "confidence": 0.9994779229164124
+    },
+    {
+      "start": 9.44,
+      "end": 11.44,
+      "label": "clear",
+      "confidence": 0.8074458837509155
+    },
+    {
+      "start": 10.28,
+      "end": 12.28,
+      "label": "lob",
+      "confidence": 0.9862499237060547
+    },
+    {
+      "start": 11.24,
+      "end": 13.24,
+      "label": "net",
+      "confidence": 0.4074745178222656
+    },
+    {
+      "start": 11.96,
+      "end": 13.96,
+      "label": "clear",
+      "confidence": 0.9653582572937012
+    },
+    {
+      "start": 14.6,
+      "end": 16.6,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 21.56,
+      "end": 23.56,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 22.28,
+      "end": 24.28,
+      "label": "drive",
+      "confidence": 0.6403143405914307
+    },
+    {
+      "start": 22.88,
+      "end": 24.88,
+      "label": "clear",
+      "confidence": 0.9997194409370422
+    },
+    {
+      "start": 24.92,
+      "end": 26.92,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 31.88,
+      "end": 33.88,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 33.68,
+      "end": 35.68,
+      "label": "lob",
+      "confidence": 0.46469777822494507
+    },
+    {
+      "start": 36.2,
+      "end": 38.2,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 36.8,
+      "end": 38.8,
+      "label": "clear",
+      "confidence": 0.8518261909484863
+    },
+    {
+      "start": 37.52,
+      "end": 39.52,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 44.12,
+      "end": 46.12,
+      "label": "clear",
+      "confidence": 0.9990431666374207
+    },
+    {
+      "start": 45.56,
+      "end": 47.56,
+      "label": "clear",
+      "confidence": 0.9992716908454895
+    },
+    {
+      "start": 46.76,
+      "end": 48.76,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 52.76,
+      "end": 54.76,
+      "label": "clear",
+      "confidence": 0.9971897006034851
+    },
+    {
+      "start": 53.6,
+      "end": 55.6,
+      "label": "clear",
+      "confidence": 0.9936977028846741
+    },
+    {
+      "start": 55.88,
+      "end": 57.88,
+      "label": "clear",
+      "confidence": 0.9796153903007507
+    },
+    {
+      "start": 56.6,
+      "end": 58.6,
+      "label": "clear",
+      "confidence": 0.9981690645217896
+    },
+    {
+      "start": 57.44,
+      "end": 59.44,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 69.32,
+      "end": 71.32,
+      "label": "clear",
+      "confidence": 0.9988507032394409
+    },
+    {
+      "start": 72.56,
+      "end": 74.56,
+      "label": "drive",
+      "confidence": 0.638735830783844
+    },
+    {
+      "start": 73.04,
+      "end": 75.04,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 79.64,
+      "end": 81.64,
+      "label": "lob",
+      "confidence": 0.603873610496521
+    },
+    {
+      "start": 95.6,
+      "end": 97.6,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 101.84,
+      "end": 103.84,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 102.68,
+      "end": 104.68,
+      "label": "lob",
+      "confidence": 0.7730900645256042
+    },
+    {
+      "start": 103.4,
+      "end": 105.4,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 113.84,
+      "end": 115.84,
+      "label": "lob",
+      "confidence": 0.9448752403259277
+    },
+    {
+      "start": 116.48,
+      "end": 118.48,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 127.76,
+      "end": 129.76,
+      "label": "clear",
+      "confidence": 0.8778067231178284
+    },
+    {
+      "start": 128.84,
+      "end": 130.84,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 133.88,
+      "end": 135.88,
+      "label": "clear",
+      "confidence": 0.9979243278503418
+    },
+    {
+      "start": 136.16,
+      "end": 138.16,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 141.92,
+      "end": 143.92,
+      "label": "clear",
+      "confidence": 0.994238018989563
+    },
+    {
+      "start": 143.96,
+      "end": 145.96,
+      "label": "net",
+      "confidence": 0.6184007525444031
+    },
+    {
+      "start": 163.16,
+      "end": 165.16,
+      "label": "clear",
+      "confidence": 0.9972912669181824
+    },
+    {
+      "start": 164.6,
+      "end": 166.6,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 177.44,
+      "end": 179.44,
+      "label": "clear",
+      "confidence": 0.9977038502693176
+    },
+    {
+      "start": 178.04,
+      "end": 180.04,
+      "label": "clear",
+      "confidence": 0.99647456407547
+    },
+    {
+      "start": 180.44,
+      "end": 182.44,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 194.48,
+      "end": 196.48,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 197.48,
+      "end": 199.48,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 200.96,
+      "end": 202.96,
+      "label": "clear",
+      "confidence": 0.40881112217903137
+    },
+    {
+      "start": 202.4,
+      "end": 204.4,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 217.64,
+      "end": 219.64,
+      "label": "clear",
+      "confidence": 0.9096505045890808
+    },
+    {
+      "start": 220.52,
+      "end": 222.52,
+      "label": "drive",
+      "confidence": 0.5343719720840454
+    },
+    {
+      "start": 228.68,
+      "end": 230.68,
+      "label": "clear",
+      "confidence": 0.4837319254875183
+    },
+    {
+      "start": 229.4,
+      "end": 231.4,
+      "label": "lob",
+      "confidence": 0.9046906232833862
+    },
+    {
+      "start": 230.0,
+      "end": 232.0,
+      "label": "clear",
+      "confidence": 0.9998904466629028
+    },
+    {
+      "start": 231.68,
+      "end": 233.68,
+      "label": "clear",
+      "confidence": 0.6369620561599731
+    },
+    {
+      "start": 232.52,
+      "end": 234.52,
+      "label": "drive",
+      "confidence": 0.5305478572845459
+    },
+    {
+      "start": 233.24,
+      "end": 235.24,
+      "label": "clear",
+      "confidence": 0.999576985836029
+    },
+    {
+      "start": 234.2,
+      "end": 236.2,
+      "label": "clear",
+      "confidence": 0.9841198325157166
+    },
+    {
+      "start": 234.92,
+      "end": 236.92,
+      "label": "clear",
+      "confidence": 0.5879503488540649
+    },
+    {
+      "start": 235.76,
+      "end": 237.76,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 245.48,
+      "end": 247.48,
+      "label": "clear",
+      "confidence": 0.9522654414176941
+    },
+    {
+      "start": 249.32,
+      "end": 251.32,
+      "label": "clear",
+      "confidence": 0.8608189821243286
+    },
+    {
+      "start": 251.36,
+      "end": 253.36,
+      "label": "clear",
+      "confidence": 0.9976189732551575
+    },
+    {
+      "start": 252.68,
+      "end": 254.68,
+      "label": "clear",
+      "confidence": 0.9905704259872437
+    },
+    {
+      "start": 253.76,
+      "end": 255.76,
+      "label": "clear",
+      "confidence": 0.9616372585296631
+    },
+    {
+      "start": 254.48,
+      "end": 256.48,
+      "label": "clear",
+      "confidence": 0.9296166896820068
+    },
+    {
+      "start": 255.08,
+      "end": 257.08,
+      "label": "clear",
+      "confidence": 0.9582527875900269
+    },
+    {
+      "start": 255.68,
+      "end": 257.68,
+      "label": "clear",
+      "confidence": 0.9740546345710754
+    },
+    {
+      "start": 256.88,
+      "end": 258.88,
+      "label": "clear",
+      "confidence": 0.9990297555923462
+    },
+    {
+      "start": 259.04,
+      "end": 261.04,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 269.72,
+      "end": 271.72,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 277.88,
+      "end": 279.88,
+      "label": "drive",
+      "confidence": 0.9890494346618652
+    },
+    {
+      "start": 278.72,
+      "end": 280.72,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 284.48,
+      "end": 286.48,
+      "label": "drive",
+      "confidence": 0.9990606904029846
+    },
+    {
+      "start": 285.32,
+      "end": 287.32,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 291.68,
+      "end": 293.68,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 296.48,
+      "end": 298.48,
+      "label": "clear",
+      "confidence": 0.859257698059082
+    }
+  ]
+}

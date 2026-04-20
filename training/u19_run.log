@@ -1,0 +1,28 @@
+C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\__init__.py:61: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tf_keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
+
+[model] loading MoveNet SinglePose Lightning
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+[model] ok
+[load] 15Matches_LSTM.h5
+[ WARN:0@1399.725] global cap_ffmpeg.cpp:496 cv_capture_retrieve FFmpeg: Exception is raised: OpenCV(4.11.0-pre) /build/opencv/modules/core/src/alloc.cpp:73: error: (-4:Insufficient memory) Failed to allocate 6220800 bytes in function 'OutOfMemoryError'
+
+[detect] using 22 shot moments (cap=60)
+[ WARN:0@1415.274] global cap_ffmpeg.cpp:496 cv_capture_retrieve FFmpeg: Exception is raised: OpenCV(4.11.0-pre) /build/opencv/modules/core/src/alloc.cpp:73: error: (-4:Insufficient memory) Failed to allocate 6220800 bytes in function 'OutOfMemoryError'
+
+  3/22  last: unknown @ 10%  (0.0 clip/s)
+  6/22  last: unknown @ 10%  (0.0 clip/s)
+  9/22  last: unknown @ 10%  (0.0 clip/s)
+  12/22  last: unknown @ 10%  (0.0 clip/s)
+  15/22  last: lob @ 97%  (0.0 clip/s)
+  18/22  last: drive @ 96%  (0.0 clip/s)
+  21/22  last: drive @ 72%  (0.0 clip/s)
+[ok] github_labels_9ea2543b.json  total=22

@@ -7785,6 +7785,126 @@ class LabelSaveRequest(BaseModel):
     duration: Optional[float] = None
 
 
+# ─── Match-level coaching insights ─────────────────────────────────────────
+# Takes the per-shot predictions from /api/predict-shot (frontend aggregates
+# them into distribution + skill_score) and asks Groq to narrate strengths,
+# improvements, and a focus for next session.
+
+class CoachingNarrativeRequest(BaseModel):
+    sport: str = Field(..., max_length=32)
+    shot_distribution: dict = Field(..., description="{'smash': 12, 'clear': 8, ...}")
+    avg_confidence: float = Field(..., ge=0, le=1)
+    skill_score: float = Field(..., ge=0, le=5, description="Computed 0-5 skill rating")
+    duration_sec: Optional[float] = None
+    total_shots: int = Field(..., ge=0)
+    player_level: Optional[str] = Field(None, max_length=20, description="beginner|intermediate|advanced|pro (optional)")
+
+
+_COACHING_SYSTEM_PROMPT = (
+    "You are AthlyticAI, a concise coaching narrator. Given quantitative match "
+    "stats, produce SPECIFIC, encouraging coaching feedback grounded in the data. "
+    "Be honest — if the numbers show weakness, say so kindly. "
+    "ALWAYS reference the actual shot counts and confidence numbers when relevant. "
+    "Output JSON ONLY, no prose around it.\n\n"
+    "Schema:\n"
+    "{\n"
+    '  "summary": "<one-sentence overview, e.g. \'Strong attacking play with limited net work — 73% smash-heavy session\'>",\n'
+    '  "strengths": ["<3 specific strength bullets, each citing a shot count or confidence>"],\n'
+    '  "improvements": ["<3 specific improvement bullets, each grounded in the data>"],\n'
+    '  "next_focus": "<one concrete drill or area for the next training session>"\n'
+    "}\n"
+)
+
+
+@api_router.post("/analysis/coaching-narrative")
+async def coaching_narrative(req: CoachingNarrativeRequest):
+    # Build the user-message context
+    dist_str = ", ".join(f"{k}: {v}" for k, v in sorted(req.shot_distribution.items(), key=lambda kv: -kv[1]))
+    user_msg = (
+        f"Sport: {req.sport}\n"
+        f"Total shots detected: {req.total_shots}\n"
+        f"Shot distribution: {dist_str}\n"
+        f"Average classification confidence: {req.avg_confidence:.0%} "
+        f"(higher = cleaner technique signature)\n"
+        f"Computed skill score: {req.skill_score:.1f}/5\n"
+        + (f"Match duration: {req.duration_sec:.0f}s\n" if req.duration_sec else "")
+        + (f"Self-rated level: {req.player_level}\n" if req.player_level else "")
+    )
+
+    # Fallback if Groq isn't configured — generate a deterministic templated response
+    if not GROQ_API_KEY:
+        return _fallback_narrative(req, dist_str)
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            r = await client.post(
+                GROQ_URL,
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "model": GROQ_MODEL,
+                    "messages": [
+                        {"role": "system", "content": _COACHING_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_msg},
+                    ],
+                    "temperature": 0.5,
+                    "max_tokens": 600,
+                    "response_format": {"type": "json_object"},
+                },
+            )
+            r.raise_for_status()
+            content = r.json()["choices"][0]["message"]["content"]
+            import json as _json
+            try:
+                parsed = _json.loads(content)
+            except Exception:
+                # Sometimes the model wraps with ```json — strip it
+                cleaned = content.strip().strip("`").lstrip("json").strip()
+                parsed = _json.loads(cleaned)
+            return {
+                "summary": parsed.get("summary", "")[:200],
+                "strengths": [s[:200] for s in (parsed.get("strengths") or [])][:3],
+                "improvements": [s[:200] for s in (parsed.get("improvements") or [])][:3],
+                "next_focus": (parsed.get("next_focus") or "")[:300],
+            }
+    except Exception as e:
+        logger.warning(f"coaching_narrative LLM failed: {e}")
+        return _fallback_narrative(req, dist_str)
+
+
+def _fallback_narrative(req: CoachingNarrativeRequest, dist_str: str) -> dict:
+    """Deterministic non-LLM fallback. Useful when GROQ_API_KEY isn't set."""
+    sorted_shots = sorted(req.shot_distribution.items(), key=lambda kv: -kv[1])
+    top_shot = sorted_shots[0] if sorted_shots else ("shots", 0)
+    weakest_shots = [k for k, v in sorted_shots if v <= 1]
+
+    strengths = []
+    if req.avg_confidence >= 0.7:
+        strengths.append(f"Clean technique — {req.avg_confidence:.0%} avg classification confidence")
+    if top_shot[1] >= 5:
+        strengths.append(f"Strong {top_shot[0]} game ({top_shot[1]} this session)")
+    if len(req.shot_distribution) >= 4:
+        strengths.append(f"Good shot variety — used {len(req.shot_distribution)} distinct shot types")
+    if not strengths:
+        strengths = [f"You completed {req.total_shots} shots in this session"]
+
+    improvements = []
+    if weakest_shots:
+        improvements.append(f"Limited use of: {', '.join(weakest_shots[:3])} — try mixing them in more")
+    if req.avg_confidence < 0.6:
+        improvements.append(f"Technique consistency at {req.avg_confidence:.0%} — focus on cleaner contact form")
+    if len(req.shot_distribution) <= 2:
+        improvements.append("Shot variety is narrow — work on at least 4 distinct shot types")
+    if not improvements:
+        improvements = [f"You're well-rounded — challenge yourself with faster opponents"]
+
+    return {
+        "summary": f"{req.total_shots}-shot session, dominant: {top_shot[0]} ({top_shot[1]}×), skill score {req.skill_score:.1f}/5",
+        "strengths": strengths[:3],
+        "improvements": improvements[:3],
+        "next_focus": f"Drill the under-used shot types: {', '.join(weakest_shots[:2]) if weakest_shots else 'shot placement'}",
+    }
+
+
 @api_router.post("/labels/save")
 async def save_labels(req: LabelSaveRequest):
     if not req.shots:
@@ -7821,34 +7941,50 @@ async def save_labels(req: LabelSaveRequest):
 # Loads training/shot_classifier.joblib lazily on first request. Until you've
 # trained and committed a model, the endpoint returns 503 with a clear message.
 
-_SHOT_MODEL_BUNDLE = None
-_SHOT_MODEL_TRIED = False
-_SHOT_MODEL_ERROR: Optional[str] = None
-_SHOT_MODEL_PATH = ROOT_DIR / "models" / "shot_classifier.joblib"
+_SHOT_MODEL_CACHE: dict = {}     # {sport: bundle}
+_SHOT_MODEL_TRIED: dict = {}     # {sport: bool}
+_SHOT_MODEL_ERROR: dict = {}     # {sport: str}
+_SHOT_MODELS_DIR = ROOT_DIR / "models"
 
 
-def _load_shot_model():
-    global _SHOT_MODEL_BUNDLE, _SHOT_MODEL_TRIED, _SHOT_MODEL_ERROR
-    if _SHOT_MODEL_TRIED:
-        return _SHOT_MODEL_BUNDLE
-    _SHOT_MODEL_TRIED = True
-    if not _SHOT_MODEL_PATH.exists():
-        _SHOT_MODEL_ERROR = (
-            f"shot_classifier.joblib not found at {_SHOT_MODEL_PATH}. "
-            "Train one locally (training/train_classifier.py) and copy "
-            "shot_classifier.joblib into backend/models/, then redeploy."
+def _shot_model_path(sport: str) -> Path:
+    """Per-sport model path. Falls back to the generic shot_classifier.joblib
+    so existing deployments keep working."""
+    candidates = [
+        _SHOT_MODELS_DIR / f"shot_classifier_{sport}.joblib",
+        _SHOT_MODELS_DIR / "shot_classifier.joblib",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]  # return the first (won't exist) so error is informative
+
+
+def _load_shot_model(sport: str = "badminton"):
+    """Load and cache per-sport classifier. Returns the bundle or None."""
+    sport = (sport or "badminton").lower()
+    if _SHOT_MODEL_TRIED.get(sport):
+        return _SHOT_MODEL_CACHE.get(sport)
+    _SHOT_MODEL_TRIED[sport] = True
+
+    path = _shot_model_path(sport)
+    if not path.exists():
+        _SHOT_MODEL_ERROR[sport] = (
+            f"No model found for sport='{sport}'. Train one with "
+            f"`python training/sports/train_for_sport.py --sport {sport}` and commit "
+            f"backend/models/shot_classifier_{sport}.joblib (or shot_classifier.joblib for default)."
         )
         return None
     try:
-        import joblib  # noqa: WPS433  — deferred import keeps cold start cheap
-        _SHOT_MODEL_BUNDLE = joblib.load(_SHOT_MODEL_PATH)
-        logger.info(
-            f"shot model loaded: classes={list(_SHOT_MODEL_BUNDLE.get('labels', []))}"
-        )
+        import joblib
+        bundle = joblib.load(path)
+        _SHOT_MODEL_CACHE[sport] = bundle
+        logger.info(f"shot model loaded for {sport}: {path.name}, classes={list(bundle.get('labels', []))}")
+        return bundle
     except Exception as e:
-        _SHOT_MODEL_ERROR = f"failed to load model: {type(e).__name__}: {e}"
-        logger.error(_SHOT_MODEL_ERROR, exc_info=True)
-    return _SHOT_MODEL_BUNDLE
+        _SHOT_MODEL_ERROR[sport] = f"failed to load {path.name}: {type(e).__name__}: {e}"
+        logger.error(_SHOT_MODEL_ERROR[sport], exc_info=True)
+        return None
 
 
 class PredictShotRequest(BaseModel):
@@ -7859,23 +7995,31 @@ class PredictShotRequest(BaseModel):
 
 
 @api_router.get("/predict-shot/status")
-async def predict_shot_status():
+async def predict_shot_status(sport: str = "badminton"):
     """Tells the frontend whether the model is available — saves a 503 round-trip."""
-    bundle = _load_shot_model()
+    bundle = _load_shot_model(sport)
     if not bundle:
-        return {"loaded": False, "error": _SHOT_MODEL_ERROR}
+        return {"loaded": False, "sport": sport, "error": _SHOT_MODEL_ERROR.get(sport)}
+    # Also report which other sports have models deployed
+    deployed = []
+    for f in sorted(_SHOT_MODELS_DIR.glob("shot_classifier_*.joblib")):
+        deployed.append(f.stem.replace("shot_classifier_", ""))
+    if (_SHOT_MODELS_DIR / "shot_classifier.joblib").exists():
+        deployed.append("default")
     return {
         "loaded": True,
+        "sport": sport,
         "classes": list(bundle.get("labels", [])),
         "feature_dim": 12 * 17 * 3,
+        "deployed_sports": deployed,
     }
 
 
 @api_router.post("/predict-shot")
-async def predict_shot(req: PredictShotRequest):
-    bundle = _load_shot_model()
+async def predict_shot(req: PredictShotRequest, sport: str = "badminton"):
+    bundle = _load_shot_model(sport)
     if not bundle:
-        raise HTTPException(status_code=503, detail=_SHOT_MODEL_ERROR or "Model not loaded")
+        raise HTTPException(status_code=503, detail=_SHOT_MODEL_ERROR.get(sport) or f"Model not loaded for {sport}")
 
     try:
         import numpy as np

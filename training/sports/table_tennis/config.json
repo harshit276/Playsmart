@@ -1,0 +1,7 @@
+{
+  "sport": "table_tennis",
+  "shot_types": ["forehand_loop", "backhand_loop", "forehand_drive", "backhand_drive", "push", "chop", "serve", "smash", "flick", "block"],
+  "lstm_weights": null,
+  "labeler_priority": ["groq"],
+  "groq_prompt": "You are looking at 3 sequential frames from a table tennis (ping pong) match showing a single shot.\n\nIdentify the shot from this list:\n- forehand_loop: topspin attacking shot from the forehand side\n- backhand_loop: topspin attacking shot from the backhand side\n- forehand_drive: flat fast shot from the forehand side\n- backhand_drive: flat fast shot from the backhand side\n- push: short backspin defensive shot\n- chop: heavy backspin defensive shot\n- serve: opening shot, ball tossed and struck\n- smash: hard finishing kill shot\n- flick: short flicked attack from over the table\n- block: short return blocking opponent's loop\n\nRespond in EXACTLY this format, nothing else:\nSHOT: <one of: forehand_loop|backhand_loop|forehand_drive|backhand_drive|push|chop|serve|smash|flick|block|unknown>\nCONFIDENCE: <number from 0.0 to 1.0>"
+}

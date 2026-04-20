@@ -1,0 +1,170 @@
+C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\__init__.py:61: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tf_keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
+
+[model] loading MoveNet SinglePose Lightning
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+[model] ok
+[load] 15Matches_LSTM.h5
+[detect] 55 shot moments
+  5/55  last: unknown @ 10%  (0.1 clip/s)
+  10/55  last: clear @ 89%  (0.1 clip/s)
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f65758bd80] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5fa1c0] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref sh  15/55  last: lob @ 93%  (0.1 clip/s)
+  20/55  last: clear @ 97%  (0.1 clip/s)
+  25/55  last: clear @ 100%  (0.1 clip/s)
+  30/55  last: lob @ 74%  (0.1 clip/s)
+  35/55  last: unknown @ 10%  (0.1 clip/s)
+  40/55  last: drive @ 100%  (0.1 clip/s)
+  45/55  last: unknown @ 10%  (0.1 clip/s)
+  50/55  last: clear @ 59%  (0.1 clip/s)
+  55/55  last: drive @ 81%  (0.1 clip/s)
+[ok] github_labels_3c030a50.json  total=55
+ort failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure
+[h264 @ 000001f64e5f6680] mmco: unref short failure

@@ -1,0 +1,10 @@
+{
+  "sport": "badminton",
+  "shot_types": ["clear", "drive", "drop", "lob", "net", "smash"],
+  "lstm_weights": "../../external/badminton_shot_type/weights/15Matches_LSTM.h5",
+  "lstm_classes": ["unknown", "clear", "drive", "drop", "lob", "net", "smash"],
+  "lstm_input_frames": 41,
+  "lstm_keypoints": 13,
+  "labeler_priority": ["lstm", "groq"],
+  "groq_prompt": "You are looking at 3 sequential frames from a badminton match showing a single shot being played.\n\nIdentify the shot from this list:\n- smash: powerful overhead downward attack\n- clear: high deep shot to the back court\n- drop: soft shot that just clears the net and falls in front court\n- drive: fast flat shot at body height\n- net: short tap played close to the net\n- lob: high defensive shot lifted up from the back/mid court\n\nRespond in EXACTLY this format, nothing else:\nSHOT: <one of: smash|clear|drop|drive|net|lob|unknown>\nCONFIDENCE: <number from 0.0 to 1.0>\n\nUse 0.9+ when very obvious, 0.7-0.9 when likely, 0.5-0.7 when plausible, below 0.5 when uncertain. Use 'unknown' with 0.0 only if no shot is being played in the frames."
+}

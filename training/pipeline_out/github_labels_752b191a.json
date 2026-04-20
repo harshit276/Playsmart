@@ -1,0 +1,187 @@
+{
+  "video_filename": "\ud83c\uddee\ud83c\uddf3 India vs Indonesia \ud83c\uddee\ud83c\udde9  Men's Badminton doubles  Paris 2024 Highlights - Olympics (1080p, h264).mp4",
+  "video_hash": "752b191a7a82653dd09bd41a81640b21495b0fd1",
+  "backend": "github_lstm",
+  "shots": [
+    {
+      "start": 26.72,
+      "end": 28.72,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 28.28,
+      "end": 30.28,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 38.0,
+      "end": 40.0,
+      "label": "net",
+      "confidence": 0.954145610332489
+    },
+    {
+      "start": 39.56,
+      "end": 41.56,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 42.68,
+      "end": 44.68,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 43.28,
+      "end": 45.28,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 43.88,
+      "end": 45.88,
+      "label": "drive",
+      "confidence": 0.9884470105171204
+    },
+    {
+      "start": 46.4,
+      "end": 48.4,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 47.36,
+      "end": 49.36,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 47.96,
+      "end": 49.96,
+      "label": "drive",
+      "confidence": 0.9430589079856873
+    },
+    {
+      "start": 49.4,
+      "end": 51.4,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 50.6,
+      "end": 52.6,
+      "label": "clear",
+      "confidence": 0.9374837279319763
+    },
+    {
+      "start": 51.56,
+      "end": 53.56,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 64.76,
+      "end": 66.76,
+      "label": "clear",
+      "confidence": 0.9921349287033081
+    },
+    {
+      "start": 65.24,
+      "end": 67.24,
+      "label": "clear",
+      "confidence": 0.98783278465271
+    },
+    {
+      "start": 65.96,
+      "end": 67.96,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 68.96,
+      "end": 70.96,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 71.48,
+      "end": 73.48,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 72.56,
+      "end": 74.56,
+      "label": "lob",
+      "confidence": 0.5483136773109436
+    },
+    {
+      "start": 73.04,
+      "end": 75.04,
+      "label": "clear",
+      "confidence": 0.9734345078468323
+    },
+    {
+      "start": 85.76,
+      "end": 87.76,
+      "label": "clear",
+      "confidence": 0.9994795918464661
+    },
+    {
+      "start": 86.48,
+      "end": 88.48,
+      "label": "clear",
+      "confidence": 0.999771773815155
+    },
+    {
+      "start": 88.4,
+      "end": 90.4,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 111.56,
+      "end": 113.56,
+      "label": "clear",
+      "confidence": 0.9829337000846863
+    },
+    {
+      "start": 112.28,
+      "end": 114.28,
+      "label": "",
+      "confidence": 0.1
+    },
+    {
+      "start": 128.72,
+      "end": 130.72,
+      "label": "clear",
+      "confidence": 0.9935600757598877
+    },
+    {
+      "start": 130.04,
+      "end": 132.04,
+      "label": "clear",
+      "confidence": 0.938001275062561
+    },
+    {
+      "start": 130.52,
+      "end": 132.52,
+      "label": "clear",
+      "confidence": 0.8234441876411438
+    },
+    {
+      "start": 131.12,
+      "end": 133.12,
+      "label": "clear",
+      "confidence": 0.9468505382537842
+    },
+    {
+      "start": 144.56,
+      "end": 146.56,
+      "label": "clear",
+      "confidence": 0.689174473285675
+    }
+  ]
+}

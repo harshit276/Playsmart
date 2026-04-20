@@ -20,6 +20,7 @@ import api from "@/lib/api";
 import ShareModal from "@/components/ShareModal";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import { NewBadgeOverlay } from "@/components/BadgeDisplay";
+import MatchInsights from "@/components/MatchInsights";
 import SEO from "@/components/SEO";
 
 const CLIENT_LOADING_STEPS = [
@@ -1169,6 +1170,14 @@ export default function AnalyzePage() {
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+
+        {/* Match Insights — multi-shot analysis with skill score + coaching narrative */}
+        {file && !viewingHistorical && (
+          <MatchInsights
+            videoFile={file}
+            sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
+          />
+        )}
 
         {/* Profile setup prompt for signed-in users without a profile */}
         {user && !profile?.active_sport && result && !viewingHistorical && (

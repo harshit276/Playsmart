@@ -1,0 +1,20 @@
+C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\__init__.py:61: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import parse_version
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tf_keras\src\losses.py:2976: The name tf.losses.sparse_softmax_cross_entropy is deprecated. Please use tf.compat.v1.losses.sparse_softmax_cross_entropy instead.
+
+Found 4 train videos
+Already labelled (skipping): {'b92b0513', '3c030a50'}
+[skip] Carolina Marin and Pusarla V. Sindhu put up a fight for a finals spot - BWF TV (1080p, h264).mp4 (hash b92b0513)
+
+Processing: FABULOUS FINAL  Lakshya Sen VS Yushi Tanaka - Badminton Alley (1080p, h264).mp4
+[model] loading MoveNet SinglePose Lightning
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\resolver.py:120: The name tf.gfile.MakeDirs is deprecated. Please use tf.io.gfile.makedirs instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+WARNING:tensorflow:From C:\Users\mundr\AppData\Local\Programs\Python\Python310\lib\site-packages\tensorflow_hub\module_v2.py:126: The name tf.saved_model.load_v2 is deprecated. Please use tf.compat.v2.saved_model.load instead.
+
+[model] ok
+[load] 15Matches_LSTM.h5

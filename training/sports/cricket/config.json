@@ -1,0 +1,7 @@
+{
+  "sport": "cricket",
+  "shot_types": ["cover_drive", "pull_shot", "hook_shot", "straight_drive", "square_cut", "sweep", "defensive_block", "yorker", "bouncer"],
+  "lstm_weights": null,
+  "labeler_priority": ["groq"],
+  "groq_prompt": "You are looking at 3 sequential frames from a cricket match showing a batting shot or bowling delivery.\n\nIdentify from this list:\n- cover_drive: front-foot drive through cover region\n- pull_shot: short ball pulled to leg side\n- hook_shot: short ball hooked over the keeper\n- straight_drive: drive straight back past the bowler\n- square_cut: late cut shot square on off side\n- sweep: front-foot horizontal-bat shot to leg side\n- defensive_block: defensive forward push, no scoring intent\n- yorker: bowling — full-pitched ball at the toes (bowler delivery)\n- bouncer: bowling — short rising delivery (bowler delivery)\n\nRespond in EXACTLY this format, nothing else:\nSHOT: <one of: cover_drive|pull_shot|hook_shot|straight_drive|square_cut|sweep|defensive_block|yorker|bouncer|unknown>\nCONFIDENCE: <number from 0.0 to 1.0>"
+}
