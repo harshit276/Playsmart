@@ -281,22 +281,23 @@ export default function AssessmentPage() {
   const { refreshProfile, isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch sport configs
+  // Render immediately with FALLBACK_SPORTS — don't block the user on
+  // /api/sports (serverless cold start can be 10+s). If the API responds,
+  // merge in any extras; if it doesn't, the fallback is already live.
   useEffect(() => {
-    api.get("/sports").then(r => {
-      const apiSports = r.data.sports || [];
-      // Merge with fallback - ensure all 6 sports are present
-      const sportKeys = new Set(apiSports.map(s => s.key));
-      const merged = [...apiSports];
-      FALLBACK_SPORTS.forEach(fb => {
-        if (!sportKeys.has(fb.key)) merged.push(fb);
-      });
-      setSports(merged);
-      setLoadingSports(false);
-    }).catch(() => {
-      setSports(FALLBACK_SPORTS);
-      setLoadingSports(false);
-    });
+    setSports(FALLBACK_SPORTS);
+    setLoadingSports(false);
+    api.get("/sports", { timeout: 6000 }).then(r => {
+      const apiSports = r.data?.sports || [];
+      if (apiSports.length) {
+        const sportKeys = new Set(apiSports.map(s => s.key));
+        const merged = [...apiSports];
+        FALLBACK_SPORTS.forEach(fb => {
+          if (!sportKeys.has(fb.key)) merged.push(fb);
+        });
+        setSports(merged);
+      }
+    }).catch(() => {});
   }, []);
 
   // Login modal countdown timer
