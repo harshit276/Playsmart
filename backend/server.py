@@ -1032,18 +1032,33 @@ def _default_training_payload(active_sport: str, skill_level: str = "Beginner") 
     plan = {"weeks": [{"days": plan_days}]} if plan_days else None
 
     # Flatten all drills + videos across the plan into lookup maps the
-    # frontend expects
+    # frontend expects. Drills in skills.json may be plain strings OR
+    # dicts — normalize to dicts with an id/name.
     drills_map: dict = {}
     videos_map: dict = {}
     for day in plan_days:
-        for d in day.get("drills", []):
-            did = d.get("id") or d.get("name", "")
-            if did and did not in drills_map:
-                drills_map[did] = d
+        # Replace day's raw drill list with normalized dicts in place, so
+        # the frontend's day-level drill rendering also gets proper shapes.
+        normalized_drills = []
+        for idx, d in enumerate(day.get("drills", [])):
+            if isinstance(d, str):
+                did = f"{day.get('skill_id', 'drill')}_{idx}"
+                dd = {"id": did, "name": d[:80], "description": d, "skill_focus": day.get("focus", ""), "difficulty": "Beginner"}
+            elif isinstance(d, dict):
+                did = d.get("id") or f"{day.get('skill_id', 'drill')}_{idx}"
+                dd = {**d, "id": did}
+            else:
+                continue
+            normalized_drills.append(did)
+            if did not in drills_map:
+                drills_map[did] = dd
+        day["drills"] = normalized_drills
+
         for v in day.get("videos", []):
-            vid = v.get("id") or v.get("url", "")
-            if vid:
-                videos_map.setdefault(day.get("skill_id", "default"), []).append(v)
+            if not isinstance(v, dict):
+                continue
+            did = day.get("skill_id", "default")
+            videos_map.setdefault(did, []).append(v)
 
     # Training videos list (flat)
     if isinstance(videos, dict):
