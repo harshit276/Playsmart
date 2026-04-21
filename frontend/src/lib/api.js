@@ -11,21 +11,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Only drop the token when the AUTHENTICATION endpoint specifically
+// says the JWT is invalid. Previously, a random 401 from any other
+// endpoint (e.g. a misclassified DB error) was logging users out.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      const hadToken = !!localStorage.getItem('playsmart_token');
-      localStorage.removeItem('playsmart_token');
-      localStorage.removeItem('playsmart_user');
-      // Only redirect if user was previously logged in (token expired)
-      // and not on pages that work for guests
-      const guestPages = ['/', '/auth', '/analyze', '/highlights', '/equipment', '/training'];
-      const currentPath = window.location.pathname;
-      const isGuestPage = guestPages.some(p => currentPath === p || currentPath.startsWith(p + '/'));
-      if (hadToken && !isGuestPage) {
-        window.location.href = '/auth';
+      const url = err.config?.url || '';
+      const isAuthEndpoint = url.includes('/auth/me') || url.includes('/auth/refresh');
+      if (isAuthEndpoint) {
+        localStorage.removeItem('playsmart_token');
+        localStorage.removeItem('playsmart_user');
       }
+      // Never auto-redirect — let the AuthProvider decide based on real
+      // state so users stay on the page they were viewing.
     }
     return Promise.reject(err);
   }

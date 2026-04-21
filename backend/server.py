@@ -337,8 +337,20 @@ async def verify_otp(req: VerifyOTPRequest):
 
 @api_router.get("/auth/me")
 async def get_me(authorization: str = Header(None)):
+    # Auth check is JWT-only (no DB). Profile fetch is best-effort with a
+    # tight timeout — if Mongo flakes we still return the authenticated
+    # user so the client doesn't get a misleading 500 that triggers a
+    # spurious logout. `profile: null` tells the UI to skip personalised
+    # bits without treating the user as unauthenticated.
     user = await get_current_user(authorization)
-    profile = await db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    profile = None
+    try:
+        profile = await asyncio.wait_for(
+            db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}),
+            timeout=3.0,
+        )
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"/auth/me: profile fetch failed for {user['id'][:8]}: {e}")
     return {"user": user, "profile": profile}
 
 
