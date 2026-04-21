@@ -1,6 +1,6 @@
 {
   "sport": "badminton",
-  "last_updated": "2026-03-24",
+  "last_updated": "2026-04-22",
   "currency_note": "INR prices reflect March 2026 Indian market. USD prices approximate for international buyers.",
   "equipment_categories": [
     {
@@ -12,7 +12,10 @@
           "brand": "Cosco",
           "type": "All-round",
           "level": "beginner",
-          "recommended_for": ["beginner", "casual_player"],
+          "recommended_for": [
+            "beginner",
+            "casual_player"
+          ],
           "specs": {
             "weight": "95g (Standard)",
             "balance": "Even",
@@ -21,15 +24,27 @@
             "material": "Aluminum, Steel Shaft"
           },
           "price_ranges": {
-            "INR": {"min": 350, "max": 550},
-            "USD": {"min": 5, "max": 8}
+            "INR": {
+              "min": 350,
+              "max": 550
+            },
+            "USD": {
+              "min": 5,
+              "max": 8
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+CBX+450+badminton",
             "flipkart": "https://www.flipkart.com/search?q=cosco+cbx+450",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Cosco+CBX+450+badminton"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=cosco+cbx+450"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Cosco+CBX+450+badminton"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=cosco+cbx+450"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
@@ -41,7 +56,10 @@
           "brand": "Cosco",
           "type": "All-round",
           "level": "beginner",
-          "recommended_for": ["beginner", "casual_player"],
+          "recommended_for": [
+            "beginner",
+            "casual_player"
+          ],
           "specs": {
             "weight": "90g (Standard)",
             "balance": "Even",
@@ -50,15 +68,27 @@
             "material": "Aluminum Frame, Steel Shaft"
           },
           "price_ranges": {
-            "INR": {"min": 500, "max": 750},
-            "USD": {"min": 7, "max": 10}
+            "INR": {
+              "min": 500,
+              "max": 750
+            },
+            "USD": {
+              "min": 7,
+              "max": 10
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+CB+885+badminton",
             "flipkart": "https://www.flipkart.com/search?q=cosco+cb+885",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Cosco+CB+885+badminton"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=cosco+cb+885"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Cosco+CB+885+badminton"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=cosco+cb+885"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
@@ -70,7 +100,9 @@
           "brand": "Yonex",
           "type": "All-round",
           "level": "beginner",
-          "recommended_for": ["beginner"],
+          "recommended_for": [
+            "beginner"
+          ],
           "specs": {
             "weight": "90g (Standard)",
             "balance": "Even",
@@ -79,15 +111,27 @@
             "material": "Aluminum"
           },
           "price_ranges": {
-            "INR": {"min": 550, "max": 800},
-            "USD": {"min": 8, "max": 12}
+            "INR": {
+              "min": 550,
+              "max": 800
+            },
+            "USD": {
+              "min": 8,
+              "max": 12
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+GR+303",
             "flipkart": "https://www.flipkart.com/search?q=yonex+gr+303",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+GR+303"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+gr+303"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+GR+303"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+gr+303"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
@@ -99,7 +143,10 @@
           "brand": "Yonex",
           "type": "All-round",
           "level": "beginner",
-          "recommended_for": ["beginner", "all_rounder"],
+          "recommended_for": [
+            "beginner",
+            "all_rounder"
+          ],
           "specs": {
             "weight": "85g (3U/4U)",
             "balance": "Even",
@@ -108,15 +155,27 @@
             "material": "Graphite, Muscle Power Frame"
           },
           "price_ranges": {
-            "INR": {"min": 1200, "max": 1800},
-            "USD": {"min": 18, "max": 25}
+            "INR": {
+              "min": 1200,
+              "max": 1800
+            },
+            "USD": {
+              "min": 18,
+              "max": 25
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Muscle+Power+29",
             "flipkart": "https://www.flipkart.com/search?q=yonex+muscle+power+29",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Muscle+Power+29"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+muscle+power+29"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Muscle+Power+29"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+muscle+power+29"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
@@ -128,7 +187,9 @@
           "brand": "Li-Ning",
           "type": "All-round",
           "level": "beginner",
-          "recommended_for": ["beginner"],
+          "recommended_for": [
+            "beginner"
+          ],
           "specs": {
             "weight": "85g (4U)",
             "balance": "Even",
@@ -137,15 +198,27 @@
             "material": "Graphite"
           },
           "price_ranges": {
-            "INR": {"min": 800, "max": 1200},
-            "USD": {"min": 12, "max": 18}
+            "INR": {
+              "min": 800,
+              "max": 1200
+            },
+            "USD": {
+              "min": 12,
+              "max": 18
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Li-Ning+XP+2020+badminton",
             "flipkart": "https://www.flipkart.com/search?q=li-ning+xp+2020",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Li-Ning+XP+2020+badminton"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=li-ning+xp+2020"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Li-Ning+XP+2020+badminton"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=li-ning+xp+2020"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
@@ -157,7 +230,10 @@
           "brand": "Yonex",
           "type": "All-round",
           "level": "beginner",
-          "recommended_for": ["beginner", "all_rounder"],
+          "recommended_for": [
+            "beginner",
+            "all_rounder"
+          ],
           "specs": {
             "weight": "78g (5U)",
             "balance": "Even",
@@ -166,15 +242,27 @@
             "material": "Graphite, Nanomesh"
           },
           "price_ranges": {
-            "INR": {"min": 1800, "max": 2500},
-            "USD": {"min": 25, "max": 40}
+            "INR": {
+              "min": 1800,
+              "max": 2500
+            },
+            "USD": {
+              "min": 25,
+              "max": 40
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Voltric+Lite+20i",
             "flipkart": "https://www.flipkart.com/search?q=yonex+voltric+lite+20i",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Voltric+Lite+20i"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+voltric+lite+20i"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Voltric+Lite+20i"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+voltric+lite+20i"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
@@ -186,7 +274,10 @@
           "brand": "Yonex",
           "type": "Power",
           "level": "intermediate",
-          "recommended_for": ["intermediate", "power_player"],
+          "recommended_for": [
+            "intermediate",
+            "power_player"
+          ],
           "specs": {
             "weight": "82g (4U)",
             "balance": "Head Heavy",
@@ -195,15 +286,27 @@
             "material": "Graphite, Rotational Generator System"
           },
           "price_ranges": {
-            "INR": {"min": 3000, "max": 4500},
-            "USD": {"min": 40, "max": 60}
+            "INR": {
+              "min": 3000,
+              "max": 4500
+            },
+            "USD": {
+              "min": 40,
+              "max": 60
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Astrox+Lite+27i",
             "flipkart": "https://www.flipkart.com/search?q=yonex+astrox+lite+27i",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Astrox+Lite+27i"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+astrox+lite+27i"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Astrox+Lite+27i"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+astrox+lite+27i"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
@@ -215,7 +318,10 @@
           "brand": "Li-Ning",
           "type": "Power",
           "level": "intermediate",
-          "recommended_for": ["intermediate", "power_player"],
+          "recommended_for": [
+            "intermediate",
+            "power_player"
+          ],
           "specs": {
             "weight": "83g (4U)",
             "balance": "Head Heavy",
@@ -224,15 +330,27 @@
             "material": "Carbon Fiber + TB Nano"
           },
           "price_ranges": {
-            "INR": {"min": 9000, "max": 12000},
-            "USD": {"min": 110, "max": 150}
+            "INR": {
+              "min": 9000,
+              "max": 12000
+            },
+            "USD": {
+              "min": 110,
+              "max": 150
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Li-Ning+Axforce+80",
             "flipkart": "https://www.flipkart.com/search?q=li-ning+axforce+80",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Li-Ning+Axforce+80"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=li-ning+axforce+80"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Li-Ning+Axforce+80"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=li-ning+axforce+80"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
@@ -244,7 +362,10 @@
           "brand": "Victor",
           "type": "Power",
           "level": "intermediate",
-          "recommended_for": ["intermediate", "advanced"],
+          "recommended_for": [
+            "intermediate",
+            "advanced"
+          ],
           "specs": {
             "weight": "88g (3U)",
             "balance": "Head Heavy",
@@ -253,15 +374,27 @@
             "material": "HM Graphite + Pyrofil"
           },
           "price_ranges": {
-            "INR": {"min": 10000, "max": 13000},
-            "USD": {"min": 120, "max": 160}
+            "INR": {
+              "min": 10000,
+              "max": 13000
+            },
+            "USD": {
+              "min": 120,
+              "max": 160
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Victor+Thruster+K+9900",
             "flipkart": "https://www.flipkart.com/search?q=victor+thruster+k+9900",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Victor+Thruster+K+9900"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=victor+thruster+k+9900"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Victor+Thruster+K+9900"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=victor+thruster+k+9900"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
@@ -273,7 +406,10 @@
           "brand": "Yonex",
           "type": "Control",
           "level": "intermediate",
-          "recommended_for": ["intermediate", "advanced"],
+          "recommended_for": [
+            "intermediate",
+            "advanced"
+          ],
           "specs": {
             "weight": "88g (3U)",
             "balance": "Even",
@@ -282,15 +418,27 @@
             "material": "HM Graphite + Pocketing Booster"
           },
           "price_ranges": {
-            "INR": {"min": 10000, "max": 14000},
-            "USD": {"min": 120, "max": 170}
+            "INR": {
+              "min": 10000,
+              "max": 14000
+            },
+            "USD": {
+              "min": 120,
+              "max": 170
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Arcsaber+11+Pro",
             "flipkart": "https://www.flipkart.com/search?q=yonex+arcsaber+11+pro",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Arcsaber+11+Pro"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+arcsaber+11+pro"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Arcsaber+11+Pro"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+arcsaber+11+pro"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
@@ -302,7 +450,9 @@
           "brand": "Yonex",
           "type": "Power",
           "level": "advanced",
-          "recommended_for": ["advanced"],
+          "recommended_for": [
+            "advanced"
+          ],
           "specs": {
             "weight": "83g (4U)",
             "balance": "Head Heavy",
@@ -311,15 +461,27 @@
             "material": "HM Graphite + Tungsten"
           },
           "price_ranges": {
-            "INR": {"min": 12000, "max": 16000},
-            "USD": {"min": 150, "max": 200}
+            "INR": {
+              "min": 12000,
+              "max": 16000
+            },
+            "USD": {
+              "min": 150,
+              "max": 200
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Astrox+88D+Pro",
             "flipkart": "https://www.flipkart.com/search?q=yonex+astrox+88d+pro",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Astrox+88D+Pro"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+astrox+88d+pro"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Astrox+88D+Pro"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+astrox+88d+pro"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
@@ -331,7 +493,9 @@
           "brand": "Yonex",
           "type": "Power",
           "level": "advanced",
-          "recommended_for": ["advanced"],
+          "recommended_for": [
+            "advanced"
+          ],
           "specs": {
             "weight": "88g (3U)",
             "balance": "Head Heavy",
@@ -340,15 +504,27 @@
             "material": "HM Graphite + Namd"
           },
           "price_ranges": {
-            "INR": {"min": 13000, "max": 17000},
-            "USD": {"min": 160, "max": 210}
+            "INR": {
+              "min": 13000,
+              "max": 17000
+            },
+            "USD": {
+              "min": 160,
+              "max": 210
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Astrox+99+Pro",
             "flipkart": "https://www.flipkart.com/search?q=yonex+astrox+99+pro",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Astrox+99+Pro"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+astrox+99+pro"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Astrox+99+Pro"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+astrox+99+pro"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
@@ -360,7 +536,9 @@
           "brand": "Perfly (Decathlon)",
           "type": "Power",
           "level": "intermediate",
-          "recommended_for": ["intermediate"],
+          "recommended_for": [
+            "intermediate"
+          ],
           "specs": {
             "weight": "83g (4U)",
             "balance": "Head Heavy",
@@ -369,19 +547,444 @@
             "material": "Carbon Fiber"
           },
           "price_ranges": {
-            "INR": {"min": 4000, "max": 5500},
-            "USD": {"min": 50, "max": 70}
+            "INR": {
+              "min": 4000,
+              "max": 5500
+            },
+            "USD": {
+              "min": 50,
+              "max": 70
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Perfly+BR+990P+badminton",
             "flipkart": "https://www.flipkart.com/search?q=perfly+br+990p",
             "india": [
-              {"store": "Decathlon India", "url": "https://www.decathlon.in/search?q=perfly+br+990p"},
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Perfly+BR+990P+badminton"}
+              {
+                "store": "Decathlon India",
+                "url": "https://www.decathlon.in/search?q=perfly+br+990p"
+              },
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Perfly+BR+990P+badminton"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
           "description": "Decathlon's performance racket. Impressive specs at a fraction of premium brand prices."
+        },
+        {
+          "id": "bd_r21",
+          "name": "Apacs Ziggler 555",
+          "brand": "Apacs",
+          "type": "All-round",
+          "level": "beginner",
+          "recommended_for": [
+            "beginner",
+            "all_rounder"
+          ],
+          "specs": {
+            "weight": "85g (4U)",
+            "balance": "Even",
+            "shaft_flexibility": "Medium",
+            "string_tension": "up to 30 lbs",
+            "material": "High-Modulus Graphite"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1500,
+              "max": 2500
+            },
+            "USD": {
+              "min": 20,
+              "max": 32
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Apacs+Ziggler+555",
+            "flipkart": "https://www.flipkart.com/search?q=apacs+ziggler+555",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Apacs+Ziggler+555"
+              },
+              {
+                "store": "Sportsuncle",
+                "url": "https://www.sportsuncle.com/search?q=apacs+ziggler+555"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71tQI-5QPZL._SL1500_.jpg",
+          "description": "Malaysian brand Apacs's popular budget-friendly all-rounder. Surprisingly durable graphite build at this price; a common upgrade from aluminum starter rackets."
+        },
+        {
+          "id": "bd_r22",
+          "name": "Apacs Feather Weight 55",
+          "brand": "Apacs",
+          "type": "Light Head-Heavy",
+          "level": "advanced",
+          "recommended_for": [
+            "advanced",
+            "attacker",
+            "singles_player"
+          ],
+          "specs": {
+            "weight": "55g (ultra-light)",
+            "balance": "Head-Heavy",
+            "shaft_flexibility": "Stiff",
+            "string_tension": "up to 32 lbs",
+            "material": "Woven Carbon, Nano Titanium"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7500,
+              "max": 9500
+            },
+            "USD": {
+              "min": 95,
+              "max": 125
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Apacs+Feather+Weight+55",
+            "flipkart": "https://www.flipkart.com/search?q=apacs+feather+weight+55",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Apacs+Feather+Weight+55"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61k7Xg5JGeL._SL1500_.jpg",
+          "description": "World's lightest production badminton racket at 55g. Unusual combination of ultra-light + head-heavy — gives advanced attackers sniper-accurate control at the net while retaining smash speed. Premium price, niche appeal."
+        },
+        {
+          "id": "bd_r23",
+          "name": "Apacs Finapi 201",
+          "brand": "Apacs",
+          "type": "All-round",
+          "level": "intermediate",
+          "recommended_for": [
+            "intermediate",
+            "all_rounder"
+          ],
+          "specs": {
+            "weight": "85g (4U)",
+            "balance": "Even-Slightly Head-Heavy",
+            "shaft_flexibility": "Medium-Stiff",
+            "string_tension": "up to 30 lbs",
+            "material": "High-Modulus Graphite"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 3500
+            },
+            "USD": {
+              "min": 32,
+              "max": 45
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Apacs+Finapi+201",
+            "flipkart": "https://www.flipkart.com/search?q=apacs+finapi+201",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Apacs+Finapi+201"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61cGQk5pqZL._SL1500_.jpg",
+          "description": "Balanced intermediate racket that performs well beyond its price. Good starter for club-level players wanting to move past entry-level gear."
+        },
+        {
+          "id": "bd_r24",
+          "name": "Apacs Nano Power 900",
+          "brand": "Apacs",
+          "type": "Offensive",
+          "level": "intermediate",
+          "recommended_for": [
+            "intermediate",
+            "power",
+            "attacker"
+          ],
+          "specs": {
+            "weight": "88g (3U)",
+            "balance": "Head-Heavy",
+            "shaft_flexibility": "Stiff",
+            "string_tension": "up to 30 lbs",
+            "material": "Nano Carbon"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3000
+            },
+            "USD": {
+              "min": 26,
+              "max": 38
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Apacs+Nano+Power+900",
+            "flipkart": "https://www.flipkart.com/search?q=apacs+nano+power+900",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Apacs+Nano+Power+900"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61wG5hx9MIL._SL1500_.jpg",
+          "description": "Aggressive head-heavy racket at a very accessible price. Built for players who want to smash hard without spending Yonex-tier money."
+        },
+        {
+          "id": "bd_r25",
+          "name": "FZ Forza Light 7.1",
+          "brand": "FZ Forza",
+          "type": "Defensive / Doubles",
+          "level": "intermediate",
+          "recommended_for": [
+            "intermediate",
+            "doubles_player",
+            "defender"
+          ],
+          "specs": {
+            "weight": "81g (5U)",
+            "balance": "Head-Light",
+            "shaft_flexibility": "Medium",
+            "string_tension": "up to 28 lbs",
+            "material": "High Modulus Graphite"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 3500
+            },
+            "USD": {
+              "min": 32,
+              "max": 45
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=FZ+Forza+Light+7.1",
+            "flipkart": "https://www.flipkart.com/search?q=fz+forza+light+7.1",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=FZ+Forza+Light+7.1"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61qJvzOhZdL._SL1500_.jpg",
+          "description": "Danish brand FZ Forza's ultra-light head-light racket, ideal for doubles front-court play and defensive counters. Lightning-fast in rapid exchanges at the net."
+        },
+        {
+          "id": "bd_r26",
+          "name": "FZ Forza Power 988",
+          "brand": "FZ Forza",
+          "type": "Offensive",
+          "level": "advanced",
+          "recommended_for": [
+            "advanced",
+            "attacker",
+            "singles_player"
+          ],
+          "specs": {
+            "weight": "88g (3U)",
+            "balance": "Head-Heavy",
+            "shaft_flexibility": "Stiff",
+            "string_tension": "up to 32 lbs",
+            "material": "Nano-Carbon Tech"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4500,
+              "max": 6500
+            },
+            "USD": {
+              "min": 58,
+              "max": 85
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=FZ+Forza+Power+988",
+            "flipkart": "https://www.flipkart.com/search?q=fz+forza+power+988",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=FZ+Forza+Power+988"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/51yZAXFnRlL._SL1500_.jpg",
+          "description": "Head-heavy stiff shaft = classic attacker's racket. Used by several European tour players. Good Yonex Astrox alternative for advanced players wanting a different feel."
+        },
+        {
+          "id": "bd_r27",
+          "name": "Hundred Powertek 1000",
+          "brand": "Hundred",
+          "type": "All-round",
+          "level": "beginner",
+          "recommended_for": [
+            "beginner",
+            "casual_player",
+            "all_rounder"
+          ],
+          "specs": {
+            "weight": "85g (4U)",
+            "balance": "Even",
+            "shaft_flexibility": "Flexible",
+            "string_tension": "up to 26 lbs",
+            "material": "Carbon Graphite"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 1800
+            },
+            "USD": {
+              "min": 16,
+              "max": 24
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Hundred+Powertek+1000",
+            "flipkart": "https://www.flipkart.com/search?q=hundred+powertek+1000",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Hundred+Powertek+1000"
+              },
+              {
+                "store": "Decathlon India",
+                "url": "https://www.decathlon.in/search?q=hundred+powertek"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61P9f1dKdNL._SL1500_.jpg",
+          "description": "Indian brand Hundred's popular entry-level all-rounder. Very affordable, widely stocked — a common first 'real' racket for school and college players."
+        },
+        {
+          "id": "bd_r28",
+          "name": "Hundred Rock Z 90",
+          "brand": "Hundred",
+          "type": "Offensive",
+          "level": "intermediate",
+          "recommended_for": [
+            "intermediate",
+            "attacker"
+          ],
+          "specs": {
+            "weight": "88g (3U)",
+            "balance": "Head-Heavy",
+            "shaft_flexibility": "Medium",
+            "string_tension": "up to 28 lbs",
+            "material": "Carbon Graphite"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1800,
+              "max": 2500
+            },
+            "USD": {
+              "min": 24,
+              "max": 32
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Hundred+Rock+Z+90",
+            "flipkart": "https://www.flipkart.com/search?q=hundred+rock+z+90",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Hundred+Rock+Z+90"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61j5HSZwkYL._SL1500_.jpg",
+          "description": "Affordable head-heavy attacker racket from Hundred. Good step-up option for players outgrowing beginner frames but not ready for 5000+ INR gear."
+        },
+        {
+          "id": "bd_r29",
+          "name": "Mizuno Fortius 65",
+          "brand": "Mizuno",
+          "type": "Light Head-Heavy",
+          "level": "intermediate",
+          "recommended_for": [
+            "intermediate",
+            "all_rounder"
+          ],
+          "specs": {
+            "weight": "80g (5U)",
+            "balance": "Slightly Head-Heavy",
+            "shaft_flexibility": "Medium",
+            "string_tension": "up to 30 lbs",
+            "material": "Premium Graphite"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 3500,
+              "max": 5000
+            },
+            "USD": {
+              "min": 45,
+              "max": 65
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Mizuno+Fortius+65",
+            "flipkart": "https://www.flipkart.com/search?q=mizuno+fortius+65",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Mizuno+Fortius+65"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/51RYVgLM-sL._SL1000_.jpg",
+          "description": "Mizuno's entry into the Indian badminton market. Balanced 5U frame good for players who want Japanese build quality without Yonex prices."
+        },
+        {
+          "id": "bd_r30",
+          "name": "Mizuno JPX Limited",
+          "brand": "Mizuno",
+          "type": "All-round",
+          "level": "advanced",
+          "recommended_for": [
+            "advanced",
+            "all_rounder"
+          ],
+          "specs": {
+            "weight": "85g (4U)",
+            "balance": "Even",
+            "shaft_flexibility": "Medium-Stiff",
+            "string_tension": "up to 32 lbs",
+            "material": "Premium Japanese Graphite, Carbon Nano"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7000,
+              "max": 9500
+            },
+            "USD": {
+              "min": 90,
+              "max": 125
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Mizuno+JPX+Limited",
+            "flipkart": "https://www.flipkart.com/search?q=mizuno+jpx+limited",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Mizuno+JPX+Limited"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71qIrF7MAlL._SL1500_.jpg",
+          "description": "Premium all-rounder aimed at advanced players who want a refined, neutral feel. Solid build quality typical of Japanese manufacturing."
         }
       ]
     },
@@ -394,17 +997,33 @@
           "brand": "Perfly (Decathlon)",
           "type": "Court Shoes",
           "level": "beginner",
-          "specs": {"sole": "Non-marking rubber", "cushion": "EVA", "weight": "340g"},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "EVA",
+            "weight": "340g"
+          },
           "price_ranges": {
-            "INR": {"min": 1500, "max": 2500},
-            "USD": {"min": 20, "max": 35}
+            "INR": {
+              "min": 1500,
+              "max": 2500
+            },
+            "USD": {
+              "min": 20,
+              "max": 35
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Perfly+BS+560+badminton+shoes",
             "flipkart": "https://www.flipkart.com/search?q=perfly+bs+560+shoes",
             "india": [
-              {"store": "Decathlon India", "url": "https://www.decathlon.in/search?q=perfly+bs+560"},
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Perfly+BS+560+badminton+shoes"}
+              {
+                "store": "Decathlon India",
+                "url": "https://www.decathlon.in/search?q=perfly+bs+560"
+              },
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Perfly+BS+560+badminton+shoes"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
@@ -416,17 +1035,33 @@
           "brand": "Nivia",
           "type": "Court Shoes",
           "level": "beginner",
-          "specs": {"sole": "Non-marking rubber", "cushion": "EVA", "weight": "330g"},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "EVA",
+            "weight": "330g"
+          },
           "price_ranges": {
-            "INR": {"min": 1000, "max": 1800},
-            "USD": {"min": 12, "max": 25}
+            "INR": {
+              "min": 1000,
+              "max": 1800
+            },
+            "USD": {
+              "min": 12,
+              "max": 25
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+HY+Court+badminton+shoes",
             "flipkart": "https://www.flipkart.com/search?q=nivia+hy+court+badminton+shoes",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Nivia+HY+Court+badminton+shoes"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=nivia+hy+court+badminton+shoes"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Nivia+HY+Court+badminton+shoes"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=nivia+hy+court+badminton+shoes"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
@@ -438,17 +1073,33 @@
           "brand": "Yonex",
           "type": "Court Shoes",
           "level": "beginner",
-          "specs": {"sole": "Non-marking rubber", "cushion": "Power Cushion", "weight": "310g"},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "Power Cushion",
+            "weight": "310g"
+          },
           "price_ranges": {
-            "INR": {"min": 3500, "max": 4500},
-            "USD": {"min": 45, "max": 60}
+            "INR": {
+              "min": 3500,
+              "max": 4500
+            },
+            "USD": {
+              "min": 45,
+              "max": 60
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+SHB+37EX",
             "flipkart": "https://www.flipkart.com/search?q=yonex+shb+37ex",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+SHB+37EX"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+shb+37ex"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+SHB+37EX"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+shb+37ex"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
@@ -460,17 +1111,33 @@
           "brand": "Li-Ning",
           "type": "Court Shoes",
           "level": "intermediate",
-          "specs": {"sole": "Non-marking rubber", "cushion": "Cloud Lite", "weight": "295g"},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "Cloud Lite",
+            "weight": "295g"
+          },
           "price_ranges": {
-            "INR": {"min": 4000, "max": 5500},
-            "USD": {"min": 50, "max": 70}
+            "INR": {
+              "min": 4000,
+              "max": 5500
+            },
+            "USD": {
+              "min": 50,
+              "max": 70
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Li-Ning+Saga+Lite+3+badminton",
             "flipkart": "https://www.flipkart.com/search?q=li-ning+saga+lite+3",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Li-Ning+Saga+Lite+3+badminton"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=li-ning+saga+lite+3"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Li-Ning+Saga+Lite+3+badminton"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=li-ning+saga+lite+3"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
@@ -482,17 +1149,33 @@
           "brand": "Victor",
           "type": "Court Shoes",
           "level": "intermediate",
-          "specs": {"sole": "VSR rubber", "cushion": "Energymax", "weight": "300g"},
+          "specs": {
+            "sole": "VSR rubber",
+            "cushion": "Energymax",
+            "weight": "300g"
+          },
           "price_ranges": {
-            "INR": {"min": 6000, "max": 8500},
-            "USD": {"min": 75, "max": 105}
+            "INR": {
+              "min": 6000,
+              "max": 8500
+            },
+            "USD": {
+              "min": 75,
+              "max": 105
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Victor+A960+badminton+shoes",
             "flipkart": "https://www.flipkart.com/search?q=victor+a960+badminton+shoes",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Victor+A960+badminton+shoes"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=victor+a960+badminton+shoes"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Victor+A960+badminton+shoes"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=victor+a960+badminton+shoes"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
@@ -504,17 +1187,33 @@
           "brand": "Yonex",
           "type": "Court Shoes",
           "level": "advanced",
-          "specs": {"sole": "Non-marking rubber", "cushion": "Power Cushion+", "weight": "310g"},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "Power Cushion+",
+            "weight": "310g"
+          },
           "price_ranges": {
-            "INR": {"min": 8000, "max": 11000},
-            "USD": {"min": 100, "max": 140}
+            "INR": {
+              "min": 8000,
+              "max": 11000
+            },
+            "USD": {
+              "min": 100,
+              "max": 140
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Power+Cushion+65Z3",
             "flipkart": "https://www.flipkart.com/search?q=yonex+65z3+badminton+shoes",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Power+Cushion+65Z3"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+65z3+badminton+shoes"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Power+Cushion+65Z3"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+65z3+badminton+shoes"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
@@ -526,21 +1225,154 @@
           "brand": "Yonex",
           "type": "Court Shoes",
           "level": "advanced",
-          "specs": {"sole": "Non-marking rubber", "cushion": "Power Cushion", "weight": "260g"},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "Power Cushion",
+            "weight": "260g"
+          },
           "price_ranges": {
-            "INR": {"min": 9000, "max": 12000},
-            "USD": {"min": 110, "max": 150}
+            "INR": {
+              "min": 9000,
+              "max": 12000
+            },
+            "USD": {
+              "min": 110,
+              "max": 150
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Aerus+Z2+badminton",
             "flipkart": "https://www.flipkart.com/search?q=yonex+aerus+z2+badminton",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Aerus+Z2+badminton"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+aerus+z2+badminton"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Aerus+Z2+badminton"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+aerus+z2+badminton"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
           "description": "Ultra-light court shoe for speed-focused players. Incredible agility on court."
+        },
+        {
+          "id": "bd_sh08",
+          "name": "Apacs Cushion Power 091",
+          "brand": "Apacs",
+          "type": "Court Shoe",
+          "level": "beginner",
+          "recommended_for": [
+            "beginner",
+            "intermediate"
+          ],
+          "specs": {
+            "cushioning": "Medium",
+            "grip": "Non-marking gum rubber",
+            "support": "Medium",
+            "weight": "340g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3000
+            },
+            "USD": {
+              "min": 26,
+              "max": 38
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Apacs+Cushion+Power+091",
+            "flipkart": "https://www.flipkart.com/search?q=apacs+cushion+power+091",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Apacs+Cushion+Power+091"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61WsGLrQn4L._SL1500_.jpg",
+          "description": "Mid-range court shoe at a beginner-friendly price. Good cushioning for footwork drills, gum-rubber outsole won't leave marks on indoor courts."
+        },
+        {
+          "id": "bd_sh09",
+          "name": "Hundred Court Pro",
+          "brand": "Hundred",
+          "type": "Court Shoe",
+          "level": "intermediate",
+          "recommended_for": [
+            "intermediate",
+            "all_rounder"
+          ],
+          "specs": {
+            "cushioning": "Gel",
+            "grip": "Non-marking rubber",
+            "support": "High",
+            "weight": "320g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 3500
+            },
+            "USD": {
+              "min": 32,
+              "max": 45
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Hundred+Court+Pro",
+            "flipkart": "https://www.flipkart.com/search?q=hundred+court+pro",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Hundred+Court+Pro"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61Q8j-4CTFL._SL1500_.jpg",
+          "description": "Popular choice at club level in India. Gel cushion system plus higher ankle support helps with quick lateral cuts."
+        },
+        {
+          "id": "bd_sh10",
+          "name": "Mizuno Wave Claw 2",
+          "brand": "Mizuno",
+          "type": "Court Shoe",
+          "level": "advanced",
+          "recommended_for": [
+            "advanced",
+            "tournament_player"
+          ],
+          "specs": {
+            "cushioning": "Mizuno Wave Plate",
+            "grip": "X10 non-marking",
+            "support": "Very High",
+            "weight": "290g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6000,
+              "max": 9000
+            },
+            "USD": {
+              "min": 75,
+              "max": 115
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Mizuno+Wave+Claw+2",
+            "flipkart": "https://www.flipkart.com/search?q=mizuno+wave+claw+2",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Mizuno+Wave+Claw+2"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71qNC4HjlxL._SL1500_.jpg",
+          "description": "Mizuno's flagship badminton shoe. Lightweight (290g), aggressive X10 outsole grip, and the Wave Plate cushioning is legitimately one of the best in the sport. Direct competitor to Yonex Aerus Z."
         }
       ]
     },
@@ -553,17 +1385,33 @@
           "brand": "Cosco",
           "type": "Nylon Shuttlecock",
           "level": "beginner",
-          "specs": {"material": "Nylon", "speed": "Medium", "durability": "High"},
+          "specs": {
+            "material": "Nylon",
+            "speed": "Medium",
+            "durability": "High"
+          },
           "price_ranges": {
-            "INR": {"min": 150, "max": 300},
-            "USD": {"min": 2, "max": 5}
+            "INR": {
+              "min": 150,
+              "max": 300
+            },
+            "USD": {
+              "min": 2,
+              "max": 5
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+Aero+777+shuttlecock",
             "flipkart": "https://www.flipkart.com/search?q=cosco+aero+777+shuttlecock",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Cosco+Aero+777+shuttlecock"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=cosco+aero+777+shuttlecock"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Cosco+Aero+777+shuttlecock"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=cosco+aero+777+shuttlecock"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
@@ -575,17 +1423,33 @@
           "brand": "Yonex",
           "type": "Nylon Shuttlecock",
           "level": "beginner",
-          "specs": {"material": "Nylon", "speed": "Medium", "durability": "High"},
+          "specs": {
+            "material": "Nylon",
+            "speed": "Medium",
+            "durability": "High"
+          },
           "price_ranges": {
-            "INR": {"min": 400, "max": 600},
-            "USD": {"min": 6, "max": 9}
+            "INR": {
+              "min": 400,
+              "max": 600
+            },
+            "USD": {
+              "min": 6,
+              "max": 9
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Mavis+350",
             "flipkart": "https://www.flipkart.com/search?q=yonex+mavis+350",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Mavis+350"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+mavis+350"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Mavis+350"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+mavis+350"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
@@ -597,17 +1461,33 @@
           "brand": "Yonex",
           "type": "Nylon Shuttlecock",
           "level": "intermediate",
-          "specs": {"material": "Nylon", "speed": "Medium-Fast", "durability": "High"},
+          "specs": {
+            "material": "Nylon",
+            "speed": "Medium-Fast",
+            "durability": "High"
+          },
           "price_ranges": {
-            "INR": {"min": 600, "max": 900},
-            "USD": {"min": 8, "max": 12}
+            "INR": {
+              "min": 600,
+              "max": 900
+            },
+            "USD": {
+              "min": 8,
+              "max": 12
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Mavis+10",
             "flipkart": "https://www.flipkart.com/search?q=yonex+mavis+10",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Mavis+10"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+mavis+10"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Mavis+10"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+mavis+10"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
@@ -619,17 +1499,33 @@
           "brand": "Li-Ning",
           "type": "Feather Shuttlecock",
           "level": "intermediate",
-          "specs": {"material": "Goose Feather", "speed": "Medium-Fast", "durability": "Medium"},
+          "specs": {
+            "material": "Goose Feather",
+            "speed": "Medium-Fast",
+            "durability": "Medium"
+          },
           "price_ranges": {
-            "INR": {"min": 1200, "max": 1800},
-            "USD": {"min": 15, "max": 22}
+            "INR": {
+              "min": 1200,
+              "max": 1800
+            },
+            "USD": {
+              "min": 15,
+              "max": 22
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Li-Ning+A%2B300+shuttlecock",
             "flipkart": "https://www.flipkart.com/search?q=li-ning+a+300+shuttlecock",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Li-Ning+A%2B300+shuttlecock"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=li-ning+a+300+shuttlecock"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Li-Ning+A%2B300+shuttlecock"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=li-ning+a+300+shuttlecock"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
@@ -641,17 +1537,33 @@
           "brand": "Yonex",
           "type": "Feather Shuttlecock",
           "level": "advanced",
-          "specs": {"material": "Goose Feather", "speed": "Medium", "durability": "Medium"},
+          "specs": {
+            "material": "Goose Feather",
+            "speed": "Medium",
+            "durability": "Medium"
+          },
           "price_ranges": {
-            "INR": {"min": 1600, "max": 2200},
-            "USD": {"min": 20, "max": 28}
+            "INR": {
+              "min": 1600,
+              "max": 2200
+            },
+            "USD": {
+              "min": 20,
+              "max": 28
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+AS-30+shuttlecock",
             "flipkart": "https://www.flipkart.com/search?q=yonex+as+30+shuttlecock",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+AS-30+shuttlecock"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+as+30+shuttlecock"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+AS-30+shuttlecock"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+as+30+shuttlecock"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
@@ -663,17 +1575,33 @@
           "brand": "Yonex",
           "type": "Feather Shuttlecock",
           "level": "advanced",
-          "specs": {"material": "Goose Feather", "speed": "Medium", "durability": "Medium"},
+          "specs": {
+            "material": "Goose Feather",
+            "speed": "Medium",
+            "durability": "Medium"
+          },
           "price_ranges": {
-            "INR": {"min": 2000, "max": 2800},
-            "USD": {"min": 25, "max": 35}
+            "INR": {
+              "min": 2000,
+              "max": 2800
+            },
+            "USD": {
+              "min": 25,
+              "max": 35
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+AS-50+shuttlecock",
             "flipkart": "https://www.flipkart.com/search?q=yonex+as+50+shuttlecock",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+AS-50+shuttlecock"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+as+50+shuttlecock"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+AS-50+shuttlecock"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+as+50+shuttlecock"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
@@ -690,17 +1618,34 @@
           "brand": "Yonex",
           "type": "All-round String",
           "level": "beginner",
-          "specs": {"gauge": "0.70mm", "repulsion": 7, "durability": 9, "control": 8},
+          "specs": {
+            "gauge": "0.70mm",
+            "repulsion": 7,
+            "durability": 9,
+            "control": 8
+          },
           "price_ranges": {
-            "INR": {"min": 300, "max": 500},
-            "USD": {"min": 4, "max": 7}
+            "INR": {
+              "min": 300,
+              "max": 500
+            },
+            "USD": {
+              "min": 4,
+              "max": 7
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+BG65+badminton+string",
             "flipkart": "https://www.flipkart.com/search?q=yonex+bg65",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+BG65+badminton+string"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+bg65"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+BG65+badminton+string"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+bg65"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
@@ -712,17 +1657,34 @@
           "brand": "Li-Ning",
           "type": "All-round String",
           "level": "beginner",
-          "specs": {"gauge": "0.65mm", "repulsion": 8, "durability": 7, "control": 7},
+          "specs": {
+            "gauge": "0.65mm",
+            "repulsion": 8,
+            "durability": 7,
+            "control": 7
+          },
           "price_ranges": {
-            "INR": {"min": 250, "max": 450},
-            "USD": {"min": 3, "max": 6}
+            "INR": {
+              "min": 250,
+              "max": 450
+            },
+            "USD": {
+              "min": 3,
+              "max": 6
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Li-Ning+No+1+badminton+string",
             "flipkart": "https://www.flipkart.com/search?q=li-ning+no+1+string",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Li-Ning+No+1+badminton+string"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=li-ning+no+1+string"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Li-Ning+No+1+badminton+string"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=li-ning+no+1+string"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
@@ -734,17 +1696,34 @@
           "brand": "Yonex",
           "type": "Power String",
           "level": "intermediate",
-          "specs": {"gauge": "0.68mm", "repulsion": 9, "durability": 7, "control": 8},
+          "specs": {
+            "gauge": "0.68mm",
+            "repulsion": 9,
+            "durability": 7,
+            "control": 8
+          },
           "price_ranges": {
-            "INR": {"min": 500, "max": 750},
-            "USD": {"min": 7, "max": 10}
+            "INR": {
+              "min": 500,
+              "max": 750
+            },
+            "USD": {
+              "min": 7,
+              "max": 10
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+BG80+string",
             "flipkart": "https://www.flipkart.com/search?q=yonex+bg80",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+BG80+string"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+bg80"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+BG80+string"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+bg80"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
@@ -756,17 +1735,34 @@
           "brand": "Victor",
           "type": "Power String",
           "level": "intermediate",
-          "specs": {"gauge": "0.68mm", "repulsion": 9, "durability": 7, "control": 7},
+          "specs": {
+            "gauge": "0.68mm",
+            "repulsion": 9,
+            "durability": 7,
+            "control": 7
+          },
           "price_ranges": {
-            "INR": {"min": 400, "max": 650},
-            "USD": {"min": 5, "max": 9}
+            "INR": {
+              "min": 400,
+              "max": 650
+            },
+            "USD": {
+              "min": 5,
+              "max": 9
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Victor+VBS+68P+string",
             "flipkart": "https://www.flipkart.com/search?q=victor+vbs+68p",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Victor+VBS+68P+string"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=victor+vbs+68p"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Victor+VBS+68P+string"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=victor+vbs+68p"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
@@ -778,21 +1774,143 @@
           "brand": "Yonex",
           "type": "Hybrid String",
           "level": "advanced",
-          "specs": {"gauge": "0.67mm/0.61mm", "repulsion": 8, "durability": 6, "control": 9},
+          "specs": {
+            "gauge": "0.67mm/0.61mm",
+            "repulsion": 8,
+            "durability": 6,
+            "control": 9
+          },
           "price_ranges": {
-            "INR": {"min": 600, "max": 900},
-            "USD": {"min": 8, "max": 12}
+            "INR": {
+              "min": 600,
+              "max": 900
+            },
+            "USD": {
+              "min": 8,
+              "max": 12
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Aerobite+string",
             "flipkart": "https://www.flipkart.com/search?q=yonex+aerobite",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Aerobite+string"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+aerobite"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Aerobite+string"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+aerobite"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
           "description": "Hybrid string for enhanced spin and control. Used by pro players for deceptive shots."
+        },
+        {
+          "id": "bd_st06",
+          "name": "Apacs 68",
+          "brand": "Apacs",
+          "type": "All-round",
+          "level": "intermediate",
+          "specs": {
+            "gauge": "0.68mm",
+            "repulsion": 7,
+            "durability": 7,
+            "control": 7
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 200,
+              "max": 400
+            },
+            "USD": {
+              "min": 3,
+              "max": 5
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Apacs+68+string+badminton",
+            "flipkart": "https://www.flipkart.com/search?q=apacs+68+string",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Apacs+68+string+badminton"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61ccv3mCnoL._SL1500_.jpg",
+          "description": "Apacs's all-rounder string. Decent repulsion with good durability. Popular cheap upgrade from stock strings."
+        },
+        {
+          "id": "bd_st07",
+          "name": "Ashaway ZyMax 66F",
+          "brand": "Ashaway",
+          "type": "Power String",
+          "level": "advanced",
+          "specs": {
+            "gauge": "0.66mm",
+            "repulsion": 9,
+            "durability": 6,
+            "control": 8
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 900
+            },
+            "USD": {
+              "min": 8,
+              "max": 12
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Ashaway+ZyMax+66F",
+            "flipkart": "https://www.flipkart.com/search?q=ashaway+zymax+66f",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Ashaway+ZyMax+66F"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/51uoqEZTJYL._SL1000_.jpg",
+          "description": "American-brand thin-gauge string favored by advanced attackers for sharp repulsion on smashes. Trade-off: lower durability — expect restringing every 3-4 weeks of regular play."
+        },
+        {
+          "id": "bd_st08",
+          "name": "Gosen G-Tone 5",
+          "brand": "Gosen",
+          "type": "Durability String",
+          "level": "intermediate",
+          "specs": {
+            "gauge": "0.70mm",
+            "repulsion": 6,
+            "durability": 9,
+            "control": 7
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 400,
+              "max": 650
+            },
+            "USD": {
+              "min": 5,
+              "max": 9
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Gosen+G-Tone+5",
+            "flipkart": "https://www.flipkart.com/search?q=gosen+g-tone+5",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Gosen+G-Tone+5"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/51GAh1hQ2nL._SL1000_.jpg",
+          "description": "Japanese Gosen's thick, durable string. Ideal for hard hitters who break strings often. Modest repulsion but lasts 3-4× longer than thin strings."
         }
       ]
     },
@@ -805,17 +1923,33 @@
           "brand": "Yonex",
           "type": "Overgrip",
           "level": "beginner",
-          "specs": {"thickness": "0.6mm", "tackiness": "High", "absorption": "High"},
+          "specs": {
+            "thickness": "0.6mm",
+            "tackiness": "High",
+            "absorption": "High"
+          },
           "price_ranges": {
-            "INR": {"min": 150, "max": 300},
-            "USD": {"min": 2, "max": 5}
+            "INR": {
+              "min": 150,
+              "max": 300
+            },
+            "USD": {
+              "min": 2,
+              "max": 5
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Super+Grap",
             "flipkart": "https://www.flipkart.com/search?q=yonex+super+grap",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+Super+Grap"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+super+grap"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+Super+Grap"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+super+grap"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
@@ -827,17 +1961,33 @@
           "brand": "Victor",
           "type": "Overgrip",
           "level": "beginner",
-          "specs": {"thickness": "0.65mm", "tackiness": "Medium", "absorption": "High"},
+          "specs": {
+            "thickness": "0.65mm",
+            "tackiness": "Medium",
+            "absorption": "High"
+          },
           "price_ranges": {
-            "INR": {"min": 120, "max": 250},
-            "USD": {"min": 2, "max": 4}
+            "INR": {
+              "min": 120,
+              "max": 250
+            },
+            "USD": {
+              "min": 2,
+              "max": 4
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Victor+GR262+grip",
             "flipkart": "https://www.flipkart.com/search?q=victor+gr262+grip",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Victor+GR262+grip"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=victor+gr262+grip"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Victor+GR262+grip"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=victor+gr262+grip"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
@@ -849,17 +1999,33 @@
           "brand": "Yonex",
           "type": "Replacement Grip",
           "level": "intermediate",
-          "specs": {"thickness": "1.2mm", "tackiness": "Low", "absorption": "Very High"},
+          "specs": {
+            "thickness": "1.2mm",
+            "tackiness": "Low",
+            "absorption": "Very High"
+          },
           "price_ranges": {
-            "INR": {"min": 200, "max": 400},
-            "USD": {"min": 3, "max": 6}
+            "INR": {
+              "min": 200,
+              "max": 400
+            },
+            "USD": {
+              "min": 3,
+              "max": 6
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+AC102+Towel+Grip",
             "flipkart": "https://www.flipkart.com/search?q=yonex+ac102+towel+grip",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+AC102+Towel+Grip"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+ac102+towel+grip"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+AC102+Towel+Grip"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+ac102+towel+grip"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
@@ -871,17 +2037,33 @@
           "brand": "Li-Ning",
           "type": "Overgrip",
           "level": "intermediate",
-          "specs": {"thickness": "0.6mm", "tackiness": "High", "absorption": "Medium"},
+          "specs": {
+            "thickness": "0.6mm",
+            "tackiness": "High",
+            "absorption": "Medium"
+          },
           "price_ranges": {
-            "INR": {"min": 180, "max": 350},
-            "USD": {"min": 3, "max": 5}
+            "INR": {
+              "min": 180,
+              "max": 350
+            },
+            "USD": {
+              "min": 3,
+              "max": 5
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Li-Ning+GP20+overgrip",
             "flipkart": "https://www.flipkart.com/search?q=li-ning+gp20+overgrip",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Li-Ning+GP20+overgrip"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=li-ning+gp20+overgrip"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Li-Ning+GP20+overgrip"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=li-ning+gp20+overgrip"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
@@ -893,21 +2075,107 @@
           "brand": "Yonex",
           "type": "Overgrip",
           "level": "advanced",
-          "specs": {"thickness": "0.6mm", "tackiness": "Very High", "absorption": "High"},
+          "specs": {
+            "thickness": "0.6mm",
+            "tackiness": "Very High",
+            "absorption": "High"
+          },
           "price_ranges": {
-            "INR": {"min": 200, "max": 400},
-            "USD": {"min": 3, "max": 6}
+            "INR": {
+              "min": 200,
+              "max": 400
+            },
+            "USD": {
+              "min": 3,
+              "max": 6
+            }
           },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+AC108+Wave+Grap",
             "flipkart": "https://www.flipkart.com/search?q=yonex+ac108+wave+grap",
             "india": [
-              {"store": "Amazon India", "url": "https://www.amazon.in/s?k=Yonex+AC108+Wave+Grap"},
-              {"store": "Flipkart", "url": "https://www.flipkart.com/search?q=yonex+ac108+wave+grap"}
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Yonex+AC108+Wave+Grap"
+              },
+              {
+                "store": "Flipkart",
+                "url": "https://www.flipkart.com/search?q=yonex+ac108+wave+grap"
+              }
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
           "description": "Wave-textured overgrip for extra grip during intense rallies. Premium Yonex option."
+        },
+        {
+          "id": "bd_g06",
+          "name": "Apacs Cushion Grip",
+          "brand": "Apacs",
+          "type": "Cushion",
+          "level": "all",
+          "specs": {
+            "thickness": "0.75mm",
+            "tackiness": 7,
+            "absorbency": 8,
+            "pack": "Single"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 80,
+              "max": 150
+            },
+            "USD": {
+              "min": 1,
+              "max": 2
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Apacs+Cushion+Grip",
+            "flipkart": "https://www.flipkart.com/search?q=apacs+cushion+grip",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Apacs+Cushion+Grip"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61nT3g9rEQL._SL1500_.jpg",
+          "description": "Affordable cushion grip with good sweat absorbency. Comes as replacement grip — not an overgrip."
+        },
+        {
+          "id": "bd_g07",
+          "name": "Hundred Overgrip 3-Pack",
+          "brand": "Hundred",
+          "type": "Overgrip",
+          "level": "all",
+          "specs": {
+            "thickness": "0.6mm",
+            "tackiness": 8,
+            "absorbency": 6,
+            "pack": "3-pack"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 200,
+              "max": 350
+            },
+            "USD": {
+              "min": 3,
+              "max": 5
+            }
+          },
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Hundred+Overgrip",
+            "flipkart": "https://www.flipkart.com/search?q=hundred+overgrip",
+            "india": [
+              {
+                "store": "Amazon India",
+                "url": "https://www.amazon.in/s?k=Hundred+Overgrip"
+              }
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61aRpxGrTqL._SL1500_.jpg",
+          "description": "Value 3-pack overgrip from Hundred. Tacky, thin, replace roughly every 2 weeks of regular play. Good way to experiment with grip feel without per-piece cost."
         }
       ]
     }
