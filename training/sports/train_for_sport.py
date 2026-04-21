@@ -162,6 +162,8 @@ def main():
     ap.add_argument("--max-clips-per-video", type=int, default=80)
     ap.add_argument("--min-conf", type=float, default=0.5)
     ap.add_argument("--use-yolo", action="store_true", help="Use YOLO11x-pose for labeling (cleaner LSTM input, ~250MB ultralytics dep)")
+    ap.add_argument("--use-shuttle-tracking", action="store_true",
+                    help="[badminton] Detect court + track shuttle via TrackNetV3 to get REAL speeds + landing positions. ~174MB weights download, requires torch + opencv. Augments each shot's metadata with peak_speed_kmh + landing_court_region instead of pose-only estimates.")
     ap.add_argument("--skip-test", action="store_true", help="Don't reserve a test video — train on ALL videos")
     ap.add_argument("--groq-key", default=os.environ.get("GROQ_API_KEY", "").strip())
     args = ap.parse_args()
@@ -211,6 +213,22 @@ def main():
             print("[error] --use-yolo needs ultralytics: pip install ultralytics", file=sys.stderr)
             sys.exit(2)
 
+    shuttle_tracker = None
+    if args.use_shuttle_tracking:
+        if args.sport != "badminton":
+            print(f"[warn] --use-shuttle-tracking is badminton-only for now; skipping for {args.sport}", flush=True)
+        else:
+            try:
+                from shuttle_tracker import ShuttleTracker
+                print("[shuttle] initializing TrackNetV3 (~174MB on first run)…", flush=True)
+                shuttle_tracker = ShuttleTracker()
+                # Lazy-load so we fail fast if torch/weights missing
+                shuttle_tracker._ensure_loaded()
+                print("[shuttle] ready — shots will include real speed + landing data", flush=True)
+            except Exception as e:
+                print(f"[warn] shuttle tracking disabled: {e}", flush=True)
+                shuttle_tracker = None
+
     lstm = None
     if "lstm" in config["labeler_priority"] and config.get("lstm_weights"):
         weights_path = (sport_dir / config["lstm_weights"]).resolve()
@@ -258,6 +276,25 @@ def main():
             shots = label_with_groq_backend(vid, moments, config["groq_prompt"], groq_key, groq_model)
         else:
             sys.exit("[error] no labeler available")
+
+        # Augment with real shuttle-tracked metrics when available.
+        # This replaces guessed speeds with measured ones and adds
+        # objective landing positions — the single highest-leverage
+        # training signal we can add to badminton labels.
+        if shuttle_tracker is not None:
+            print(f"  [shuttle] measuring {len(shots)} shots…", flush=True)
+            from shuttle_tracker import measure_shot
+            for shot in shots:
+                try:
+                    m = measure_shot(vid, shot["start"], shot["end"], tracker=shuttle_tracker)
+                except Exception:
+                    m = None
+                if m is None:
+                    continue
+                shot["speed_kmh_measured"] = round(m.peak_speed_kmh, 1)
+                shot["landing_court_region"] = m.landing_court_region
+                shot["shuttle_track_confidence"] = round(m.confidence, 2)
+
         cached.write_text(json.dumps({"video": vid.name, "shots": shots}, indent=2))
         all_labels.append((vid, shots))
 
