@@ -1,6 +1,6 @@
 {
   "sport": "football",
-  "last_updated": "2026-03-24",
+  "last_updated": "2026-04-22",
   "currency_note": "INR prices reflect March 2026 Indian market.",
   "equipment_categories": [
     {
@@ -110,6 +110,86 @@
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
           "description": "FIFA World Cup match ball. Premium quality with thermal bonding."
+        },
+        {
+          "id": "fb_bl08",
+          "name": "Adidas Tango League Football",
+          "brand": "Adidas",
+          "type": "Training Ball",
+          "level": "intermediate",
+          "recommended_for": "Club training and amateur league matches",
+          "specs": {"size": "5", "panels": "32-panel classic", "material": "TPU", "bladder": "Butyl", "FIFA_quality": "Basic"},
+          "price_ranges": {"INR": {"min": 1800, "max": 2800}, "USD": {"min": 23, "max": 36}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Tango+League+Football",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+tango+league+football",
+            "india": [
+              "https://www.amazon.in/s?k=Adidas+Tango+League+Football",
+              "https://www.flipkart.com/search?q=adidas+tango+league+football"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Iconic Adidas Tango design reborn as a training ball. Thermal bonded panels for consistent flight."
+        },
+        {
+          "id": "fb_bl09",
+          "name": "Select Derbystar Brillant APS",
+          "brand": "Select",
+          "type": "Match Ball",
+          "level": "advanced",
+          "recommended_for": "Professional league matches, top-tier European competitions",
+          "specs": {"size": "5", "panels": "32-panel classic", "material": "Premium PU", "bladder": "Latex", "FIFA_quality": "Quality Pro"},
+          "price_ranges": {"INR": {"min": 5500, "max": 8500}, "USD": {"min": 70, "max": 109}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Select+Derbystar+Brillant+APS",
+            "flipkart": "https://www.flipkart.com/search?q=select+derbystar+brillant+aps",
+            "india": [
+              "https://www.amazon.in/s?k=Select+Derbystar+Brillant+APS",
+              "https://www.flipkart.com/search?q=select+derbystar+brillant+aps"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Official Bundesliga match ball. Hand-stitched premium PU with zero-wing valve for balanced flight."
+        },
+        {
+          "id": "fb_bl10",
+          "name": "Molten UEFA Europa League Official Match Ball",
+          "brand": "Molten",
+          "type": "Match Ball",
+          "level": "advanced",
+          "recommended_for": "UEFA Europa League, continental competitions",
+          "specs": {"size": "5", "panels": "Thermal bonded (12 panels)", "material": "Premium PU", "bladder": "Latex", "FIFA_quality": "Quality Pro"},
+          "price_ranges": {"INR": {"min": 4500, "max": 7500}, "USD": {"min": 58, "max": 96}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Molten+UEFA+Europa+League+ball",
+            "flipkart": "https://www.flipkart.com/search?q=molten+uefa+europa+league+ball",
+            "india": [
+              "https://www.amazon.in/s?k=Molten+UEFA+Europa+League+ball",
+              "https://www.flipkart.com/search?q=molten+uefa+europa+league+ball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "Official UEFA Europa League match ball. Acentec technology provides stable and accurate trajectory."
+        },
+        {
+          "id": "fb_bl11",
+          "name": "Molten Vantaggio 5000 Football",
+          "brand": "Molten",
+          "type": "Match Ball",
+          "level": "intermediate",
+          "recommended_for": "School/college matches, club training",
+          "specs": {"size": "5", "panels": "32-panel classic", "material": "PU", "bladder": "Butyl", "FIFA_quality": "Quality"},
+          "price_ranges": {"INR": {"min": 2200, "max": 3800}, "USD": {"min": 28, "max": 49}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Molten+Vantaggio+5000+football",
+            "flipkart": "https://www.flipkart.com/search?q=molten+vantaggio+5000+football",
+            "india": [
+              "https://www.amazon.in/s?k=Molten+Vantaggio+5000+football",
+              "https://www.flipkart.com/search?q=molten+vantaggio+5000+football"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
+          "description": "FIFA Quality certified match ball. Dual-cushion construction offers consistent rebound and soft touch."
         }
       ]
     },
@@ -220,6 +300,126 @@
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
           "description": "Top-tier Nike boot. Gripknit for enhanced touch and control at pace."
+        },
+        {
+          "id": "fb_bt08",
+          "name": "Adidas Predator Elite FG",
+          "brand": "Adidas",
+          "type": "Firm Ground",
+          "level": "advanced",
+          "recommended_for": "Elite playmakers seeking maximum control and spin",
+          "specs": {"surface": "FG firm ground", "upper": "HybridTouch synthetic with Strike Rib 2.0", "studs": "FG conical + bladed"},
+          "price_ranges": {"INR": {"min": 17000, "max": 24000}, "USD": {"min": 218, "max": 308}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Elite+FG",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+predator+elite+fg",
+            "india": [
+              "https://www.amazon.in/s?k=Adidas+Predator+Elite+FG",
+              "https://www.flipkart.com/search?q=adidas+predator+elite+fg"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Flagship Adidas control boot. Strike Rib 2.0 elements on the forefoot deliver extra spin and dip on shots."
+        },
+        {
+          "id": "fb_bt09",
+          "name": "Adidas X Crazyfast.1 FG",
+          "brand": "Adidas",
+          "type": "Firm Ground",
+          "level": "advanced",
+          "recommended_for": "Speed wingers and counter-attacking forwards",
+          "specs": {"surface": "FG firm ground", "upper": "Aerocage speed cage + ultralight knit", "studs": "FG bladed"},
+          "price_ranges": {"INR": {"min": 14000, "max": 20000}, "USD": {"min": 179, "max": 256}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Adidas+X+Crazyfast+1+FG",
+            "flipkart": "https://www.flipkart.com/search?q=adidas+x+crazyfast+1+fg",
+            "india": [
+              "https://www.amazon.in/s?k=Adidas+X+Crazyfast+1+FG",
+              "https://www.flipkart.com/search?q=adidas+x+crazyfast+1+fg"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Adidas' fastest boot. Aerocage structure locks the foot for explosive sprints on firm ground."
+        },
+        {
+          "id": "fb_bt10",
+          "name": "Nike Tiempo Legend 10 Elite FG",
+          "brand": "Nike",
+          "type": "Firm Ground",
+          "level": "advanced",
+          "recommended_for": "Central midfielders and defenders who prize touch and comfort",
+          "specs": {"surface": "FG firm ground", "upper": "Premium Kangaroo-alternative leather (FlyTouch Plus)", "studs": "FG conical"},
+          "price_ranges": {"INR": {"min": 16000, "max": 22000}, "USD": {"min": 205, "max": 282}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nike+Tiempo+Legend+10+Elite+FG",
+            "flipkart": "https://www.flipkart.com/search?q=nike+tiempo+legend+10+elite+fg",
+            "india": [
+              "https://www.amazon.in/s?k=Nike+Tiempo+Legend+10+Elite+FG",
+              "https://www.flipkart.com/search?q=nike+tiempo+legend+10+elite+fg"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Classic leather-style Nike silo. Plush FlyTouch Plus upper for authentic leather feel with modern durability."
+        },
+        {
+          "id": "fb_bt11",
+          "name": "Puma Future 7 Ultimate FG/AG",
+          "brand": "Puma",
+          "type": "Firm Ground / Artificial Grass",
+          "level": "advanced",
+          "recommended_for": "Creative midfielders needing adaptive fit",
+          "specs": {"surface": "FG firm ground / AG artificial grass", "upper": "FUZIONFIT+ adaptive compression knit", "studs": "Hybrid FG/AG"},
+          "price_ranges": {"INR": {"min": 14500, "max": 20500}, "USD": {"min": 186, "max": 263}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Puma+Future+7+Ultimate+FG",
+            "flipkart": "https://www.flipkart.com/search?q=puma+future+7+ultimate+fg",
+            "india": [
+              "https://www.amazon.in/s?k=Puma+Future+7+Ultimate+FG",
+              "https://www.flipkart.com/search?q=puma+future+7+ultimate+fg"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Puma's top creator boot. FUZIONFIT+ band wraps the midfoot for locked-in, sock-like fit across surfaces."
+        },
+        {
+          "id": "fb_bt12",
+          "name": "New Balance Tekela v4 Pro FG",
+          "brand": "New Balance Football",
+          "type": "Firm Ground",
+          "level": "intermediate",
+          "recommended_for": "Agile dribblers and creative wingers",
+          "specs": {"surface": "FG firm ground", "upper": "Hypoknit knit with TPU skin", "studs": "FG conical"},
+          "price_ranges": {"INR": {"min": 7500, "max": 11500}, "USD": {"min": 96, "max": 147}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=New+Balance+Tekela+v4+Pro+FG",
+            "flipkart": "https://www.flipkart.com/search?q=new+balance+tekela+v4+pro+fg",
+            "india": [
+              "https://www.amazon.in/s?k=New+Balance+Tekela+v4+Pro+FG",
+              "https://www.flipkart.com/search?q=new+balance+tekela+v4+pro+fg"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "New Balance's control silo. Hypoknit upper adds stretch where needed and support where it counts."
+        },
+        {
+          "id": "fb_bt13",
+          "name": "Umbro Velocita Elite FG",
+          "brand": "Umbro",
+          "type": "Firm Ground",
+          "level": "intermediate",
+          "recommended_for": "All-round midfielders seeking lightweight fit",
+          "specs": {"surface": "FG firm ground", "upper": "A-Frame microfibre synthetic", "studs": "FG bladed + conical mix"},
+          "price_ranges": {"INR": {"min": 5500, "max": 8000}, "USD": {"min": 70, "max": 103}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Umbro+Velocita+Elite+FG",
+            "flipkart": "https://www.flipkart.com/search?q=umbro+velocita+elite+fg",
+            "india": [
+              "https://www.amazon.in/s?k=Umbro+Velocita+Elite+FG",
+              "https://www.flipkart.com/search?q=umbro+velocita+elite+fg"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Umbro's flagship speed boot. A-Frame cage locks the foot for explosive direction changes."
         }
       ]
     },
@@ -300,6 +500,66 @@
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
           "description": "Pro-level shin guards. Anatomical design for optimal protection."
+        },
+        {
+          "id": "fb_sg06",
+          "name": "Puma Ultra Flex Sleeve Shin Guard",
+          "brand": "Puma",
+          "type": "Shin Guard",
+          "level": "intermediate",
+          "recommended_for": "Club players who want lightweight sleeve-style protection",
+          "specs": {"size": "M", "material": "PE shield with EVA backing", "protection_level": "Medium-high impact", "attachment": "Slip-in (compression sleeve)", "ankle_protection": false},
+          "price_ranges": {"INR": {"min": 900, "max": 1600}, "USD": {"min": 12, "max": 21}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Puma+Ultra+Flex+Sleeve+Shin+Guard",
+            "flipkart": "https://www.flipkart.com/search?q=puma+ultra+flex+sleeve+shin+guard",
+            "india": [
+              "https://www.amazon.in/s?k=Puma+Ultra+Flex+Sleeve+Shin+Guard",
+              "https://www.flipkart.com/search?q=puma+ultra+flex+sleeve+shin+guard"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Puma slip-in shin guards with integrated compression sleeve. Flex zones reduce bulk under socks."
+        },
+        {
+          "id": "fb_sg07",
+          "name": "Under Armour Challenge Shin Guard",
+          "brand": "Under Armour",
+          "type": "Shin Guard",
+          "level": "intermediate",
+          "recommended_for": "Outfield players who need strap-secured stable protection",
+          "specs": {"size": "L", "material": "Hard PP shell with PU foam backing", "protection_level": "High impact", "attachment": "Elastic strap with velcro", "ankle_protection": true},
+          "price_ranges": {"INR": {"min": 1200, "max": 2200}, "USD": {"min": 15, "max": 28}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Under+Armour+Challenge+Shin+Guard",
+            "flipkart": "https://www.flipkart.com/search?q=under+armour+challenge+shin+guard",
+            "india": [
+              "https://www.amazon.in/s?k=Under+Armour+Challenge+Shin+Guard",
+              "https://www.flipkart.com/search?q=under+armour+challenge+shin+guard"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Under Armour strap-on shin guards. Includes removable ankle guards for full lower-leg coverage."
+        },
+        {
+          "id": "fb_sg08",
+          "name": "Joma Pro Carbon Shin Guard",
+          "brand": "Joma",
+          "type": "Shin Guard",
+          "level": "advanced",
+          "recommended_for": "Competitive players needing lightweight, high-impact protection",
+          "specs": {"size": "S", "material": "Carbon-reinforced polymer shell", "protection_level": "Pro-grade high impact", "attachment": "Slip-in", "ankle_protection": false},
+          "price_ranges": {"INR": {"min": 1800, "max": 3000}, "USD": {"min": 23, "max": 38}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Joma+Pro+Carbon+Shin+Guard",
+            "flipkart": "https://www.flipkart.com/search?q=joma+pro+carbon+shin+guard",
+            "india": [
+              "https://www.amazon.in/s?k=Joma+Pro+Carbon+Shin+Guard",
+              "https://www.flipkart.com/search?q=joma+pro+carbon+shin+guard"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
+          "description": "Joma's pro-level carbon shield. Ultralight yet rigid for top-tier impact dispersion."
         }
       ]
     },
@@ -395,6 +655,46 @@
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
           "description": "Elite GK gloves. Premium palm foam for maximum grip in all conditions."
+        },
+        {
+          "id": "fb_gk07",
+          "name": "Puma Ultra Ultimate Hybrid Goalkeeper Gloves",
+          "brand": "Puma",
+          "type": "Professional Gloves",
+          "level": "advanced",
+          "recommended_for": "Elite keepers wanting hybrid strap lockdown",
+          "specs": {"size": "9", "palm": "Ultragrip Pro Latex (4mm)", "cut": "Negative cut", "latex_grade": "Pro grade German latex", "closure": "Hybrid bandage + velcro"},
+          "price_ranges": {"INR": {"min": 6500, "max": 10000}, "USD": {"min": 83, "max": 128}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Puma+Ultra+Ultimate+Hybrid+Goalkeeper+Gloves",
+            "flipkart": "https://www.flipkart.com/search?q=puma+ultra+ultimate+hybrid+goalkeeper+gloves",
+            "india": [
+              "https://www.amazon.in/s?k=Puma+Ultra+Ultimate+Hybrid+Goalkeeper+Gloves",
+              "https://www.flipkart.com/search?q=puma+ultra+ultimate+hybrid+goalkeeper+gloves"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Puma's flagship GK glove. Hybrid wrist closure combines bandage security with velcro adjustability."
+        },
+        {
+          "id": "fb_gk08",
+          "name": "Mizuno Monarcida Neo Select Goalkeeper Gloves",
+          "brand": "Mizuno Football",
+          "type": "Match Gloves",
+          "level": "intermediate",
+          "recommended_for": "Club-level keepers seeking comfort and reliable grip",
+          "specs": {"size": "8", "palm": "Japanese Super Soft Latex (3.5mm)", "cut": "Roll finger", "latex_grade": "Mid-high grade", "closure": "Wrap-around velcro"},
+          "price_ranges": {"INR": {"min": 2800, "max": 4500}, "USD": {"min": 36, "max": 58}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Mizuno+Monarcida+Neo+Select+Goalkeeper+Gloves",
+            "flipkart": "https://www.flipkart.com/search?q=mizuno+monarcida+neo+select+goalkeeper+gloves",
+            "india": [
+              "https://www.amazon.in/s?k=Mizuno+Monarcida+Neo+Select+Goalkeeper+Gloves",
+              "https://www.flipkart.com/search?q=mizuno+monarcida+neo+select+goalkeeper+gloves"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
+          "description": "Mizuno's roll-finger GK glove. Japanese soft latex palm offers a plush, tacky feel for confident catching."
         }
       ]
     }

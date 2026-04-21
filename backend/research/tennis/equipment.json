@@ -1,6 +1,6 @@
 {
   "sport": "tennis",
-  "last_updated": "2026-03-24",
+  "last_updated": "2026-04-22",
   "currency_note": "INR prices reflect March 2026 Indian market.",
   "equipment_categories": [
     {
@@ -125,6 +125,146 @@
           },
           "image": "https://m.media-amazon.com/images/I/71XFTGjm1RL._SL1500_.jpg",
           "description": "Nadal's racket line. Maximum spin generation for topspin-heavy players."
+        },
+        {
+          "id": "tn_r09",
+          "name": "Prince Textreme Tour 100P",
+          "brand": "Prince",
+          "type": "Control",
+          "level": "advanced",
+          "recommended_for": "Flat hitters and classic control players",
+          "specs": {"head_size": "100 sq in", "weight": "305g", "balance": "Head Light", "pattern": "18x20"},
+          "price_ranges": {"INR": {"min": 15500, "max": 21000}, "USD": {"min": 199, "max": 269}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Prince+Textreme+Tour+100P+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=prince+textreme+tour+100p",
+            "india": [
+              "https://www.amazon.in/s?k=Prince+Textreme+Tour+100P+tennis+racket",
+              "https://www.flipkart.com/search?q=prince+textreme+tour+100p"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61jLhY6ZKXL._SL1500_.jpg",
+          "description": "Classic 18x20 pattern control racket with Textreme carbon for stability. Favourite of flat hitters seeking precision."
+        },
+        {
+          "id": "tn_r10",
+          "name": "Prince Beast Pro 100",
+          "brand": "Prince",
+          "type": "Power",
+          "level": "intermediate",
+          "recommended_for": "Baseliners seeking heavy power and plow-through",
+          "specs": {"head_size": "100 sq in", "weight": "310g", "balance": "Slightly Head Heavy", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 14500, "max": 19500}, "USD": {"min": 186, "max": 250}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Prince+Beast+Pro+100+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=prince+beast+pro+100",
+            "india": [
+              "https://www.amazon.in/s?k=Prince+Beast+Pro+100+tennis+racket",
+              "https://www.flipkart.com/search?q=prince+beast+pro+100"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61n4sQPkG8L._SL1500_.jpg",
+          "description": "Heavy, plow-through power racket with excellent stability. Great for aggressive baseliners hitting big groundstrokes."
+        },
+        {
+          "id": "tn_r11",
+          "name": "Volkl V-Sense 10 Tour",
+          "brand": "Volkl",
+          "type": "Control",
+          "level": "advanced",
+          "recommended_for": "Advanced players who prize feel and comfort",
+          "specs": {"head_size": "98 sq in", "weight": "325g", "balance": "Head Light", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 17500, "max": 23500}, "USD": {"min": 224, "max": 301}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Volkl+V-Sense+10+Tour+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=volkl+v-sense+10+tour",
+            "india": [
+              "https://www.amazon.in/s?k=Volkl+V-Sense+10+Tour+tennis+racket",
+              "https://www.flipkart.com/search?q=volkl+v-sense+10+tour"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61mK9dQwWFL._SL1500_.jpg",
+          "description": "German-engineered player's racket renowned for arm-friendly feel and pinpoint control. Ideal for advanced all-courters."
+        },
+        {
+          "id": "tn_r12",
+          "name": "Volkl V-Feel 7",
+          "brand": "Volkl",
+          "type": "Comfort Power",
+          "level": "intermediate",
+          "recommended_for": "Club players seeking comfort and easy power",
+          "specs": {"head_size": "102 sq in", "weight": "290g", "balance": "Even", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 12500, "max": 17000}, "USD": {"min": 160, "max": 218}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Volkl+V-Feel+7+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=volkl+v-feel+7",
+            "india": [
+              "https://www.amazon.in/s?k=Volkl+V-Feel+7+tennis+racket",
+              "https://www.flipkart.com/search?q=volkl+v-feel+7"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61QHzPFKwSL._SL1500_.jpg",
+          "description": "Soft, arm-friendly tweener with V-Sensor dampening. Excellent for intermediates with tennis elbow concerns."
+        },
+        {
+          "id": "tn_r13",
+          "name": "ProKennex Ki Q+ Tour Pro",
+          "brand": "ProKennex",
+          "type": "Comfort Control",
+          "level": "advanced",
+          "recommended_for": "Players with arm injuries seeking comfort plus control",
+          "specs": {"head_size": "97 sq in", "weight": "325g", "balance": "Head Light", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 19000, "max": 25000}, "USD": {"min": 244, "max": 320}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=ProKennex+Ki+Q%2B+Tour+Pro+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=prokennex+ki+q+tour+pro",
+            "india": [
+              "https://www.amazon.in/s?k=ProKennex+Ki+Q%2B+Tour+Pro+tennis",
+              "https://www.flipkart.com/search?q=prokennex+ki+q+tour+pro"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61xCJZ2mvML._SL1500_.jpg",
+          "description": "Kinetic-system racket renowned for shock absorption. A go-to for advanced players rehabbing tennis elbow."
+        },
+        {
+          "id": "tn_r14",
+          "name": "ProKennex Black Ace Pro",
+          "brand": "ProKennex",
+          "type": "Control",
+          "level": "advanced",
+          "recommended_for": "Serve-and-volley and flat-hitting baseliners",
+          "specs": {"head_size": "98 sq in", "weight": "315g", "balance": "Head Light", "pattern": "18x20"},
+          "price_ranges": {"INR": {"min": 18000, "max": 24000}, "USD": {"min": 231, "max": 308}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=ProKennex+Black+Ace+Pro+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=prokennex+black+ace+pro",
+            "india": [
+              "https://www.amazon.in/s?k=ProKennex+Black+Ace+Pro+tennis",
+              "https://www.flipkart.com/search?q=prokennex+black+ace+pro"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61PjYxz2p3L._SL1500_.jpg",
+          "description": "Dense 18x20 pattern with kinetic comfort tech. Crisp feel and pinpoint control for classic tennis styles."
+        },
+        {
+          "id": "tn_r15",
+          "name": "Tecnifibre TFight 305 Isoflex",
+          "brand": "Tecnifibre",
+          "type": "Spin & Control",
+          "level": "advanced",
+          "recommended_for": "Tour-level baseliners needing spin, control and stability",
+          "specs": {"head_size": "98 sq in", "weight": "305g", "balance": "Head Light", "pattern": "16x19"},
+          "price_ranges": {"INR": {"min": 17500, "max": 23000}, "USD": {"min": 224, "max": 295}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tecnifibre+TFight+305+Isoflex+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=tecnifibre+tfight+305",
+            "india": [
+              "https://www.amazon.in/s?k=Tecnifibre+TFight+305+Isoflex+tennis",
+              "https://www.flipkart.com/search?q=tecnifibre+tfight+305"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61f5B1oT6bL._SL1500_.jpg",
+          "description": "Daniil Medvedev's racket line. Isoflex tech offers stability on off-centre hits without losing spin or control."
         }
       ]
     },
@@ -220,6 +360,66 @@
           },
           "image": "https://m.media-amazon.com/images/I/71yH3XLHPEL._SL1500_.jpg",
           "description": "Tank-like durability with excellent lateral support. Built for aggressive movers."
+        },
+        {
+          "id": "tn_sh07",
+          "name": "Diadora Speed Blushield 6",
+          "brand": "Diadora",
+          "type": "All Court",
+          "level": "advanced",
+          "recommended_for": "Fast-paced baseliners valuing Italian craftsmanship",
+          "specs": {"surface": "All Court", "cushion": "Blushield DD Anima", "weight": "355g"},
+          "price_ranges": {"INR": {"min": 11000, "max": 15500}, "USD": {"min": 141, "max": 199}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Diadora+Speed+Blushield+6+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=diadora+speed+blushield+tennis",
+            "india": [
+              "https://www.amazon.in/s?k=Diadora+Speed+Blushield+6+tennis",
+              "https://www.flipkart.com/search?q=diadora+speed+blushield+tennis"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71sF5gK3zqL._SL1500_.jpg",
+          "description": "Premium Italian-made speed shoe with Blushield cushioning. Excellent lateral lockdown for quick direction changes."
+        },
+        {
+          "id": "tn_sh08",
+          "name": "K-Swiss Hypercourt Express 2",
+          "brand": "K-Swiss",
+          "type": "All Court",
+          "level": "intermediate",
+          "recommended_for": "Club players wanting comfort and durability at a fair price",
+          "specs": {"surface": "All Court", "cushion": "EVA + Aosta 7.0 Rubber", "weight": "365g"},
+          "price_ranges": {"INR": {"min": 6500, "max": 9500}, "USD": {"min": 83, "max": 122}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=K-Swiss+Hypercourt+Express+2+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=k-swiss+hypercourt+express+2",
+            "india": [
+              "https://www.amazon.in/s?k=K-Swiss+Hypercourt+Express+2+tennis",
+              "https://www.flipkart.com/search?q=k-swiss+hypercourt+express+2"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71qGfV8LJ1L._SL1500_.jpg",
+          "description": "Reliable mid-range shoe with 6-month outsole durability guarantee. A workhorse for intermediate players."
+        },
+        {
+          "id": "tn_sh09",
+          "name": "K-Swiss Bigshot Light 4",
+          "brand": "K-Swiss",
+          "type": "All Court",
+          "level": "intermediate",
+          "recommended_for": "Players seeking lightweight comfort with stability",
+          "specs": {"surface": "All Court", "cushion": "Ortholite EVA", "weight": "325g"},
+          "price_ranges": {"INR": {"min": 7000, "max": 10000}, "USD": {"min": 90, "max": 128}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=K-Swiss+Bigshot+Light+4+tennis",
+            "flipkart": "https://www.flipkart.com/search?q=k-swiss+bigshot+light+4",
+            "india": [
+              "https://www.amazon.in/s?k=K-Swiss+Bigshot+Light+4+tennis",
+              "https://www.flipkart.com/search?q=k-swiss+bigshot+light+4"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71fGYhzcZsL._SL1500_.jpg",
+          "description": "Lightweight stability shoe with roomy toebox and Ortholite insole. Balanced ride for all-court tennis."
         }
       ]
     },
@@ -315,6 +515,66 @@
           },
           "image": "https://m.media-amazon.com/images/I/71nXRxFGQDL._SL1500_.jpg",
           "description": "The most used string on the ATP Tour. Excellent control and durability."
+        },
+        {
+          "id": "tn_st07",
+          "name": "Solinco Hyper-G 16L",
+          "brand": "Solinco",
+          "type": "Polyester",
+          "level": "advanced",
+          "recommended_for": "Spin-heavy aggressive baseliners",
+          "specs": {"gauge": "1.25mm (16L)", "material": "Square-profile co-polyester", "tension_range": "48-55 lbs"},
+          "price_ranges": {"INR": {"min": 1100, "max": 1600}, "USD": {"min": 14, "max": 21}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Solinco+Hyper-G+16L+tennis+string",
+            "flipkart": "https://www.flipkart.com/search?q=solinco+hyper-g+16l",
+            "india": [
+              "https://www.amazon.in/s?k=Solinco+Hyper-G+16L+tennis+string",
+              "https://www.flipkart.com/search?q=solinco+hyper-g+16l"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71KJr8B2xmL._SL1500_.jpg",
+          "description": "Square-profile poly beloved on the junior and college circuit. Massive spin bite and crisp response."
+        },
+        {
+          "id": "tn_st08",
+          "name": "Tecnifibre X-One Biphase 17",
+          "brand": "Tecnifibre",
+          "type": "Multifilament",
+          "level": "intermediate",
+          "recommended_for": "Players wanting gut-like feel without the gut price",
+          "specs": {"gauge": "1.24mm (17g)", "material": "Polyamide multifilament", "tension_range": "48-57 lbs"},
+          "price_ranges": {"INR": {"min": 1600, "max": 2200}, "USD": {"min": 21, "max": 28}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tecnifibre+X-One+Biphase+17+tennis+string",
+            "flipkart": "https://www.flipkart.com/search?q=tecnifibre+x-one+biphase+17",
+            "india": [
+              "https://www.amazon.in/s?k=Tecnifibre+X-One+Biphase+17+tennis+string",
+              "https://www.flipkart.com/search?q=tecnifibre+x-one+biphase+17"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71DKjNTLhHL._SL1500_.jpg",
+          "description": "Premium multifilament offering a natural-gut-like response. The choice for arm comfort and plush power."
+        },
+        {
+          "id": "tn_st09",
+          "name": "Gamma Professional 17",
+          "brand": "Gamma",
+          "type": "Synthetic Gut",
+          "level": "intermediate",
+          "recommended_for": "Recreational and club players seeking durability and comfort",
+          "specs": {"gauge": "1.24mm (17g)", "material": "Nylon with titanium wraps", "tension_range": "50-60 lbs"},
+          "price_ranges": {"INR": {"min": 700, "max": 1100}, "USD": {"min": 9, "max": 14}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Gamma+Professional+17+tennis+string",
+            "flipkart": "https://www.flipkart.com/search?q=gamma+professional+17+string",
+            "india": [
+              "https://www.amazon.in/s?k=Gamma+Professional+17+tennis+string",
+              "https://www.flipkart.com/search?q=gamma+professional+17+string"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/61ZeUr-rPBL._SL1500_.jpg",
+          "description": "Long-standing US-made synthetic gut with titanium wraps. Reliable playability and value for club players."
         }
       ]
     },
@@ -410,6 +670,46 @@
           },
           "image": "https://m.media-amazon.com/images/I/71kQj8ZXOPL._SL1500_.jpg",
           "description": "Official French Open ball. Designed for clay and hard courts."
+        },
+        {
+          "id": "tn_b07",
+          "name": "Tecnifibre X-One Tennis Balls (Can of 4)",
+          "brand": "Tecnifibre",
+          "type": "Pressurized Match Ball",
+          "level": "advanced",
+          "recommended_for": "Club tournaments and serious practice on hard courts",
+          "specs": {"type": "Pressurized", "felt": "Extra duty", "use": "Match/Tournament", "ITF_approved": true},
+          "price_ranges": {"INR": {"min": 600, "max": 900}, "USD": {"min": 8, "max": 12}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tecnifibre+X-One+Tennis+Balls",
+            "flipkart": "https://www.flipkart.com/search?q=tecnifibre+x-one+tennis+balls",
+            "india": [
+              "https://www.amazon.in/s?k=Tecnifibre+X-One+Tennis+Balls",
+              "https://www.flipkart.com/search?q=tecnifibre+x-one+tennis+balls"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71RjJ8HmRQL._SL1500_.jpg",
+          "description": "Premium 4-ball can, official ball of ATP Rolex Paris Masters. Long-lasting extra-duty felt with consistent bounce."
+        },
+        {
+          "id": "tn_b08",
+          "name": "Prince Tour Pro Tennis Balls (Can of 3)",
+          "brand": "Prince",
+          "type": "Pressurized Match Ball",
+          "level": "intermediate",
+          "recommended_for": "Club match play and coaching sessions",
+          "specs": {"type": "Pressurized", "felt": "Regular duty", "use": "Match/Practice", "ITF_approved": true},
+          "price_ranges": {"INR": {"min": 420, "max": 680}, "USD": {"min": 5, "max": 9}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Prince+Tour+Pro+Tennis+Balls",
+            "flipkart": "https://www.flipkart.com/search?q=prince+tour+pro+tennis+balls",
+            "india": [
+              "https://www.amazon.in/s?k=Prince+Tour+Pro+Tennis+Balls",
+              "https://www.flipkart.com/search?q=prince+tour+pro+tennis+balls"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71BdWcBzLpL._SL1500_.jpg",
+          "description": "Consistent bounce and solid durability at a competitive price. A steady choice for league matches."
         }
       ]
     }

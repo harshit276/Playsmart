@@ -1,7 +1,7 @@
 {
   "sport": "pickleball",
-  "last_updated": "2026-03-24",
-  "currency_note": "INR prices reflect March 2026 Indian market.",
+  "last_updated": "2026-04-22",
+  "currency_note": "INR prices reflect April 2026 Indian market.",
   "equipment_categories": [
     {
       "category": "paddles",
@@ -110,6 +110,206 @@
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
           "description": "Top-tier professional paddle. Air Dynamic Throat for maximum power and spin."
+        },
+        {
+          "id": "pb_p08",
+          "name": "Paddletek Tempest Wave Pro",
+          "brand": "Paddletek",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "recommended_for": "Control-oriented players seeking premium touch and finesse",
+          "specs": {"weight": "215-225g (7.6-7.9 oz)", "face_material": "Graphite", "core": "Polymer honeycomb (13mm)", "grip_size": "4.125 inch", "shape": "Standard", "surface": "Smooth"},
+          "price_ranges": {"INR": {"min": 10000, "max": 14000}, "USD": {"min": 130, "max": 180}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Paddletek+Tempest+Wave+Pro",
+            "flipkart": "https://www.flipkart.com/search?q=paddletek+tempest+wave+pro",
+            "india": [
+              "https://www.amazon.in/s?k=Paddletek+Tempest+Wave+Pro",
+              "https://www.flipkart.com/search?q=paddletek+tempest+wave+pro"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Paddletek's flagship control paddle. Beloved for its soft feel and pinpoint placement at the kitchen line."
+        },
+        {
+          "id": "pb_p09",
+          "name": "Paddletek Bantam EX-L",
+          "brand": "Paddletek",
+          "type": "Intermediate Paddle",
+          "level": "intermediate",
+          "recommended_for": "Players wanting added power with a forgiving sweet spot",
+          "specs": {"weight": "225-240g (7.9-8.5 oz)", "face_material": "Fiberglass composite", "core": "Bantam polymer honeycomb (15mm)", "grip_size": "4.25 inch", "shape": "Standard", "surface": "Textured"},
+          "price_ranges": {"INR": {"min": 7500, "max": 10500}, "USD": {"min": 95, "max": 135}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Paddletek+Bantam+EX-L",
+            "flipkart": "https://www.flipkart.com/search?q=paddletek+bantam+ex-l",
+            "india": [
+              "https://www.amazon.in/s?k=Paddletek+Bantam+EX-L",
+              "https://www.flipkart.com/search?q=paddletek+bantam+ex-l"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Power-oriented Bantam series paddle with a larger sweet spot. Popular intermediate upgrade."
+        },
+        {
+          "id": "pb_p10",
+          "name": "Gamma Compass NeuCore",
+          "brand": "Gamma",
+          "type": "Intermediate Paddle",
+          "level": "intermediate",
+          "recommended_for": "All-court players seeking balanced control and spin",
+          "specs": {"weight": "220-232g (7.8-8.2 oz)", "face_material": "Textured graphite", "core": "NeuCore polymer (16mm)", "grip_size": "4.125 inch", "shape": "Standard", "surface": "Textured for spin"},
+          "price_ranges": {"INR": {"min": 6500, "max": 9000}, "USD": {"min": 85, "max": 115}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Gamma+Compass+NeuCore+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=gamma+compass+neucore+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=Gamma+Compass+NeuCore+Pickleball",
+              "https://www.flipkart.com/search?q=gamma+compass+neucore+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Thicker 16mm NeuCore polymer core for soft touch on dinks and added control on drives."
+        },
+        {
+          "id": "pb_p11",
+          "name": "Gamma Micron 5.0",
+          "brand": "Gamma",
+          "type": "Beginner Paddle",
+          "level": "beginner",
+          "recommended_for": "New players and juniors seeking a lightweight, maneuverable paddle",
+          "specs": {"weight": "200-215g (7.1-7.6 oz)", "face_material": "Textured graphite", "core": "Aramid honeycomb (11mm)", "grip_size": "4.0 inch", "shape": "Standard", "surface": "Smooth"},
+          "price_ranges": {"INR": {"min": 3200, "max": 5000}, "USD": {"min": 42, "max": 65}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Gamma+Micron+5.0+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=gamma+micron+5.0+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=Gamma+Micron+5.0+Pickleball",
+              "https://www.flipkart.com/search?q=gamma+micron+5.0+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Classic entry-level Gamma paddle. Lightweight design makes it ideal for smaller players and learners."
+        },
+        {
+          "id": "pb_p12",
+          "name": "Engage Pursuit Pro 6.0",
+          "brand": "Engage",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "recommended_for": "Tournament players prioritising spin and control",
+          "specs": {"weight": "218-232g (7.7-8.2 oz)", "face_material": "Liquid Graphite skin over fiberglass", "core": "ControlPro Black polymer (16mm)", "grip_size": "4.25 inch", "shape": "Elongated", "surface": "Textured for spin"},
+          "price_ranges": {"INR": {"min": 11500, "max": 15500}, "USD": {"min": 150, "max": 200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Engage+Pursuit+Pro+Pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=engage+pursuit+pro+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=Engage+Pursuit+Pro+Pickleball",
+              "https://www.flipkart.com/search?q=engage+pursuit+pro+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Engage's flagship Pursuit Pro 6.0 delivers elite-level spin and pinpoint control. USAPA approved for tournament use."
+        },
+        {
+          "id": "pb_p13",
+          "name": "CRBN 1 16mm Raw Carbon",
+          "brand": "CRBN",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "recommended_for": "Players seeking maximum spin via raw carbon face",
+          "specs": {"weight": "220-232g (7.8-8.2 oz)", "face_material": "Raw T700 carbon fiber", "core": "Polypropylene honeycomb (16mm)", "grip_size": "4.125 inch", "shape": "Standard", "surface": "Textured raw carbon for maximum spin"},
+          "price_ranges": {"INR": {"min": 12000, "max": 16000}, "USD": {"min": 155, "max": 210}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=CRBN+1+16mm+pickleball+paddle",
+            "flipkart": "https://www.flipkart.com/search?q=crbn+1+16mm+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=CRBN+1+16mm+pickleball+paddle",
+              "https://www.flipkart.com/search?q=crbn+1+16mm+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Standard-shape raw carbon paddle popular among competitive players. Unmatched spin and a consistent feel."
+        },
+        {
+          "id": "pb_p14",
+          "name": "CRBN 2 16mm Elongated",
+          "brand": "CRBN",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "recommended_for": "Singles players and power hitters wanting extra reach",
+          "specs": {"weight": "220-235g (7.8-8.3 oz)", "face_material": "Raw T700 carbon fiber", "core": "Polypropylene honeycomb (16mm)", "grip_size": "4.125 inch", "shape": "Elongated", "surface": "Textured raw carbon"},
+          "price_ranges": {"INR": {"min": 12500, "max": 16500}, "USD": {"min": 160, "max": 215}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=CRBN+2+Elongated+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=crbn+2+elongated+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=CRBN+2+Elongated+pickleball",
+              "https://www.flipkart.com/search?q=crbn+2+elongated+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Elongated shape for added reach and leverage. Ideal for singles and drive-heavy playstyles."
+        },
+        {
+          "id": "pb_p15",
+          "name": "Babolat RNGD Touch",
+          "brand": "Babolat",
+          "type": "Intermediate Paddle",
+          "level": "intermediate",
+          "recommended_for": "Transitioning tennis players who value control and feel",
+          "specs": {"weight": "220-235g (7.8-8.3 oz)", "face_material": "Carbon fiber", "core": "Polymer honeycomb (16mm)", "grip_size": "4.25 inch", "shape": "Standard", "surface": "Textured"},
+          "price_ranges": {"INR": {"min": 7000, "max": 10000}, "USD": {"min": 90, "max": 130}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Babolat+RNGD+Touch+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=babolat+rngd+touch+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=Babolat+RNGD+Touch+pickleball",
+              "https://www.flipkart.com/search?q=babolat+rngd+touch+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Babolat entered pickleball in 2023; the RNGD Touch brings their tennis heritage to a controlled, feel-first paddle."
+        },
+        {
+          "id": "pb_p16",
+          "name": "Wilson Juice Pro",
+          "brand": "Wilson",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "recommended_for": "Competitive players looking for a well-rounded power/control blend",
+          "specs": {"weight": "225-238g (7.9-8.4 oz)", "face_material": "Carbon fiber", "core": "Polymer honeycomb (16mm)", "grip_size": "4.25 inch", "shape": "Elongated", "surface": "Textured for spin"},
+          "price_ranges": {"INR": {"min": 9500, "max": 13500}, "USD": {"min": 120, "max": 175}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Wilson+Juice+Pro+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=wilson+juice+pro+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=Wilson+Juice+Pro+pickleball",
+              "https://www.flipkart.com/search?q=wilson+juice+pro+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Wilson's pickleball line flagship. Elongated body with textured carbon face for confident drives and reliable touch."
+        },
+        {
+          "id": "pb_p17",
+          "name": "Gearbox CX11Q Elongated",
+          "brand": "Gearbox",
+          "type": "Advanced Paddle",
+          "level": "advanced",
+          "recommended_for": "Players who prefer a solid, one-piece construction feel",
+          "specs": {"weight": "220-238g (7.8-8.4 oz)", "face_material": "3K carbon fiber", "core": "Solid span core (carbon tube construction)", "grip_size": "3.625 inch (small)", "shape": "Elongated", "surface": "Textured"},
+          "price_ranges": {"INR": {"min": 11000, "max": 15000}, "USD": {"min": 145, "max": 195}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Gearbox+CX11Q+Elongated",
+            "flipkart": "https://www.flipkart.com/search?q=gearbox+cx11q+elongated",
+            "india": [
+              "https://www.amazon.in/s?k=Gearbox+CX11Q+Elongated",
+              "https://www.flipkart.com/search?q=gearbox+cx11q+elongated"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
+          "description": "Gearbox's signature Solid Span Technology delivers a uniquely consistent feel. Elongated shape with small-grip option."
         }
       ]
     },
@@ -190,6 +390,46 @@
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
           "description": "Ben Johns' signature tournament ball. Excellent flight characteristics."
+        },
+        {
+          "id": "pb_b06",
+          "name": "Gamma Photon Outdoor (Pack of 3)",
+          "brand": "Gamma",
+          "type": "Outdoor Ball",
+          "level": "intermediate",
+          "recommended_for": "Outdoor recreational and club play",
+          "specs": {"holes": 40, "material": "Seamless hard plastic", "diameter": "74mm", "weight": "26g", "USAPA_approved": true},
+          "price_ranges": {"INR": {"min": 700, "max": 1100}, "USD": {"min": 9, "max": 14}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Gamma+Photon+outdoor+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=gamma+photon+outdoor+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=Gamma+Photon+outdoor+pickleball",
+              "https://www.flipkart.com/search?q=gamma+photon+outdoor+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Seamless construction for true flight and added durability. A solid value-focused outdoor ball."
+        },
+        {
+          "id": "pb_b07",
+          "name": "Franklin X-26 Indoor (Pack of 3)",
+          "brand": "Franklin",
+          "type": "Indoor Ball",
+          "level": "intermediate",
+          "recommended_for": "Indoor club and tournament play",
+          "specs": {"holes": 26, "material": "Soft plastic", "diameter": "74mm", "weight": "23g", "USAPA_approved": true},
+          "price_ranges": {"INR": {"min": 500, "max": 900}, "USD": {"min": 6, "max": 11}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Franklin+X-26+indoor+pickleball",
+            "flipkart": "https://www.flipkart.com/search?q=franklin+x-26+indoor+pickleball",
+            "india": [
+              "https://www.amazon.in/s?k=Franklin+X-26+indoor+pickleball",
+              "https://www.flipkart.com/search?q=franklin+x-26+indoor+pickleball"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
+          "description": "Franklin's dedicated indoor 26-hole ball. USAPA approved, consistent bounce on wooden and synthetic floors."
         }
       ]
     },
@@ -270,6 +510,46 @@
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
           "description": "Premium Nike court shoe. Responsive Air Zoom cushioning for competitive play."
+        },
+        {
+          "id": "pb_sh06",
+          "name": "Babolat Jet Mach 3 All Court",
+          "brand": "Babolat",
+          "type": "Court Shoes",
+          "level": "advanced",
+          "recommended_for": "Fast, agile players transitioning from tennis",
+          "specs": {"sole": "Michelin non-marking rubber", "cushion": "Kompressor Pro", "weight": "335g", "upper": "Matryx woven"},
+          "price_ranges": {"INR": {"min": 10500, "max": 14500}, "USD": {"min": 135, "max": 185}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Babolat+Jet+Mach+3+All+Court",
+            "flipkart": "https://www.flipkart.com/search?q=babolat+jet+mach+3+all+court",
+            "india": [
+              "https://www.amazon.in/s?k=Babolat+Jet+Mach+3+All+Court",
+              "https://www.flipkart.com/search?q=babolat+jet+mach+3+all+court"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Lightweight and breathable Matryx upper with Michelin rubber outsole. Favoured by players moving from tennis to pickleball."
+        },
+        {
+          "id": "pb_sh07",
+          "name": "Wilson Rush Pro 4.0",
+          "brand": "Wilson",
+          "type": "Court Shoes",
+          "level": "intermediate",
+          "recommended_for": "All-court players seeking durability and stability",
+          "specs": {"sole": "Duralast rubber (non-marking)", "cushion": "Pro Torque Chassis 2.0", "weight": "345g"},
+          "price_ranges": {"INR": {"min": 7500, "max": 10500}, "USD": {"min": 95, "max": 135}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Wilson+Rush+Pro+4.0",
+            "flipkart": "https://www.flipkart.com/search?q=wilson+rush+pro+4.0",
+            "india": [
+              "https://www.amazon.in/s?k=Wilson+Rush+Pro+4.0",
+              "https://www.flipkart.com/search?q=wilson+rush+pro+4.0"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
+          "description": "Wilson's durable mid-tier court shoe with a reinforced Pro Torque Chassis for lateral stability on pickleball courts."
         }
       ]
     }

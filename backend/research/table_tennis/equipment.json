@@ -1,6 +1,6 @@
 {
   "sport": "table_tennis",
-  "last_updated": "2026-03-24",
+  "last_updated": "2026-04-22",
   "currency_note": "INR prices reflect March 2026 Indian market.",
   "equipment_categories": [
     {
@@ -125,6 +125,132 @@
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
           "description": "Top-tier professional blade. Maximum speed for elite players with precise technique."
+        },
+        {
+          "id": "tt_bl09",
+          "name": "Tibhar Samsonov Alpha",
+          "brand": "Tibhar",
+          "type": "Allround+ Blade",
+          "level": "intermediate",
+          "recommended_for": ["All-round players", "Loopers"],
+          "specs": {"weight": "85g", "plies": "5 wood", "composition": "All wood (Limba outer)", "speed_rating": 7.0, "control_rating": 8.5, "stiffness_rating": 5.0, "handle": "Flared (FL)", "head_size": "158x152mm"},
+          "price_ranges": {"INR": {"min": 4500, "max": 6500}, "USD": {"min": 58, "max": 83}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tibhar+Samsonov+Alpha+blade",
+            "flipkart": "https://www.flipkart.com/search?q=tibhar+samsonov+alpha+blade",
+            "india": [
+              "https://www.amazon.in/s?k=Tibhar+Samsonov+Alpha+blade",
+              "https://www.flipkart.com/search?q=tibhar+samsonov+alpha+blade",
+              "https://www.tabletennisstore.in/search?q=tibhar+samsonov+alpha"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71q0Y8vQ4kL._SL1500_.jpg",
+          "description": "Vladimir Samsonov's signature all-wood blade. Soft feel, great control, and excellent looping characteristics for technical players."
+        },
+        {
+          "id": "tt_bl10",
+          "name": "Tibhar Stratus Power Wood",
+          "brand": "Tibhar",
+          "type": "Offensive Blade",
+          "level": "intermediate",
+          "recommended_for": ["Offensive loopers", "Two-winged attackers"],
+          "specs": {"weight": "88g", "plies": "5 wood", "composition": "All wood (Koto outer)", "speed_rating": 8.0, "control_rating": 8.0, "stiffness_rating": 6.5, "handle": "Flared (FL)", "head_size": "158x152mm"},
+          "price_ranges": {"INR": {"min": 5500, "max": 7500}, "USD": {"min": 70, "max": 96}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tibhar+Stratus+Power+Wood+blade",
+            "flipkart": "https://www.flipkart.com/search?q=tibhar+stratus+power+wood",
+            "india": [
+              "https://www.amazon.in/s?k=Tibhar+Stratus+Power+Wood+blade",
+              "https://www.flipkart.com/search?q=tibhar+stratus+power+wood",
+              "https://www.tabletennisstore.in/search?q=stratus+power+wood"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71r1Y8vQ5kL._SL1500_.jpg",
+          "description": "Cult-classic 5-ply offensive blade with Koto outer. Delivers explosive power with surprisingly good control. A favorite in European leagues."
+        },
+        {
+          "id": "tt_bl11",
+          "name": "Donic Waldner Senso Carbon",
+          "brand": "Donic",
+          "type": "Offensive Blade",
+          "level": "intermediate",
+          "recommended_for": ["All-round attackers", "Loopers"],
+          "specs": {"weight": "86g", "plies": "5+2 carbon with Senso handle", "composition": "Wood + Carbon (hollow handle)", "speed_rating": 8.5, "control_rating": 7.5, "stiffness_rating": 7.0, "handle": "Flared (FL)", "head_size": "157x150mm"},
+          "price_ranges": {"INR": {"min": 6500, "max": 8500}, "USD": {"min": 83, "max": 109}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Donic+Waldner+Senso+Carbon",
+            "flipkart": "https://www.flipkart.com/search?q=donic+waldner+senso+carbon",
+            "india": [
+              "https://www.amazon.in/s?k=Donic+Waldner+Senso+Carbon",
+              "https://www.flipkart.com/search?q=donic+waldner+senso+carbon",
+              "https://www.tabletennisstore.in/search?q=waldner+senso+carbon"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71s2Y8vQ6kL._SL1500_.jpg",
+          "description": "Jan-Ove Waldner signature with Senso hollow handle for lighter feel. Carbon layers boost speed while wood dominates for a classic touch."
+        },
+        {
+          "id": "tt_bl12",
+          "name": "Sanwei Fextra 7",
+          "brand": "Sanwei",
+          "type": "Offensive Blade",
+          "level": "beginner",
+          "recommended_for": ["Entry-level attackers", "Chinese style beginners"],
+          "specs": {"weight": "92g", "plies": "7 wood", "composition": "All wood (Limba/Ayous)", "speed_rating": 7.5, "control_rating": 8.0, "stiffness_rating": 6.0, "handle": "Flared (FL)", "head_size": "158x152mm"},
+          "price_ranges": {"INR": {"min": 1800, "max": 2800}, "USD": {"min": 23, "max": 36}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Sanwei+Fextra+7+blade",
+            "flipkart": "https://www.flipkart.com/search?q=sanwei+fextra+7+blade",
+            "india": [
+              "https://www.amazon.in/s?k=Sanwei+Fextra+7+blade",
+              "https://www.flipkart.com/search?q=sanwei+fextra+7+blade",
+              "https://www.tabletennisstore.in/search?q=sanwei+fextra+7"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71t3Y8vQ7kL._SL1500_.jpg",
+          "description": "Outstanding budget 7-ply blade from Sanwei. Rivals blades 2-3x its price. A go-to recommendation for beginners who want Chinese-style power."
+        },
+        {
+          "id": "tt_bl13",
+          "name": "Victas Koji Matsushita",
+          "brand": "Victas",
+          "type": "Defensive Blade",
+          "level": "advanced",
+          "recommended_for": ["Choppers", "Defenders"],
+          "specs": {"weight": "80g", "plies": "5 wood", "composition": "All wood defensive", "speed_rating": 4.0, "control_rating": 9.5, "stiffness_rating": 3.5, "handle": "Flared (FL)", "head_size": "164x158mm"},
+          "price_ranges": {"INR": {"min": 7500, "max": 10000}, "USD": {"min": 96, "max": 128}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Victas+Koji+Matsushita+blade",
+            "flipkart": "https://www.flipkart.com/search?q=victas+koji+matsushita+blade",
+            "india": [
+              "https://www.amazon.in/s?k=Victas+Koji+Matsushita+blade",
+              "https://www.flipkart.com/search?q=victas+koji+matsushita+blade",
+              "https://www.tabletennisstore.in/search?q=koji+matsushita"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71u4Y8vQ8kL._SL1500_.jpg",
+          "description": "The definitive modern defender blade. Oversized head with soft feel for deep, heavy chops. Named after legendary Japanese chopper Koji Matsushita."
+        },
+        {
+          "id": "tt_bl14",
+          "name": "Andro Treiber K",
+          "brand": "Andro",
+          "type": "Offensive Blade",
+          "level": "intermediate",
+          "recommended_for": ["Loopers", "Aggressive all-rounders"],
+          "specs": {"weight": "87g", "plies": "5 wood", "composition": "All wood (Limba outer, Kiri core)", "speed_rating": 7.8, "control_rating": 8.2, "stiffness_rating": 6.0, "handle": "Flared (FL)", "head_size": "157x150mm"},
+          "price_ranges": {"INR": {"min": 4000, "max": 6000}, "USD": {"min": 51, "max": 77}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Andro+Treiber+K+blade",
+            "flipkart": "https://www.flipkart.com/search?q=andro+treiber+k+blade",
+            "india": [
+              "https://www.amazon.in/s?k=Andro+Treiber+K+blade",
+              "https://www.flipkart.com/search?q=andro+treiber+k+blade",
+              "https://www.tabletennisstore.in/search?q=andro+treiber+k"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71v5Y8vQ9kL._SL1500_.jpg",
+          "description": "Andro's popular 5-ply offensive blade. Balanced feel with good dwell time for looping. Excellent middle-ground for players moving up from allround blades."
         }
       ]
     },
@@ -235,6 +361,146 @@
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
           "description": "Butterfly's flagship rubber. Ultimate speed and spin for professional play."
+        },
+        {
+          "id": "tt_rb08",
+          "name": "Tibhar Evolution MX-P",
+          "brand": "Tibhar",
+          "type": "High-performance Tensor",
+          "level": "advanced",
+          "specs": {"sponge_thickness": "2.1mm", "speed": 9.5, "spin": 9.5, "control": 7.0, "hardness": "47.5 degrees", "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 4500, "max": 6000}, "USD": {"min": 58, "max": 77}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tibhar+Evolution+MX-P",
+            "flipkart": "https://www.flipkart.com/search?q=tibhar+evolution+mx-p",
+            "india": [
+              "https://www.amazon.in/s?k=Tibhar+Evolution+MX-P",
+              "https://www.flipkart.com/search?q=tibhar+evolution+mx-p",
+              "https://www.tabletennisstore.in/search?q=evolution+mx-p"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71w6Y9vQaML._SL1500_.jpg",
+          "description": "Tibhar's best-selling high-end rubber. A direct Tenergy 05 rival with outstanding spin and a crisp feel. Hugely popular in European top leagues."
+        },
+        {
+          "id": "tt_rb09",
+          "name": "Andro Rasanter R47",
+          "brand": "Andro",
+          "type": "High-performance Tensor",
+          "level": "advanced",
+          "specs": {"sponge_thickness": "2.0mm", "speed": 9.3, "spin": 9.7, "control": 7.2, "hardness": "47 degrees", "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 4200, "max": 5800}, "USD": {"min": 54, "max": 74}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Andro+Rasanter+R47",
+            "flipkart": "https://www.flipkart.com/search?q=andro+rasanter+r47",
+            "india": [
+              "https://www.amazon.in/s?k=Andro+Rasanter+R47",
+              "https://www.flipkart.com/search?q=andro+rasanter+r47",
+              "https://www.tabletennisstore.in/search?q=rasanter+r47"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71x7YavQbML._SL1500_.jpg",
+          "description": "Andro's spin-monster tensor with Energy Cell sponge. Huge arcs and dwell time, favored by modern loopers for its forgiving power."
+        },
+        {
+          "id": "tt_rb10",
+          "name": "Andro Hexer Grip",
+          "brand": "Andro",
+          "type": "Tensor Rubber",
+          "level": "intermediate",
+          "specs": {"sponge_thickness": "2.1mm", "speed": 8.5, "spin": 9.2, "control": 8.0, "hardness": "45 degrees", "surface": "Inverted pimples (grippy)"},
+          "price_ranges": {"INR": {"min": 2800, "max": 3800}, "USD": {"min": 36, "max": 49}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Andro+Hexer+Grip",
+            "flipkart": "https://www.flipkart.com/search?q=andro+hexer+grip",
+            "india": [
+              "https://www.amazon.in/s?k=Andro+Hexer+Grip",
+              "https://www.flipkart.com/search?q=andro+hexer+grip",
+              "https://www.tabletennisstore.in/search?q=hexer+grip"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71y8YbvQcML._SL1500_.jpg",
+          "description": "Ultra-grippy tensor with hexagonal sponge structure. Superb for short-game control and loop-drive play. Great intermediate upgrade from classic rubbers."
+        },
+        {
+          "id": "tt_rb11",
+          "name": "Donic Bluefire M1",
+          "brand": "Donic",
+          "type": "High-performance Tensor",
+          "level": "advanced",
+          "specs": {"sponge_thickness": "2.0mm", "speed": 9.5, "spin": 9.5, "control": 7.0, "hardness": "47.5 degrees", "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 4000, "max": 5500}, "USD": {"min": 51, "max": 71}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Donic+Bluefire+M1",
+            "flipkart": "https://www.flipkart.com/search?q=donic+bluefire+m1",
+            "india": [
+              "https://www.amazon.in/s?k=Donic+Bluefire+M1",
+              "https://www.flipkart.com/search?q=donic+bluefire+m1",
+              "https://www.tabletennisstore.in/search?q=donic+bluefire+m1"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71z9YcvQdML._SL1500_.jpg",
+          "description": "Donic's iconic blue-sponge tensor. Explosive power-loop rubber with a crisp throw angle. Used by top German league players."
+        },
+        {
+          "id": "tt_rb12",
+          "name": "Victas V>15 Extra",
+          "brand": "Victas",
+          "type": "Premium Tensor",
+          "level": "advanced",
+          "specs": {"sponge_thickness": "2.0mm", "speed": 9.8, "spin": 9.6, "control": 6.5, "hardness": "50 degrees", "surface": "Inverted pimples"},
+          "price_ranges": {"INR": {"min": 5500, "max": 7000}, "USD": {"min": 71, "max": 90}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Victas+V15+Extra",
+            "flipkart": "https://www.flipkart.com/search?q=victas+v15+extra",
+            "india": [
+              "https://www.amazon.in/s?k=Victas+V15+Extra",
+              "https://www.flipkart.com/search?q=victas+v15+extra",
+              "https://www.tabletennisstore.in/search?q=victas+v15+extra"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71aAYdvQeML._SL1500_.jpg",
+          "description": "Hard Japanese-made tensor loved by Chinese and Japanese pros. Extreme power on full strokes with Euro-tensor feel. Requires confident technique."
+        },
+        {
+          "id": "tt_rb13",
+          "name": "Friendship 729 GeoSpin",
+          "brand": "Friendship 729",
+          "type": "Chinese Tacky Rubber",
+          "level": "beginner",
+          "specs": {"sponge_thickness": "2.1mm", "speed": 7.5, "spin": 9.5, "control": 8.0, "hardness": "42 degrees", "surface": "Inverted pimples (tacky)"},
+          "price_ranges": {"INR": {"min": 500, "max": 900}, "USD": {"min": 7, "max": 12}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Friendship+729+GeoSpin",
+            "flipkart": "https://www.flipkart.com/search?q=friendship+729+geospin",
+            "india": [
+              "https://www.amazon.in/s?k=Friendship+729+GeoSpin",
+              "https://www.flipkart.com/search?q=friendship+729+geospin",
+              "https://www.tabletennisstore.in/search?q=729+geospin"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71bBYevQfML._SL1500_.jpg",
+          "description": "Legendary budget Chinese rubber. Exceptionally tacky top sheet with great service and loop spin. Best price-to-performance rubber on the market."
+        },
+        {
+          "id": "tt_rb14",
+          "name": "DHS Hurricane 3 National (Blue Sponge)",
+          "brand": "DHS",
+          "type": "Pro Chinese Tacky Rubber",
+          "level": "advanced",
+          "specs": {"sponge_thickness": "2.15mm", "speed": 9.0, "spin": 10.0, "control": 7.5, "hardness": "40 degrees (National blue)", "surface": "Inverted pimples (tacky)"},
+          "price_ranges": {"INR": {"min": 6500, "max": 9000}, "USD": {"min": 83, "max": 115}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+3+National+Blue",
+            "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+3+national+blue",
+            "india": [
+              "https://www.amazon.in/s?k=DHS+Hurricane+3+National+Blue",
+              "https://www.flipkart.com/search?q=dhs+hurricane+3+national+blue",
+              "https://www.tabletennisstore.in/search?q=hurricane+3+national"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71cCYfvQgML._SL1500_.jpg",
+          "description": "The rubber used by Ma Long and Fan Zhendong. Factory-tuned professional-grade Hurricane 3 with blue sponge. Unmatched spin for Chinese-style loopers."
         }
       ]
     },
@@ -315,6 +581,46 @@
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
           "description": "Official WTT match ball. The highest quality ball for professional play."
+        },
+        {
+          "id": "tt_ba06",
+          "name": "Sanwei Target Pro 40+ 3-Star (Pack of 6)",
+          "brand": "Sanwei",
+          "type": "3-Star ITTF Approved",
+          "level": "intermediate",
+          "specs": {"star_rating": 3, "material": "ABS Poly 40+ (seamless)", "diameter": "40+mm", "ITTF_approved": true},
+          "price_ranges": {"INR": {"min": 450, "max": 750}, "USD": {"min": 6, "max": 10}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Sanwei+Target+Pro+40+3+star",
+            "flipkart": "https://www.flipkart.com/search?q=sanwei+target+pro+40+3+star",
+            "india": [
+              "https://www.amazon.in/s?k=Sanwei+Target+Pro+40+3+star",
+              "https://www.flipkart.com/search?q=sanwei+target+pro+40+3+star",
+              "https://www.tabletennisstore.in/search?q=sanwei+target+pro"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71dDYgvQhML._SL1500_.jpg",
+          "description": "Popular Chinese training ball loved by hardhitters. Hard feel with consistent bounce. Excellent durability for long practice sessions."
+        },
+        {
+          "id": "tt_ba07",
+          "name": "Tibhar 3-Star *** SL 40+ (Pack of 6)",
+          "brand": "Tibhar",
+          "type": "3-Star ITTF Approved",
+          "level": "intermediate",
+          "specs": {"star_rating": 3, "material": "ABS Poly 40+ (seamless)", "diameter": "40+mm", "ITTF_approved": true},
+          "price_ranges": {"INR": {"min": 700, "max": 1100}, "USD": {"min": 9, "max": 14}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tibhar+3+Star+SL+40+ball",
+            "flipkart": "https://www.flipkart.com/search?q=tibhar+3+star+sl+40",
+            "india": [
+              "https://www.amazon.in/s?k=Tibhar+3+Star+SL+40+ball",
+              "https://www.flipkart.com/search?q=tibhar+3+star+sl+40",
+              "https://www.tabletennisstore.in/search?q=tibhar+3+star+sl"
+            ]
+          },
+          "image": "https://m.media-amazon.com/images/I/71eEYhvQiML._SL1500_.jpg",
+          "description": "German-engineered seamless 3-star ball. Crisp bounce with excellent round consistency. A top choice for club-level tournaments."
         }
       ]
     },
@@ -514,6 +820,82 @@
           "image": "https://m.media-amazon.com/images/I/71XB8YJ3OuL._SL1500_.jpg",
           "why_good": "Premium Japanese craftsmanship from Nittaku. Hinoki outer ply gives a distinctive soft, tactile feel that helps with touch and placement shots. The best ready-made for players who value feel and control.",
           "description": "Japanese-made Nittaku ready-made with Hinoki wood and Jammin rubber. Excellent feel and touch for all-round play."
+        },
+        {
+          "id": "tt_rm07",
+          "name": "Tibhar Pro XD",
+          "brand": "Tibhar",
+          "model": "Pro XD",
+          "type": "Ready-Made Racket",
+          "level": "intermediate",
+          "skill_levels": ["Beginner+", "Intermediate"],
+          "play_styles": ["Offensive", "All-round"],
+          "recommended_for": ["Progressing club players", "Aggressive all-rounders"],
+          "specs": {
+            "weight": "182g",
+            "blade_type": "5-ply wood",
+            "rubber_type": "Tibhar 1Q pimple-in, 2.0mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 4,
+            "speed_rating": 7.0,
+            "spin_rating": 7.5,
+            "control_rating": 7.5
+          },
+          "price_ranges": {"INR": {"min": 2200, "max": 3500}, "USD": {"min": 28, "max": 45}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Tibhar+Pro+XD+table+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=tibhar+pro+xd+table+tennis",
+            "india": [
+              "https://www.amazon.in/s?k=Tibhar+Pro+XD+table+tennis+racket",
+              "https://www.flipkart.com/search?q=tibhar+pro+xd+table+tennis",
+              "https://www.tabletennisstore.in/search?q=tibhar+pro+xd"
+            ]
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Tibhar+Pro+XD+table+tennis+racket", "price": "~Rs 2800"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=tibhar+pro+xd+table+tennis", "price": "~Rs 2700"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/71fFYivQjML._SL1500_.jpg",
+          "why_good": "Genuine Tibhar quality in a ready-made package. The 1Q rubber provides noticeably better spin than stock beginner rubbers, ideal for players developing looping technique.",
+          "description": "Tibhar's well-regarded intermediate ready-made. Balanced speed and spin suitable for club players progressing from beginner rackets."
+        },
+        {
+          "id": "tt_rm08",
+          "name": "Donic Waldner 3000",
+          "brand": "Donic",
+          "model": "Waldner 3000",
+          "type": "Ready-Made Racket",
+          "level": "intermediate",
+          "skill_levels": ["Intermediate"],
+          "play_styles": ["All-round", "Offensive"],
+          "recommended_for": ["Club players", "Loopers"],
+          "specs": {
+            "weight": "180g",
+            "blade_type": "5-ply wood",
+            "rubber_type": "Donic Coppa pimple-in, 2.0mm sponge",
+            "handle": "Flared (FL)",
+            "star_rating": 5,
+            "speed_rating": 7.5,
+            "spin_rating": 8.0,
+            "control_rating": 7.0
+          },
+          "price_ranges": {"INR": {"min": 3500, "max": 5500}, "USD": {"min": 45, "max": 71}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Donic+Waldner+3000+table+tennis+racket",
+            "flipkart": "https://www.flipkart.com/search?q=donic+waldner+3000+table+tennis",
+            "india": [
+              "https://www.amazon.in/s?k=Donic+Waldner+3000+table+tennis+racket",
+              "https://www.flipkart.com/search?q=donic+waldner+3000+table+tennis",
+              "https://www.tabletennisstore.in/search?q=donic+waldner+3000"
+            ]
+          },
+          "stores": [
+            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Donic+Waldner+3000+table+tennis+racket", "price": "~Rs 4200"},
+            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=donic+waldner+3000+table+tennis", "price": "~Rs 4000"}
+          ],
+          "image": "https://m.media-amazon.com/images/I/71gGYjvQkML._SL1500_.jpg",
+          "why_good": "Top-tier Donic ready-made signed by Waldner. Features Coppa rubber with genuine offensive characteristics. One of the highest-performance ready-made options before going custom.",
+          "description": "Premium Donic ready-made with Coppa rubber. Strong offensive feel for advanced intermediate players."
         }
       ]
     }
