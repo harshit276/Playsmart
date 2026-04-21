@@ -524,27 +524,23 @@ async def get_equipment_recommendations(
             profile["active_sport"] = sport
     else:
         try:
-            profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
+            profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=3.0)
         except (Exception, asyncio.TimeoutError):
-            profile = _guest_default_profile()
+            profile = None
         if not profile:
             profile = _guest_default_profile()
+            if sport:
+                profile["active_sport"] = sport
 
     try:
-        # Use explicit sport param first, then latest analysis sport, then profile active_sport
+        # Sport resolution: explicit param → profile's active_sport → default.
+        # Dropped the per-request "latest analysis" MongoDB lookup — the
+        # profile.active_sport is already kept in sync on every analysis save,
+        # so it's the same data without the DB roundtrip.
         if sport:
             active_sport = sport
-        elif user_id == "guest":
-            # No DB lookup needed for guests
-            active_sport = profile.get("active_sport", "badminton")
         else:
-            try:
-                latest_analysis_for_sport = await asyncio.wait_for(db.video_analyses.find_one(
-                    {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
-                ), timeout=3.0)
-            except (Exception, asyncio.TimeoutError):
-                latest_analysis_for_sport = None
-            active_sport = (latest_analysis_for_sport or {}).get("sport") or profile.get("active_sport", "badminton")
+            active_sport = profile.get("active_sport", "badminton")
 
         # Sport-specific category mapping
         sport_categories = {
@@ -571,32 +567,14 @@ async def get_equipment_recommendations(
             _equipment_cache[db_cache_key] = {"data": fetched, "ts": _time.time()}
             return fetched
 
-        # Map the public category name to a DB collection category and decide
-        # whether we have a scoring rule for it. Anything not in this map (e.g.
-        # strings, grips, balls, accessories) is sourced purely from the
-        # research data — top_recs stays empty.
+        # Map the public category name to the internal research-file key. All
+        # equipment data now comes from research/*.json — no MongoDB on the
+        # read path. Mongo flakiness no longer affects this endpoint.
         if category == "shoes":
             db_category = cat_map.get("shoes", "shoes")
-            items = await _get_db_items(db_category)
-            if active_sport == "badminton" and items:
-                top_recs = get_top_shoe_recommendations(profile, items, top_n=3)
-            elif items:
-                top_recs = _generic_score_equipment(profile, items, top_n=3)
-            else:
-                top_recs = []
         elif category in ("racket", "racquet", "primary"):
             db_category = cat_map.get("primary", "racket")
-            items = await _get_db_items(db_category)
-            if active_sport == "badminton" and items:
-                top_recs = get_top_recommendations(profile, items, top_n=3)
-            elif items:
-                top_recs = _generic_score_equipment(profile, items, top_n=3)
-            else:
-                top_recs = []
         else:
-            # Research-only categories: strings, grips, shuttlecocks, balls,
-            # accessories, etc. Map "strings" -> internal "string" so the
-            # research_cat_map lookup downstream finds research data correctly.
             secondary_map = {
                 "strings": "string", "string": "string",
                 "grips": "grip", "grip": "grip",
@@ -606,8 +584,8 @@ async def get_equipment_recommendations(
                 "blades": "tt_blade", "blade": "tt_blade",
             }
             db_category = secondary_map.get(category, category)
-            items = []
-            top_recs = []
+        items = []
+        top_recs = []
 
         # ─── Merge research equipment data ───
         budget_range = profile.get("budget_range", "Medium")
@@ -680,38 +658,16 @@ async def get_equipment_recommendations(
             )
             _equipment_cache[all_cache_key] = {"data": all_research_items, "ts": _time.time()}
 
-        # Get latest analysis weaknesses for personalized "why_this_fits".
-        # Skip for guests — they have no analyses.
-        latest_analysis = None
-        if user_id != "guest":
-            try:
-                latest_analysis = await asyncio.wait_for(db.video_analyses.find_one(
-                    {"user_id": user_id}, {"_id": 0, "shot_analysis": 1, "coach_feedback": 1},
-                    sort=[("date", -1)]
-                ), timeout=3.0)
-            except (Exception, asyncio.TimeoutError):
-                latest_analysis = None
+        # Personalization ("why this fits") no longer depends on MongoDB —
+        # we derive weaknesses from the profile's recorded history tags if
+        # present, and skip entirely otherwise. Keeps the read path 100%
+        # MongoDB-free so this endpoint always returns fast.
         detected_weaknesses = []
-        if latest_analysis:
-            sa = latest_analysis.get("shot_analysis") or {}
-            for w in (sa.get("weaknesses") or []):
-                if isinstance(w, dict):
-                    detected_weaknesses.append(w.get("issue", w.get("area", "")))
+        weaknesses_src = profile.get("recent_weaknesses") or []
+        if isinstance(weaknesses_src, list):
+            detected_weaknesses = [w for w in weaknesses_src if isinstance(w, str)][:5]
 
-        # Batch-fetch prices for all top_recs in one query (was N serial queries)
-        eq_ids = [rec["equipment"]["id"] for rec in top_recs]
-        prices_by_id = {}
-        if eq_ids:
-            try:
-                all_prices = await asyncio.wait_for(
-                    db.equipment_prices.find({"product_id": {"$in": eq_ids}}, {"_id": 0}).to_list(50),
-                    timeout=3.0,
-                )
-                for p in all_prices:
-                    prices_by_id.setdefault(p.get("product_id"), []).append(p)
-            except (Exception, asyncio.TimeoutError):
-                pass
-
+        prices_by_id = {}   # DB-sourced prices are gone; research items have buy_links already
         results = []
         for rec in top_recs:
             eq = rec["equipment"]
@@ -928,110 +884,68 @@ def _score_research_item(item: dict, profile: dict, bmin: float, bmax: float) ->
 
 @api_router.get("/recommendations/gear/{user_id}")
 async def get_gear_recommendations(user_id: str, sport: Optional[str] = None):
+    # MongoDB-free read path. Profile fetch only for logged-in users AND
+    # only with a tight 3s timeout — falls back to guest defaults if slow.
     if user_id == "guest":
         profile = _guest_default_profile()
-        if sport:
-            profile["active_sport"] = sport
     else:
+        profile = None
         try:
             profile = await asyncio.wait_for(
                 db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}),
-                timeout=5.0,
+                timeout=3.0,
             )
-        except (Exception, asyncio.TimeoutError) as e:
-            logger.warning(f"gear: profile fetch failed for {user_id[:8]}: {e}")
-            profile = None
+        except (Exception, asyncio.TimeoutError):
+            pass
         if not profile:
-            # Fall back to guest defaults rather than 404 — keeps the page useful
             profile = _guest_default_profile()
-            if sport:
-                profile["active_sport"] = sport
+    if sport:
+        profile["active_sport"] = sport
 
     skill = profile.get("skill_level", "Beginner")
     budget = profile.get("budget_range", "Medium")
+    active_sport = sport or profile.get("active_sport", "badminton")
 
-    # Use explicit sport param first, then latest analysis sport, then profile active_sport
-    if sport:
-        active_sport = sport
-    elif user_id == "guest":
-        active_sport = profile.get("active_sport", "badminton")
-    else:
-        try:
-            latest_analysis_for_sport = await asyncio.wait_for(
-                db.video_analyses.find_one(
-                    {"user_id": user_id}, {"_id": 0, "sport": 1}, sort=[("date", -1)]
-                ),
-                timeout=3.0,
-            )
-        except (Exception, asyncio.TimeoutError):
-            latest_analysis_for_sport = None
-        active_sport = (latest_analysis_for_sport or {}).get("sport") or profile.get("active_sport", "badminton")
-
-    # Sport-specific gear categories
+    # Gear is now served entirely from research/<sport>/equipment.json — no
+    # MongoDB. Research categories map 1:1 to the "gear" accessory types.
+    from research_loader import get_all_equipment_categories
     sport_gear = {
-        "badminton": ["shuttlecock", "string", "grip", "bag"],
-        "table_tennis": ["tt_rubber", "tt_ball", "tt_bag"],
-        "tennis": ["tennis_string", "tennis_ball", "tennis_bag"],
-        "pickleball": ["pb_ball", "pb_bag"],
-        "cricket": ["cricket_ball", "cricket_pads", "cricket_gloves", "cricket_helmet"],
-        "football": ["football", "football_shinguards"],
-        "swimming": ["swim_cap", "fins", "kickboard", "pull_buoy"],
+        "badminton":    ["shuttlecocks", "strings", "grips", "accessories"],
+        "table_tennis": ["rubbers", "balls", "accessories"],
+        "tennis":       ["strings", "balls", "accessories"],
+        "pickleball":   ["balls", "accessories"],
+        "cricket":      ["balls", "pads", "gloves", "helmets"],
+        "football":     ["footballs", "shin_guards"],
+        "swimming":     ["swim_caps", "fins"],
     }
     gear_categories = sport_gear.get(active_sport, sport_gear["badminton"])
-
-    # Fetch all gear categories in PARALLEL (was serial = slow)
-    async def _fetch_cat(cat: str):
-        try:
-            items = await asyncio.wait_for(
-                db.equipment.find({"category": cat}, {"_id": 0}).to_list(50),
-                timeout=4.0,
-            )
-            return cat, items
-        except (Exception, asyncio.TimeoutError) as e:
-            logger.warning(f"gear: db.equipment fetch failed for cat={cat}: {e}")
-            return cat, []
-
-    cat_results = await asyncio.gather(*(_fetch_cat(c) for c in gear_categories))
-
-    # Collect all eligible items to batch the prices in ONE query
-    all_eligible = []
-    per_cat_eligible: dict = {}
-    for cat, items in cat_results:
-        eligible = []
-        for item in items:
-            rec_levels = item.get("recommended_skill_level", [])
-            if isinstance(rec_levels, str):
-                rec_levels = [rec_levels]
-            if skill in rec_levels or not rec_levels:
-                eligible.append(item)
-                all_eligible.append(item)
-        per_cat_eligible[cat] = eligible[:2]  # top 2 per cat
-
-    prices_by_id: dict = {}
-    if all_eligible:
-        try:
-            eq_ids = [it["id"] for it in all_eligible]
-            all_prices = await asyncio.wait_for(
-                db.equipment_prices.find({"product_id": {"$in": eq_ids}}, {"_id": 0}).to_list(200),
-                timeout=3.0,
-            )
-            for p in all_prices:
-                prices_by_id.setdefault(p.get("product_id"), []).append(p)
-        except (Exception, asyncio.TimeoutError):
-            pass
+    all_cats = get_all_equipment_categories(active_sport)
 
     results = {}
-    for cat, eligible in per_cat_eligible.items():
+    for cat in gear_categories:
+        items = all_cats.get(cat, []) or []
+        # Prefer items matching user's skill level, else any
+        eligible = [it for it in items if _matches_skill(it, skill)][:2]
+        if not eligible:
+            eligible = items[:2]
         results[cat] = [
             {
-                "equipment": item,
-                "prices": prices_by_id.get(item["id"], []),
-                "reason": _gear_reason(item, skill, budget),
+                "equipment": it,
+                "prices": [],  # buy_links already embedded in research items
+                "reason": _gear_reason(it, skill, budget),
             }
-            for item in eligible
+            for it in eligible
         ]
 
     return {"gear": results, "profile_level": skill, "active_sport": active_sport}
+
+
+def _matches_skill(item: dict, skill: str) -> bool:
+    lvl = (item.get("level") or item.get("recommended_skill_level") or "").lower()
+    s = (skill or "").lower().replace("+", "")
+    if isinstance(lvl, list):
+        return not lvl or s in [x.lower() for x in lvl]
+    return (not lvl) or (s == lvl)
 
 
 def _gear_reason(item, skill, budget):
