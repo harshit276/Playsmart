@@ -979,19 +979,24 @@ async def get_gear_recommendations(user_id: str, sport: Optional[str] = None):
     }
     gear_categories = sport_gear.get(active_sport, sport_gear["badminton"])
 
-    results = {}
-    for cat in gear_categories:
+    # Fetch all gear categories in PARALLEL (was serial = slow)
+    async def _fetch_cat(cat: str):
         try:
             items = await asyncio.wait_for(
                 db.equipment.find({"category": cat}, {"_id": 0}).to_list(50),
                 timeout=4.0,
             )
+            return cat, items
         except (Exception, asyncio.TimeoutError) as e:
             logger.warning(f"gear: db.equipment fetch failed for cat={cat}: {e}")
-            items = []
+            return cat, []
 
-        matched = []
-        # Batch prices for all items in this category in one query
+    cat_results = await asyncio.gather(*(_fetch_cat(c) for c in gear_categories))
+
+    # Collect all eligible items to batch the prices in ONE query
+    all_eligible = []
+    per_cat_eligible: dict = {}
+    for cat, items in cat_results:
         eligible = []
         for item in items:
             rec_levels = item.get("recommended_skill_level", [])
@@ -999,27 +1004,32 @@ async def get_gear_recommendations(user_id: str, sport: Optional[str] = None):
                 rec_levels = [rec_levels]
             if skill in rec_levels or not rec_levels:
                 eligible.append(item)
+                all_eligible.append(item)
+        per_cat_eligible[cat] = eligible[:2]  # top 2 per cat
 
-        prices_by_id: dict = {}
-        if eligible:
-            try:
-                eq_ids = [it["id"] for it in eligible]
-                all_prices = await asyncio.wait_for(
-                    db.equipment_prices.find({"product_id": {"$in": eq_ids}}, {"_id": 0}).to_list(100),
-                    timeout=3.0,
-                )
-                for p in all_prices:
-                    prices_by_id.setdefault(p.get("product_id"), []).append(p)
-            except (Exception, asyncio.TimeoutError):
-                pass
+    prices_by_id: dict = {}
+    if all_eligible:
+        try:
+            eq_ids = [it["id"] for it in all_eligible]
+            all_prices = await asyncio.wait_for(
+                db.equipment_prices.find({"product_id": {"$in": eq_ids}}, {"_id": 0}).to_list(200),
+                timeout=3.0,
+            )
+            for p in all_prices:
+                prices_by_id.setdefault(p.get("product_id"), []).append(p)
+        except (Exception, asyncio.TimeoutError):
+            pass
 
-        for item in eligible:
-            matched.append({
+    results = {}
+    for cat, eligible in per_cat_eligible.items():
+        results[cat] = [
+            {
                 "equipment": item,
                 "prices": prices_by_id.get(item["id"], []),
                 "reason": _gear_reason(item, skill, budget),
-            })
-        results[cat] = matched[:2]
+            }
+            for item in eligible
+        ]
 
     return {"gear": results, "profile_level": skill, "active_sport": active_sport}
 
@@ -1093,21 +1103,59 @@ def _build_why_this_fits_research(equipment: dict, profile: dict, weaknesses: li
     return " ".join(parts)
 
 
+def _default_training_payload(active_sport: str, skill_level: str = "Beginner") -> dict:
+    """Build a usable default training response (plan + drills + videos) from
+    research data alone — no user profile needed. Guests AND logged-in users
+    whose profile fetch fails get this so the page never shows 'no drills'."""
+    from research_loader import (
+        get_all_skills, get_all_videos, build_weekly_plan_from_skills, get_drills_for_issues, get_videos_for_issues,
+    )
+    skills = get_all_skills(active_sport)
+    videos = get_all_videos(active_sport)
+
+    # Build a real weekly plan with drills per day
+    plan_days = build_weekly_plan_from_skills(active_sport, skill_level, focus_issues=None, days_per_week=5)
+    plan = {"weeks": [{"days": plan_days}]} if plan_days else None
+
+    # Flatten all drills + videos across the plan into lookup maps the
+    # frontend expects
+    drills_map: dict = {}
+    videos_map: dict = {}
+    for day in plan_days:
+        for d in day.get("drills", []):
+            did = d.get("id") or d.get("name", "")
+            if did and did not in drills_map:
+                drills_map[did] = d
+        for v in day.get("videos", []):
+            vid = v.get("id") or v.get("url", "")
+            if vid:
+                videos_map.setdefault(day.get("skill_id", "default"), []).append(v)
+
+    # Training videos list (flat)
+    if isinstance(videos, dict):
+        training_videos = list(videos.values())[:10]
+    elif isinstance(videos, list):
+        training_videos = videos[:10]
+    else:
+        training_videos = []
+
+    return {
+        "plan": plan,
+        "drills": drills_map,
+        "videos": videos_map,
+        "skills": skills,
+        "training_videos": training_videos,
+    }
+
+
 @api_router.get("/recommendations/training/{user_id}")
 async def get_training_recommendation(user_id: str, sport: Optional[str] = None, authorization: str = Header(None)):
-    from research_loader import get_all_skills, get_all_videos
+    active_sport = sport or "badminton"
     if user_id == "guest":
-        # Return default training data for guests
-        active_sport = sport or "badminton"
-        skills = get_all_skills(active_sport)
-        videos = get_all_videos(active_sport)
-        return {"plan": None, "drills": {}, "videos": videos, "skills": skills, "training_videos": list(videos.values())[:10] if isinstance(videos, dict) else videos[:10] if isinstance(videos, list) else []}
+        return _default_training_payload(active_sport)
     user = await get_current_user_or_none(authorization)
     if not user:
-        active_sport = sport or "badminton"
-        skills = get_all_skills(active_sport)
-        videos = get_all_videos(active_sport)
-        return {"plan": None, "drills": {}, "videos": videos, "skills": skills, "training_videos": list(videos.values())[:10] if isinstance(videos, dict) else videos[:10] if isinstance(videos, list) else []}
+        return _default_training_payload(active_sport)
 
     try:
         profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
@@ -1115,17 +1163,9 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
         logger.warning(f"training: profile fetch failed for {user_id[:8]}: {e}")
         profile = None
     if not profile:
-        # Don't 404 — degrade gracefully to guest data so the page still renders
-        active_sport = sport or "badminton"
-        skills = get_all_skills(active_sport)
-        videos = get_all_videos(active_sport)
-        return {
-            "plan": None,
-            "drills": {},
-            "videos": videos,
-            "skills": skills,
-            "training_videos": list(videos.values())[:10] if isinstance(videos, dict) else (videos[:10] if isinstance(videos, list) else []),
-        }
+        # Profile fetch failed (DB down or user never assessed) — serve real
+        # drills from research data using beginner-level default
+        return _default_training_payload(active_sport)
 
     skill = profile.get("skill_level", "Beginner")
 

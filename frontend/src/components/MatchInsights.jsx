@@ -13,7 +13,7 @@ const FRAMES = 12;
 const KP = 17;
 const MIN_PRED_CONF = 0.30; // below this, the model's "guess" is too noisy to count
 
-export default function MatchInsights({ videoFile, sport = "badminton", onError }) {
+export default function MatchInsights({ videoFile, sport = "badminton", playerPosition = "auto", onError }) {
   const [phase, setPhase] = useState("idle"); // idle | scanning | classifying | narrating | done | error
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
@@ -98,9 +98,14 @@ export default function MatchInsights({ videoFile, sport = "badminton", onError 
       await new Promise((r, e) => { videoEl.onloadedmetadata = r; videoEl.onerror = e; });
       const w = videoEl.videoWidth || 640;
       const h = videoEl.videoHeight || 360;
+
+      // Doubles support: if user picked a player quadrant, crop to it
+      // before pose detection so MoveNet only sees the intended player.
+      // Mirrors the crop logic in training/extract_poses.py.
+      const cropBox = computeCropBox(w, h, playerPosition);
       const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = cropBox.w;
+      canvas.height = cropBox.h;
       const ctx = canvas.getContext("2d");
 
       const newPreds = [];
@@ -116,11 +121,21 @@ export default function MatchInsights({ videoFile, sport = "badminton", onError 
           videoEl.currentTime = t;
           // eslint-disable-next-line no-await-in-loop
           await new Promise((r) => { videoEl.onseeked = r; });
-          ctx.drawImage(videoEl, 0, 0, w, h);
+          // Draw the (possibly cropped) source region onto the canvas
+          ctx.drawImage(
+            videoEl,
+            cropBox.x, cropBox.y, cropBox.w, cropBox.h,    // source
+            0, 0, cropBox.w, cropBox.h,                    // dest
+          );
           // eslint-disable-next-line no-await-in-loop
           const poses = await detector.estimatePoses(canvas);
           if (poses?.[0]?.keypoints) {
-            const kps = poses[0].keypoints.map((kp) => [kp.y / h, kp.x / w, kp.score ?? 0]);
+            // Normalize against the cropped canvas, NOT the full frame
+            const kps = poses[0].keypoints.map((kp) => [
+              kp.y / cropBox.h,
+              kp.x / cropBox.w,
+              kp.score ?? 0,
+            ]);
             keypoints.push(kps);
             last = kps;
           } else {
@@ -335,4 +350,31 @@ function computeSkillScore(n, avgConf, dist) {
   const diversity = Object.keys(dist).length / 6;
   const volume = Math.min(1, n / 25);
   return Math.round((0.45 * avgConf + 0.35 * diversity + 0.20 * volume) * 5 * 10) / 10;
+}
+
+/**
+ * Per-video player position crop. Matches training/extract_poses.py's
+ * crop_to_quadrant() — same geometry + 10% padding.
+ * Returns {x, y, w, h} into the source frame.
+ */
+function computeCropBox(w, h, position) {
+  if (!position || position === "auto") return { x: 0, y: 0, w, h };
+  const halfW = Math.floor(w / 2);
+  const halfH = Math.floor(h / 2);
+  const padX = Math.floor(halfW * 0.1);
+  const padY = Math.floor(halfH * 0.1);
+  const map = {
+    "top-left":     { x: 0,         y: 0,         w: halfW,     h: halfH },
+    "top-right":    { x: halfW,     y: 0,         w: halfW,     h: halfH },
+    "bottom-left":  { x: 0,         y: halfH,     w: halfW,     h: halfH },
+    "bottom-right": { x: halfW,     y: halfH,     w: halfW,     h: halfH },
+  };
+  const box = map[position];
+  if (!box) return { x: 0, y: 0, w, h };
+  // Add 10% padding so the player isn't clipped at the quadrant edge
+  const x = Math.max(0, box.x - padX);
+  const y = Math.max(0, box.y - padY);
+  const wOut = Math.min(w - x, box.w + padX * 2);
+  const hOut = Math.min(h - y, box.h + padY * 2);
+  return { x, y, w: wOut, h: hOut };
 }

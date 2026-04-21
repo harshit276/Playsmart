@@ -1176,6 +1176,7 @@ export default function AnalyzePage() {
           <MatchInsights
             videoFile={file}
             sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
+            playerPosition={targetPlayer || "auto"}
           />
         )}
 

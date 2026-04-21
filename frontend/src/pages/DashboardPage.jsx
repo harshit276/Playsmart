@@ -87,19 +87,18 @@ export default function DashboardPage() {
 
   const loadData = useCallback(async () => {
     if (!user?.id) return; // Guests get default empty state
-    const results = await Promise.allSettled([
-      api.get(`/progress/${user.id}`),
-      api.get(`/analysis-history/${user.id}`),
-      api.get(`/recommendations/equipment/${user.id}?category=racket`),
-      api.get(`/badges/${user.id}`),
-    ]);
-    if (results[0].status === "fulfilled") setProgress(results[0].value.data);
-    if (results[1].status === "fulfilled") setAnalysisHistory(results[1].value.data.analyses || []);
-    if (results[2].status === "fulfilled") {
-      const recs = results[2].value.data?.recommendations || [];
-      setEquipment(recs.slice(0, 3));
-    }
-    if (results[3].status === "fulfilled") setBadgesData(results[3].value.data);
+    // 8s per-call timeout so a single flaking endpoint doesn't block the
+    // whole dashboard. Each setter fires as its call resolves so the page
+    // paints progressively instead of blocking on the slowest one.
+    const OPTS = { timeout: 8000 };
+    api.get(`/progress/${user.id}`, OPTS)
+      .then(r => setProgress(r.data)).catch(() => {});
+    api.get(`/analysis-history/${user.id}`, OPTS)
+      .then(r => setAnalysisHistory(r.data.analyses || [])).catch(() => {});
+    api.get(`/recommendations/equipment/${user.id}?category=racket`, OPTS)
+      .then(r => setEquipment((r.data?.recommendations || []).slice(0, 3))).catch(() => {});
+    api.get(`/badges/${user.id}`, OPTS)
+      .then(r => setBadgesData(r.data)).catch(() => {});
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);

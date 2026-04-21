@@ -44,6 +44,16 @@ export default function HighlightsPage() {
   // Clean up video URL on unmount
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl); }, [videoUrl]);
 
+  // Blob URL for the generated reel — the <video> player swaps to this
+  // once composition finishes so the user sees their reel, not the source.
+  const [reelUrl, setReelUrl] = useState(null);
+  useEffect(() => {
+    if (!recordedBlob) { setReelUrl(null); return; }
+    const url = URL.createObjectURL(recordedBlob);
+    setReelUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [recordedBlob]);
+
   const handleFile = (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
@@ -51,6 +61,18 @@ export default function HighlightsPage() {
     if (!["mp4", "avi", "mov", "mkv", "webm"].includes(ext)) {
       toast.error("Unsupported format. Use MP4, AVI, MOV, MKV, or WEBM.");
       return;
+    }
+    // Guard rail for large phone uploads — browsers / MediaRecorder blow up
+    // over ~400 MB. Warn and let the user choose.
+    const sizeMB = f.size / 1024 / 1024;
+    if (sizeMB > 400) {
+      const ok = window.confirm(
+        `This video is ${sizeMB.toFixed(0)} MB. Very large videos often fail on phones `
+        + `(MediaRecorder OOMs). Continue anyway, or cancel and trim it first?`
+      );
+      if (!ok) return;
+    } else if (sizeMB > 200) {
+      toast.info(`${sizeMB.toFixed(0)} MB video — analysis may take a minute.`);
     }
     setFile(f);
     setHighlights(null);
@@ -83,6 +105,7 @@ export default function HighlightsPage() {
       // Pose-based detector picks actual SHOT moments via wrist-acceleration
       // peaks. Falls back to motion-based detection if MoveNet fails.
       let result = null;
+      let usedDetector = null;
       try {
         const { detectPoseHighlights } = await import("@/ai/poseHighlightDetector");
         result = await detectPoseHighlights(file, selectedSport || activeSport, {
@@ -92,6 +115,7 @@ export default function HighlightsPage() {
             if (message) setLoadingText(message);
           },
         });
+        if (result?.highlights?.length) usedDetector = "pose";
       } catch (poseErr) {
         console.warn("Pose detector failed, falling back to motion-based:", poseErr);
       }
@@ -106,7 +130,11 @@ export default function HighlightsPage() {
             if (message) setLoadingText(message);
           },
         });
+        usedDetector = "motion";
       }
+
+      // Stamp which detector ran so the UI can show it
+      if (result) result.detector = usedDetector;
 
       if (result.highlights.length === 0) {
         setError("No highlight moments found. Try a longer video with more action.");
@@ -361,12 +389,28 @@ export default function HighlightsPage() {
             <div className="relative bg-black" style={{ maxHeight: "50vh" }}>
               <video
                 ref={videoRef}
-                src={videoUrl}
+                src={reelUrl || videoUrl}
                 controls={!isPlayingReel}
                 playsInline
                 onTimeUpdate={handleTimeUpdate}
                 className="w-full h-auto max-h-[50vh] object-contain"
               />
+              {reelUrl && (
+                <div className="absolute top-3 left-3 bg-lime-400 text-black text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
+                  Your Highlight Reel
+                </div>
+              )}
+              {!reelUrl && highlights?.detector && (
+                <div className={`absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded ${
+                  highlights.detector === "pose"
+                    ? "bg-lime-400/90 text-black"
+                    : "bg-amber-500/90 text-black"
+                }`}>
+                  {highlights.detector === "pose"
+                    ? "Pose-based detection · clean shots"
+                    : "Motion fallback · clips may be approximate"}
+                </div>
+              )}
               {/* Hidden canvas for recording */}
               <canvas ref={canvasRef} className="hidden" />
 
