@@ -19,9 +19,20 @@ sports/
 ```bash
 cd training
 pip install -r requirements.txt
-# optional: for cleaner LSTM-driven labels (badminton mainly), add YOLO11x:
+
+# Optional: cleaner LSTM-driven labels (badminton), use YOLO11x-pose
 pip install ultralytics
-# optional: for sports without a pretrained labeler, you'll need Groq:
+
+# Optional: shuttle tracking + court detection for REAL speeds + landing data
+# Adds ~+5-10 sec/clip processing time, needs torch + opencv + ~200 MB weights
+pip install torch torchvision opencv-python
+cd external
+git clone --depth 1 https://github.com/alenzenx/TrackNetV3
+# Then download a pretrained weights checkpoint from the repo's release page
+# and place it at training/external/TrackNetV3/exp/best.pt
+# (or set TRACKNET_WEIGHTS_PATH env var to a custom location)
+
+# For sports without a pretrained labeler (everything except badminton):
 set GROQ_API_KEY=gsk_xxx
 ```
 
