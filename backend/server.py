@@ -7767,54 +7767,87 @@ class LabelSaveRequest(BaseModel):
 
 
 # ─── Match-level coaching insights ─────────────────────────────────────────
-# Takes the per-shot predictions from /api/predict-shot (frontend aggregates
-# them into distribution + skill_score) and asks Groq to narrate strengths,
-# improvements, and a focus for next session.
+# Takes pose-derived shot CHARACTERISTICS (not shot-type predictions) from
+# the frontend and asks Groq to narrate strengths/improvements/focus. We
+# avoid claiming specific shot types because pose-only classification is
+# unreliable; we describe what the motion LOOKED LIKE instead.
+
+class ShotClusterStats(BaseModel):
+    count: int = Field(..., ge=0)
+    avg_speed: float = Field(..., ge=0, le=1, description="Mean wrist peak speed (normalized 0-1)")
+    avg_extension: float = Field(..., ge=0, le=1, description="Mean arm extension (normalized 0-1)")
+    consistency: float = Field(..., ge=0, le=1, description="1 - normalized stddev of metrics across this cluster's shots")
+
 
 class CoachingNarrativeRequest(BaseModel):
     sport: str = Field(..., max_length=32)
-    shot_distribution: dict = Field(..., description="{'smash': 12, 'clear': 8, ...}")
-    avg_confidence: float = Field(..., ge=0, le=1)
-    skill_score: float = Field(..., ge=0, le=5, description="Computed 0-5 skill rating")
-    duration_sec: Optional[float] = None
     total_shots: int = Field(..., ge=0)
-    player_level: Optional[str] = Field(None, max_length=20, description="beginner|intermediate|advanced|pro (optional)")
+    duration_sec: Optional[float] = None
+    avg_recovery_sec: Optional[float] = Field(None, ge=0, description="Mean idle time between shots")
+    overall_consistency: float = Field(..., ge=0, le=1, description="Cross-cluster technique repeatability")
+    clusters: dict[str, ShotClusterStats] = Field(
+        ...,
+        description=(
+            "Pose-cluster summaries keyed by descriptive name, e.g. "
+            "{'powerful_overhead': {...}, 'soft_touch': {...}, 'flat_drive': {...}, 'defensive_lift': {...}}"
+        ),
+    )
+    player_level: Optional[str] = Field(None, max_length=20)
 
 
 _COACHING_SYSTEM_PROMPT = (
-    "You are AthlyticAI, a concise coaching narrator. Given quantitative match "
-    "stats, produce SPECIFIC, encouraging coaching feedback grounded in the data. "
-    "Be honest — if the numbers show weakness, say so kindly. "
-    "ALWAYS reference the actual shot counts and confidence numbers when relevant. "
-    "Output JSON ONLY, no prose around it.\n\n"
-    "Schema:\n"
-    "{\n"
-    '  "summary": "<one-sentence overview, e.g. \'Strong attacking play with limited net work — 73% smash-heavy session\'>",\n'
-    '  "strengths": ["<3 specific strength bullets, each citing a shot count or confidence>"],\n'
-    '  "improvements": ["<3 specific improvement bullets, each grounded in the data>"],\n'
-    '  "next_focus": "<one concrete drill or area for the next training session>"\n'
-    "}\n"
+    "You are AthlyticAI, a concise coaching narrator. The frontend has detected "
+    "shot moments and grouped them by POSE CHARACTERISTICS (NOT specific shot types — "
+    "we don't claim to know whether a shot was a 'drop' vs a 'net shot'; we describe "
+    "what the motion looked like). Each cluster has a count, normalized speed, "
+    "extension, and consistency score.\n\n"
+    "Cluster names you may see:\n"
+    "  powerful_overhead — high-speed motion with arm above shoulders (smashes / overhead clears)\n"
+    "  soft_overhead — low-speed motion with arm above shoulders (drops, slow clears)\n"
+    "  flat_drive — medium-speed, mid-height motion (drives, fast exchanges)\n"
+    "  defensive_lift — slow upward motion from low position (lifts, defensive shots)\n"
+    "  low_touch — slow low-position motion (net shots, push returns)\n\n"
+    "Rules:\n"
+    "  1. NEVER name a specific shot type (smash/clear/drop/net) — describe the motion category.\n"
+    "  2. ALWAYS cite actual numbers (counts, consistency %, speeds).\n"
+    "  3. Honest tone — call out weaknesses without sugar-coating.\n"
+    "  4. Output ONLY JSON, no prose around it. Schema:\n"
+    "  {\n"
+    '    "summary": "<one-sentence overview, e.g. \'12 shots, attacking-heavy session — 5 powerful overheads with strong consistency, but soft-touch shots vary wildly\'>",\n'
+    '    "strengths": ["<3 bullets, each citing real numbers>"],\n'
+    '    "improvements": ["<3 bullets, each grounded in cluster stats>"],\n'
+    '    "next_focus": "<one concrete drill, e.g. \'10 minutes of soft-touch reps to bring touch consistency from 52% to 70%+\'>"\n'
+    "  }\n"
 )
 
 
 @api_router.post("/analysis/coaching-narrative")
 async def coaching_narrative(req: CoachingNarrativeRequest):
-    # Build the user-message context
-    dist_str = ", ".join(f"{k}: {v}" for k, v in sorted(req.shot_distribution.items(), key=lambda kv: -kv[1]))
+    # Build the user-message context — formatted cluster summary
+    cluster_lines = []
+    for name, stats in sorted(req.clusters.items(), key=lambda kv: -kv[1].count):
+        if stats.count == 0:
+            continue
+        cluster_lines.append(
+            f"  {name}: count={stats.count}, "
+            f"avg_speed={stats.avg_speed:.0%}, "
+            f"avg_extension={stats.avg_extension:.0%}, "
+            f"consistency={stats.consistency:.0%}"
+        )
     user_msg = (
         f"Sport: {req.sport}\n"
         f"Total shots detected: {req.total_shots}\n"
-        f"Shot distribution: {dist_str}\n"
-        f"Average classification confidence: {req.avg_confidence:.0%} "
-        f"(higher = cleaner technique signature)\n"
-        f"Computed skill score: {req.skill_score:.1f}/5\n"
         + (f"Match duration: {req.duration_sec:.0f}s\n" if req.duration_sec else "")
+        + (f"Avg recovery between shots: {req.avg_recovery_sec:.1f}s\n" if req.avg_recovery_sec else "")
+        + f"Overall technique consistency: {req.overall_consistency:.0%}\n"
         + (f"Self-rated level: {req.player_level}\n" if req.player_level else "")
+        + "\nShot clusters by motion characteristic:\n"
+        + "\n".join(cluster_lines)
     )
 
-    # Fallback if Groq isn't configured — generate a deterministic templated response
+    # Fallback if Groq isn't configured
     if not GROQ_API_KEY:
-        return _fallback_narrative(req, dist_str)
+        return _fallback_narrative(req)
 
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
@@ -7838,51 +7871,76 @@ async def coaching_narrative(req: CoachingNarrativeRequest):
             try:
                 parsed = _json.loads(content)
             except Exception:
-                # Sometimes the model wraps with ```json — strip it
                 cleaned = content.strip().strip("`").lstrip("json").strip()
                 parsed = _json.loads(cleaned)
             return {
-                "summary": parsed.get("summary", "")[:200],
-                "strengths": [s[:200] for s in (parsed.get("strengths") or [])][:3],
-                "improvements": [s[:200] for s in (parsed.get("improvements") or [])][:3],
-                "next_focus": (parsed.get("next_focus") or "")[:300],
+                "summary": parsed.get("summary", "")[:240],
+                "strengths": [s[:240] for s in (parsed.get("strengths") or [])][:3],
+                "improvements": [s[:240] for s in (parsed.get("improvements") or [])][:3],
+                "next_focus": (parsed.get("next_focus") or "")[:320],
             }
     except Exception as e:
         logger.warning(f"coaching_narrative LLM failed: {e}")
-        return _fallback_narrative(req, dist_str)
+        return _fallback_narrative(req)
 
 
-def _fallback_narrative(req: CoachingNarrativeRequest, dist_str: str) -> dict:
-    """Deterministic non-LLM fallback. Useful when GROQ_API_KEY isn't set."""
-    sorted_shots = sorted(req.shot_distribution.items(), key=lambda kv: -kv[1])
-    top_shot = sorted_shots[0] if sorted_shots else ("shots", 0)
-    weakest_shots = [k for k, v in sorted_shots if v <= 1]
+_CLUSTER_HUMAN_NAMES = {
+    "powerful_overhead": "powerful overhead",
+    "soft_overhead": "soft overhead",
+    "flat_drive": "flat drive",
+    "defensive_lift": "defensive lift",
+    "low_touch": "low touch",
+}
+
+
+def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
+    """Deterministic non-LLM fallback. Used when GROQ_API_KEY missing."""
+    populated = {n: s for n, s in req.clusters.items() if s.count > 0}
+    sorted_clusters = sorted(populated.items(), key=lambda kv: -kv[1].count)
 
     strengths = []
-    if req.avg_confidence >= 0.7:
-        strengths.append(f"Clean technique — {req.avg_confidence:.0%} avg classification confidence")
-    if top_shot[1] >= 5:
-        strengths.append(f"Strong {top_shot[0]} game ({top_shot[1]} this session)")
-    if len(req.shot_distribution) >= 4:
-        strengths.append(f"Good shot variety — used {len(req.shot_distribution)} distinct shot types")
+    if req.overall_consistency >= 0.7:
+        strengths.append(f"Strong overall technique — {req.overall_consistency:.0%} consistency across shots")
+    if sorted_clusters:
+        top = sorted_clusters[0]
+        if top[1].count >= 3:
+            human = _CLUSTER_HUMAN_NAMES.get(top[0], top[0])
+            strengths.append(f"Confident with {human} motion ({top[1].count} this session, "
+                             f"{top[1].consistency:.0%} consistent)")
+    if len(populated) >= 3:
+        strengths.append(f"Good motion variety — {len(populated)} distinct shot patterns")
     if not strengths:
-        strengths = [f"You completed {req.total_shots} shots in this session"]
+        strengths = [f"{req.total_shots} shots completed this session"]
 
     improvements = []
-    if weakest_shots:
-        improvements.append(f"Limited use of: {', '.join(weakest_shots[:3])} — try mixing them in more")
-    if req.avg_confidence < 0.6:
-        improvements.append(f"Technique consistency at {req.avg_confidence:.0%} — focus on cleaner contact form")
-    if len(req.shot_distribution) <= 2:
-        improvements.append("Shot variety is narrow — work on at least 4 distinct shot types")
+    inconsistent = [(n, s) for n, s in populated.items() if s.consistency < 0.55 and s.count >= 2]
+    if inconsistent:
+        n, s = min(inconsistent, key=lambda kv: kv[1].consistency)
+        human = _CLUSTER_HUMAN_NAMES.get(n, n)
+        improvements.append(f"Your {human} shots vary a lot ({s.consistency:.0%} consistency across {s.count}). Drill this to build muscle memory.")
+    underused = [n for n, s in req.clusters.items() if s.count == 0]
+    if underused and len(underused) <= 3:
+        humans = [_CLUSTER_HUMAN_NAMES.get(n, n) for n in underused]
+        improvements.append(f"You didn't use these patterns: {', '.join(humans)}. Mix them in to be less predictable.")
+    if req.avg_recovery_sec and req.avg_recovery_sec > 1.5:
+        improvements.append(f"Recovery time between shots is {req.avg_recovery_sec:.1f}s — work on quick split-step footwork.")
     if not improvements:
-        improvements = [f"You're well-rounded — challenge yourself with faster opponents"]
+        improvements = ["You're well-rounded — push for higher pace or a stronger opponent next session."]
 
+    summary = (
+        f"{req.total_shots}-shot session, {len(populated)} motion patterns, "
+        f"overall consistency {req.overall_consistency:.0%}"
+    )
+    next_focus = (
+        f"Drill {_CLUSTER_HUMAN_NAMES.get(min(populated, key=lambda n: populated[n].consistency), 'your weakest')} "
+        f"reps to lift consistency"
+        if populated else "Pick one motion pattern and drill it for 15 minutes"
+    )
     return {
-        "summary": f"{req.total_shots}-shot session, dominant: {top_shot[0]} ({top_shot[1]}×), skill score {req.skill_score:.1f}/5",
+        "summary": summary,
         "strengths": strengths[:3],
         "improvements": improvements[:3],
-        "next_focus": f"Drill the under-used shot types: {', '.join(weakest_shots[:2]) if weakest_shots else 'shot placement'}",
+        "next_focus": next_focus,
     }
 
 
