@@ -23,6 +23,8 @@ import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 
 const FRAMES_PER_SHOT = 12;
+const MAX_SHOTS_TO_ANALYZE = 25;   // hard cap to keep total time bounded (~30-60s)
+const MAX_VIDEO_SECONDS = 300;     // 5 min — past this, recommend trimming
 
 // MoveNet keypoint indices (the joints we care about)
 const KP = {
@@ -49,8 +51,18 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
   const [overall, setOverall] = useState(null);
   const [narrative, setNarrative] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [wasTruncated, setWasTruncated] = useState(false);
 
   useEffect(() => () => setShots([]), []);
+
+  // Auto-start when component mounts with a video — no click required.
+  // Single-flight: only auto-run once per video file.
+  useEffect(() => {
+    if (videoFile && phase === "idle") {
+      run();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoFile]);
 
   const totalShots = shots.length;
   const populated = useMemo(
@@ -77,6 +89,18 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
         },
       });
       if (!result.clips.length) throw new Error("No shot moments detected");
+
+      // Cap to MAX_SHOTS_TO_ANALYZE — pick the highest-scoring shots
+      // so analysis stays under ~60 seconds even for full matches.
+      let clips = result.clips;
+      let truncated = false;
+      if (clips.length > MAX_SHOTS_TO_ANALYZE) {
+        truncated = true;
+        clips = [...clips]
+          .sort((a, b) => (b.score || 0) - (a.score || 0))
+          .slice(0, MAX_SHOTS_TO_ANALYZE)
+          .sort((a, b) => a.start - b.start);
+      }
 
       // ─── 2. Init MoveNet in-browser ──────────────────────────────
       setPhase("extracting");
@@ -109,8 +133,9 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
 
       // ─── 4. Per-shot characteristic extraction ───────────────────
       const shotData = [];
-      for (let si = 0; si < result.clips.length; si++) {
-        const clip = result.clips[si];
+      const t0 = performance.now();
+      for (let si = 0; si < clips.length; si++) {
+        const clip = clips[si];
         const times = [];
         for (let k = 0; k < FRAMES_PER_SHOT; k++) {
           times.push(clip.start + (clip.end - clip.start) * (k / (FRAMES_PER_SHOT - 1)));
@@ -140,10 +165,24 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
           shotData.push({ ...chars, start: clip.start, end: clip.end });
         }
 
-        const pct = 20 + Math.round(((si + 1) / result.clips.length) * 65);
+        const pct = 20 + Math.round(((si + 1) / clips.length) * 65);
+        const elapsed = (performance.now() - t0) / 1000;
+        const eta = clips.length > si + 1 && elapsed > 1
+          ? Math.round((elapsed / (si + 1)) * (clips.length - si - 1))
+          : null;
         setProgress(pct);
-        setProgressMsg(`Analyzing motion ${si + 1}/${result.clips.length}`);
+        setProgressMsg(
+          `Analyzing motion ${si + 1}/${clips.length}` +
+          (eta != null ? ` (~${eta}s remaining)` : ""),
+        );
         setShots([...shotData]);
+      }
+      setWasTruncated(truncated);
+      if (truncated) {
+        console.info(
+          `MatchInsights: capped at ${MAX_SHOTS_TO_ANALYZE} highest-scoring shots ` +
+          `(detected ${result.clips.length} total). For finer-grained analysis, upload a shorter clip.`,
+        );
       }
       detector.dispose();
       URL.revokeObjectURL(videoEl.src);
@@ -200,17 +239,17 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
           <Trophy className="w-5 h-5 text-lime-400" />
           Match Insights
         </h3>
-        {phase === "idle" && (
+        {(phase === "done" || phase === "error") && (
           <button onClick={run}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-lime-400 hover:bg-lime-300 text-black">
-            Analyze whole match
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700">
+            Re-analyze
           </button>
         )}
       </div>
 
-      {phase === "idle" && (
+      {phase === "idle" && !videoFile && (
         <p className="text-xs text-zinc-500">
-          Detects every shot in your video, measures pose dynamics for each, groups them by motion pattern, and gives you grounded coaching feedback. No shot-type guessing — we describe what we actually measure.
+          Upload a video to see grounded coaching insights — measures pose dynamics for every detected shot.
         </p>
       )}
 
@@ -232,6 +271,11 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
 
       {(phase === "done" || phase === "narrating") && totalShots > 0 && (
         <div className="space-y-4">
+          {wasTruncated && (
+            <div className="bg-amber-500/5 border border-amber-500/30 rounded-lg px-3 py-2 text-[11px] text-amber-300">
+              Long video — analyzed the {MAX_SHOTS_TO_ANALYZE} most-significant shots only. For per-shot analysis upload a 3-5 minute clip.
+            </div>
+          )}
           {/* Headline stats */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-zinc-800/50 rounded-xl p-3">

@@ -1264,23 +1264,18 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* ── HERO: Grade + Shot + Speed (or Unknown error state) ── */}
+        {/* ── HERO: Grade + Shot + Speed (or soft note for single-shot inconclusive) ── */}
         {(shot.shot_type === 'unknown' || (shot.confidence != null && shot.confidence < 0.2)) ? (
-          <div className="bg-zinc-900/80 border border-amber-500/20 rounded-2xl p-6 text-center">
-            <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-3" />
-            <h3 className="font-bold text-white mb-2">Couldn't Analyze This Video</h3>
-            <p className="text-sm text-zinc-400 mb-4">
-              We couldn't clearly detect your shots. This usually happens when:
-            </p>
-            <ul className="text-xs text-zinc-500 text-left max-w-xs mx-auto space-y-1 mb-4">
-              <li>• Video is too short or shaky</li>
-              <li>• Player is too far from camera</li>
-              <li>• Pose is partially hidden</li>
-              <li>• Multiple people are very close together</li>
-            </ul>
-            <Button onClick={() => setActiveTab('upload')} className="bg-lime-400 text-black">
-              Upload Another Video
-            </Button>
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl px-5 py-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-zinc-200 font-medium">Single-shot grade unavailable</p>
+              <p className="text-xs text-zinc-500 mt-1">
+                The single-shot grader couldn't lock onto one dominant shot in this video.
+                That's fine — see <span className="text-lime-400 font-semibold">Match Insights</span> above
+                for the full pose-based breakdown. Single-shot grading works best on 3-10 second clips of one shot.
+              </p>
+            </div>
           </div>
         ) : (
         <motion.div
