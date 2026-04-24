@@ -1,40 +1,35 @@
 /**
- * MatchInsights — hybrid shot-type identification + technique consistency.
+ * MatchInsights — value-add on top of the page's existing shot list.
  *
- *   1. Detect shot moments (motion-peak based). Hard cap: 10 shots.
- *   2. Path A (shot ID via vision): for each shot build a 3-frame strip JPEG,
- *      send the batch to /api/analysis/identify-shots → real shot names.
- *   3. Path B (pose technique via MoveNet): 4 keyframes per shot in-browser →
- *      wrist peak speed, arm extension, follow-through smoothness.
- *   4. Aggregate metrics per REAL shot type (smash/clear/drop/...) →
- *      distribution + per-type quality.
- *   5. Send to /api/analysis/coaching-narrative for LLM breakdown.
+ * The page's videoProcessor pipeline already detected and classified shots
+ * (`result.shots`). We DO NOT re-detect or re-classify here. We just:
+ *   1. Take those shots' timestamps + types as input.
+ *   2. Run MoveNet on 4 keyframes per shot (capped to top 10 by score)
+ *      to extract per-shot pose dynamics — wrist peak speed, arm extension,
+ *      follow-through smoothness.
+ *   3. Aggregate quality stats per shot type → consistency %.
+ *   4. Send distribution + per-type quality to /api/analysis/coaching-narrative
+ *      for an LLM coaching breakdown.
  *
- * Doubles support: `playerPosition` ("auto" | "top-left" | "top-right" |
- * "bottom-left" | "bottom-right") crops the frame so we only analyze the
- * selected player.
+ * The component renders ONLY what the existing shot-distribution card
+ * doesn't already show: per-type technique consistency + the coaching
+ * narrative. No duplicated counts.
  */
 import { useState, useMemo, useEffect, useRef } from "react";
 import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 
-const MAX_SHOTS = 10;            // hard cap — Groq quota + total runtime
-const FRAMES_PER_SHOT_POSE = 4;  // MoveNet keyframes per shot
-const FRAMES_PER_STRIP = 3;      // frames in the Groq vision strip
-const STRIP_FRAME_WIDTH = 320;
-const STRIP_FRAME_HEIGHT = 240;
-const SEEK_TIMEOUT_MS = 2000;    // never hang waiting for one seek
+const MAX_SHOTS = 10;
+const FRAMES_PER_SHOT = 4;
+const SEEK_TIMEOUT_MS = 1500;
+const PER_SHOT_TIMEOUT_MS = 8000;  // hard ceiling per shot, including pose inference
 
-// MoveNet keypoint indices
 const KP = {
   L_SHOULDER: 5, R_SHOULDER: 6,
-  L_ELBOW: 7,    R_ELBOW: 8,
   L_WRIST: 9,    R_WRIST: 10,
-  L_HIP: 11,     R_HIP: 12,
 };
 
-// Color palette for shot-type pills (rotated)
 const SHOT_COLORS = [
   "bg-red-400/80 text-black",
   "bg-amber-400/80 text-black",
@@ -45,117 +40,73 @@ const SHOT_COLORS = [
   "bg-pink-400/80 text-black",
 ];
 
-export default function MatchInsights({ videoFile, sport = "badminton", playerPosition = "auto" }) {
-  const [phase, setPhase] = useState("idle"); // idle | scanning | identifying | extracting | narrating | done | error
+export default function MatchInsights({ videoFile, shots: shotsProp, sport = "badminton", playerPosition = "auto" }) {
+  const [phase, setPhase] = useState("idle"); // idle | extracting | narrating | done | error
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
-  const [shotResults, setShotResults] = useState([]); // [{ label, confidence, pose: {speed, extension, smoothness} | null, start, end }]
+  const [perShot, setPerShot] = useState([]); // [{ label, pose: {speed, extension, smoothness} | null }]
   const [overall, setOverall] = useState(null);
   const [narrative, setNarrative] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [wasTruncated, setWasTruncated] = useState(false);
   const ranKeyRef = useRef(null);
 
-  // Auto-run on mount, single-flight per video file
+  const shotsAvailable = Array.isArray(shotsProp) && shotsProp.length > 0;
+
   useEffect(() => {
-    if (!videoFile) return;
-    const key = `${videoFile.name}-${videoFile.size}-${videoFile.lastModified}`;
+    if (!videoFile || !shotsAvailable) return;
+    const key = `${videoFile.name}-${videoFile.size}-${videoFile.lastModified}-${shotsProp.length}`;
     if (ranKeyRef.current === key) return;
     ranKeyRef.current = key;
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoFile]);
+  }, [videoFile, shotsAvailable]);
 
-  const totalShots = shotResults.length;
-  const distribution = useMemo(() => groupByType(shotResults), [shotResults]);
-  const perTypeQuality = useMemo(() => buildPerTypeQuality(shotResults), [shotResults]);
+  const perTypeQuality = useMemo(() => buildPerTypeQuality(perShot), [perShot]);
+  const populatedTypes = useMemo(
+    () => Object.keys(perTypeQuality).filter((k) => k !== "unknown"),
+    [perTypeQuality],
+  );
 
   const run = async () => {
-    if (!videoFile) return;
-    setPhase("scanning");
+    if (!videoFile || !shotsAvailable) return;
+    setPhase("extracting");
     setProgress(0);
-    setShotResults([]);
+    setPerShot([]);
     setOverall(null);
     setNarrative(null);
     setErrorMsg(null);
     setWasTruncated(false);
 
     try {
-      // ─── 1. Detect shot moments ──────────────────────────────────
-      setProgressMsg("Detecting shot moments…");
-      const { extractShotMoments } = await import("@/ai/shotMomentExtractor");
-      const result = await extractShotMoments(videoFile, {
-        onProgress: ({ percent, message }) => {
-          setProgress(Math.round(percent * 0.15));
-          if (message) setProgressMsg(message);
-        },
-      });
-      if (!result.clips.length) throw new Error("No shot moments detected in this video.");
-
-      let clips = result.clips;
-      if (clips.length > MAX_SHOTS) {
+      // Pick top-N highest-scored shots if more than MAX_SHOTS
+      let chosen = shotsProp;
+      if (chosen.length > MAX_SHOTS) {
         setWasTruncated(true);
-        clips = [...clips]
+        chosen = [...chosen]
           .sort((a, b) => (b.score || 0) - (a.score || 0))
           .slice(0, MAX_SHOTS)
-          .sort((a, b) => a.start - b.start);
+          .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       }
 
-      // ─── 2. Set up video + crop ──────────────────────────────────
+      // Set up video element
+      setProgressMsg("Loading video…");
       const videoEl = document.createElement("video");
       videoEl.src = URL.createObjectURL(videoFile);
       videoEl.muted = true;
       videoEl.playsInline = true;
-      await new Promise((r, e) => { videoEl.onloadedmetadata = r; videoEl.onerror = e; });
+      videoEl.preload = "auto";
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error("Video metadata load timed out")), 8000);
+        videoEl.onloadedmetadata = () => { clearTimeout(t); resolve(); };
+        videoEl.onerror = () => { clearTimeout(t); reject(new Error("Video failed to load")); };
+      });
+
       const W = videoEl.videoWidth || 640;
       const H = videoEl.videoHeight || 360;
       const cropBox = computeCropBox(W, H, playerPosition);
 
-      // ─── 3. Build per-shot frame strips (for Groq) ───────────────
-      setPhase("identifying");
-      setProgressMsg(`Capturing frames for ${clips.length} shots…`);
-
-      const stripCanvas = document.createElement("canvas");
-      stripCanvas.width = STRIP_FRAME_WIDTH * FRAMES_PER_STRIP;
-      stripCanvas.height = STRIP_FRAME_HEIGHT;
-      const stripCtx = stripCanvas.getContext("2d");
-
-      const strips = [];
-      for (let si = 0; si < clips.length; si++) {
-        const clip = clips[si];
-        stripCtx.clearRect(0, 0, stripCanvas.width, stripCanvas.height);
-        for (let f = 0; f < FRAMES_PER_STRIP; f++) {
-          const t = clip.start + (clip.end - clip.start) * (f / (FRAMES_PER_STRIP - 1));
-          // eslint-disable-next-line no-await-in-loop
-          const ok = await safeSeek(videoEl, t);
-          if (!ok) continue;
-          stripCtx.drawImage(
-            videoEl,
-            cropBox.x, cropBox.y, cropBox.w, cropBox.h,
-            f * STRIP_FRAME_WIDTH, 0, STRIP_FRAME_WIDTH, STRIP_FRAME_HEIGHT,
-          );
-        }
-        // strip JPEG → base64 (no data URL prefix; backend tolerates either)
-        const dataUrl = stripCanvas.toDataURL("image/jpeg", 0.7);
-        strips.push(dataUrl.split(",", 2)[1] || dataUrl);
-        setProgress(15 + Math.round(((si + 1) / clips.length) * 15));
-      }
-
-      // ─── 4. Identify shots via Groq Vision ───────────────────────
-      setProgressMsg(`Identifying shot types via vision…`);
-      let shotLabels = strips.map(() => ({ label: "", confidence: 0.0 }));
-      try {
-        const { data } = await api.post("/analysis/identify-shots", {
-          sport,
-          image_strips: strips,
-        }, { timeout: 45000 });
-        shotLabels = data.shots || shotLabels;
-      } catch (e) {
-        console.warn("identify-shots failed; continuing with pose-only", e);
-      }
-
-      // ─── 5. MoveNet keyframes per shot ───────────────────────────
-      setPhase("extracting");
+      // Set up MoveNet
       setProgressMsg("Loading pose detector…");
       const tf = await import("@tensorflow/tfjs");
       const poseDetection = await import("@tensorflow-models/pose-detection");
@@ -169,52 +120,48 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
         { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING },
       );
 
-      const poseCanvas = document.createElement("canvas");
-      poseCanvas.width = cropBox.w;
-      poseCanvas.height = cropBox.h;
-      const poseCtx = poseCanvas.getContext("2d");
+      const canvas = document.createElement("canvas");
+      canvas.width = cropBox.w;
+      canvas.height = cropBox.h;
+      const ctx = canvas.getContext("2d");
 
+      // Per-shot pose extraction with hard timeout
       const merged = [];
       const t0 = performance.now();
-      for (let si = 0; si < clips.length; si++) {
-        const clip = clips[si];
-        const poseSeq = [];
-        for (let k = 0; k < FRAMES_PER_SHOT_POSE; k++) {
-          const t = clip.start + (clip.end - clip.start) * (k / (FRAMES_PER_SHOT_POSE - 1));
-          // eslint-disable-next-line no-await-in-loop
-          const ok = await safeSeek(videoEl, t);
-          if (!ok) { poseSeq.push(null); continue; }
-          poseCtx.drawImage(
-            videoEl,
-            cropBox.x, cropBox.y, cropBox.w, cropBox.h,
-            0, 0, cropBox.w, cropBox.h,
-          );
-          // eslint-disable-next-line no-await-in-loop
-          const poses = await detector.estimatePoses(poseCanvas);
-          poseSeq.push(poses?.[0]?.keypoints || null);
-        }
-        const pose = extractPoseQuality(poseSeq, cropBox.w, cropBox.h, clip.end - clip.start);
+      for (let si = 0; si < chosen.length; si++) {
+        const shot = chosen[si];
+        const center = shot.timestamp || 0;
+        const dur = Math.max(0.4, Math.min(2.0, shot.duration || 1.0));
+        const start = Math.max(0, center - dur / 2);
+        const end = Math.min(videoEl.duration || (center + dur / 2), center + dur / 2);
 
-        const lbl = shotLabels[si] || { label: "", confidence: 0.0 };
+        let pose = null;
+        try {
+          pose = await Promise.race([
+            extractOneShotPose(videoEl, ctx, canvas, detector, cropBox, start, end),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("shot-timeout")), PER_SHOT_TIMEOUT_MS)),
+          ]);
+        } catch (e) {
+          // skip this shot
+        }
+
         merged.push({
-          label: lbl.label || "unknown",
-          confidence: lbl.confidence || 0,
+          label: shot.type || "unknown",
+          name: shot.name || shot.type || "unknown",
           pose,
-          start: clip.start,
-          end: clip.end,
         });
 
-        const pct = 30 + Math.round(((si + 1) / clips.length) * 60);
+        const pct = Math.round(((si + 1) / chosen.length) * 90);
         const elapsed = (performance.now() - t0) / 1000;
-        const eta = clips.length > si + 1 && elapsed > 1
-          ? Math.round((elapsed / (si + 1)) * (clips.length - si - 1))
+        const eta = chosen.length > si + 1 && elapsed > 1
+          ? Math.round((elapsed / (si + 1)) * (chosen.length - si - 1))
           : null;
         setProgress(pct);
         setProgressMsg(
-          `Analyzing technique ${si + 1}/${clips.length}` +
+          `Analyzing technique ${si + 1}/${chosen.length}` +
           (eta != null ? ` (~${eta}s remaining)` : ""),
         );
-        setShotResults([...merged]);
+        setPerShot([...merged]);
       }
       detector.dispose();
       URL.revokeObjectURL(videoEl.src);
@@ -222,7 +169,7 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
       const overallStats = computeOverall(merged, videoEl.duration);
       setOverall(overallStats);
 
-      // ─── 6. Coaching narrative ───────────────────────────────────
+      // Coaching narrative
       setPhase("narrating");
       setProgress(95);
       setProgressMsg("Generating coaching feedback…");
@@ -252,12 +199,15 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
     }
   };
 
+  // Don't render at all when there are no shots from the parent.
+  if (!shotsAvailable) return null;
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-white font-bold text-base flex items-center gap-2">
           <Trophy className="w-5 h-5 text-lime-400" />
-          Match Insights
+          Coaching Insights
         </h3>
         {(phase === "done" || phase === "error") && (
           <button onClick={run}
@@ -267,13 +217,7 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
         )}
       </div>
 
-      {phase === "idle" && !videoFile && (
-        <p className="text-xs text-zinc-500">
-          Upload a video to see grounded coaching insights.
-        </p>
-      )}
-
-      {(phase === "scanning" || phase === "identifying" || phase === "extracting" || phase === "narrating") && (
+      {(phase === "extracting" || phase === "narrating") && (
         <div>
           <Progress value={progress} className="h-1.5 bg-zinc-800" />
           <p className="text-[11px] text-zinc-500 mt-2 flex items-center gap-2">
@@ -289,65 +233,52 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
         </div>
       )}
 
-      {(phase === "done" || phase === "narrating") && totalShots > 0 && (
+      {(phase === "done" || phase === "narrating") && perShot.length > 0 && (
         <div className="space-y-4">
           {wasTruncated && (
             <div className="bg-amber-500/5 border border-amber-500/30 rounded-lg px-3 py-2 text-[11px] text-amber-300">
-              Long video — analyzed the {MAX_SHOTS} most-significant shots only. For per-shot analysis upload a shorter clip.
+              Analyzed your top {MAX_SHOTS} shots for technique consistency.
             </div>
           )}
 
-          {/* Headline stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-zinc-800/50 rounded-xl p-3">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Shots</p>
-              <p className="text-2xl font-bold text-white mt-1">{totalShots}</p>
-            </div>
-            <div className="bg-zinc-800/50 rounded-xl p-3">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Types</p>
-              <p className="text-2xl font-bold text-white mt-1">
-                {Object.keys(distribution).filter((k) => k !== "unknown").length}
-              </p>
-            </div>
-            <div className="bg-zinc-800/50 rounded-xl p-3">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Consistency</p>
-              <p className="text-2xl font-bold text-lime-400 mt-1">
-                {overall ? Math.round(overall.consistency * 100) : 0}<span className="text-zinc-500 text-sm font-normal">%</span>
-              </p>
-            </div>
+          {/* Headline — overall consistency */}
+          <div className="bg-zinc-800/50 rounded-xl p-3">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500">Overall technique consistency</p>
+            <p className="text-3xl font-bold text-lime-400 mt-1">
+              {overall ? Math.round(overall.consistency * 100) : 0}<span className="text-zinc-500 text-lg font-normal">%</span>
+            </p>
+            <p className="text-[10px] text-zinc-600 mt-1">
+              How repeatable your motion is across all shots — higher means muscle memory is forming.
+            </p>
           </div>
 
-          {/* Distribution */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Shot types detected</p>
-            <div className="space-y-1.5">
-              {Object.entries(distribution)
-                .sort(([, a], [, b]) => b - a)
-                .map(([name, count], i) => {
-                  const color = name === "unknown"
-                    ? "bg-zinc-600 text-white"
-                    : SHOT_COLORS[i % SHOT_COLORS.length];
-                  const pct = totalShots ? (count / totalShots) * 100 : 0;
-                  const q = perTypeQuality[name];
-                  const consist = q ? Math.round(q.consistency * 100) : null;
-                  return (
-                    <div key={name} className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${color} w-28 text-center`}>
-                        {name}
-                      </span>
-                      <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-zinc-400" style={{ width: `${pct}%` }} />
+          {/* Per-type consistency */}
+          {populatedTypes.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Consistency by shot type</p>
+              <div className="space-y-1.5">
+                {populatedTypes
+                  .sort((a, b) => (perTypeQuality[b].consistency || 0) - (perTypeQuality[a].consistency || 0))
+                  .map((name, i) => {
+                    const q = perTypeQuality[name];
+                    const consist = Math.round(q.consistency * 100);
+                    const color = SHOT_COLORS[i % SHOT_COLORS.length];
+                    const barColor = consist >= 70 ? "bg-lime-400" : consist >= 50 ? "bg-amber-400" : "bg-red-400";
+                    return (
+                      <div key={name} className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${color} w-24 text-center`}>
+                          {name.replace(/_/g, " ")}
+                        </span>
+                        <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className={`h-full ${barColor}`} style={{ width: `${consist}%` }} />
+                        </div>
+                        <div className="w-12 text-right text-[11px] text-zinc-300 font-mono">{consist}%</div>
                       </div>
-                      <div className="w-10 text-right text-[11px] text-zinc-400 font-mono">{count}×</div>
-                      <div className="w-12 text-right text-[10px] text-zinc-500 font-mono">
-                        {consist != null ? `${consist}%` : "—"}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+              </div>
             </div>
-            <p className="text-[10px] text-zinc-600 mt-2">Last column = technique consistency for that shot type</p>
-          </div>
+          )}
 
           {/* Narrative */}
           {narrative && (
@@ -395,17 +326,32 @@ export default function MatchInsights({ videoFile, sport = "badminton", playerPo
           )}
         </div>
       )}
-
-      {phase === "done" && totalShots === 0 && (
-        <p className="text-xs text-zinc-500">No shot moments detected in this video.</p>
-      )}
     </div>
   );
 }
 
 // ── helpers ──────────────────────────────────────────────────────
 
-// Seek with a hard timeout so a flaky video can't hang the UI.
+async function extractOneShotPose(videoEl, ctx, canvas, detector, cropBox, start, end) {
+  const span = Math.max(0.001, end - start);
+  const poseSeq = [];
+  for (let k = 0; k < FRAMES_PER_SHOT; k++) {
+    const t = start + span * (k / Math.max(1, FRAMES_PER_SHOT - 1));
+    // eslint-disable-next-line no-await-in-loop
+    const seeked = await safeSeek(videoEl, t);
+    if (!seeked) { poseSeq.push(null); continue; }
+    ctx.drawImage(
+      videoEl,
+      cropBox.x, cropBox.y, cropBox.w, cropBox.h,
+      0, 0, cropBox.w, cropBox.h,
+    );
+    // eslint-disable-next-line no-await-in-loop
+    const poses = await detector.estimatePoses(canvas);
+    poseSeq.push(poses?.[0]?.keypoints || null);
+  }
+  return extractPoseQuality(poseSeq, cropBox.w, cropBox.h, span);
+}
+
 function safeSeek(videoEl, t) {
   return new Promise((resolve) => {
     let done = false;
@@ -455,10 +401,6 @@ function computeCropBox(w, h, position) {
   };
 }
 
-/**
- * Per-shot pose quality from a sequence of MoveNet keypoint sets.
- * Returns { speed, extension, smoothness } in [0, 1] or null if too sparse.
- */
 function extractPoseQuality(poseSeq, frameW, frameH, durationSec) {
   const valid = poseSeq.filter(Boolean);
   if (valid.length < 2) return null;
@@ -496,7 +438,6 @@ function extractPoseQuality(poseSeq, frameW, frameH, durationSec) {
   const speed = Math.min(1, peakSpeed / 3.0);
   const extension = Math.min(1, Math.max(...armExt) / 0.45);
 
-  // Smoothness — variance of trajectory positions (lower variance = smoother)
   let smoothness = 1;
   if (wristXY.length >= 3) {
     const meanX = wristXY.reduce((s, p) => s + p[0], 0) / wristXY.length;
@@ -537,31 +478,22 @@ function buildPerTypeQuality(shots) {
     out[name] = {
       avg_smoothness: clamp01(avg("smoothness")),
       avg_speed: clamp01(avg("speed")),
-      consistency: clamp01(1 - meanStd * 2.5),
+      consistency: clamp01(arr.length === 1 ? avg("smoothness") : 1 - meanStd * 2.5),
     };
   }
   return out;
 }
 
-function computeOverall(shots, totalDurationSec) {
+function computeOverall(shots) {
   const valid = shots.filter((s) => s.pose);
   if (valid.length === 0) return { consistency: 0, avg_recovery_sec: null };
-
-  const sorted = [...shots].sort((a, b) => a.start - b.start);
-  const recoveries = [];
-  for (let i = 1; i < sorted.length; i++) {
-    const gap = sorted[i].start - sorted[i - 1].end;
-    if (gap > 0 && gap < 30) recoveries.push(gap);
-  }
-  const avg_recovery_sec = recoveries.length ? recoveries.reduce((a, b) => a + b, 0) / recoveries.length : null;
-
   const stddev = (k) => {
     if (valid.length < 2) return 0;
     const m = valid.reduce((s, x) => s + x.pose[k], 0) / valid.length;
     return Math.sqrt(valid.reduce((s, x) => s + (x.pose[k] - m) ** 2, 0) / valid.length);
   };
   const meanStd = (stddev("speed") + stddev("extension") + stddev("smoothness")) / 3;
-  return { consistency: clamp01(1 - meanStd * 2.5), avg_recovery_sec };
+  return { consistency: clamp01(1 - meanStd * 2.5), avg_recovery_sec: null };
 }
 
 function clamp01(x) {

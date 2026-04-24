@@ -1175,6 +1175,7 @@ export default function AnalyzePage() {
         {file && !viewingHistorical && (
           <MatchInsights
             videoFile={file}
+            shots={result.shots}
             sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
             playerPosition={targetPlayer || "auto"}
           />
