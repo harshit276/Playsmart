@@ -7766,11 +7766,148 @@ class LabelSaveRequest(BaseModel):
     duration: Optional[float] = None
 
 
-# ─── Match-level coaching insights ─────────────────────────────────────────
-# Takes pose-derived shot CHARACTERISTICS (not shot-type predictions) from
-# the frontend and asks Groq to narrate strengths/improvements/focus. We
-# avoid claiming specific shot types because pose-only classification is
-# unreliable; we describe what the motion LOOKED LIKE instead.
+# ─── Per-shot identification via Groq Vision ───────────────────────────────
+# Frontend sends a list of base64 image strips (one per shot, each strip
+# is 3 horizontally-concatenated frames around the shot's peak moment).
+# We call Groq Vision in parallel for each strip to get a shot-type
+# label + confidence. This replaces the broken pose-only classifier.
+
+_SHOT_PROMPTS_BY_SPORT = {
+    "badminton": """You are looking at 3 sequential frames from a badminton match showing ONE shot being played by the player in focus.
+
+Identify which shot it is from this list:
+- smash: powerful overhead downward attack
+- clear: high deep shot to the back court
+- drop: soft shot that just clears the net and falls in front court
+- drive: fast flat shot at body height
+- net: short tap played close to the net
+- lob: high defensive shot lifted up
+
+Respond in EXACTLY this format, nothing else:
+SHOT: <one of: smash|clear|drop|drive|net|lob|unknown>
+CONFIDENCE: <0.0 to 1.0>
+
+Use 0.9+ when very obvious, 0.7-0.9 likely, 0.5-0.7 plausible, below 0.5 uncertain. Use 'unknown' with 0.0 only if no shot is being played.""",
+    "tennis": """You are looking at 3 sequential frames from a tennis match showing ONE shot.
+
+Identify the shot from this list:
+- serve: opening shot, racket overhead, ball toss
+- forehand: groundstroke from dominant-hand side after the bounce
+- backhand: groundstroke from non-dominant side
+- volley: hit before the ball bounces, near the net
+- overhead: smash motion above the player's head
+- drop_shot: soft touch landing just over the net
+- slice: low spin shot, racket cuts under the ball
+
+Respond in EXACTLY this format, nothing else:
+SHOT: <one of: serve|forehand|backhand|volley|overhead|drop_shot|slice|unknown>
+CONFIDENCE: <0.0 to 1.0>""",
+    "table_tennis": """You are looking at 3 sequential frames from a table tennis match showing ONE shot.
+
+Identify it from:
+- forehand_loop, backhand_loop, forehand_drive, backhand_drive,
+  push, chop, serve, smash, flick, block
+
+Respond in EXACTLY this format, nothing else:
+SHOT: <one of those|unknown>
+CONFIDENCE: <0.0 to 1.0>""",
+    "pickleball": """You are looking at 3 sequential frames from a pickleball match showing ONE shot.
+
+Identify it from:
+- dink, drive, drop, serve, volley, lob, smash
+
+Respond in EXACTLY this format, nothing else:
+SHOT: <one of those|unknown>
+CONFIDENCE: <0.0 to 1.0>""",
+}
+
+
+class IdentifyShotsRequest(BaseModel):
+    sport: str = Field(..., max_length=32)
+    image_strips: list[str] = Field(..., max_items=15,
+                                    description="Base64-encoded JPEG strips, one per shot. Max 15 to keep cost bounded.")
+
+
+@api_router.post("/analysis/identify-shots")
+async def identify_shots(req: IdentifyShotsRequest):
+    if not req.image_strips:
+        return {"shots": []}
+    if not GROQ_API_KEY:
+        # No Groq → return all unknown so frontend renders gracefully
+        return {"shots": [{"label": "", "confidence": 0.0} for _ in req.image_strips]}
+
+    model = pick_groq_model(GROQ_API_KEY)
+    if not model:
+        raise HTTPException(status_code=503, detail="No Groq vision model available")
+
+    prompt = _SHOT_PROMPTS_BY_SPORT.get(req.sport.lower(), _SHOT_PROMPTS_BY_SPORT["badminton"])
+
+    async def _one(strip_b64: str) -> dict:
+        # Tolerate both raw base64 and data URLs
+        if strip_b64.startswith("data:"):
+            strip_b64 = strip_b64.split(",", 1)[1] if "," in strip_b64 else strip_b64
+        payload = {
+            "model": model,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{strip_b64}"}},
+                ],
+            }],
+            "temperature": 0.0,
+            "max_tokens": 60,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.post(
+                    GROQ_URL,
+                    headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+                    json=payload,
+                )
+            if r.status_code == 429:
+                return {"label": "", "confidence": 0.0, "error": "rate_limited"}
+            r.raise_for_status()
+            text = r.json()["choices"][0]["message"]["content"]
+            return _parse_shot_response(text)
+        except Exception as e:
+            logger.warning(f"identify-shots: groq call failed: {e}")
+            return {"label": "", "confidence": 0.0}
+
+    # Parallel — 10 shots × ~1-2s = 2-3s total instead of 10-20s sequential
+    results = await asyncio.gather(*(_one(s) for s in req.image_strips))
+    return {"shots": results}
+
+
+def _parse_shot_response(text: str) -> dict:
+    label = ""
+    conf = 0.5
+    for line in text.splitlines():
+        line = line.strip()
+        upper = line.upper()
+        if upper.startswith("SHOT") and ":" in line:
+            v = line.split(":", 1)[-1].strip().lower().split()[0] if line.split(":", 1)[-1].strip() else ""
+            v = v.strip(".,!?'\"")
+            if v and v != "unknown":
+                label = v
+        elif upper.startswith("CONFIDENCE") and ":" in line:
+            v = line.split(":", 1)[-1].strip().strip(".,!?'\"%")
+            try:
+                conf = float(v) / 100.0 if float(v) > 1.0 else float(v)
+            except ValueError:
+                pass
+    return {"label": label, "confidence": max(0.0, min(1.0, conf))}
+
+
+# ─── Coaching narrative (now takes shot distribution + per-type quality) ───
+# Takes Groq-identified shot types from the frontend along with pose-derived
+# per-type quality metrics, and asks Groq to narrate.
+
+class PerTypeQuality(BaseModel):
+    avg_smoothness: float = Field(..., ge=0, le=1)
+    avg_speed: float = Field(..., ge=0, le=1)
+    consistency: float = Field(..., ge=0, le=1)
+
 
 class ShotClusterStats(BaseModel):
     count: int = Field(..., ge=0)
@@ -7784,31 +7921,38 @@ class CoachingNarrativeRequest(BaseModel):
     total_shots: int = Field(..., ge=0)
     duration_sec: Optional[float] = None
     avg_recovery_sec: Optional[float] = Field(None, ge=0, description="Mean idle time between shots")
-    overall_consistency: float = Field(..., ge=0, le=1, description="Cross-cluster technique repeatability")
-    clusters: dict[str, ShotClusterStats] = Field(
-        ...,
-        description=(
-            "Pose-cluster summaries keyed by descriptive name, e.g. "
-            "{'powerful_overhead': {...}, 'soft_touch': {...}, 'flat_drive': {...}, 'defensive_lift': {...}}"
-        ),
+    overall_consistency: float = Field(..., ge=0, le=1, description="Cross-shot technique repeatability")
+
+    # NEW shape (preferred): real shot types from Groq Vision + per-type pose quality.
+    # The frontend builds these from identify-shots + MoveNet pass.
+    distribution: Optional[dict[str, int]] = Field(
+        None, description="{'smash': 5, 'clear': 3, 'drop': 2, ...}"
     )
+    per_type_quality: Optional[dict[str, PerTypeQuality]] = Field(
+        None, description="Per-shot-type pose-quality stats keyed by shot label"
+    )
+
+    # OLD shape (compat — old clients may still send this)
+    clusters: Optional[dict[str, ShotClusterStats]] = Field(
+        None, description="Legacy: pose-cluster summaries by descriptive name"
+    )
+
     player_level: Optional[str] = Field(None, max_length=20)
 
 
 _COACHING_SYSTEM_PROMPT = (
     "You are AthlyticAI, a concise coaching narrator. The frontend has detected "
-    "shot moments and grouped them by POSE CHARACTERISTICS (NOT specific shot types — "
-    "we don't claim to know whether a shot was a 'drop' vs a 'net shot'; we describe "
-    "what the motion looked like). Each cluster has a count, normalized speed, "
-    "extension, and consistency score.\n\n"
-    "Cluster names you may see:\n"
-    "  powerful_overhead — high-speed motion with arm above shoulders (smashes / overhead clears)\n"
-    "  soft_overhead — low-speed motion with arm above shoulders (drops, slow clears)\n"
-    "  flat_drive — medium-speed, mid-height motion (drives, fast exchanges)\n"
-    "  defensive_lift — slow upward motion from low position (lifts, defensive shots)\n"
-    "  low_touch — slow low-position motion (net shots, push returns)\n\n"
+    "shot moments and identified each shot's TYPE via a vision model. For each "
+    "shot type it also computed pose-derived quality metrics (smoothness, speed, "
+    "consistency).\n\n"
+    "You will see ONE of two formats:\n"
+    "  A) distribution + per_type_quality  — preferred. Real shot names "
+    "(smash, clear, drop, etc.) with quality stats per type.\n"
+    "  B) clusters  — legacy fallback when vision identification is unavailable. "
+    "Generic motion categories (powerful_overhead, soft_touch, etc.).\n\n"
     "Rules:\n"
-    "  1. NEVER name a specific shot type (smash/clear/drop/net) — describe the motion category.\n"
+    "  1. If format A (distribution): USE the real shot names provided (smash/clear/drop/etc.). "
+    "If format B (clusters): describe the motion category, do NOT invent specific shot names.\n"
     "  2. ALWAYS cite actual numbers (counts, consistency %, speeds).\n"
     "  3. Honest tone — call out weaknesses without sugar-coating.\n"
     "  4. Output ONLY JSON, no prose around it. Schema:\n"
@@ -7823,17 +7967,39 @@ _COACHING_SYSTEM_PROMPT = (
 
 @api_router.post("/analysis/coaching-narrative")
 async def coaching_narrative(req: CoachingNarrativeRequest):
-    # Build the user-message context — formatted cluster summary
-    cluster_lines = []
-    for name, stats in sorted(req.clusters.items(), key=lambda kv: -kv[1].count):
-        if stats.count == 0:
-            continue
-        cluster_lines.append(
-            f"  {name}: count={stats.count}, "
-            f"avg_speed={stats.avg_speed:.0%}, "
-            f"avg_extension={stats.avg_extension:.0%}, "
-            f"consistency={stats.consistency:.0%}"
-        )
+    # Build user-message context. Prefer distribution + per_type_quality (new),
+    # fall back to clusters (legacy).
+    if req.distribution:
+        lines = []
+        for shot_type, count in sorted(req.distribution.items(), key=lambda kv: -kv[1]):
+            if count == 0:
+                continue
+            q = (req.per_type_quality or {}).get(shot_type)
+            if q:
+                lines.append(
+                    f"  {shot_type}: count={count}, "
+                    f"avg_smoothness={q.avg_smoothness:.0%}, "
+                    f"avg_speed={q.avg_speed:.0%}, "
+                    f"consistency={q.consistency:.0%}"
+                )
+            else:
+                lines.append(f"  {shot_type}: count={count}")
+        body_section = "\nShot distribution (real shot types from vision) with per-type pose quality:\n" + "\n".join(lines)
+    elif req.clusters:
+        cluster_lines = []
+        for name, stats in sorted(req.clusters.items(), key=lambda kv: -kv[1].count):
+            if stats.count == 0:
+                continue
+            cluster_lines.append(
+                f"  {name}: count={stats.count}, "
+                f"avg_speed={stats.avg_speed:.0%}, "
+                f"avg_extension={stats.avg_extension:.0%}, "
+                f"consistency={stats.consistency:.0%}"
+            )
+        body_section = "\nShot clusters by motion characteristic:\n" + "\n".join(cluster_lines)
+    else:
+        body_section = "\n(No per-shot breakdown provided.)"
+
     user_msg = (
         f"Sport: {req.sport}\n"
         f"Total shots detected: {req.total_shots}\n"
@@ -7841,8 +8007,7 @@ async def coaching_narrative(req: CoachingNarrativeRequest):
         + (f"Avg recovery between shots: {req.avg_recovery_sec:.1f}s\n" if req.avg_recovery_sec else "")
         + f"Overall technique consistency: {req.overall_consistency:.0%}\n"
         + (f"Self-rated level: {req.player_level}\n" if req.player_level else "")
-        + "\nShot clusters by motion characteristic:\n"
-        + "\n".join(cluster_lines)
+        + body_section
     )
 
     # Fallback if Groq isn't configured
@@ -7895,7 +8060,66 @@ _CLUSTER_HUMAN_NAMES = {
 
 def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
     """Deterministic non-LLM fallback. Used when GROQ_API_KEY missing."""
-    populated = {n: s for n, s in req.clusters.items() if s.count > 0}
+    # Branch on the new distribution+per_type_quality format vs legacy clusters.
+    if req.distribution:
+        populated_dist = {n: c for n, c in req.distribution.items() if c > 0}
+        sorted_types = sorted(populated_dist.items(), key=lambda kv: -kv[1])
+        ptq = req.per_type_quality or {}
+
+        strengths = []
+        if req.overall_consistency >= 0.7:
+            strengths.append(f"Strong overall technique — {req.overall_consistency:.0%} consistency across shots")
+        if sorted_types:
+            top_name, top_count = sorted_types[0]
+            q = ptq.get(top_name)
+            if q and top_count >= 2:
+                strengths.append(f"Used {top_name} {top_count}× — {q.consistency:.0%} consistency, "
+                                 f"{q.avg_smoothness:.0%} smoothness")
+            elif top_count >= 2:
+                strengths.append(f"Used {top_name} {top_count}× this session")
+        if len(populated_dist) >= 3:
+            strengths.append(f"Good shot variety — {len(populated_dist)} distinct shot types played")
+        if not strengths:
+            strengths = [f"{req.total_shots} shots completed this session"]
+
+        improvements = []
+        inconsistent = [(n, ptq[n]) for n, c in populated_dist.items()
+                        if n in ptq and ptq[n].consistency < 0.55 and c >= 2]
+        if inconsistent:
+            n, q = min(inconsistent, key=lambda kv: kv[1].consistency)
+            improvements.append(
+                f"Your {n}s vary a lot ({q.consistency:.0%} consistency). Drill this to build muscle memory."
+            )
+        if req.avg_recovery_sec and req.avg_recovery_sec > 1.5:
+            improvements.append(
+                f"Recovery time between shots is {req.avg_recovery_sec:.1f}s — work on quick split-step footwork."
+            )
+        if not improvements:
+            improvements = ["You're well-rounded — push for higher pace or a stronger opponent next session."]
+
+        summary = (
+            f"{req.total_shots}-shot session, {len(populated_dist)} shot types, "
+            f"overall consistency {req.overall_consistency:.0%}"
+        )
+        if populated_dist:
+            weakest_name = min(
+                populated_dist,
+                key=lambda n: ptq[n].consistency if n in ptq else 1.0,
+            )
+            next_focus = f"Drill {weakest_name} reps for 10 minutes to lift consistency"
+        else:
+            next_focus = "Pick one shot type and drill it for 15 minutes"
+
+        return {
+            "summary": summary,
+            "strengths": strengths[:3],
+            "improvements": improvements[:3],
+            "next_focus": next_focus,
+        }
+
+    # Legacy clusters path
+    clusters = req.clusters or {}
+    populated = {n: s for n, s in clusters.items() if s.count > 0}
     sorted_clusters = sorted(populated.items(), key=lambda kv: -kv[1].count)
 
     strengths = []
@@ -7918,7 +8142,7 @@ def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
         n, s = min(inconsistent, key=lambda kv: kv[1].consistency)
         human = _CLUSTER_HUMAN_NAMES.get(n, n)
         improvements.append(f"Your {human} shots vary a lot ({s.consistency:.0%} consistency across {s.count}). Drill this to build muscle memory.")
-    underused = [n for n, s in req.clusters.items() if s.count == 0]
+    underused = [n for n, s in clusters.items() if s.count == 0]
     if underused and len(underused) <= 3:
         humans = [_CLUSTER_HUMAN_NAMES.get(n, n) for n in underused]
         improvements.append(f"You didn't use these patterns: {', '.join(humans)}. Mix them in to be less predictable.")
