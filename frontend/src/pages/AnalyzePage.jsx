@@ -471,12 +471,14 @@ export default function AnalyzePage() {
 
   const analyze = async () => {
     if (!file) return;
-    if (!analysisMode) { toast.error("Please select an analysis mode"); return; }
+    // mode selector removed — always run full analysis
 
     setAnalyzing(true);
     setResult(null);
     setError(null);
     setProgress(0);
+    // Scroll to top so the user sees the loading panel immediately
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
 
     const VIDEO_ANALYSIS_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball"];
     const activeSport = profile?.active_sport || "badminton";
@@ -967,14 +969,38 @@ export default function AnalyzePage() {
 
   const renderUpload = () => (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      {/* Loading state pinned to top so user sees progress immediately */}
+      {analyzing && (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+          className="mb-6 bg-zinc-900/80 border border-lime-400/30 rounded-2xl p-6 text-center shadow-lg shadow-lime-400/10">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-10 h-10 border-2 border-lime-400 border-t-transparent rounded-full mx-auto mb-3"
+          />
+          <p className="font-heading font-semibold text-white uppercase tracking-tight mb-2 text-sm">
+            Analyzing your video
+          </p>
+          <motion.p
+            key={loadingText}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-zinc-400 text-xs mb-3"
+          >
+            {loadingText}
+          </motion.p>
+          <div className="max-w-xs mx-auto">
+            <Progress value={progress} className="h-1.5 bg-zinc-800 [&>div]:bg-lime-400 [&>div]:rounded-full [&>div]:transition-all [&>div]:duration-700" />
+          </div>
+          <p className="text-zinc-600 text-[10px] mt-2">{progress}%</p>
+        </motion.div>
+      )}
+
       {/* Sport Selection */}
       {renderSportSelector()}
 
       {/* Player Selection for Doubles */}
       {renderPlayerSelector()}
-
-      {/* Mode Selection */}
-      {renderModeSelection()}
 
       {/* Tips for best results */}
       <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 mb-4">
@@ -1011,7 +1037,7 @@ export default function AnalyzePage() {
         </p>
         <p className="text-zinc-500 text-sm">or click to browse</p>
         <p className="text-zinc-600 text-xs mt-3">
-          MP4, AVI, MOV &middot; Max {analysisMode === "full" ? "60" : "20"} seconds
+          MP4, AVI, MOV &middot; Up to a few minutes (longer = slower)
         </p>
         <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelect} />
       </div>
@@ -1057,39 +1083,12 @@ export default function AnalyzePage() {
       {/* Mobile sticky analyze button */}
       {file && !analyzing && !result && !error && (
         <div className="fixed bottom-4 left-4 right-4 z-50 sm:hidden">
-          <Button onClick={analyze} disabled={!analysisMode}
+          <Button onClick={analyze} disabled={false}
             className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-sm py-3 shadow-lg shadow-lime-400/20"
             data-testid="analyze-btn-mobile">
             <Zap className="w-4 h-4 mr-2" /> Analyze Video
           </Button>
         </div>
-      )}
-
-      {/* Loading state */}
-      {analyzing && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="mt-6 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-8 text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-2 border-lime-400 border-t-transparent rounded-full mx-auto mb-4"
-          />
-          <p className="font-heading font-semibold text-white uppercase tracking-tight mb-2">
-            {processingMode === "client" ? "On-Device" : analysisMode === "quick" ? "Quick" : "Full"} Analysis in Progress
-          </p>
-          <motion.p
-            key={loadingText}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-zinc-400 text-sm mb-4"
-          >
-            {loadingText}
-          </motion.p>
-          <div className="max-w-xs mx-auto">
-            <Progress value={progress} className="h-2 bg-zinc-800 [&>div]:bg-lime-400 [&>div]:rounded-full [&>div]:transition-all [&>div]:duration-700" />
-          </div>
-          <p className="text-zinc-600 text-xs mt-2">{progress}%</p>
-        </motion.div>
       )}
 
       {/* Error state */}
@@ -1302,19 +1301,6 @@ export default function AnalyzePage() {
                   <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-xs px-2 py-0.5 font-bold uppercase">
                     {result.skill_level || "Unknown"}
                   </Badge>
-                  {result._processingMode && (
-                    <Badge className={`text-[10px] px-2 py-0.5 ${
-                      result._processingMode === "client"
-                        ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
-                        : "bg-sky-400/10 text-sky-400 border-sky-400/20"
-                    }`}>
-                      {result._processingMode === "client" ? (
-                        <><Cpu className="w-2.5 h-2.5 mr-1 inline" /> On Device</>
-                      ) : (
-                        <><Cloud className="w-2.5 h-2.5 mr-1 inline" /> Server</>
-                      )}
-                    </Badge>
-                  )}
                   {result.target_player && (
                     <Badge className="text-[10px] px-2 py-0.5 bg-violet-400/10 text-violet-400 border-violet-400/20">
                       <Target className="w-2.5 h-2.5 mr-1 inline" /> {result.target_player === "auto" ? "Primary player" : `${result.target_player.replace("-", " ")} player`}
@@ -1366,14 +1352,31 @@ export default function AnalyzePage() {
               <Film className="w-3 h-3 text-sky-400" /> Match Analysis — {result.total_shots_detected} Shots Detected
             </p>
 
-            {/* Play style */}
-            {result.player_profile?.play_style && (
-              <div className="flex items-center gap-2 flex-wrap mb-4">
+            {/* Skill level + Play style + Avg power-shot speed */}
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              {result.skill_level && (
+                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px] uppercase font-bold">
+                  {result.skill_level} level
+                </Badge>
+              )}
+              {result.player_profile?.play_style && (
                 <Badge className="bg-sky-400/10 text-sky-400 border-sky-400/20 text-[10px] uppercase font-bold">
                   {result.player_profile.play_style} Style
                 </Badge>
-              </div>
-            )}
+              )}
+              {(() => {
+                const power = (result.shots || []).filter(
+                  (s) => ["smash", "drive", "clear"].includes(s.type) && s.speed > 0,
+                );
+                if (power.length === 0) return null;
+                const avg = Math.round(power.reduce((a, b) => a + b.speed, 0) / power.length);
+                return (
+                  <Badge className="bg-amber-400/10 text-amber-400 border-amber-400/20 text-[10px] uppercase font-bold">
+                    <Zap className="w-2.5 h-2.5 mr-1 inline" /> Avg {avg} km/h
+                  </Badge>
+                );
+              })()}
+            </div>
 
             {/* Shot distribution bars */}
             {result.shot_distribution && Object.keys(result.shot_distribution).length > 0 && (
