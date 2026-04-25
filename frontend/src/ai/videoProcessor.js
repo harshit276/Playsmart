@@ -602,7 +602,7 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
   }
 
   // Cap max shots based on video duration to avoid over-detection
-  const maxShots = duration < 15 ? 6 : duration < 30 ? 12 : duration < 120 ? 25 : 40;
+  const maxShots = duration < 15 ? 6 : duration < 30 ? 12 : duration < 120 ? 30 : duration < 300 ? 60 : 120;
   if (peaks.length > maxShots) {
     peaks.sort((a, b) => b.speed - a.speed);
     peaks.length = maxShots;
@@ -1857,12 +1857,16 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     const videoDuration = tempVideo.duration;
     URL.revokeObjectURL(tempUrl);
 
-    // Scale frame count by duration: ~5fps sampling, clamped 40-150
+    // Frame budget. Old cap of 150 was a disaster on long clips —
+    // a 7-minute highlight got sampled at 0.36 fps, missing every smash.
+    // New strategy: at least 3 fps, hard ceiling at 600 to keep memory
+    // sane. A 7-min clip now samples at ~1.4 fps (vs 0.36) and captures
+    // ~4× as many shot moments.
     let targetFrameCount;
     if (mode === "quick") {
       targetFrameCount = sportConfig.quickFrames;
     } else {
-      targetFrameCount = Math.min(150, Math.max(40, Math.floor(videoDuration * 5)));
+      targetFrameCount = Math.min(600, Math.max(60, Math.floor(videoDuration * 3)));
     }
 
     // ── Step 3: Extract frames ───────────────────────────────────────────

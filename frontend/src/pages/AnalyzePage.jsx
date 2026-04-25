@@ -288,7 +288,7 @@ const DRILL_DIFFICULTY_STYLE = {
 };
 
 export default function AnalyzePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isGuest = !user?.id;
@@ -1127,6 +1127,27 @@ export default function AnalyzePage() {
     </motion.div>
   );
 
+  const handleInlineGoogleSignIn = async () => {
+    try {
+      const { signInWithPopup } = await import("firebase/auth");
+      const { auth, googleProvider } = await import("@/lib/firebase");
+      const fb = await signInWithPopup(auth, googleProvider);
+      const idToken = await fb.user.getIdToken();
+      const { data } = await api.post("/auth/firebase", {
+        firebase_token: idToken,
+        name: fb.user.displayName || "",
+        email: fb.user.email || "",
+        photo: fb.user.photoURL || "",
+      });
+      login(data.token, data.user, data.has_profile);
+      toast.success("Signed in — coaching unlocked!");
+    } catch (err) {
+      if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") return;
+      console.error("Inline sign-in failed:", err);
+      toast.error(err?.message || "Sign in failed");
+    }
+  };
+
   const renderLockedOverlay = (children) => (
     <div className="relative">
       <div className="blur-sm pointer-events-none select-none opacity-50">
@@ -1140,7 +1161,7 @@ export default function AnalyzePage() {
             Sign in to see personalized training plans, pro tips, and track your improvement over time.
           </p>
           <Button
-            onClick={() => navigate("/auth")}
+            onClick={handleInlineGoogleSignIn}
             className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6"
           >
             Sign in with Google
