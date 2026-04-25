@@ -13,7 +13,7 @@
 const AMAZON_AFFILIATE_TAG =
   (typeof process !== "undefined" &&
     process?.env?.REACT_APP_AMAZON_AFFILIATE_TAG) ||
-  "harshit123077-21";
+  "athlyticai-21";
 
 const AMAZON_HOSTS = ["amazon.in", "amzn.in", "amazon.com"];
 
