@@ -19,7 +19,6 @@ const ProgressPage = lazy(() => import("@/pages/ProgressPage"));
 const PlayerCardPage = lazy(() => import("@/pages/PlayerCardPage"));
 const AnalyzePage = lazy(() => import("@/pages/AnalyzePage"));
 const CommunityPage = lazy(() => import("@/pages/CommunityPage"));
-const HighlightsPage = lazy(() => import("@/pages/HighlightsPage"));
 const BlogListPage = lazy(() => import("@/pages/BlogListPage"));
 const BlogPostPage = lazy(() => import("@/pages/BlogPostPage"));
 const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
@@ -116,7 +115,6 @@ function AppRoutes() {
       <Route path="/training" element={<TrainingPage />} />
       <Route path="/progress" element={<ProgressPage />} />
       <Route path="/analyze" element={<AnalyzePage />} />
-      <Route path="/highlights" element={<HighlightsPage />} />
       <Route path="/community" element={<CommunityPage />} />
       <Route path="/card" element={<PlayerCardPage />} />
       <Route path="/label" element={<LabelPage />} />

@@ -15,7 +15,6 @@ import { motion, AnimatePresence } from "framer-motion";
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/analyze", label: "Analyze", icon: Video },
-  { path: "/highlights", label: "Highlights", icon: Film },
   { path: "/equipment", label: "Equipment", icon: Target },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/community", label: "Community", icon: Users },
@@ -33,7 +32,6 @@ const MOBILE_NAV_PRIMARY = [
 
 // "More" menu items on mobile
 const MOBILE_NAV_MORE = [
-  { path: "/highlights", label: "Highlights", icon: Film },
   { path: "/community", label: "Community", icon: Users },
   { path: "/progress", label: "Progress", icon: BarChart3 },
   { path: "/card", label: "My Card", icon: CreditCard },
