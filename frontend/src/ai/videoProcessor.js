@@ -569,13 +569,23 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
 
   if (wristSpeeds.length < 3) return [];
 
-  // Compute threshold: shots are faster than average
+  // Percentile-based threshold (avg-based was too strict on active clips —
+  // an active video pushes avg up so 2× avg only catches the very biggest
+  // peaks, missing softer drops/nets). Use the 60th percentile of non-zero
+  // speeds: this adapts to each clip's motion profile and catches roughly
+  // the top 40% of motion frames as candidate peaks.
+  const nonZero = wristSpeeds.filter((w) => w.speed > 0).sort((a, b) => a.speed - b.speed);
+  const pIdx = Math.floor(nonZero.length * 0.60);
+  const percentileThresh = nonZero[pIdx]?.speed || 0;
   const avgSpeed = avg(wristSpeeds.map((w) => w.speed));
-  const threshold = avgSpeed * 2.0;
+  // Combine: needs to clear EITHER 1.3× avg OR the 60th percentile,
+  // whichever is lower. Avg path catches obvious shots in idle videos;
+  // percentile path catches softer shots in active rallies.
+  const threshold = Math.min(avgSpeed * 1.3, percentileThresh) || 0;
 
   // Adaptive minimum gap between peaks based on video duration
   const duration = timestamps.length > 0 ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
-  const minGap = duration < 15 ? 2.0 : duration < 60 ? 1.0 : 0.5;
+  const minGap = duration < 15 ? 1.2 : duration < 60 ? 0.7 : 0.4;
 
   // Find peaks (local maxima above threshold)
   const peaks = [];
@@ -592,7 +602,7 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
   }
 
   // Cap max shots based on video duration to avoid over-detection
-  const maxShots = duration < 15 ? 3 : duration < 30 ? 6 : duration < 120 ? 15 : 30;
+  const maxShots = duration < 15 ? 6 : duration < 30 ? 12 : duration < 120 ? 25 : 40;
   if (peaks.length > maxShots) {
     peaks.sort((a, b) => b.speed - a.speed);
     peaks.length = maxShots;
@@ -2003,6 +2013,12 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // Release frame data to free memory
     frames.length = 0;
 
+    // Drop unknowns and clearly-junk shots from downstream stats.
+    // (They pollute the distribution, score average, and profile.)
+    const cleanShots = detectedShots.filter(
+      (s) => s.type && s.type !== "unknown" && (s.confidence ?? 0) >= 0.15,
+    );
+
     // ── Step 8: Analyze segments ─────────────────────────────────────────
     progress("segments", 72, "Analyzing segments...");
     const segmentData = detectSegments(motionScores, timestamps);
@@ -2010,22 +2026,22 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // ── Step 9: Compute overall metrics ──────────────────────────────────
     progress("metrics", 78, "Computing metrics...");
     const metrics = computeMetrics(allKeypoints, segmentData, allKeypoints.length);
-    // Overall score is the AVERAGE of all detected shots' scores. Falls back
-    // to the legacy form-metric score if no shots were detected.
-    const shotScoresArr = detectedShots.map((s) => s.score || 0).filter((s) => s > 0);
+    // Overall score = average of clean shots' scores. Fall back to form
+    // metrics when nothing classifiable was detected.
+    const shotScoresArr = cleanShots.map((s) => s.score || 0).filter((s) => s > 0);
     const overallScore = shotScoresArr.length > 0
       ? Math.round(shotScoresArr.reduce((a, b) => a + b, 0) / shotScoresArr.length)
       : computeOverallScore(metrics);
     const grade = scoreToGrade(overallScore);
     // ── Step 10: Build player profile ────────────────────────────────────
     progress("profile", 82, "Building player profile...");
-    const playerProfile = buildPlayerProfile(detectedShots, dominantHand);
+    const playerProfile = buildPlayerProfile(cleanShots, dominantHand);
 
     // Determine the "primary" shot for backward compat
     const primaryShotType = playerProfile.primary_shot;
     const primaryShotName = primaryShotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    const primaryConfidence = detectedShots.length > 0
-      ? avg(detectedShots.filter((s) => s.type === primaryShotType).map((s) => s.confidence))
+    const primaryConfidence = cleanShots.length > 0
+      ? avg(cleanShots.filter((s) => s.type === primaryShotType).map((s) => s.confidence))
       : 0.5;
 
     const weaknesses = detectWeaknesses(metrics, primaryShotName);
@@ -2045,7 +2061,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
 
     // ── Step 12: Build shot distribution ─────────────────────────────────
     const shotDistribution = {};
-    for (const shot of detectedShots) {
+    for (const shot of cleanShots) {
       if (!shotDistribution[shot.type]) shotDistribution[shot.type] = 0;
       shotDistribution[shot.type]++;
     }
@@ -2053,16 +2069,16 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // ── Step 13: Generate results ────────────────────────────────────────
     progress("results", 95, "Generating results...");
 
-    const isMultiShot = detectedShots.length > 1;
+    const isMultiShot = cleanShots.length > 1;
 
     const result = {
       success: true,
       multi_shot: isMultiShot,
-      total_shots_detected: detectedShots.length,
+      total_shots_detected: cleanShots.length,
       dominant_hand: dominantHand,
 
       // Individual shots array (NEW)
-      shots: detectedShots.map((s) => ({
+      shots: cleanShots.map((s) => ({
         type: s.type,
         name: s.name,
         confidence: s.confidence,

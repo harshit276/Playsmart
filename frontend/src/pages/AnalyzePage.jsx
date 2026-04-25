@@ -1233,52 +1233,20 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── Analysis Quality Indicator ── */}
-        {result.analysis_quality && (
-          <div className={`rounded-2xl border p-4 mb-4 ${
-            result.analysis_quality.confidence_level === 'high' ? 'bg-green-500/5 border-green-500/20' :
-            result.analysis_quality.confidence_level === 'medium' ? 'bg-amber-500/5 border-amber-500/20' :
-            'bg-red-500/5 border-red-500/20'
-          }`}>
-            <div className="flex items-start gap-3">
-              {result.analysis_quality.confidence_level === 'high' ? (
-                <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
-              ) : (
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-              )}
-              <div className="flex-1">
-                <p className="text-sm font-medium text-white">
-                  {result.analysis_quality.confidence_level === 'high' && 'High Quality Analysis'}
-                  {result.analysis_quality.confidence_level === 'medium' && 'Medium Quality Analysis'}
-                  {result.analysis_quality.confidence_level === 'low' && 'Low Quality Analysis'}
-                </p>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Analyzed {result.analysis_quality.quality_frames}/{result.analysis_quality.total_frames_extracted} usable frames • Camera: {result.analysis_quality.camera_angle}
-                </p>
-                {result.analysis_quality.warning && (
-                  <p className="text-xs text-amber-400 mt-2">
-                    💡 {result.analysis_quality.warning}
-                  </p>
-                )}
-              </div>
-            </div>
+        {/* ── Analysis Quality (compact chip — full card was visual noise) ── */}
+        {result.analysis_quality?.confidence_level === 'low' && result.analysis_quality?.warning && (
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-300">{result.analysis_quality.warning}</p>
           </div>
         )}
 
-        {/* ── HERO: Grade + Shot + Speed (or soft note for single-shot inconclusive) ── */}
-        {(shot.shot_type === 'unknown' || (shot.confidence != null && shot.confidence < 0.2)) ? (
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl px-5 py-4 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm text-zinc-200 font-medium">Single-shot grade unavailable</p>
-              <p className="text-xs text-zinc-500 mt-1">
-                The single-shot grader couldn't lock onto one dominant shot in this video.
-                That's fine — see <span className="text-lime-400 font-semibold">Match Insights</span> above
-                for the full pose-based breakdown. Single-shot grading works best on 3-10 second clips of one shot.
-              </p>
-            </div>
-          </div>
-        ) : (
+        {/* ── HERO: Grade + Shot + Speed ──
+             Hidden in multi-shot mode (the Match Analysis card below has the
+             same info) and when single-shot confidence is too low to be
+             meaningful — Coaching Insights covers that case.
+        */}
+        {!result.multi_shot && shot.shot_type !== 'unknown' && !(shot.confidence != null && shot.confidence < 0.3) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -247,38 +247,54 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
             </div>
           )}
 
-          {/* Headline — overall consistency */}
-          <div className="bg-zinc-800/50 rounded-xl p-3">
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500">Overall technique consistency</p>
-            <p className="text-3xl font-bold text-lime-400 mt-1">
-              {overall ? Math.round(overall.consistency * 100) : 0}<span className="text-zinc-500 text-lg font-normal">%</span>
-            </p>
-            <p className="text-[10px] text-zinc-600 mt-1">
-              How repeatable your motion is across all shots — higher means muscle memory is forming.
-            </p>
-          </div>
+          {/* Headline — overall consistency. Needs ≥3 shots to be meaningful. */}
+          {perShot.filter((s) => s.pose).length >= 3 ? (
+            <div className="bg-zinc-800/50 rounded-xl p-3">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Overall technique consistency</p>
+              <p className="text-3xl font-bold text-lime-400 mt-1">
+                {overall ? Math.round(overall.consistency * 100) : 0}<span className="text-zinc-500 text-lg font-normal">%</span>
+              </p>
+              <p className="text-[10px] text-zinc-600 mt-1">
+                How repeatable your motion is across all shots — higher means muscle memory is forming.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-zinc-800/50 rounded-xl p-3">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Sample size</p>
+              <p className="text-base text-zinc-200 mt-1">
+                Analyzed <span className="font-bold text-white">{perShot.length}</span> shot{perShot.length === 1 ? '' : 's'} —
+                upload a longer rally for a full consistency score.
+              </p>
+            </div>
+          )}
 
-          {/* Per-type consistency */}
+          {/* Per-type quality — consistency for n≥2, form score for n=1 */}
           {populatedTypes.length > 0 && (
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Consistency by shot type</p>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">Technique by shot type</p>
               <div className="space-y-1.5">
                 {populatedTypes
-                  .sort((a, b) => (perTypeQuality[b].consistency || 0) - (perTypeQuality[a].consistency || 0))
+                  .sort((a, b) => (perTypeQuality[b].consistency ?? perTypeQuality[b].avg_smoothness ?? 0)
+                                  - (perTypeQuality[a].consistency ?? perTypeQuality[a].avg_smoothness ?? 0))
                   .map((name, i) => {
                     const q = perTypeQuality[name];
-                    const consist = Math.round(q.consistency * 100);
+                    const value = q.consistency != null ? q.consistency : q.avg_smoothness;
+                    const pct = Math.round(value * 100);
                     const color = SHOT_COLORS[i % SHOT_COLORS.length];
-                    const barColor = consist >= 70 ? "bg-lime-400" : consist >= 50 ? "bg-amber-400" : "bg-red-400";
+                    const barColor = pct >= 70 ? "bg-lime-400" : pct >= 50 ? "bg-amber-400" : "bg-red-400";
+                    const tag = q.consistency != null
+                      ? `consistency · n=${q.n}`
+                      : `form score · 1 shot`;
                     return (
                       <div key={name} className="flex items-center gap-2">
                         <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${color} w-24 text-center`}>
                           {name.replace(/_/g, " ")}
                         </span>
                         <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                          <div className={`h-full ${barColor}`} style={{ width: `${consist}%` }} />
+                          <div className={`h-full ${barColor}`} style={{ width: `${pct}%` }} />
                         </div>
-                        <div className="w-12 text-right text-[11px] text-zinc-300 font-mono">{consist}%</div>
+                        <div className="w-12 text-right text-[11px] text-zinc-300 font-mono">{pct}%</div>
+                        <div className="w-24 text-right text-[9px] text-zinc-500 truncate">{tag}</div>
                       </div>
                     );
                   })}
@@ -484,7 +500,10 @@ function buildPerTypeQuality(shots) {
     out[name] = {
       avg_smoothness: clamp01(avg("smoothness")),
       avg_speed: clamp01(avg("speed")),
-      consistency: clamp01(arr.length === 1 ? avg("smoothness") : 1 - meanStd * 2.5),
+      // Consistency only meaningful with ≥2 samples. For singletons, expose
+      // smoothness as "form score" instead — the UI labels it separately.
+      consistency: arr.length >= 2 ? clamp01(1 - meanStd * 2.5) : null,
+      n: arr.length,
     };
   }
   return out;
