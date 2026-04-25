@@ -92,13 +92,19 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
       // Set up video element
       setProgressMsg("Loading video…");
       const videoEl = document.createElement("video");
-      videoEl.src = URL.createObjectURL(videoFile);
       videoEl.muted = true;
       videoEl.playsInline = true;
       videoEl.preload = "auto";
+      videoEl.crossOrigin = "anonymous";
+      videoEl.src = URL.createObjectURL(videoFile);
+      try { videoEl.load(); } catch {}
       await new Promise((resolve, reject) => {
-        const t = setTimeout(() => reject(new Error("Video metadata load timed out")), 8000);
-        videoEl.onloadedmetadata = () => { clearTimeout(t); resolve(); };
+        // 30s for big phone-recorded files; only fails if truly broken
+        const t = setTimeout(() => reject(new Error("Video took too long to load (try a shorter clip)")), 30000);
+        const onReady = () => { clearTimeout(t); resolve(); };
+        if (videoEl.readyState >= 1 && videoEl.videoWidth) { onReady(); return; }
+        videoEl.addEventListener("loadedmetadata", onReady, { once: true });
+        videoEl.addEventListener("loadeddata", onReady, { once: true });
         videoEl.onerror = () => { clearTimeout(t); reject(new Error("Video failed to load")); };
       });
 

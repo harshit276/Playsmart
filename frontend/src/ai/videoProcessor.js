@@ -2127,7 +2127,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       analysis_id: `local-${Date.now()}`,
       coach_feedback: {
         summary: isMultiShot
-          ? `Match analysis: ${detectedShots.length} shots detected. Overall ${grade} (${overallScore}/100). Dominant hand: ${dominantHand}. Play style: ${playerProfile.play_style}.`
+          ? `Match analysis: ${detectedShots.length} shots detected. Overall ${grade} (${overallScore}/100). Play style: ${playerProfile.play_style}.`
           : `Your ${primaryShotName} scored ${overallScore}/100 (${grade}). ${skillLevel} level detected.`,
         top_issues: weaknesses.slice(0, 3).map((w) => ({
           issue: w.issue,

@@ -1331,11 +1331,6 @@ export default function AnalyzePage() {
                       <Target className="w-2.5 h-2.5 mr-1 inline" /> {result.target_player === "auto" ? "Primary player" : `${result.target_player.replace("-", " ")} player`}
                     </Badge>
                   )}
-                  {result.dominant_hand && (
-                    <Badge className="text-[10px] px-2 py-0.5 bg-cyan-400/10 text-cyan-400 border-cyan-400/20">
-                      {result.dominant_hand === "right" ? "Right-handed" : "Left-handed"}
-                    </Badge>
-                  )}
                 </div>
                 {(shot.confidence != null && shot.confidence > 0) && (
                   <p className="text-zinc-500 text-xs">
@@ -1382,17 +1377,14 @@ export default function AnalyzePage() {
               <Film className="w-3 h-3 text-sky-400" /> Match Analysis — {result.total_shots_detected} Shots Detected
             </p>
 
-            {/* Dominant hand + Play style */}
-            <div className="flex items-center gap-2 flex-wrap mb-4">
-              <Badge className="bg-violet-400/10 text-violet-400 border-violet-400/20 text-[10px] uppercase font-bold">
-                {result.dominant_hand === "right" ? "Right-handed" : "Left-handed"}
-              </Badge>
-              {result.player_profile?.play_style && (
+            {/* Play style */}
+            {result.player_profile?.play_style && (
+              <div className="flex items-center gap-2 flex-wrap mb-4">
                 <Badge className="bg-sky-400/10 text-sky-400 border-sky-400/20 text-[10px] uppercase font-bold">
                   {result.player_profile.play_style} Style
                 </Badge>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Shot distribution bars */}
             {result.shot_distribution && Object.keys(result.shot_distribution).length > 0 && (
@@ -1475,15 +1467,6 @@ export default function AnalyzePage() {
               </div>
             )}
           </motion.div>
-        )}
-
-        {/* ── Dominant hand badge (single shot mode) ── */}
-        {result.dominant_hand && !result.multi_shot && (
-          <div className="flex items-center gap-2 -mt-1">
-            <Badge className="bg-violet-400/10 text-violet-400 border-violet-400/20 text-[10px] uppercase font-bold">
-              {result.dominant_hand === "right" ? "Right-handed" : "Left-handed"} player detected
-            </Badge>
-          </div>
         )}
 
         {/* ── Score Comparison with Previous ── */}
