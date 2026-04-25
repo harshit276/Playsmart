@@ -2414,19 +2414,38 @@ async def generate_cloudinary_reel(req: HighlightReelRequest):
                 "score": m.get("score", 50),
             })
 
-        # Build reel URL
+        # Build reel URL — use Cloudinary's splice transformation for true
+        # non-contiguous concat (the previous version did a basic trim from
+        # first clip start to last clip end, which included EVERYTHING
+        # in between, not just the highlight moments).
         if len(clips) == 1:
             reel_url = clips[0]["url"]
         else:
-            # Trim from first moment start to last moment end
-            first_start = clips[0]["start_time"]
-            last_end = max(c["start_time"] + c["duration"] for c in clips)
-            total_dur = min(60, round(last_end - first_start, 1))
+            # First clip: base layer (trimmed)
+            first = clips[0]
+            base_parts = [f"so_{first['start_time']}", f"du_{first['duration']}"]
+            if first.get("should_slowmo") and req.include_speed_overlay:
+                base_parts.append("e_accelerate:-50")
+            # Encode public_id for use in the layer reference. Cloudinary
+            # requires colons to be replaced with `:` in URL position so
+            # we use the form `l_video:<pid_with_colons_or_slashes>` —
+            # subfolders use `:` instead of `/` in the layer reference.
+            layer_pid = pid.replace("/", ":")
+            base_path = "/".join(base_parts)
 
-            reel_url = (
-                f"https://res.cloudinary.com/{cloud}/video/upload/"
-                f"so_{first_start},du_{total_dur},w_1280,c_limit,q_auto:good/{pid}.mp4"
-            )
+            # Subsequent clips: spliced as overlays
+            splice_layers = []
+            for c in clips[1:]:
+                layer_parts = [f"l_video:{layer_pid}"]
+                inner = [f"so_{c['start_time']}", f"du_{c['duration']}"]
+                if c.get("should_slowmo") and req.include_speed_overlay:
+                    inner.append("e_accelerate:-50")
+                layer_parts.append("/".join(inner))
+                layer_parts.append("fl_splice")
+                splice_layers.append("/".join(layer_parts))
+
+            transform = "/".join([base_path, "w_1280,c_limit,q_auto:good"] + splice_layers)
+            reel_url = f"https://res.cloudinary.com/{cloud}/video/upload/{transform}/{pid}.mp4"
 
         # Total highlight duration
         total_duration = round(sum(c["duration"] for c in clips), 1)

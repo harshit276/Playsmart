@@ -44,15 +44,21 @@ export default function HighlightsPage() {
   // Clean up video URL on unmount
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl); }, [videoUrl]);
 
-  // Blob URL for the generated reel — the <video> player swaps to this
-  // once composition finishes so the user sees their reel, not the source.
+  // Cloudinary-hosted reel URL (replaces the broken in-browser ffmpeg blob).
+  // Server-side splice composition produces a real concatenated reel from
+  // non-contiguous moments — no browser memory issues, no ffmpeg.wasm.
   const [reelUrl, setReelUrl] = useState(null);
+  const [reelClips, setReelClips] = useState(null); // per-clip Cloudinary URLs
+  const [cloudinaryPublicId, setCloudinaryPublicId] = useState(null);
+
+  // Cleanup uploaded source from Cloudinary when the user resets / unmounts
   useEffect(() => {
-    if (!recordedBlob) { setReelUrl(null); return; }
-    const url = URL.createObjectURL(recordedBlob);
-    setReelUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [recordedBlob]);
+    return () => {
+      if (cloudinaryPublicId) {
+        import("@/lib/cloudinaryUpload").then((m) => m.cleanupVideo(cloudinaryPublicId)).catch(() => {});
+      }
+    };
+  }, [cloudinaryPublicId]);
 
   const handleFile = (e) => {
     const f = e.target.files?.[0];
@@ -184,30 +190,60 @@ export default function HighlightsPage() {
     }
   }, [isPlayingReel, currentClipIndex, highlights, stopReel]);
 
-  // ─── Compose polished reel: title card + crossfades + overlay + music ───
+  // ─── Compose reel server-side via Cloudinary ───
+  // Old approach used ffmpeg.wasm in the browser → constant memory failures
+  // on long videos. New approach: upload once to Cloudinary, generate a
+  // splice-transformation URL that concatenates the detected moments.
+  // No browser ffmpeg, no concat fragility.
   const downloadReel = async () => {
     if (!highlights?.highlights?.length || !file) return;
     setIsRecording(true);
     setRecordedBlob(null);
-    setLoadingText("Composing reel…");
+    setReelUrl(null);
+    setReelClips(null);
+    setLoadingText("Uploading to cloud…");
+    setProgress(0);
     try {
-      const { composeReel } = await import("@/ai/reelComposer");
-      const blob = await composeReel({
-        file,
-        moments: highlights.highlights,
-        title: profile?.username ? `${profile.username}'s Highlights` : "Highlights",
-        subtitle: new Date().toLocaleDateString(),
-        addMusic,
+      const { uploadToCloudinary, generateReel } = await import("@/lib/cloudinaryUpload");
+
+      // Step 1: upload (compresses in-browser if >100MB to save bandwidth)
+      const uploaded = await uploadToCloudinary(file, {
         onProgress: ({ percent, message }) => {
-          setProgress(percent || 0);
+          setProgress(Math.round((percent || 0) * 0.8));
           if (message) setLoadingText(message);
         },
       });
-      setRecordedBlob(blob);
+      setCloudinaryPublicId(uploaded.public_id);
+
+      // Step 2: generate the spliced reel + per-clip URLs
+      setLoadingText("Composing reel server-side…");
+      setProgress(85);
+      const reel = await generateReel(
+        uploaded.public_id,
+        selectedSport || "badminton",
+        uploaded.duration || 0,
+        {
+          target_clips: highlights.highlights.length,
+          include_speed_overlay: true,
+          moments: highlights.highlights.map((m) => ({
+            start_time: m.start_time,
+            end_time: m.end_time,
+            type: m.type,
+            description: m.description,
+            speed_kmh: m.speed_kmh || 0,
+            should_slowmo: !!m.should_slowmo,
+            score: m.score || 50,
+          })),
+        },
+      );
+
+      setProgress(100);
+      setReelUrl(reel.reel_url);
+      setReelClips(reel.clips || []);
       toast.success("Highlight reel ready!");
     } catch (err) {
-      console.error("Reel compose failed:", err);
-      toast.error("Reel generation failed: " + (err.message || "unknown"));
+      console.error("Cloud reel composition failed:", err);
+      toast.error("Reel generation failed: " + (err?.response?.data?.detail || err.message || "unknown"));
     } finally {
       setIsRecording(false);
     }
@@ -473,21 +509,12 @@ export default function HighlightsPage() {
                   {isRecording ? (
                     <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
                   ) : (
-                    <Download className="w-4 h-4 mr-1" />
+                    <Sparkles className="w-4 h-4 mr-1" />
                   )}
-                  {isRecording ? "Recording…" : "Record Reel"}
+                  {isRecording ? "Composing…" : "Create Shareable Reel"}
                 </Button>
               </div>
-              <label className="flex items-center gap-2 mb-3 px-1 text-xs text-zinc-400 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={addMusic}
-                  onChange={(e) => setAddMusic(e.target.checked)}
-                  disabled={isRecording}
-                  className="accent-lime-400"
-                />
-                Mix in background music (drop a file in <code className="text-zinc-500 mx-0.5">public/audio/highlights-music.mp3</code> first)
-              </label>
+
               {isRecording && (
                 <div className="mb-3 px-1">
                   <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
@@ -497,22 +524,17 @@ export default function HighlightsPage() {
                 </div>
               )}
 
-              {/* Download recorded reel */}
-              {recordedBlob && (
-                <Button
-                  onClick={() => {
-                    const url = URL.createObjectURL(recordedBlob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "athlyticai_highlights.webm";
-                    a.click();
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                  }}
-                  className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold h-11 mb-3"
+              {/* Download / share the cloud-composed reel */}
+              {reelUrl && (
+                <a
+                  href={reelUrl}
+                  download="athlyticai_highlights.mp4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full inline-flex items-center justify-center gap-2 bg-lime-400 text-black hover:bg-lime-500 font-bold h-11 rounded-md mb-3"
                 >
-                  <Download className="w-4 h-4 mr-2" /> Download Highlight Reel
-                  ({(recordedBlob.size / 1024 / 1024).toFixed(1)} MB)
-                </Button>
+                  <Download className="w-4 h-4" /> Download Highlight Reel
+                </a>
               )}
 
               {/* New Video button */}
