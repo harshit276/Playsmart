@@ -511,6 +511,46 @@ async def get_equipment(equipment_id: str):
     return {"equipment": item, "prices": prices}
 
 
+# ─── Local-shop enquiry ───
+# User submits name + phone + product; we log it for follow-up. Backed
+# by MongoDB if available, otherwise just stored in memory + logger
+# (sufficient until volume grows). The promise to the user is a 1-2hr
+# callback — that part is human, not automated.
+
+class EnquiryRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+    phone: str = Field(..., min_length=8, max_length=20)
+    city: Optional[str] = Field(None, max_length=80)
+    product: str = Field(..., min_length=1, max_length=160)
+    sport: Optional[str] = Field(None, max_length=32)
+    notes: Optional[str] = Field(None, max_length=500)
+
+
+@api_router.post("/equipment/enquiry")
+async def equipment_enquiry(req: EnquiryRequest):
+    record = {
+        "id": str(uuid.uuid4()),
+        "name": req.name.strip(),
+        "phone": req.phone.strip(),
+        "city": (req.city or "").strip() or None,
+        "product": req.product.strip(),
+        "sport": req.sport,
+        "notes": (req.notes or "").strip() or None,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    # Best-effort persistence — never block the user on DB.
+    try:
+        await asyncio.wait_for(db.equipment_enquiries.insert_one({**record}), timeout=2.0)
+    except Exception as e:
+        logger.warning(f"equipment_enquiry: DB write failed, logging only: {e}")
+    logger.info(
+        f"NEW LOCAL-SHOP ENQUIRY · {record['name']} · {record['phone']} · "
+        f"{record['city'] or '?'} · product={record['product']} · sport={record['sport'] or '?'}"
+    )
+    return {"ok": True, "id": record["id"], "callback_eta_hours": "1-2"}
+
+
 # ─── Recommendation Routes ───
 
 @api_router.get("/recommendations/equipment/{user_id}")

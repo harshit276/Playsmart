@@ -735,13 +735,15 @@ function DrillCard({ drill, videos: drillVideos, sport, index, expanded, onToggl
   const vids = drillVideos || [];
   const thumbnailUrl = getDrillThumbnail(vids);
   const videoUrl = getDrillVideoUrl(vids);
+  const videoId = extractYouTubeId(videoUrl);
   const placeholderEmoji = EXERCISE_EMOJI[(drill.name || "").length % EXERCISE_EMOJI.length];
+  const [playing, setPlaying] = useState(false);
 
   const handleThumbnailClick = (e) => {
-    if (videoUrl) {
-      e.stopPropagation();
-      window.open(videoUrl, "_blank", "noopener,noreferrer");
-    }
+    e.stopPropagation();
+    // YouTube → play inline; non-YouTube → open in new tab
+    if (videoId) setPlaying(true);
+    else if (videoUrl) window.open(videoUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -755,37 +757,57 @@ function DrillCard({ drill, videos: drillVideos, sport, index, expanded, onToggl
           : "border-zinc-800 bg-zinc-900/60 hover:border-zinc-600"
       } ${expanded ? "ring-1 ring-lime-400/20" : ""}`}
     >
-      {/* LARGE THUMBNAIL */}
+      {/* LARGE THUMBNAIL — clicks play YouTube inline */}
       <div
-        className={`relative w-full aspect-video overflow-hidden ${videoUrl ? "cursor-pointer" : ""}`}
-        onClick={handleThumbnailClick}
+        className={`relative w-full aspect-video overflow-hidden bg-zinc-950 ${(videoUrl && !playing) ? "cursor-pointer" : ""}`}
+        onClick={!playing ? handleThumbnailClick : undefined}
       >
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={drill.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => { e.target.style.display = "none"; if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = "flex"; }}
+        {playing && videoId ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+            title={drill.name}
+            className="w-full h-full"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
           />
-        ) : null}
-        <div className={`${thumbnailUrl ? "hidden" : "flex"} absolute inset-0 bg-gradient-to-br ${
-          SPORT_GRADIENT[sport] || "from-zinc-700 to-zinc-900"
-        } items-center justify-center`}>
-          <span className="text-4xl opacity-60 select-none">{placeholderEmoji}</span>
-        </div>
-        {/* Play overlay */}
-        {videoUrl && (
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-            <div className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border border-white/10">
-              <Play className="w-5 h-5 text-white ml-0.5" />
+        ) : (
+          <>
+            {thumbnailUrl ? (
+              <img
+                src={thumbnailUrl}
+                alt={drill.name}
+                loading="lazy"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => { e.target.style.display = "none"; if (e.target.nextElementSibling) e.target.nextElementSibling.style.display = "flex"; }}
+              />
+            ) : null}
+            <div className={`${thumbnailUrl ? "hidden" : "flex"} absolute inset-0 bg-gradient-to-br ${
+              SPORT_GRADIENT[sport] || "from-zinc-700 to-zinc-900"
+            } items-center justify-center`}>
+              <span className="text-4xl opacity-60 select-none">{placeholderEmoji}</span>
             </div>
-          </div>
-        )}
-        {/* Difficulty badge on thumbnail */}
-        {drill.difficulty && (
-          <div className="absolute top-2 right-2">
-            <Badge className={`${diffStyle} text-[10px] px-2 py-0.5 backdrop-blur-sm`}>{drill.difficulty}</Badge>
-          </div>
+            {/* Play overlay (always visible on mobile, hover on desktop) */}
+            {videoUrl && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/0 group-hover:from-black/60 transition-colors flex items-center justify-center">
+                <div className="w-14 h-14 rounded-full bg-lime-400/90 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                  <Play className="w-6 h-6 text-black ml-0.5" fill="currentColor" />
+                </div>
+              </div>
+            )}
+            {/* Difficulty badge on thumbnail */}
+            {drill.difficulty && (
+              <div className="absolute top-2 right-2">
+                <Badge className={`${diffStyle} text-[10px] px-2 py-0.5 backdrop-blur-sm shadow-lg`}>{drill.difficulty}</Badge>
+              </div>
+            )}
+            {/* Duration chip bottom-left */}
+            {drill.duration_minutes > 0 && (
+              <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded-md px-1.5 py-0.5 text-[10px] font-mono text-white">
+                {drill.duration_minutes} min
+              </div>
+            )}
+          </>
         )}
       </div>
 
