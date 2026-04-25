@@ -17,6 +17,7 @@ import {
 import api from "@/lib/api";
 import { swrGet } from "@/lib/cachedFetch";
 import EnquireLocalShop from "@/components/EnquireLocalShop";
+import { withAffiliate } from "@/lib/affiliateLinks";
 import { getSportEmoji, getSportLabel, SPORT_LABEL } from "@/lib/sportConfig";
 import SEO from "@/components/SEO";
 
@@ -73,7 +74,7 @@ function PriceRow({ prices, buyLinks }) {
       return (
         <div className="flex flex-wrap gap-2 mt-4">
           {entries.map(([store, url]) => (
-            <a key={store} href={url} target="_blank" rel="noopener noreferrer"
+            <a key={store} href={withAffiliate(url)} target="_blank" rel="noopener noreferrer sponsored"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors bg-zinc-800 text-zinc-300 hover:bg-zinc-700">
               <ShoppingCart className="w-3 h-3" />
               {labels[store] || store.charAt(0).toUpperCase() + store.slice(1)}
@@ -91,7 +92,7 @@ function PriceRow({ prices, buyLinks }) {
       {prices.map((p, pi) => {
         const isLowest = prices.length > 1 && p.price === lowest;
         return (
-          <a key={pi} href={p.listing_url} target="_blank" rel="noopener noreferrer"
+          <a key={pi} href={withAffiliate(p.listing_url)} target="_blank" rel="noopener noreferrer sponsored"
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
               isLowest
                 ? "bg-lime-400 text-black hover:bg-lime-500"
@@ -116,7 +117,7 @@ function BuyLinks({ buyLinks }) {
   return (
     <div className="space-y-2">
       {entries.map(([store, url]) => (
-        <a key={store} href={url} target="_blank" rel="noopener noreferrer"
+        <a key={store} href={withAffiliate(url)} target="_blank" rel="noopener noreferrer sponsored"
           className="flex items-center justify-between p-2.5 rounded-xl text-xs bg-zinc-800/50 hover:bg-zinc-700/50 transition-colors">
           <span className="font-medium text-zinc-300">{labels[store] || store.charAt(0).toUpperCase() + store.slice(1)}</span>
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-lime-400/10 text-lime-400 rounded-lg">
@@ -145,7 +146,7 @@ function PriceTable({ prices, buyLinks }) {
             <span className={`font-bold ${p.price === lowest ? "text-lime-400" : "text-white"}`}>
               {p.price?.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
             </span>
-            <a href={p.listing_url} target="_blank" rel="noopener noreferrer"
+            <a href={withAffiliate(p.listing_url)} target="_blank" rel="noopener noreferrer sponsored"
               className="inline-flex items-center gap-1 px-2 py-1 bg-lime-400/10 text-lime-400 rounded-lg hover:bg-lime-400/20 transition-colors"
               data-testid={`buy-link-${p.marketplace?.toLowerCase()}`}>
               <ShoppingCart className="w-3 h-3" /> Buy <ExternalLink className="w-2.5 h-2.5" />
@@ -471,7 +472,7 @@ function GearCard({ item, prices, reason }) {
                   <span className={`font-bold ${isLowest ? "text-lime-400" : "text-white"}`}>
                     {p.price?.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })}
                   </span>
-                  <a href={p.listing_url} target="_blank" rel="noopener noreferrer"
+                  <a href={withAffiliate(p.listing_url)} target="_blank" rel="noopener noreferrer sponsored"
                     className="inline-flex items-center gap-1 px-2 py-0.5 bg-lime-400/10 text-lime-400 rounded-lg text-[10px] hover:bg-lime-400/20"
                     data-testid={`gear-buy-${eq.id}-${p.marketplace?.toLowerCase()}`}>
                     <ShoppingCart className="w-2.5 h-2.5" /> Buy <ExternalLink className="w-2 h-2" />
