@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { swrGet } from "@/lib/cachedFetch";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -127,25 +128,34 @@ export default function TrainingPage() {
   const loadData = useCallback(async () => {
     const userId = user?.id || "guest";
     setFetchError(false);
-    setLoading(true);
-    try {
-      const results = await Promise.allSettled([
-        api.get(`/recommendations/training/${userId}`, { timeout: 15000 }),
-        api.get(`/progress/${userId}`, { timeout: 15000 }),
-      ]);
 
-      if (results[0].status === "fulfilled") setPlanData(results[0].value.data);
-      if (results[1].status === "fulfilled") {
-        const map = {};
-        (results[1].value.data.entries || []).forEach(e => { map[e.day] = true; });
-        setProgress(map);
-      }
-      if (results[0].status !== "fulfilled" && results[1].status !== "fulfilled") {
-        setFetchError(true);
-      }
-    } catch {
-      setFetchError(true);
+    const planUrl = `/recommendations/training/${userId}`;
+    const progressUrl = `/progress/${userId}`;
+
+    // Hydrate from cache instantly — subsequent visits skip the spinner
+    const planSwr = swrGet(planUrl, { timeout: 15000 });
+    const progressSwr = swrGet(progressUrl, { timeout: 15000 });
+
+    if (planSwr.cached) setPlanData(planSwr.cached);
+    if (progressSwr.cached) {
+      const map = {};
+      (progressSwr.cached.entries || []).forEach(e => { map[e.day] = true; });
+      setProgress(map);
     }
+
+    setLoading(!(planSwr.cached || progressSwr.cached));
+
+    // Background refresh
+    const results = await Promise.allSettled([planSwr.fresh, progressSwr.fresh]);
+    let anySuccess = !!(planSwr.cached || progressSwr.cached);
+    if (results[0].status === "fulfilled") { setPlanData(results[0].value); anySuccess = true; }
+    if (results[1].status === "fulfilled") {
+      const map = {};
+      (results[1].value.entries || []).forEach(e => { map[e.day] = true; });
+      setProgress(map);
+      anySuccess = true;
+    }
+    if (!anySuccess) setFetchError(true);
     setLoading(false);
   }, [user?.id]);
 

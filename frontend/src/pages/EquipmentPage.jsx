@@ -15,6 +15,7 @@ import {
   CheckCircle2, ClipboardList, ArrowRight, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
+import { swrGet } from "@/lib/cachedFetch";
 import { getSportEmoji, getSportLabel, SPORT_LABEL } from "@/lib/sportConfig";
 import SEO from "@/components/SEO";
 
@@ -752,34 +753,60 @@ export default function EquipmentPage() {
 
   const fetchData = useCallback(async (sport, budget) => {
     const userId = user?.id || "guest";
-    setLoading(true);
     setFetchError(false);
-    setRacketData(null);
-    setShoeData(null);
-    setGearData(null);
-    setStringsData(null);
     const sportParam = sport ? `&sport=${sport}` : '';
     const sportQuery = sport ? `?sport=${sport}` : '';
     const budgetKey = budget || selectedBudget || "2k-4k";
     const bRange = BUDGET_RANGES[budgetKey];
     const budgetParam = bRange ? `&budget_min=${bRange.min}&budget_max=${bRange.max}` : '';
-    // Fire all requests in parallel. Don't drop the skeleton until they
-    // all settle — partial empty tabs (e.g. clicking "Gear" while still
-    // loading) used to look broken.
-    let anySuccess = false;
-    const r1 = api.get(`/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`, { timeout: 15000 })
-      .then(res => { setRacketData(res.data); anySuccess = true; }).catch(() => {});
-    const r2 = api.get(`/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`, { timeout: 15000 })
-      .then(res => { setShoeData(res.data); anySuccess = true; }).catch(() => {});
-    const r3 = api.get(`/recommendations/gear/${userId}${sportQuery}`, { timeout: 15000 })
-      .then(res => { setGearData(res.data); anySuccess = true; }).catch(() => {});
-    const requests = [r1, r2, r3];
-    if (sport === "badminton") {
-      const r4 = api.get(`/recommendations/equipment/${userId}?category=strings&sport=badminton${budgetParam}`, { timeout: 15000 })
-        .then(res => { setStringsData(res.data); anySuccess = true; }).catch(() => {});
-      requests.push(r4);
+
+    // Build URL list. Each call is wrapped in SWR — if we have cached data
+    // we render it instantly (no spinner) and refresh in the background.
+    const urls = {
+      racket: `/recommendations/equipment/${userId}?category=racket${sportParam}${budgetParam}`,
+      shoes:  `/recommendations/equipment/${userId}?category=shoes${sportParam}${budgetParam}`,
+      gear:   `/recommendations/gear/${userId}${sportQuery}`,
+      strings: sport === "badminton"
+        ? `/recommendations/equipment/${userId}?category=strings&sport=badminton${budgetParam}`
+        : null,
+    };
+
+    // Hydrate from cache synchronously — instant render on revisits / budget switches
+    const swrCalls = {};
+    let anyCached = false;
+    for (const [key, url] of Object.entries(urls)) {
+      if (!url) continue;
+      const { cached, fresh } = swrGet(url, { timeout: 15000 });
+      swrCalls[key] = { cached, fresh };
+      if (cached) anyCached = true;
     }
-    await Promise.allSettled(requests);
+
+    // Apply cached values immediately
+    if (swrCalls.racket?.cached) setRacketData(swrCalls.racket.cached);
+    if (swrCalls.shoes?.cached) setShoeData(swrCalls.shoes.cached);
+    if (swrCalls.gear?.cached) setGearData(swrCalls.gear.cached);
+    if (swrCalls.strings?.cached) setStringsData(swrCalls.strings.cached);
+
+    // No cache → show spinner. With cache → keep current data visible.
+    if (!anyCached) {
+      setRacketData(null);
+      setShoeData(null);
+      setGearData(null);
+      setStringsData(null);
+      setLoading(true);
+    } else {
+      setLoading(false);
+    }
+
+    // Background refresh — silently update when fresh data arrives
+    let anySuccess = anyCached;
+    const refreshes = [];
+    if (swrCalls.racket) refreshes.push(swrCalls.racket.fresh.then(d => { setRacketData(d); anySuccess = true; }).catch(() => {}));
+    if (swrCalls.shoes)  refreshes.push(swrCalls.shoes.fresh.then(d  => { setShoeData(d);   anySuccess = true; }).catch(() => {}));
+    if (swrCalls.gear)   refreshes.push(swrCalls.gear.fresh.then(d   => { setGearData(d);   anySuccess = true; }).catch(() => {}));
+    if (swrCalls.strings) refreshes.push(swrCalls.strings.fresh.then(d => { setStringsData(d); anySuccess = true; }).catch(() => {}));
+
+    await Promise.allSettled(refreshes);
     if (!anySuccess) setFetchError(true);
     setLoading(false);
   }, [user?.id, selectedBudget]);
@@ -847,14 +874,20 @@ export default function EquipmentPage() {
     }
   };
 
-  // Use backend-separated in-budget (recommendations) and out-of-budget (also_explore) lists
+  // Top-3 picks (the personal recommendation), rest get bumped into the
+  // "Other suitable equipment" section. Avoids overwhelming the user.
+  const PRIMARY_LIMIT = 3;
+  const racketAll = racketData?.recommendations || [];
+  const racketAlsoExplore = racketData?.also_explore || [];
   const racketFiltered = {
-    inBudget: racketData?.recommendations || [],
-    aboveBudget: racketData?.also_explore || [],
+    inBudget: racketAll.slice(0, PRIMARY_LIMIT),
+    aboveBudget: [...racketAll.slice(PRIMARY_LIMIT), ...racketAlsoExplore],
   };
+  const shoeAll = shoeData?.recommendations || [];
+  const shoeAlsoExplore = shoeData?.also_explore || [];
   const shoeFiltered = {
-    inBudget: shoeData?.recommendations || [],
-    aboveBudget: shoeData?.also_explore || [],
+    inBudget: shoeAll.slice(0, PRIMARY_LIMIT),
+    aboveBudget: [...shoeAll.slice(PRIMARY_LIMIT), ...shoeAlsoExplore],
   };
 
   const activeSportForLabels = selectedSport || profile?.active_sport;
@@ -989,9 +1022,9 @@ export default function EquipmentPage() {
                     <div className="flex items-center gap-2 mb-3">
                       <Star className="w-4 h-4 text-amber-400" />
                       <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
-                        You Might Also Like
+                        Other Suitable Options
                       </h3>
-                      <span className="text-xs text-zinc-600">({racketFiltered.aboveBudget.length} above budget)</span>
+                      <span className="text-xs text-zinc-600">({racketFiltered.aboveBudget.length})</span>
                     </div>
                     <Separator className="bg-zinc-800 mb-4" />
                     <div className="space-y-4">
@@ -1028,9 +1061,9 @@ export default function EquipmentPage() {
                     <div className="flex items-center gap-2 mb-3">
                       <Star className="w-4 h-4 text-amber-400" />
                       <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
-                        You Might Also Like
+                        Other Suitable Options
                       </h3>
-                      <span className="text-xs text-zinc-600">({shoeFiltered.aboveBudget.length} above budget)</span>
+                      <span className="text-xs text-zinc-600">({shoeFiltered.aboveBudget.length})</span>
                     </div>
                     <Separator className="bg-zinc-800 mb-4" />
                     <div className="space-y-4">
