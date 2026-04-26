@@ -1089,6 +1089,7 @@ def _default_training_payload(active_sport: str, skill_level: str = "Beginner") 
     drills_map: dict = {}
     videos_map: dict = {}
     for day in plan_days:
+        day_videos = [v for v in day.get("videos", []) if isinstance(v, dict)]
         # Replace day's raw drill list with normalized dicts in place, so
         # the frontend's day-level drill rendering also gets proper shapes.
         normalized_drills = []
@@ -1104,13 +1105,13 @@ def _default_training_payload(active_sport: str, skill_level: str = "Beginner") 
             normalized_drills.append(did)
             if did not in drills_map:
                 drills_map[did] = dd
+            # Each drill in the day inherits the day's videos — frontend
+            # looks up videos[drill.id], not by skill. Without this every
+            # drill card showed an emoji placeholder instead of a real
+            # YouTube thumbnail.
+            if day_videos:
+                videos_map.setdefault(did, []).extend(day_videos)
         day["drills"] = normalized_drills
-
-        for v in day.get("videos", []):
-            if not isinstance(v, dict):
-                continue
-            did = day.get("skill_id", "default")
-            videos_map.setdefault(did, []).append(v)
 
     # Training videos list (flat)
     if isinstance(videos, dict):

@@ -494,8 +494,15 @@ def build_weekly_plan_from_skills(
 
         videos = _video_by_skill.get(sport, {}).get(skill_id, [])[:2]
         video_list = [
-            {"id": v["id"], "title": v["title"], "channel": v["channel"],
-             "url": v["url"], "level": v.get("level"), "language": v.get("language")}
+            {
+                "id": v["id"], "title": v["title"], "channel": v["channel"],
+                "url": v["url"], "level": v.get("level"),
+                "language": v.get("language"),
+                # Pass through thumbnail so frontend can render it without
+                # having to extract a video ID from the URL.
+                "thumbnail": v.get("thumbnail") or v.get("thumbnail_url"),
+                "duration_min": v.get("duration_min"),
+            }
             for v in videos
         ]
 
