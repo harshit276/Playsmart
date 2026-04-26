@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -137,6 +138,18 @@ export default function CommunityPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { document.title = "Community | AthlyticAI"; }, []);
+
+  // Auto-open host modal when navigated from "Host Game" nav item
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("host") === "1") {
+      setShowCreate(true);
+      // Clean the param so refreshing doesn't keep reopening
+      const params = new URLSearchParams(searchParams);
+      params.delete("host");
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const refresh = () => {
     invalidateMatching((k) => k.startsWith("/games") || k.startsWith("/friends") || k.startsWith("/community"));

@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import {
   Target, Dumbbell, BarChart3, Video, Flame, ChevronRight,
-  Star, Zap, Play, Clock, Calendar, ArrowRight, Camera, Trophy
+  Star, Zap, Play, Clock, Calendar, ArrowRight, Camera, Trophy,
+  Sparkles, Swords, Users
 } from "lucide-react";
 import api from "@/lib/api";
 import { hasVideoAnalysis } from "@/lib/sportConfig";
 import { BadgeStrip } from "@/components/BadgeDisplay";
+import { swrGet } from "@/lib/cachedFetch";
 
 const SPORT_LABELS = {
   badminton: "Badminton", table_tennis: "Table Tennis", tennis: "Tennis",
@@ -87,18 +89,22 @@ export default function DashboardPage() {
 
   const loadData = useCallback(async () => {
     if (!user?.id) return; // Guests get default empty state
-    // 8s per-call timeout so a single flaking endpoint doesn't block the
-    // whole dashboard. Each setter fires as its call resolves so the page
-    // paints progressively instead of blocking on the slowest one.
+    // SWR-cached: subsequent visits paint instantly from cache, refresh in
+    // background. Each setter fires twice — first with cached data, again
+    // when the network call resolves with fresh data.
     const OPTS = { timeout: 8000 };
-    api.get(`/progress/${user.id}`, OPTS)
-      .then(r => setProgress(r.data)).catch(() => {});
-    api.get(`/analysis-history/${user.id}`, OPTS)
-      .then(r => setAnalysisHistory(r.data.analyses || [])).catch(() => {});
-    api.get(`/recommendations/equipment/${user.id}?category=racket`, OPTS)
-      .then(r => setEquipment((r.data?.recommendations || []).slice(0, 3))).catch(() => {});
-    api.get(`/badges/${user.id}`, OPTS)
-      .then(r => setBadgesData(r.data)).catch(() => {});
+    const calls = [
+      { url: `/progress/${user.id}`, set: (d) => setProgress(d) },
+      { url: `/analysis-history/${user.id}`, set: (d) => setAnalysisHistory(d?.analyses || []) },
+      { url: `/recommendations/equipment/${user.id}?category=racket`,
+        set: (d) => setEquipment((d?.recommendations || []).slice(0, 3)) },
+      { url: `/badges/${user.id}`, set: (d) => setBadgesData(d) },
+    ];
+    for (const c of calls) {
+      const { cached, fresh } = swrGet(c.url, OPTS);
+      if (cached) c.set(cached);
+      fresh.then(c.set).catch(() => {});
+    }
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -189,6 +195,32 @@ export default function DashboardPage() {
             <div className="bg-lime-400/10 border border-lime-400/30 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
               <p className="text-sm text-zinc-300"><Zap className="w-4 h-4 inline mr-1 text-lime-400" />Sign in to save your progress and get personalized recommendations.</p>
               <Link to="/auth" className="text-sm font-medium text-lime-400 hover:text-lime-300 shrink-0">Sign In &rarr;</Link>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Quiz prompt — logged-in user with no sport profile yet */}
+        {!isGuestMode && (!profile?.selected_sports?.length || !profile?.active_sport) && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+            <div className="relative overflow-hidden bg-gradient-to-br from-lime-400/15 to-emerald-900/10 border border-lime-400/30 rounded-2xl p-5 sm:p-6">
+              <div className="absolute -right-6 -bottom-6 text-[120px] opacity-10 select-none">🏸</div>
+              <div className="relative flex items-start gap-4 flex-wrap">
+                <div className="w-12 h-12 rounded-xl bg-lime-400/20 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-6 h-6 text-lime-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-heading font-bold text-lg sm:text-xl text-white uppercase tracking-tight mb-1">
+                    Personalize your dashboard
+                  </h3>
+                  <p className="text-zinc-300 text-sm mb-4">
+                    Take our 30-second quiz so we can recommend the right training plan, equipment, and matches for your level.
+                  </p>
+                  <Link to="/assessment"
+                    className="inline-flex items-center gap-1.5 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-5 py-2.5 text-sm">
+                    <Zap className="w-4 h-4" /> Take the Quiz
+                  </Link>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -403,16 +435,9 @@ export default function DashboardPage() {
                     <h3 className="font-heading font-bold text-xl sm:text-2xl text-white uppercase tracking-tight mb-1">
                       Analyze Your Game
                     </h3>
-                    <p className="text-zinc-400 text-sm mb-4">Upload a video and get instant AI coaching feedback.</p>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <Link to="/analyze?mode=quick" className="inline-flex items-center gap-2 px-4 py-2 bg-lime-400/10 text-lime-400 rounded-xl text-xs font-bold hover:bg-lime-400/20 transition-colors">
-                        <Zap className="w-3.5 h-3.5" /> Quick Analysis
-                        <span className="text-zinc-500 font-normal">~30 sec</span>
-                      </Link>
-                      <Link to="/analyze?mode=full" className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 text-zinc-300 rounded-xl text-xs font-bold hover:bg-zinc-700 transition-colors">
-                        <Target className="w-3.5 h-3.5" /> Full Analysis
-                        <span className="text-zinc-500 font-normal">~2 min</span>
-                      </Link>
+                    <p className="text-zinc-400 text-sm mb-4">Upload a video and get instant AI coaching feedback — shot detection, technique consistency, and a coach narrative.</p>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-lime-400 text-black rounded-xl text-xs font-bold group-hover:bg-lime-500 transition-colors">
+                      <Camera className="w-3.5 h-3.5" /> Upload Video <ArrowRight className="w-3.5 h-3.5" />
                     </div>
                   </div>
                   <ChevronRight className="w-6 h-6 text-zinc-600 group-hover:text-lime-400 transition-colors shrink-0 hidden sm:block" />
@@ -622,7 +647,11 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-6">
                 <Target className="w-8 h-8 text-zinc-600 mx-auto mb-2" strokeWidth={1.5} />
-                <p className="text-zinc-500 text-sm">Equipment picks loading...</p>
+                <p className="text-zinc-500 text-sm">No picks yet</p>
+                <Link to="/equipment"
+                  className="inline-flex items-center gap-1 text-xs text-lime-400 hover:text-lime-300 font-medium mt-2">
+                  Browse Equipment <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
             )}
           </motion.div>
@@ -660,9 +689,8 @@ export default function DashboardPage() {
 
           {/* ── Quick Links ── */}
           {[
-            sportHasVideoAnalysis
-              ? { to: "/analyze", icon: Video, label: "Analyze Game", desc: "AI video coaching", color: "text-emerald-400" }
-              : { to: "/analyze", icon: Video, label: "Analyze Game", desc: "Coming soon", color: "text-zinc-600", disabled: true },
+            { to: "/community?host=1", icon: Swords, label: "Host a Game", desc: "Find local players", color: "text-amber-400" },
+            { to: "/community", icon: Users, label: "Community", desc: "Open games near you", color: "text-emerald-400" },
             { to: "/equipment", icon: Target, label: "Equipment", desc: "Top gear matches", color: "text-lime-400" },
             { to: "/training", icon: Dumbbell, label: "Training", desc: `${skillLevel} program`, color: "text-sky-400" },
             { to: "/progress", icon: BarChart3, label: "Progress", desc: `${completedDays} days done`, color: "text-purple-400" },
@@ -674,16 +702,13 @@ export default function DashboardPage() {
               transition={{ delay: 0.4 + i * 0.05 }}
               className="md:col-span-2"
             >
-              <Link to={link.disabled ? "#" : link.to} data-testid={`quick-link-${link.label.toLowerCase().replace(/\s/g, "-")}`}
-                onClick={link.disabled ? (e) => e.preventDefault() : undefined}
-                className={`group block bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 transition-all h-full ${
-                  link.disabled ? "opacity-50 cursor-not-allowed" : "hover:border-lime-400/30"
-                }`}>
+              <Link to={link.to} data-testid={`quick-link-${link.label.toLowerCase().replace(/\s/g, "-")}`}
+                className="group block bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 transition-all h-full hover:border-lime-400/30">
                 <link.icon className={`w-6 h-6 ${link.color} mb-2`} strokeWidth={1.5} />
-                <p className={`font-heading font-semibold text-sm tracking-tight mb-0.5 ${link.disabled ? "text-zinc-500" : "text-white"}`}>{link.label}</p>
+                <p className="font-heading font-semibold text-sm tracking-tight mb-0.5 text-white">{link.label}</p>
                 <p className="text-zinc-500 text-[10px]">{link.desc}</p>
                 <div className="flex justify-end mt-1">
-                  <ChevronRight className={`w-3.5 h-3.5 transition-colors ${link.disabled ? "text-zinc-700" : "text-zinc-600 group-hover:text-lime-400"}`} />
+                  <ChevronRight className="w-3.5 h-3.5 transition-colors text-zinc-600 group-hover:text-lime-400" />
                 </div>
               </Link>
             </motion.div>
