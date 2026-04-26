@@ -78,7 +78,12 @@ def _load_all():
                 _video_by_skill[sport] = {}
                 for video in _videos_data[sport].get("videos", []):
                     _video_index[sport][video["id"]] = video
-                    for skill_id in video.get("skill_areas", []):
+                    # Tolerate both old shape (skill_areas: [list]) and new
+                    # shape (skill_id: "single") so old + curated files coexist.
+                    skill_keys = list(video.get("skill_areas", []))
+                    if not skill_keys and video.get("skill_id"):
+                        skill_keys = [video["skill_id"]]
+                    for skill_id in skill_keys:
                         _video_by_skill[sport].setdefault(skill_id, []).append(video)
             except Exception as e:
                 logger.error(f"Failed to load {videos_path}: {e}")

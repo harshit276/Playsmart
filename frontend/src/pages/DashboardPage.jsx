@@ -81,6 +81,7 @@ export default function DashboardPage() {
   const [trainingVideos, setTrainingVideos] = useState([]);
   const [equipment, setEquipment] = useState([]);
   const [badgesData, setBadgesData] = useState(null);
+  const [trainingPlan, setTrainingPlan] = useState(null);
 
   const selectedSports = profile?.selected_sports || ["badminton"];
   const activeSport = profile?.active_sport || selectedSports[0];
@@ -99,6 +100,7 @@ export default function DashboardPage() {
       { url: `/recommendations/equipment/${user.id}?category=racket`,
         set: (d) => setEquipment((d?.recommendations || []).slice(0, 3)) },
       { url: `/badges/${user.id}`, set: (d) => setBadgesData(d) },
+      { url: `/recommendations/training/${user.id}`, set: (d) => setTrainingPlan(d) },
     ];
     for (const c of calls) {
       const { cached, fresh } = swrGet(c.url, OPTS);
@@ -176,6 +178,25 @@ export default function DashboardPage() {
   });
 
   const lastAnalysis = analysisHistory.length > 0 ? analysisHistory[0] : null;
+
+  // Real "today's drills" — pull the next incomplete training day from the
+  // weekly plan + map drill IDs to drill objects. Falls back to nothing if
+  // the plan hasn't loaded yet (UI hides the section entirely).
+  const todaysDrills = useMemo(() => {
+    const plan = trainingPlan?.plan;
+    const drillsMap = trainingPlan?.drills || {};
+    if (!plan?.weeks?.length) return [];
+    const allDays = plan.weeks.flatMap((w) => w.days || []);
+    const completed = new Set(
+      (progress?.entries || []).map((e) => e.day).filter(Boolean),
+    );
+    const next = allDays.find((d) => d.type !== "rest" && !completed.has(d.day));
+    if (!next?.drills?.length) return [];
+    return next.drills
+      .map((id) => drillsMap[id])
+      .filter(Boolean)
+      .slice(0, 3);
+  }, [trainingPlan, progress]);
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="dashboard-page">
@@ -483,35 +504,47 @@ export default function DashboardPage() {
               <ProgressRing value={completedDays} max={totalDays} size={44} strokeWidth={3} />
             </div>
 
-            <div className="space-y-3">
-              {[
-                { title: "Footwork Drills", duration: "15 min", difficulty: "Medium", color: "bg-sky-400" },
-                { title: "Shot Practice", duration: "20 min", difficulty: "Hard", color: "bg-amber-400" },
-              ].map((drill, i) => (
-                <motion.div
-                  key={drill.title}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.25 + i * 0.05 }}
-                  className="flex items-center gap-3 bg-zinc-800/50 rounded-xl p-3"
-                >
-                  <div className={`w-8 h-8 ${drill.color}/10 rounded-lg flex items-center justify-center shrink-0`}>
-                    <Play className={`w-4 h-4 ${drill.color.replace("bg-", "text-")}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{drill.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-zinc-500 flex items-center gap-0.5">
-                        <Clock className="w-2.5 h-2.5" /> {drill.duration}
-                      </span>
-                      <Badge variant="outline" className="border-zinc-700 text-zinc-500 text-[9px] px-1.5 py-0">
-                        {drill.difficulty}
-                      </Badge>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            {todaysDrills.length > 0 ? (
+              <div className="space-y-3">
+                {todaysDrills.map((drill, i) => {
+                  const colors = ["bg-sky-400", "bg-amber-400", "bg-purple-400"];
+                  const c = colors[i % colors.length];
+                  return (
+                    <motion.div
+                      key={drill.id || i}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.25 + i * 0.05 }}
+                      className="flex items-center gap-3 bg-zinc-800/50 rounded-xl p-3"
+                    >
+                      <div className={`w-8 h-8 ${c}/10 rounded-lg flex items-center justify-center shrink-0`}>
+                        <Play className={`w-4 h-4 ${c.replace("bg-", "text-")}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{drill.name || "Drill"}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {drill.duration_minutes > 0 && (
+                            <span className="text-[10px] text-zinc-500 flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" /> {drill.duration_minutes} min
+                            </span>
+                          )}
+                          {drill.difficulty && (
+                            <Badge variant="outline" className="border-zinc-700 text-zinc-500 text-[9px] px-1.5 py-0">
+                              {drill.difficulty}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Dumbbell className="w-8 h-8 text-zinc-600 mx-auto mb-2" strokeWidth={1.5} />
+                <p className="text-zinc-500 text-xs">Loading your plan…</p>
+              </div>
+            )}
 
             <Link to="/training"
               className="mt-4 w-full inline-flex items-center justify-center gap-1 text-xs font-bold text-lime-400 hover:text-lime-300 bg-lime-400/5 hover:bg-lime-400/10 rounded-xl py-2.5 transition-colors">
