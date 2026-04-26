@@ -234,6 +234,17 @@ async def firebase_auth(req: FirebaseAuthRequest):
     # Save/update user in background (don't wait for it)
     asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
 
+    # First-time signup grant — idempotent (skips if already credited).
+    # Runs in background so login response stays snappy.
+    async def _maybe_signup_grant():
+        try:
+            if not await _has_transaction(user_id, "signup_grant"):
+                await _credit_tokens(user_id, "signup_grant", TOKEN_RULES["signup_grant"],
+                                     {"email": email, "source": "firebase_auth"})
+        except Exception as e:
+            logger.warning(f"signup_grant background failed for {user_id[:8]}: {e}")
+    asyncio.create_task(_maybe_signup_grant())
+
     # Quick profile check (1s timeout — if DB is slow, assume no profile)
     has_profile = False
     try:
@@ -354,7 +365,317 @@ async def get_me(authorization: str = Header(None)):
         )
     except (Exception, asyncio.TimeoutError) as e:
         logger.warning(f"/auth/me: profile fetch failed for {user['id'][:8]}: {e}")
+
+    # Daily-login token (first 7 days, once/day). Background — never blocks.
+    async def _maybe_daily_login_credit():
+        try:
+            # Only credit during first 7 days after signup
+            user_doc = await asyncio.wait_for(
+                db.users.find_one({"id": user["id"]}, {"_id": 0, "created_at": 1}),
+                timeout=2.0,
+            )
+            created = (user_doc or {}).get("created_at")
+            if created:
+                created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                age_days = (datetime.now(timezone.utc) - created_dt).days
+                if age_days > 7:
+                    return
+            if await _today_credit_count(user["id"], "daily_login") < DAILY_CAPS["daily_login"]:
+                await _credit_tokens(user["id"], "daily_login", TOKEN_RULES["daily_login"],
+                                     {"day_index": age_days if created else None})
+        except Exception as e:
+            logger.warning(f"daily_login credit failed for {user['id'][:8]}: {e}")
+    asyncio.create_task(_maybe_daily_login_credit())
+
     return {"user": user, "profile": profile}
+
+
+# ─── Tokens (in-app currency) ─────────────────────────────────────
+# AthlyticAI tokens are how users pay for video analysis. Earned via
+# signup, referrals, hosting community games, completing training days.
+# Buyable via Cashfree (wired in Phase 3). Rules of thumb:
+#   - Mongo writes are best-effort (other endpoints time out at 2-5s
+#     and fall back to defaults — same pattern here).
+#   - Idempotency uses the token_transactions log as the source of
+#     truth: before crediting a once-per-day or once-per-signup reward,
+#     check if a matching transaction already exists.
+#   - Server is the source of truth for spend; the client balance is
+#     UX hint only.
+
+import secrets as _secrets
+import string as _string
+
+TOKEN_PACKS = [
+    {"key": "pack_500",  "tokens":   500, "price_inr":   99, "label": "Starter"},
+    {"key": "pack_1500", "tokens":  1500, "price_inr":  249, "label": "Best Value", "highlight": True},
+    {"key": "pack_5000", "tokens":  5000, "price_inr":  699, "label": "Pro"},
+    {"key": "pack_15000","tokens": 15000, "price_inr": 1499, "label": "Power User"},
+]
+
+# Earn / spend amounts — change here, log everywhere (kind matches the
+# transaction "kind" field).
+TOKEN_RULES = {
+    "signup_grant":   300,   # once per user
+    "referral_credit": 200,  # to both referrer and referred user, once per pair
+    "host_game":       50,   # cap 5/day
+    "training_day":    20,   # cap 1/day
+    "daily_login":     25,   # cap 1/day, only first 7 days
+    "analysis_spend": -100,  # negative = debit
+}
+
+DAILY_CAPS = {"host_game": 5, "training_day": 1, "daily_login": 1}
+
+
+class SpendRequest(BaseModel):
+    kind: str = Field(..., max_length=40)
+    amount: int = Field(..., gt=0)
+
+
+class RedeemReferralRequest(BaseModel):
+    code: str = Field(..., min_length=4, max_length=32)
+
+
+def _generate_referral_code(name_or_email: str) -> str:
+    """Short, human-readable code: NAME-XXXX (4 random base32 chars)."""
+    base = "".join(c for c in (name_or_email or "user").upper() if c.isalnum())[:8] or "USER"
+    suffix = "".join(_secrets.choice(_string.ascii_uppercase + _string.digits) for _ in range(4))
+    return f"{base}-{suffix}"
+
+
+async def _ensure_referral_code(user_id: str, name_or_email: str = "") -> Optional[str]:
+    """Return the user's referral code, creating one if missing. Best-effort
+    — returns None on DB failure so callers can degrade gracefully."""
+    try:
+        existing = await asyncio.wait_for(
+            db.referrals.find_one({"owner_user_id": user_id}, {"_id": 0, "code": 1}),
+            timeout=2.0,
+        )
+        if existing and existing.get("code"):
+            return existing["code"]
+        code = _generate_referral_code(name_or_email)
+        await asyncio.wait_for(db.referrals.insert_one({
+            "id": str(uuid.uuid4()),
+            "owner_user_id": user_id,
+            "code": code,
+            "redeemed_by": [],
+            "total_credited": 0,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }), timeout=2.0)
+        return code
+    except Exception as e:
+        logger.warning(f"_ensure_referral_code failed for {user_id[:8]}: {e}")
+        return None
+
+
+async def _get_balance(user_id: str) -> int:
+    try:
+        doc = await asyncio.wait_for(
+            db.users.find_one({"id": user_id}, {"_id": 0, "tokens": 1}),
+            timeout=2.0,
+        )
+        return int((doc or {}).get("tokens", 0))
+    except Exception:
+        return 0
+
+
+async def _has_transaction(user_id: str, kind: str, since_iso: str = None) -> bool:
+    """Idempotency check — has this user already received this kind of credit?"""
+    try:
+        q = {"user_id": user_id, "kind": kind}
+        if since_iso:
+            q["created_at"] = {"$gte": since_iso}
+        existing = await asyncio.wait_for(
+            db.token_transactions.find_one(q, {"_id": 0, "id": 1}),
+            timeout=2.0,
+        )
+        return existing is not None
+    except Exception:
+        return False  # fail-open — duplicate is better than silently dropping
+
+
+async def _today_credit_count(user_id: str, kind: str) -> int:
+    """How many times has the user received `kind` today?"""
+    try:
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        return await asyncio.wait_for(
+            db.token_transactions.count_documents({
+                "user_id": user_id,
+                "kind": kind,
+                "created_at": {"$gte": today_start},
+            }),
+            timeout=2.0,
+        )
+    except Exception:
+        return 0
+
+
+async def _credit_tokens(
+    user_id: str, kind: str, delta: int, metadata: dict = None
+) -> Optional[int]:
+    """Credit (positive delta) or debit (negative delta) tokens. Writes a
+    transaction log. Returns the new balance or None on DB failure.
+    Caller is responsible for idempotency / cap checks before calling."""
+    if delta == 0:
+        return await _get_balance(user_id)
+    try:
+        # Upsert tokens on the user doc atomically. $inc creates the field
+        # if missing — works even if the user doc was never written by
+        # _save_user_background (race condition safety).
+        result = await asyncio.wait_for(
+            db.users.find_one_and_update(
+                {"id": user_id},
+                {"$inc": {"tokens": delta}, "$setOnInsert": {"id": user_id}},
+                upsert=True,
+                return_document=True,
+                projection={"_id": 0, "tokens": 1},
+            ),
+            timeout=3.0,
+        )
+        new_balance = int((result or {}).get("tokens", delta))
+        # Log transaction
+        tx = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "kind": kind,
+            "delta": delta,
+            "balance_after": new_balance,
+            "metadata": metadata or {},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            await asyncio.wait_for(db.token_transactions.insert_one(tx), timeout=2.0)
+        except Exception:
+            pass  # log write best-effort
+        logger.info(f"tokens: {user_id[:8]} {kind} {delta:+d} → {new_balance}")
+        return new_balance
+    except Exception as e:
+        logger.warning(f"_credit_tokens failed for {user_id[:8]} {kind} {delta}: {e}")
+        return None
+
+
+async def _spend_tokens(user_id: str, kind: str, amount: int, metadata: dict = None) -> dict:
+    """Server-side spend gate. Returns {ok, balance} or raises HTTPException(402)
+    with {required, balance, packs} when insufficient."""
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Spend amount must be positive")
+    balance = await _get_balance(user_id)
+    if balance < amount:
+        raise HTTPException(status_code=402, detail={
+            "error": "insufficient_tokens",
+            "required": amount,
+            "balance": balance,
+            "packs": TOKEN_PACKS,
+        })
+    new_balance = await _credit_tokens(user_id, kind, -amount, metadata)
+    return {"ok": True, "balance": new_balance if new_balance is not None else balance - amount}
+
+
+async def _settle_pending_referrals(user_id: str) -> None:
+    """When a referred user completes their first analysis, credit both
+    sides 200 tokens. Idempotent — checks `completed_at` to avoid double
+    payouts. Called from analyze_client_results in background."""
+    try:
+        # Find a referral where this user is in redeemed_by with completed_at=None
+        ref = await asyncio.wait_for(
+            db.referrals.find_one(
+                {"redeemed_by": {"$elemMatch": {"user_id": user_id, "completed_at": None}}},
+                {"_id": 0},
+            ),
+            timeout=2.0,
+        )
+        if not ref:
+            return  # No pending referral for this user
+        owner_id = ref["owner_user_id"]
+        # Credit both sides
+        await _credit_tokens(user_id, "referral_credit", TOKEN_RULES["referral_credit"],
+                             {"role": "redeemer", "code": ref["code"], "from_user_id": owner_id})
+        await _credit_tokens(owner_id, "referral_credit", TOKEN_RULES["referral_credit"],
+                             {"role": "referrer", "code": ref["code"], "to_user_id": user_id})
+        # Mark this redemption as completed + bump total_credited counter
+        now = datetime.now(timezone.utc).isoformat()
+        await asyncio.wait_for(
+            db.referrals.update_one(
+                {"code": ref["code"], "redeemed_by.user_id": user_id},
+                {"$set": {"redeemed_by.$.completed_at": now},
+                 "$inc": {"total_credited": TOKEN_RULES["referral_credit"] * 2}},
+            ),
+            timeout=2.0,
+        )
+        logger.info(f"referral settled: code={ref['code']} owner={owner_id[:8]} new={user_id[:8]}")
+    except Exception as e:
+        logger.warning(f"_settle_pending_referrals failed for {user_id[:8]}: {e}")
+
+
+@api_router.get("/tokens/balance")
+async def get_token_balance(authorization: str = Header(None)):
+    user = await get_current_user(authorization)
+    user_id = user["id"]
+    balance = await _get_balance(user_id)
+    # Last 20 transactions
+    txs = []
+    try:
+        txs = await asyncio.wait_for(
+            db.token_transactions.find({"user_id": user_id}, {"_id": 0})
+            .sort("created_at", -1).to_list(20),
+            timeout=2.0,
+        )
+    except Exception:
+        pass
+    code = await _ensure_referral_code(user_id, user.get("email", ""))
+    return {
+        "balance": balance,
+        "transactions": txs,
+        "referral_code": code,
+        "rules": TOKEN_RULES,
+    }
+
+
+@api_router.get("/tokens/packs")
+async def get_token_packs():
+    """Public — anyone can browse pack pricing."""
+    return {"packs": TOKEN_PACKS, "currency": "INR"}
+
+
+@api_router.post("/tokens/redeem-referral")
+async def redeem_referral(req: RedeemReferralRequest, authorization: str = Header(None)):
+    """Apply a referral code on signup. Stored as pending — both sides credited
+    when the new user completes their first analysis (in analyze_client_results)."""
+    user = await get_current_user(authorization)
+    user_id = user["id"]
+    code = req.code.strip().upper()
+
+    try:
+        ref = await asyncio.wait_for(
+            db.referrals.find_one({"code": code}, {"_id": 0}),
+            timeout=2.0,
+        )
+    except Exception:
+        ref = None
+    if not ref:
+        raise HTTPException(status_code=404, detail="Referral code not found")
+    if ref["owner_user_id"] == user_id:
+        raise HTTPException(status_code=400, detail="Can't redeem your own code")
+    # Already redeemed by this user?
+    if any(r.get("user_id") == user_id for r in ref.get("redeemed_by", [])):
+        return {"ok": True, "status": "already_redeemed"}
+
+    try:
+        await asyncio.wait_for(
+            db.referrals.update_one(
+                {"code": code},
+                {"$push": {"redeemed_by": {
+                    "user_id": user_id,
+                    "redeemed_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": None,
+                }}},
+            ),
+            timeout=2.0,
+        )
+    except Exception as e:
+        logger.warning(f"redeem-referral DB write failed: {e}")
+        raise HTTPException(status_code=503, detail="Try again in a moment")
+
+    return {"ok": True, "status": "pending", "credit_on": "first_analysis"}
 
 
 # ─── Profile Routes ───
@@ -1402,7 +1723,21 @@ async def update_progress(data: ProgressUpdate, authorization: str = Header(None
     # Check training badges
     new_badges = await check_and_award_badges(user["id"])
 
-    return {"message": "Day completed!", "completed": True, "entry": entry, "new_badges": new_badges}
+    # Token reward — once per day per user (DAILY_CAPS["training_day"]=1).
+    # Best-effort, errors don't fail the user-facing complete action.
+    tokens_earned = 0
+    try:
+        if await _today_credit_count(user["id"], "training_day") < DAILY_CAPS["training_day"]:
+            await _credit_tokens(user["id"], "training_day", TOKEN_RULES["training_day"],
+                                 {"plan_id": data.plan_id, "day": data.day})
+            tokens_earned = TOKEN_RULES["training_day"]
+    except Exception as e:
+        logger.warning(f"training_day credit failed for {user['id'][:8]}: {e}")
+
+    return {
+        "message": "Day completed!", "completed": True, "entry": entry,
+        "new_badges": new_badges, "tokens_earned": tokens_earned,
+    }
 
 
 # ─── Player Card Route ───
@@ -2206,6 +2541,10 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         await asyncio.wait_for(update_upload_streak(user["id"]), timeout=5.0)
     except (Exception, asyncio.TimeoutError):
         logger.warning("Gamification update failed (timeout or error)")
+
+    # ─── Referral payoff: credit both sides on first analysis ─────
+    # Run in background so the analysis response stays fast.
+    asyncio.create_task(_settle_pending_referrals(user["id"]))
 
     # Return full enriched result (same format as /analyze-video)
     return {
@@ -3196,7 +3535,18 @@ async def create_game(data: GameCreate, authorization: str = Header(None)):
     }
     await db.games.insert_one(game)
     game.pop("_id", None)
-    return {"message": "Game created!", "game": game}
+
+    # Token reward — capped at 5/day so spamming games doesn't farm tokens.
+    tokens_earned = 0
+    try:
+        if await _today_credit_count(user["id"], "host_game") < DAILY_CAPS["host_game"]:
+            await _credit_tokens(user["id"], "host_game", TOKEN_RULES["host_game"],
+                                 {"game_id": game["id"], "sport": data.sport})
+            tokens_earned = TOKEN_RULES["host_game"]
+    except Exception as e:
+        logger.warning(f"host_game credit failed for {user['id'][:8]}: {e}")
+
+    return {"message": "Game created!", "game": game, "tokens_earned": tokens_earned}
 
 
 @api_router.get("/games")

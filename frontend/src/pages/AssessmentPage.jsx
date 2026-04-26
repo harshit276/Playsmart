@@ -341,7 +341,15 @@ export default function AssessmentPage() {
       // Profile changed → all profile-derived recommendations are stale.
       // Drop their caches so the dashboard / training / equipment fetch
       // fresh data with the new skill_level + play_style + budget.
-      invalidateMatching((k) => k.includes("/recommendations/") || k.includes("/badges/") || k.includes("/progress/"));
+      invalidateMatching((k) => k.includes("/recommendations/") || k.includes("/badges/") || k.includes("/progress/") || k.startsWith("/tokens/"));
+      // If they arrived via ?ref=CODE, redeem it. Server credits both
+      // sides on the new user's first analysis (background settle).
+      const refCode = new URLSearchParams(window.location.search).get("ref");
+      if (refCode) {
+        try {
+          await api.post("/tokens/redeem-referral", { code: refCode }, { timeout: 5000 });
+        } catch (e) { /* invalid code or already redeemed — silent */ }
+      }
       toast.success("Profile created! Let's see your recommendations.");
     } catch (err) {
       console.warn("Profile save failed, continuing anyway:", err);
