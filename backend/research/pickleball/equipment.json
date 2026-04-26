@@ -1,6 +1,6 @@
 {
   "sport": "pickleball",
-  "last_updated": "2026-04-22",
+  "last_updated": "2026-04-25",
   "currency_note": "INR prices reflect April 2026 Indian market.",
   "equipment_categories": [
     {
@@ -19,7 +19,20 @@
             "flipkart": "https://www.flipkart.com/search?q=nivia+pickleball+paddle"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Affordable Indian brand paddle for beginners. Lightweight and forgiving."
+          "image_search_failed": true,
+          "description": "Affordable Indian brand paddle for beginners. Lightweight and forgiving.",
+          "pros": [
+            "Sub-220g weight is easy on the wrist for new players",
+            "Fiberglass face offers a forgiving touch on mishits",
+            "Widely stocked across Indian sports retailers",
+            "Entry price under INR 2500 keeps the barrier low"
+          ],
+          "cons": [
+            "13mm thin core gives less control on dinks than 16mm paddles",
+            "Standard shape limits reach for taller players",
+            "Not USAPA-listed for sanctioned tournaments",
+            "Edge guard quality is basic and prone to scuffing"
+          ]
         },
         {
           "id": "pk_pad02",
@@ -34,7 +47,20 @@
             "flipkart": "https://www.flipkart.com/search?q=cosco+pickleball+paddle"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Budget-friendly Indian sports brand. Widely available across India."
+          "image_search_failed": true,
+          "description": "Budget-friendly Indian sports brand. Widely available across India.",
+          "pros": [
+            "Cheapest paddle in this list, great for school/club starter kits",
+            "Fiberglass face produces extra pop on drives for beginners",
+            "Pan-India distribution via Cosco's existing sports network",
+            "210-230g weight balances stability and swing speed"
+          ],
+          "cons": [
+            "Polymer core is not heat-pressed, sweet spot is small",
+            "No textured face means weak spin generation",
+            "Cushioned grip wears smooth within a few months of regular play",
+            "No tournament approval certification"
+          ]
         },
         {
           "id": "pk_pad03",
@@ -49,7 +75,20 @@
             "flipkart": "https://www.flipkart.com/search?q=vector+x+pickleball+paddle"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Indian brand paddle at an attractive price point. Good for casual recreational play."
+          "image_search_failed": true,
+          "description": "Indian brand paddle at an attractive price point. Good for casual recreational play.",
+          "pros": [
+            "Lightweight 205-225g build suits quick hand exchanges",
+            "Available as a paddle + ball combo on Indian e-commerce",
+            "Polymer core dampens vibration for a quieter feel",
+            "Affordable replacement option for casual play"
+          ],
+          "cons": [
+            "Build quality varies between batches",
+            "13mm core lacks the plush dwell of premium paddles",
+            "Grip circumference runs slightly small for larger hands",
+            "Limited spin due to a smooth fiberglass face"
+          ]
         },
         {
           "id": "pk_pad04",
@@ -64,7 +103,20 @@
             "flipkart": "https://www.flipkart.com/search?q=head+radical+elite+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Well-known tennis brand's entry into pickleball. Good balance of power and control."
+          "image_search_failed": true,
+          "description": "Well-known tennis brand's entry into pickleball. Good balance of power and control.",
+          "pros": [
+            "Wide-body shape gives a generous sweet spot for intermediates",
+            "Hybrid fiberglass/carbon face balances pop and touch",
+            "Backed by Head's tennis-grade build quality and warranty",
+            "4.25 inch grip suits most adult players out of the box"
+          ],
+          "cons": [
+            "14mm core is a middle ground that excels at neither power nor control",
+            "Wide shape sacrifices reach compared to elongated paddles",
+            "Pricey for a non-pro paddle vs. CRBN/Selkirk competitors",
+            "Less spin than dedicated raw-carbon faces"
+          ]
         },
         {
           "id": "pk_pad05",
@@ -79,7 +131,20 @@
             "flipkart": "https://www.flipkart.com/search?q=selkirk+amped+s2+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Premium intermediate paddle with excellent sweet spot and control."
+          "image_search_failed": true,
+          "description": "Premium intermediate paddle with excellent sweet spot and control.",
+          "pros": [
+            "16mm Polymer X5 core gives a soft, control-first feel",
+            "FiberFlex fiberglass face adds power without losing touch",
+            "Slightly elongated shape extends reach versus standard S2 wide-body",
+            "USAPA approved for tournament use"
+          ],
+          "cons": [
+            "Heavier 220-235g swingweight tires the arm in long sessions",
+            "Smooth face limits spin compared to textured carbon paddles",
+            "Premium price tag for an intermediate-tier paddle",
+            "Edge guard adds weight at the tip, slowing reaction speed"
+          ]
         },
         {
           "id": "pk_pad06",
@@ -94,7 +159,20 @@
             "flipkart": "https://www.flipkart.com/search?q=joola+ben+johns+hyperion+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Ben Johns' signature paddle. Maximum spin and power for competitive play."
+          "image_search_failed": true,
+          "description": "Ben Johns' signature paddle. Maximum spin and power for competitive play.",
+          "pros": [
+            "Carbon Friction Surface produces tour-level spin (2200+ RPM)",
+            "16mm Reactive Polymer core gives a plush feel on resets",
+            "Elongated shape extends reach for singles and serve returns",
+            "USAPA-approved and used by Ben Johns on the PPA tour"
+          ],
+          "cons": [
+            "Premium price (INR 14k-20k) is steep for non-tournament players",
+            "Higher swingweight increases arm fatigue in long matches",
+            "Elongated shape has a smaller sweet spot than wide-body designs",
+            "CFS face wears down within 6-12 months of heavy use"
+          ]
         },
         {
           "id": "pk_pad07",
@@ -109,7 +187,20 @@
             "flipkart": "https://www.flipkart.com/search?q=selkirk+vanguard+power+air+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Top-tier professional paddle. Air Dynamic Throat for maximum power and spin."
+          "image_search_failed": true,
+          "description": "Top-tier professional paddle. Air Dynamic Throat for maximum power and spin.",
+          "pros": [
+            "Air Dynamic Throat reduces drag for faster swing speeds",
+            "ProSpin+ face delivers elite spin rates",
+            "Invikta elongated shape favored by power singles players",
+            "Backed by Selkirk's lifetime limited warranty"
+          ],
+          "cons": [
+            "Highest price in the list at up to INR 25,000",
+            "14mm core is less forgiving than 16mm options on resets",
+            "Edgeless cap design exposes the core to chip damage",
+            "Heavy swingweight makes hand battles harder at the kitchen"
+          ]
         },
         {
           "id": "pb_p08",
@@ -129,7 +220,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Paddletek's flagship control paddle. Beloved for its soft feel and pinpoint placement at the kitchen line."
+          "image_search_failed": true,
+          "description": "Paddletek's flagship control paddle. Beloved for its soft feel and pinpoint placement at the kitchen line.",
+          "pros": [
+            "Graphite face gives crisp, predictable feedback on dinks",
+            "Light 215-225g head accelerates fast for hand battles",
+            "Standard shape offers a wide, forgiving sweet spot",
+            "Lifetime warranty backed by Paddletek's US factory"
+          ],
+          "cons": [
+            "Smooth surface generates noticeably less spin than textured paddles",
+            "13mm core lacks the dwell time of modern 16mm builds",
+            "Less power than carbon-faced rivals at the same price",
+            "Smaller 4.125 inch grip needs an overgrip for larger hands"
+          ]
         },
         {
           "id": "pb_p09",
@@ -149,7 +253,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Power-oriented Bantam series paddle with a larger sweet spot. Popular intermediate upgrade."
+          "image_search_failed": true,
+          "description": "Power-oriented Bantam series paddle with a larger sweet spot. Popular intermediate upgrade.",
+          "pros": [
+            "Fiberglass face delivers strong pop on drives",
+            "15mm Bantam core widens the sweet spot for forgiveness",
+            "Cushioned 4.25 inch grip handles sweat well",
+            "Long-running model with proven durability and parts support"
+          ],
+          "cons": [
+            "Heavier 225-240g build slows reactions at the net",
+            "Power orientation makes touch shots harder to control",
+            "Textured fiberglass loses bite faster than raw carbon",
+            "Standard shape limits reach versus elongated paddles"
+          ]
         },
         {
           "id": "pb_p10",
@@ -169,7 +286,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Thicker 16mm NeuCore polymer core for soft touch on dinks and added control on drives."
+          "image_search_failed": true,
+          "description": "Thicker 16mm NeuCore polymer core for soft touch on dinks and added control on drives.",
+          "pros": [
+            "16mm NeuCore polymer gives a plush dink feel",
+            "Textured graphite face produces above-average spin for the price",
+            "Honeycomb cells are larger, dampening vibration noticeably",
+            "Standard shape offers a balanced, all-court sweet spot"
+          ],
+          "cons": [
+            "Smaller 4.125 inch grip may need build-up for adult hands",
+            "Less raw power than fiberglass-faced peers",
+            "Textured graphite wears smoother in 4-6 months of heavy play",
+            "Niche brand recognition vs. Selkirk/JOOLA in India"
+          ]
         },
         {
           "id": "pb_p11",
@@ -189,7 +319,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Classic entry-level Gamma paddle. Lightweight design makes it ideal for smaller players and learners."
+          "image_search_failed": true,
+          "description": "Classic entry-level Gamma paddle. Lightweight design makes it ideal for smaller players and learners.",
+          "pros": [
+            "Sub-215g weight is ideal for juniors and smaller players",
+            "Aramid honeycomb core resists denting better than basic polymer",
+            "Smooth graphite face is easy to control for new dinkers",
+            "Comfortable 4.0 inch contoured grip"
+          ],
+          "cons": [
+            "11mm thin core gives little dwell time on resets",
+            "Smooth surface produces minimal spin",
+            "Light head sacrifices power on drives",
+            "Outgrown quickly once players hit 3.5+ skill"
+          ]
         },
         {
           "id": "pb_p12",
@@ -209,7 +352,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Engage's flagship Pursuit Pro 6.0 delivers elite-level spin and pinpoint control. USAPA approved for tournament use."
+          "image_search_failed": true,
+          "description": "Engage's flagship Pursuit Pro 6.0 delivers elite-level spin and pinpoint control. USAPA approved for tournament use.",
+          "pros": [
+            "ControlPro Black core delivers consistent dwell on every shot",
+            "Liquid Graphite skin is texturized for top-tier spin",
+            "Elongated shape extends leverage for serves and drives",
+            "USAPA approved with strong tournament pedigree"
+          ],
+          "cons": [
+            "Premium price near INR 15,000",
+            "Elongated head shape is less forgiving on off-center hits",
+            "Slightly muted feel compared to raw carbon paddles",
+            "Limited offline availability in India"
+          ]
         },
         {
           "id": "pb_p13",
@@ -229,7 +385,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Standard-shape raw carbon paddle popular among competitive players. Unmatched spin and a consistent feel."
+          "image_search_failed": true,
+          "description": "Standard-shape raw carbon paddle popular among competitive players. Unmatched spin and a consistent feel.",
+          "pros": [
+            "Raw T700 carbon face produces among the highest spin rates available",
+            "16mm polypropylene core gives soft, controlled resets",
+            "Standard shape provides a wide, forgiving sweet spot",
+            "Used widely on the PPA and APP tours"
+          ],
+          "cons": [
+            "Raw carbon surface texture wears off within ~9 months of heavy play",
+            "4.125 inch grip is small and usually needs an overgrip",
+            "No edge guard means chips at the rim are common",
+            "Limited Indian distribution; mostly imported via resellers"
+          ]
         },
         {
           "id": "pb_p14",
@@ -249,7 +418,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Elongated shape for added reach and leverage. Ideal for singles and drive-heavy playstyles."
+          "image_search_failed": true,
+          "description": "Elongated shape for added reach and leverage. Ideal for singles and drive-heavy playstyles.",
+          "pros": [
+            "Elongated 16.5 inch length adds reach for singles court coverage",
+            "Raw T700 carbon face delivers tour-level spin",
+            "16mm core absorbs pace on counters and resets",
+            "Increased polar moment for more powerful drives"
+          ],
+          "cons": [
+            "Smaller sweet spot than the standard CRBN 1",
+            "Higher swingweight tires the wrist in fast hands battles",
+            "No edge guard exposes the elongated tip to chipping",
+            "Premium import price in India"
+          ]
         },
         {
           "id": "pb_p15",
@@ -269,7 +451,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Babolat entered pickleball in 2023; the RNGD Touch brings their tennis heritage to a controlled, feel-first paddle."
+          "image_search_failed": true,
+          "description": "Babolat entered pickleball in 2023; the RNGD Touch brings their tennis heritage to a controlled, feel-first paddle.",
+          "pros": [
+            "Carbon face plus 16mm core favors touch and placement",
+            "Tennis-style 4.25 inch grip feels familiar to converters",
+            "Build quality benefits from Babolat's racket pedigree",
+            "Standard shape gives a forgiving sweet spot"
+          ],
+          "cons": [
+            "Newer to pickleball than dedicated brands like Selkirk/JOOLA",
+            "Spin output trails raw-carbon competitors",
+            "Limited width compared to Bantam-style power paddles",
+            "Indian availability is mainly through tennis specialty stores"
+          ]
         },
         {
           "id": "pb_p16",
@@ -289,7 +484,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Wilson's pickleball line flagship. Elongated body with textured carbon face for confident drives and reliable touch."
+          "image_search_failed": true,
+          "description": "Wilson's pickleball line flagship. Elongated body with textured carbon face for confident drives and reliable touch.",
+          "pros": [
+            "Textured carbon face balances spin and pop well",
+            "16mm polymer core is forgiving on resets",
+            "Elongated body adds reach for serves and overheads",
+            "Wilson's tennis distribution makes it easy to find in India"
+          ],
+          "cons": [
+            "225-238g is on the heavy end for hand battles",
+            "Elongated shape narrows the sweet spot",
+            "Spin trails specialist raw-carbon paddles",
+            "Premium price for what is effectively a rebadged OEM build"
+          ]
         },
         {
           "id": "pb_p17",
@@ -309,7 +517,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Gearbox's signature Solid Span Technology delivers a uniquely consistent feel. Elongated shape with small-grip option."
+          "image_search_failed": true,
+          "description": "Gearbox's signature Solid Span Technology delivers a uniquely consistent feel. Elongated shape with small-grip option.",
+          "pros": [
+            "Solid Span construction gives an exceptionally consistent feel across the face",
+            "3K carbon face produces good spin and pop",
+            "Small 3.625 inch grip suits players preferring wrist snap and overgrip stacking",
+            "Highly durable build with no honeycomb crush failure mode"
+          ],
+          "cons": [
+            "Solid core feels stiffer than polymer cores on resets",
+            "Small grip needs build-up for medium/large hands",
+            "Heavier static weight loads the wrist in fast exchanges",
+            "Niche brand with limited Indian distribution"
+          ]
         }
       ]
     },
@@ -329,7 +550,20 @@
             "flipkart": "https://www.flipkart.com/search?q=nivia+pickleball+balls"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Budget Indian brand pickleball for indoor play. Good for practice and recreation."
+          "image_search_failed": true,
+          "description": "Budget Indian brand pickleball for indoor play. Good for practice and recreation.",
+          "pros": [
+            "Cheapest option in the list at INR 50 per ball",
+            "26-hole indoor design is softer on wooden floors",
+            "Easy to source through Nivia's pan-India network",
+            "Lightweight 22-24g is forgiving for beginners"
+          ],
+          "cons": [
+            "Not USAPA-listed for sanctioned tournaments",
+            "Plastic seams can split within 5-10 hours of play",
+            "Flight quality is inconsistent batch-to-batch",
+            "Indoor-only use; cracks quickly outdoors"
+          ]
         },
         {
           "id": "pk_ba02",
@@ -344,7 +578,20 @@
             "flipkart": "https://www.flipkart.com/search?q=onix+fuse+indoor+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "USAPA approved indoor ball. Consistent flight and bounce for competitive play."
+          "image_search_failed": true,
+          "description": "USAPA approved indoor ball. Consistent flight and bounce for competitive play.",
+          "pros": [
+            "USAPA approved for indoor tournament play",
+            "Consistent 22.5g weight produces predictable flight",
+            "Softer feel reduces paddle face wear",
+            "26-hole design slows the ball for long indoor rallies"
+          ],
+          "cons": [
+            "Only suited to indoor courts, will crack outdoors",
+            "Soft seams flatten after 6-10 hours of league play",
+            "Higher price than competing indoor balls",
+            "Limited Indian stock; often back-ordered"
+          ]
         },
         {
           "id": "pk_ba03",
@@ -359,7 +606,20 @@
             "flipkart": "https://www.flipkart.com/search?q=franklin+x-40+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Official outdoor tournament ball. Durable and wind-resistant for outdoor courts."
+          "image_search_failed": true,
+          "description": "Official outdoor tournament ball. Durable and wind-resistant for outdoor courts.",
+          "pros": [
+            "Official ball of USAPA national tournaments",
+            "40-hole design cuts wind drift outdoors",
+            "Hard plastic build resists cracking on rough surfaces",
+            "Bright optic colors for outdoor visibility"
+          ],
+          "cons": [
+            "Hard surface puts more wear on paddle faces",
+            "Cracks in cold weather (sub 10C) more easily",
+            "Faster pace can intimidate beginners",
+            "Some packs ship with off-round balls that wobble"
+          ]
         },
         {
           "id": "pk_ba04",
@@ -374,7 +634,20 @@
             "flipkart": "https://www.flipkart.com/search?q=dura+fast+40+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "The standard tournament ball. Fast, consistent, and used in most professional events."
+          "image_search_failed": true,
+          "description": "The standard tournament ball. Fast, consistent, and used in most professional events.",
+          "pros": [
+            "Long-running tournament standard with predictable flight",
+            "Single-piece (non-seamed) build flies true with spin",
+            "Used in most pro PPA/APP outdoor events",
+            "USAPA approved for sanctioned play"
+          ],
+          "cons": [
+            "Cracks faster than Franklin X-40 in cool weather",
+            "Hard surface is rougher on paddle face wear",
+            "Very fast pace makes resets harder for beginners",
+            "Often ships with slight imbalance from the seam"
+          ]
         },
         {
           "id": "pk_ba05",
@@ -389,7 +662,20 @@
             "flipkart": "https://www.flipkart.com/search?q=joola+ben+johns+tour+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Ben Johns' signature tournament ball. Excellent flight characteristics."
+          "image_search_failed": true,
+          "description": "Ben Johns' signature tournament ball. Excellent flight characteristics.",
+          "pros": [
+            "Tour-grade construction with tight roundness tolerances",
+            "Backed by JOOLA's pro touring program",
+            "USAPA approved for outdoor competition",
+            "Consistent bounce and flight in calm conditions"
+          ],
+          "cons": [
+            "Most expensive ball in this list",
+            "Still cracks in cold weather like other 40-hole balls",
+            "Limited stock in India outside specialist retailers",
+            "Marginal performance gain over cheaper Franklin/Dura options"
+          ]
         },
         {
           "id": "pb_b06",
@@ -409,7 +695,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Seamless construction for true flight and added durability. A solid value-focused outdoor ball."
+          "image_search_failed": true,
+          "description": "Seamless construction for true flight and added durability. A solid value-focused outdoor ball.",
+          "pros": [
+            "Seamless construction eliminates seam-split failures",
+            "USAPA approved for outdoor tournament play",
+            "More balanced flight than two-piece competitors",
+            "Strong value at INR 250-350 per ball"
+          ],
+          "cons": [
+            "Sold in packs of 3, smaller than most rivals",
+            "Slightly softer feel than Dura/Franklin",
+            "Brand recognition trails Onix/Franklin in India",
+            "Loses bounce after extended hot-weather play"
+          ]
         },
         {
           "id": "pb_b07",
@@ -429,7 +728,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Franklin's dedicated indoor 26-hole ball. USAPA approved, consistent bounce on wooden and synthetic floors."
+          "image_search_failed": true,
+          "description": "Franklin's dedicated indoor 26-hole ball. USAPA approved, consistent bounce on wooden and synthetic floors.",
+          "pros": [
+            "USAPA approved indoor tournament ball",
+            "Soft plastic compound is gentle on paddle faces",
+            "Consistent bounce on wood and sport-court flooring",
+            "26-hole pattern slows the ball for longer rallies"
+          ],
+          "cons": [
+            "Pack of 3 only; cost per ball is higher",
+            "Indoor-only design cracks fast outdoors",
+            "Soft seams deform after extended league play",
+            "Less wind stability if used in airy indoor halls"
+          ]
         }
       ]
     },
@@ -449,7 +761,20 @@
             "flipkart": "https://www.flipkart.com/search?q=nivia+court+shoes"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Budget Indian court shoe. Non-marking sole for indoor courts."
+          "image_search_failed": true,
+          "description": "Budget Indian court shoe. Non-marking sole for indoor courts.",
+          "pros": [
+            "Lowest price point in the shoe list (sub INR 2000)",
+            "Non-marking rubber sole works on most indoor surfaces",
+            "EVA midsole gives basic shock absorption",
+            "Pan-India retail availability"
+          ],
+          "cons": [
+            "Generic court shoe, not optimized for lateral pickleball moves",
+            "EVA cushioning compresses within a few months",
+            "Limited toe-drag reinforcement for serves",
+            "No specialised herringbone outdoor pattern"
+          ]
         },
         {
           "id": "pk_sh02",
@@ -464,7 +789,20 @@
             "flipkart": "https://www.flipkart.com/search?q=artengo+court+shoes"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Affordable Decathlon court shoe suitable for pickleball."
+          "image_search_failed": true,
+          "description": "Affordable Decathlon court shoe suitable for pickleball.",
+          "pros": [
+            "Lightweight 320g build for fast court moves",
+            "Decathlon's 2-year warranty backs durability",
+            "Reasonable lateral support for the price band",
+            "Easy to try in-store at Decathlon outlets"
+          ],
+          "cons": [
+            "Designed primarily for tennis, not pickleball-specific",
+            "EVA midsole lacks responsiveness of premium gels",
+            "Limited stability for heavier players",
+            "Outsole wears quickly on abrasive outdoor courts"
+          ]
         },
         {
           "id": "pk_sh03",
@@ -479,7 +817,20 @@
             "flipkart": "https://www.flipkart.com/search?q=asics+gel+renma"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Asics' pickleball-specific shoe. Gel cushioning for lateral movements."
+          "image_search_failed": true,
+          "description": "Asics' pickleball-specific shoe. Gel cushioning for lateral movements.",
+          "pros": [
+            "Asics GEL cushioning excels at lateral impacts",
+            "Pickleball-specific outsole pattern",
+            "Wide toe box accommodates Indian foot shapes well",
+            "Strong torsional stability for cuts and pivots"
+          ],
+          "cons": [
+            "330g weight is heavier than racket-sport rivals",
+            "Mid-range price gets undercut by tennis K-Swiss alternatives",
+            "Outsole is geared mostly to indoor/cushion court surfaces",
+            "Limited size availability in India"
+          ]
         },
         {
           "id": "pk_sh04",
@@ -494,7 +845,20 @@
             "flipkart": "https://www.flipkart.com/search?q=k-swiss+express+light+pickleball"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Pickleball-specific shoe from K-Swiss. Good lateral support and comfort."
+          "image_search_failed": true,
+          "description": "Pickleball-specific shoe from K-Swiss. Good lateral support and comfort.",
+          "pros": [
+            "Pickleball-tuned upper with reinforced toe drag zones",
+            "Aosta rubber outsole handles outdoor concrete well",
+            "Surge 7.0 midsole adds responsive cushioning",
+            "K-Swiss six-month outsole guarantee"
+          ],
+          "cons": [
+            "340g is on the heavier end for quick footwork",
+            "Narrower fit than Asics, may pinch wide feet",
+            "Indian sizing is limited; many sizes are import-only",
+            "Premium price approaches Nike Air Zoom NXT range"
+          ]
         },
         {
           "id": "pk_sh05",
@@ -509,7 +873,20 @@
             "flipkart": "https://www.flipkart.com/search?q=nike+court+air+zoom+nxt"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Premium Nike court shoe. Responsive Air Zoom cushioning for competitive play."
+          "image_search_failed": true,
+          "description": "Premium Nike court shoe. Responsive Air Zoom cushioning for competitive play.",
+          "pros": [
+            "Air Zoom unit gives responsive, springy cushioning",
+            "Modified herringbone outsole grips both indoor and outdoor courts",
+            "Premium materials and stitched overlays for durability",
+            "Nike's six-month outsole warranty applies"
+          ],
+          "cons": [
+            "350g build is the heaviest in this list",
+            "Highest price point in the shoes section",
+            "Designed for tennis primarily; less pickleball-tuned than K-Swiss",
+            "Air Zoom unit can feel firm in cold weather"
+          ]
         },
         {
           "id": "pb_sh06",
@@ -529,7 +906,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Lightweight and breathable Matryx upper with Michelin rubber outsole. Favoured by players moving from tennis to pickleball."
+          "image_search_failed": true,
+          "description": "Lightweight and breathable Matryx upper with Michelin rubber outsole. Favoured by players moving from tennis to pickleball.",
+          "pros": [
+            "Michelin outsole compound delivers exceptional grip and durability",
+            "Matryx woven upper is breathable and locks the foot in place",
+            "Kompressor Pro midsole absorbs lateral impacts",
+            "Sub-340g weight feels nimble for an all-court shoe"
+          ],
+          "cons": [
+            "Premium price near INR 14,500",
+            "Narrow tennis-style fit can pinch wide feet",
+            "Stiff break-in period of several sessions",
+            "All-court outsole wears faster on rough Indian outdoor courts"
+          ]
         },
         {
           "id": "pb_sh07",
@@ -549,7 +939,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Wilson's durable mid-tier court shoe with a reinforced Pro Torque Chassis for lateral stability on pickleball courts."
+          "image_search_failed": true,
+          "description": "Wilson's durable mid-tier court shoe with a reinforced Pro Torque Chassis for lateral stability on pickleball courts.",
+          "pros": [
+            "Pro Torque Chassis 2.0 stiffens the midfoot for stability on hard cuts",
+            "Duralast rubber outsole carries Wilson's six-month wear warranty",
+            "Reinforced toe cap for serve drag",
+            "Wide range of widths available"
+          ],
+          "cons": [
+            "345g build is heavy for fast pickleball footwork",
+            "Stiff midfoot needs break-in time",
+            "Cushioning is firmer than Asics GEL alternatives",
+            "Indian retail stock favors tennis colors only"
+          ]
         }
       ]
     }

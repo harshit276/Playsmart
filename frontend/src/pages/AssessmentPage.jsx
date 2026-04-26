@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
+import { invalidateMatching } from "@/lib/cachedFetch";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -337,6 +338,10 @@ export default function AssessmentPage() {
     try {
       await api.post("/profile", buildProfilePayload(), { timeout: 10000 });
       await refreshProfile();
+      // Profile changed → all profile-derived recommendations are stale.
+      // Drop their caches so the dashboard / training / equipment fetch
+      // fresh data with the new skill_level + play_style + budget.
+      invalidateMatching((k) => k.includes("/recommendations/") || k.includes("/badges/") || k.includes("/progress/"));
       toast.success("Profile created! Let's see your recommendations.");
     } catch (err) {
       console.warn("Profile save failed, continuing anyway:", err);

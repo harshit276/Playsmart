@@ -19,7 +19,18 @@
             "flipkart": "https://www.flipkart.com/search?q=cosco+ace+25+tennis+racket"
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
-          "description": "Ultra-budget Indian brand racket for absolute beginners. Lightweight and forgiving."
+          "description": "Ultra-budget Indian brand racket for absolute beginners. Lightweight and forgiving.",
+          "pros": [
+            "105 sq in oversized head gives huge sweet spot for new players",
+            "280g light frame easy on the arm during long learning sessions",
+            "Sub-3000 INR price makes it the cheapest entry into real tennis",
+            "Widely stocked at Indian sports stores for easy replacement"
+          ],
+          "cons": [
+            "Aluminium build lacks the feel and durability of graphite frames",
+            "Open 16x18 pattern wears strings out quickly",
+            "Outgrown within months once stroke technique improves"
+          ]
         },
         {
           "id": "tn_r02",
@@ -34,7 +45,18 @@
             "flipkart": "https://www.flipkart.com/search?q=artengo+tr100+tennis+racket"
           },
           "image": "https://m.media-amazon.com/images/I/51pQFqDkSQL._SL1500_.jpg",
-          "description": "Decathlon's entry-level tennis racket. Light, maneuverable, and great value for beginners."
+          "description": "Decathlon's entry-level tennis racket. Light, maneuverable, and great value for beginners.",
+          "pros": [
+            "Featherweight 275g frame ideal for juniors and new adult players",
+            "16x19 pattern offers more spin friendliness than typical beginner rackets",
+            "Backed by Decathlon's 2-year warranty network across India",
+            "Pre-strung and ready to play out of the box"
+          ],
+          "cons": [
+            "Lacks plow-through against pace from intermediate opponents",
+            "Aluminium-composite build flexes too much on hard hits",
+            "Cosmetic finish chips quickly with regular court use"
+          ]
         },
         {
           "id": "tn_r03",
@@ -49,7 +71,18 @@
             "flipkart": "https://www.flipkart.com/search?q=yonex+ezone+100+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
-          "description": "Comfortable power racket from Yonex. Vibration dampening and generous sweet spot."
+          "description": "Comfortable power racket from Yonex. Vibration dampening and generous sweet spot.",
+          "pros": [
+            "Isometric head shape enlarges the sweet spot 7% vs oval frames",
+            "300g even balance suits a wide range of playing styles",
+            "VDM grip handle reduces shock for arm comfort",
+            "Used by Naomi Osaka and Frances Tiafoe on tour"
+          ],
+          "cons": [
+            "Premium INR price hard to justify for true beginners",
+            "Power-friendly response can feel uncontrollable at first",
+            "Stock grip wears out fast and needs replacement"
+          ]
         },
         {
           "id": "tn_r04",
@@ -64,7 +97,18 @@
             "flipkart": "https://www.flipkart.com/search?q=wilson+blade+100+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/61sAkZkW-zL._SL1500_.jpg",
-          "description": "Control-oriented racket for club players. Excellent feel and precision."
+          "description": "Control-oriented racket for club players. Excellent feel and precision.",
+          "pros": [
+            "FortyFive degree braided graphite layup delivers tour-level feel",
+            "300g even-balance frame strikes a clean power-control compromise",
+            "16x19 pattern still offers spin without sacrificing precision",
+            "Used by Serena Williams' camp and Madison Keys"
+          ],
+          "cons": [
+            "Lower stiffness rating means less free power on shorter swings",
+            "Demands clean technique to access the sweet spot consistently",
+            "Cosmetic green chrome chips quickly on net-cord clips"
+          ]
         },
         {
           "id": "tn_r05",
@@ -79,7 +123,18 @@
             "flipkart": "https://www.flipkart.com/search?q=babolat+pure+drive+2024"
           },
           "image": "https://m.media-amazon.com/images/I/71NZwDe5kTL._SL1500_.jpg",
-          "description": "Best-selling intermediate racket. Excellent power and spin potential."
+          "description": "Best-selling intermediate racket. Excellent power and spin potential.",
+          "pros": [
+            "World's best-selling tweener with proven club-level performance",
+            "100 sq in / 16x19 combo delivers easy depth and topspin",
+            "NF2 Tech in throat dampens vibrations without killing feel",
+            "Used by Carlos Alcaraz and Felix Auger-Aliassime"
+          ],
+          "cons": [
+            "Stiff 71 RA frame can aggravate tennis elbow on long sessions",
+            "Loud, hollow sound off the strings polarises players",
+            "Demands a polyester string setup to tame the launch angle"
+          ]
         },
         {
           "id": "tn_r06",
@@ -94,7 +149,18 @@
             "flipkart": "https://www.flipkart.com/search?q=wilson+clash+100+v2"
           },
           "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
-          "description": "Unique flex and stability combo. Comfortable yet controlled for aggressive baseliners."
+          "description": "Unique flex and stability combo. Comfortable yet controlled for aggressive baseliners.",
+          "pros": [
+            "FreeFlex carbon mapping allows the frame to flex without instability",
+            "Industry-low 55 RA stiffness is exceptionally arm-friendly",
+            "295g head-light spec keeps it maneuverable at net",
+            "Stable Smart suspension reduces twist on off-centre hits"
+          ],
+          "cons": [
+            "Muted feel disappoints traditional Blade/Pro Staff fans",
+            "Soft frame robs free power against heavy hitters",
+            "Premium price point above most peers in the category"
+          ]
         },
         {
           "id": "tn_r07",
@@ -109,7 +175,18 @@
             "flipkart": "https://www.flipkart.com/search?q=head+speed+mp+2024"
           },
           "image": "https://m.media-amazon.com/images/I/61hLqYB0dXL._SL1500_.jpg",
-          "description": "Djokovic's racket line. Excellent control and spin for advanced players."
+          "description": "Djokovic's racket line. Excellent control and spin for advanced players.",
+          "pros": [
+            "Auxetic 2.0 in the throat sharpens feedback on flat drives",
+            "300g even balance suits aggressive baseliners and all-courters alike",
+            "Endorsed and played by Novak Djokovic at the top level",
+            "Box-beam profile delivers consistent response across the string bed"
+          ],
+          "cons": [
+            "Lower power than competitors at the same weight",
+            "Premium 22000 INR price tag for a non-pro-stock layup",
+            "Slightly less spin friendly than Pure Aero or TFight"
+          ]
         },
         {
           "id": "tn_r08",
@@ -124,7 +201,18 @@
             "flipkart": "https://www.flipkart.com/search?q=babolat+pure+aero+2023"
           },
           "image": "https://m.media-amazon.com/images/I/71XFTGjm1RL._SL1500_.jpg",
-          "description": "Nadal's racket line. Maximum spin generation for topspin-heavy players."
+          "description": "Nadal's racket line. Maximum spin generation for topspin-heavy players.",
+          "pros": [
+            "Aeromodular beam slices through the air for huge racket-head speed",
+            "16x19 spaced pattern grabs the ball for elite topspin generation",
+            "Slightly head-heavy balance adds plow-through on full cuts",
+            "The racket of Rafael Nadal and Carlos Alcaraz at Roland Garros"
+          ],
+          "cons": [
+            "Stiff 70 RA frame is among the harshest on the arm",
+            "Difficult to flatten out for clean drives or first serves",
+            "Most expensive intermediate-friendly racket on this list"
+          ]
         },
         {
           "id": "tn_r09",
@@ -144,7 +232,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61jLhY6ZKXL._SL1500_.jpg",
-          "description": "Classic 18x20 pattern control racket with Textreme carbon for stability. Favourite of flat hitters seeking precision."
+          "description": "Classic 18x20 pattern control racket with Textreme carbon for stability. Favourite of flat hitters seeking precision.",
+          "pros": [
+            "Dense 18x20 pattern delivers pinpoint placement for flat hitters",
+            "Textreme carbon weave dampens vibration without killing feel",
+            "305g head-light balance keeps net play crisp and quick",
+            "100 sq in head still offers a usable sweet spot for an 18x20"
+          ],
+          "cons": [
+            "Tight string pattern severely limits topspin potential",
+            "Limited Indian distribution makes restringing harder to source",
+            "Demands clean technique to generate pace, not a forgiving frame"
+          ]
         },
         {
           "id": "tn_r10",
@@ -164,7 +263,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61n4sQPkG8L._SL1500_.jpg",
-          "description": "Heavy, plow-through power racket with excellent stability. Great for aggressive baseliners hitting big groundstrokes."
+          "description": "Heavy, plow-through power racket with excellent stability. Great for aggressive baseliners hitting big groundstrokes.",
+          "pros": [
+            "310g static weight delivers tour-like plow-through on contact",
+            "Slightly head-heavy balance makes serves feel effortless",
+            "Twaron carbon damps the impact for arm-friendlier power",
+            "16x19 pattern keeps spin access despite the heavier frame"
+          ],
+          "cons": [
+            "310g+ swing weight tires the arm in three-set matches",
+            "Less maneuverable at net than 300g rivals like the Pure Drive",
+            "Tail-light versions are not officially imported into India"
+          ]
         },
         {
           "id": "tn_r11",
@@ -184,7 +294,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61mK9dQwWFL._SL1500_.jpg",
-          "description": "German-engineered player's racket renowned for arm-friendly feel and pinpoint control. Ideal for advanced all-courters."
+          "description": "German-engineered player's racket renowned for arm-friendly feel and pinpoint control. Ideal for advanced all-courters.",
+          "pros": [
+            "98 sq in tour-spec head rewards clean ball striking",
+            "325g static weight gives top-tier stability against hard hitters",
+            "Sensor handle absorbs shock for arm-friendly feel",
+            "Head-light balance keeps an otherwise heavy frame nimble at net"
+          ],
+          "cons": [
+            "Hefty 325g static weight is taxing for younger or smaller players",
+            "Niche brand with limited dealer presence in India",
+            "Tight 98 sq in head is unforgiving on shanked balls"
+          ]
         },
         {
           "id": "tn_r12",
@@ -204,7 +325,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QHzPFKwSL._SL1500_.jpg",
-          "description": "Soft, arm-friendly tweener with V-Sensor dampening. Excellent for intermediates with tennis elbow concerns."
+          "description": "Soft, arm-friendly tweener with V-Sensor dampening. Excellent for intermediates with tennis elbow concerns.",
+          "pros": [
+            "V-Sensor dampening makes it one of the softest tweeners on the market",
+            "290g weight and 102 sq in head are easy on developing strokes",
+            "16x19 pattern still produces meaningful topspin for the level",
+            "Among the most arm-friendly options for tennis elbow sufferers"
+          ],
+          "cons": [
+            "Soft layup gets pushed around against power baseliners",
+            "Limited tour pedigree for players who care about pro endorsement",
+            "Hard to demo locally given Volkl's small Indian footprint"
+          ]
         },
         {
           "id": "tn_r13",
@@ -224,7 +356,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61xCJZ2mvML._SL1500_.jpg",
-          "description": "Kinetic-system racket renowned for shock absorption. A go-to for advanced players rehabbing tennis elbow."
+          "description": "Kinetic-system racket renowned for shock absorption. A go-to for advanced players rehabbing tennis elbow.",
+          "pros": [
+            "Patented Kinetic chambers make it the gold standard for tennis elbow",
+            "97 sq in tour head and 325g mass give pro-level stability",
+            "Head-light spec keeps an otherwise heavy frame agile at net",
+            "16x19 pattern lets advanced players still bite topspin"
+          ],
+          "cons": [
+            "Dense, muted feel takes weeks to dial in if coming from Wilson/Babolat",
+            "25000 INR ceiling is the highest on this list",
+            "Niche brand with very thin Indian dealer support"
+          ]
         },
         {
           "id": "tn_r14",
@@ -244,7 +387,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61PjYxz2p3L._SL1500_.jpg",
-          "description": "Dense 18x20 pattern with kinetic comfort tech. Crisp feel and pinpoint control for classic tennis styles."
+          "description": "Dense 18x20 pattern with kinetic comfort tech. Crisp feel and pinpoint control for classic tennis styles.",
+          "pros": [
+            "Tight 18x20 pattern gives surgical control on first serves and volleys",
+            "Kinetic comfort system pairs control with arm protection",
+            "315g head-light setup transitions cleanly between baseline and net",
+            "Crisp, low-launch response loved by serve-and-volley players"
+          ],
+          "cons": [
+            "18x20 string pattern starves players who rely on heavy topspin",
+            "Limited Indian retail presence makes it tough to demo before buying",
+            "Asks for tour-grade technique to generate first-strike pace"
+          ]
         },
         {
           "id": "tn_r15",
@@ -264,7 +418,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61f5B1oT6bL._SL1500_.jpg",
-          "description": "Daniil Medvedev's racket line. Isoflex tech offers stability on off-centre hits without losing spin or control."
+          "description": "Daniil Medvedev's racket line. Isoflex tech offers stability on off-centre hits without losing spin or control.",
+          "pros": [
+            "Isoflex tech adds frame stability on off-centre hits",
+            "305g 98 sq in spec mirrors classic tour control specs",
+            "16x19 pattern offers more spin than typical 305g players' rackets",
+            "Endorsed by Daniil Medvedev on the ATP Tour"
+          ],
+          "cons": [
+            "Stiffer than other 305g tour frames so less arm-friendly",
+            "Premium INR price hard to recoup at recreational level",
+            "Tecnifibre service network is sparse outside metro India"
+          ]
         }
       ]
     },
@@ -284,7 +449,18 @@
             "flipkart": "https://www.flipkart.com/search?q=artengo+ts160+tennis+shoes"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Affordable beginner tennis shoe from Decathlon. Decent grip and comfort."
+          "description": "Affordable beginner tennis shoe from Decathlon. Decent grip and comfort.",
+          "pros": [
+            "Sub-3500 INR price is unbeatable for a true tennis shoe",
+            "Multi-court outsole works on hard, synthetic and clay",
+            "320g weight keeps the foot agile during rallies",
+            "Decathlon's 6-month outsole guarantee included"
+          ],
+          "cons": [
+            "Basic EVA cushioning compresses fast in 3-4 months",
+            "Lateral support inadequate for hard pivots and slides",
+            "Upper mesh tears at the toe drag area for aggressive movers"
+          ]
         },
         {
           "id": "tn_s02",
@@ -299,7 +475,18 @@
             "flipkart": "https://www.flipkart.com/search?q=nivia+tennis+shoes"
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Budget Indian brand tennis shoe. Non-marking sole, basic cushioning."
+          "description": "Budget Indian brand tennis shoe. Non-marking sole, basic cushioning.",
+          "pros": [
+            "Cheapest dedicated tennis shoe widely available across India",
+            "Non-marking outsole lets you play on indoor academy courts",
+            "Sturdy build holds up to school and college coaching sessions",
+            "Local warranty and easy replacement at sports stores"
+          ],
+          "cons": [
+            "EVA midsole offers minimal shock absorption on hard courts",
+            "340g feels heavy compared to international competitors",
+            "Lacks reinforced toe cap so wears through quickly with toe drag"
+          ]
         },
         {
           "id": "tn_s03",
@@ -314,7 +501,18 @@
             "flipkart": "https://www.flipkart.com/search?q=asics+gel+dedicate+8+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "Mid-range Asics tennis shoe with Gel cushioning. Good durability and support."
+          "description": "Mid-range Asics tennis shoe with Gel cushioning. Good durability and support.",
+          "pros": [
+            "Asics rearfoot Gel pods reduce impact on hard-court landings",
+            "Trusted Asics fit and Trusstic stability tech for mid-priced shoe",
+            "Wide toe box accommodates Indian foot shapes",
+            "Durable enough for 3-4x weekly club play"
+          ],
+          "cons": [
+            "Heavier 340g build slows down quick first-step movement",
+            "Forefoot cushioning is basic compared to Resolution/Solution range",
+            "Cosmetic colourways are conservative and limited"
+          ]
         },
         {
           "id": "tn_s04",
@@ -329,7 +527,18 @@
             "flipkart": "https://www.flipkart.com/search?q=asics+gel+resolution+9+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/71d2Hp-kqNL._SL1500_.jpg",
-          "description": "Premium stability shoe. Excellent for players who slide on hard courts."
+          "description": "Premium stability shoe. Excellent for players who slide on hard courts.",
+          "pros": [
+            "Twistruss midsole gives elite lateral lockdown on cuts",
+            "Gel + FlyteFoam stack absorbs shock without going soft",
+            "AHAR Plus outsole is among the most durable in tennis",
+            "Worn by Novak Djokovic and Gael Monfils on tour"
+          ],
+          "cons": [
+            "360g weight is on the heavy end for fast players",
+            "Stiff initial break-in period of 3-4 sessions",
+            "Snug last runs narrow for wider Indian feet"
+          ]
         },
         {
           "id": "tn_s05",
@@ -344,7 +553,18 @@
             "flipkart": "https://www.flipkart.com/search?q=nike+vapor+pro+2+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Pro-level speed shoe with Air Zoom units. Lightweight and responsive."
+          "description": "Pro-level speed shoe with Air Zoom units. Lightweight and responsive.",
+          "pros": [
+            "Forefoot Air Zoom unit gives a springy, fast push-off",
+            "340g weight is light for a stability-grade tennis shoe",
+            "Low-to-the-ground ride aids quick direction changes",
+            "Worn by Carlos Alcaraz and Frances Tiafoe on tour"
+          ],
+          "cons": [
+            "Outsole durability falls short of Asics Resolution rivals",
+            "Snug Nike fit runs narrow at midfoot for wider feet",
+            "14000 INR ceiling is steep for a shoe with limited cushion stack"
+          ]
         },
         {
           "id": "tn_s06",
@@ -359,7 +579,18 @@
             "flipkart": "https://www.flipkart.com/search?q=adidas+barricade+13+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/71yH3XLHPEL._SL1500_.jpg",
-          "description": "Tank-like durability with excellent lateral support. Built for aggressive movers."
+          "description": "Tank-like durability with excellent lateral support. Built for aggressive movers.",
+          "pros": [
+            "Geofit collar locks the heel for aggressive lateral movement",
+            "Adituff toe wrap is the toughest in the segment",
+            "Bounce Pro midsole keeps energy return high through long matches",
+            "6-month outsole guarantee from Adidas covers wear-out"
+          ],
+          "cons": [
+            "Heavy 380g weight is the highest in this list",
+            "Wide platform makes it feel clunky to faster movers",
+            "Break-in stiffness can blister the heel during the first week"
+          ]
         },
         {
           "id": "tn_sh07",
@@ -379,7 +610,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71sF5gK3zqL._SL1500_.jpg",
-          "description": "Premium Italian-made speed shoe with Blushield cushioning. Excellent lateral lockdown for quick direction changes."
+          "description": "Premium Italian-made speed shoe with Blushield cushioning. Excellent lateral lockdown for quick direction changes.",
+          "pros": [
+            "DD Anima Blushield foam returns energy without going soft",
+            "Italian last hugs the midfoot for elite lateral lockdown",
+            "Premium materials feel a class above mass-market rivals",
+            "Striking colourways stand out on court"
+          ],
+          "cons": [
+            "Sparse Indian retail presence limits warranty support",
+            "Premium INR pricing close to Asics Resolution territory",
+            "Narrow Italian last runs tight on wider feet"
+          ]
         },
         {
           "id": "tn_sh08",
@@ -399,7 +641,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71qGfV8LJ1L._SL1500_.jpg",
-          "description": "Reliable mid-range shoe with 6-month outsole durability guarantee. A workhorse for intermediate players."
+          "description": "Reliable mid-range shoe with 6-month outsole durability guarantee. A workhorse for intermediate players.",
+          "pros": [
+            "Aosta 7.0 outsole carries a 6-month wear guarantee",
+            "Sub-9500 INR pricing undercuts most premium rivals",
+            "Wide last suits Indian foot shapes comfortably",
+            "Tough upper holds up to heavy toe drag on hard courts"
+          ],
+          "cons": [
+            "365g weight feels heavier than today's speed shoes",
+            "Plain EVA midsole lacks the responsiveness of Boost or Air Zoom",
+            "Limited Indian colour stock outside online channels"
+          ]
         },
         {
           "id": "tn_sh09",
@@ -419,7 +672,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71fGYhzcZsL._SL1500_.jpg",
-          "description": "Lightweight stability shoe with roomy toebox and Ortholite insole. Balanced ride for all-court tennis."
+          "description": "Lightweight stability shoe with roomy toebox and Ortholite insole. Balanced ride for all-court tennis.",
+          "pros": [
+            "325g build is featherweight for a stability-class shoe",
+            "Ortholite insole adds plush step-in feel and odour control",
+            "Roomy toe box accommodates wider feet and orthotics",
+            "Mid-priced sweet spot between Hypercourt and Express tiers"
+          ],
+          "cons": [
+            "Lighter outsole rubber wears faster than Aosta 7.0",
+            "Lateral support softer than the heavier Hypercourt sibling",
+            "Cushioning thins after roughly 3 months of heavy use"
+          ]
         }
       ]
     },
@@ -439,7 +703,18 @@
             "flipkart": "https://www.flipkart.com/search?q=cosco+tennis+string"
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
-          "description": "Ultra-affordable synthetic gut. Good for recreational players and restringing budget rackets."
+          "description": "Ultra-affordable synthetic gut. Good for recreational players and restringing budget rackets.",
+          "pros": [
+            "Cheapest stringing option for budget-conscious players",
+            "1.30mm 16g gauge gives reliable durability for beginners",
+            "Soft nylon construction is gentle on the arm",
+            "Stocked at every neighbourhood Indian sports shop"
+          ],
+          "cons": [
+            "Loses tension within 5-6 hours of play",
+            "Lacks the spin bite of even basic polyester strings",
+            "Inconsistent quality between batches reported by stringers"
+          ]
         },
         {
           "id": "tn_st02",
@@ -454,7 +729,18 @@
             "flipkart": "https://www.flipkart.com/search?q=yonex+dynawire+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
-          "description": "Durable and affordable Yonex string. Good power and comfort for beginners."
+          "description": "Durable and affordable Yonex string. Good power and comfort for beginners.",
+          "pros": [
+            "Multifilament weave delivers gut-like comfort under 800 INR",
+            "1.30mm gauge balances feel and durability for beginners",
+            "Higher tension range (up to 60 lbs) supports control players",
+            "Reputable Yonex quality control between batches"
+          ],
+          "cons": [
+            "Frays visibly after 8-10 hours of heavy hitting",
+            "Lower spin potential than even cheap polyester strings",
+            "Not ideal for chronic string breakers above NTRP 4.0"
+          ]
         },
         {
           "id": "tn_st03",
@@ -469,7 +755,18 @@
             "flipkart": "https://www.flipkart.com/search?q=babolat+syn+gut+force"
           },
           "image": "https://m.media-amazon.com/images/I/61LfjJZK7pL._SL1500_.jpg",
-          "description": "Popular mid-range string. Good blend of power, comfort, and durability."
+          "description": "Popular mid-range string. Good blend of power, comfort, and durability.",
+          "pros": [
+            "Polyurethane wraps add bite without sacrificing comfort",
+            "Holds tension better than basic nylon synthetic guts",
+            "1.30mm 16g gauge is ideal for hybrid setups with polyester crosses",
+            "Affordable Babolat reliability under 1000 INR"
+          ],
+          "cons": [
+            "Doesn't match polyester for spin or control",
+            "Tension drops noticeably after 10-12 hours",
+            "Not recommended for chronic string breakers"
+          ]
         },
         {
           "id": "tn_st04",
@@ -484,7 +781,18 @@
             "flipkart": "https://www.flipkart.com/search?q=yonex+poly+tour+pro"
           },
           "image": "https://m.media-amazon.com/images/I/61a8vB7XPZL._SL1500_.jpg",
-          "description": "Soft-feeling polyester string with excellent spin and control."
+          "description": "Soft-feeling polyester string with excellent spin and control.",
+          "pros": [
+            "Among the softest co-polyesters, easy on the arm",
+            "1.25mm 17g gauge maximises spin and feel",
+            "Used by Stan Wawrinka and several Yonex pros",
+            "Holds tension better than most premium polyesters"
+          ],
+          "cons": [
+            "Still stiffer than multifilament for arm-injury players",
+            "Spin potential below firmer polys like RPM Blast or Hyper-G",
+            "Premium pricing for a single set under Indian retail"
+          ]
         },
         {
           "id": "tn_st05",
@@ -499,7 +807,18 @@
             "flipkart": "https://www.flipkart.com/search?q=babolat+rpm+blast"
           },
           "image": "https://m.media-amazon.com/images/I/71KqO4YSHML._SL1500_.jpg",
-          "description": "Nadal's string of choice. Maximum spin potential with firm control."
+          "description": "Nadal's string of choice. Maximum spin potential with firm control.",
+          "pros": [
+            "Octagonal cross-section bites the ball for elite spin",
+            "Used by Rafael Nadal and Carlos Alcaraz at Roland Garros",
+            "Crisp control at the recommended 50 lbs tension",
+            "Long-lasting playability for an aggressive polyester"
+          ],
+          "cons": [
+            "Very stiff response is hard on the arm",
+            "Loses tension faster than ALU Power for big hitters",
+            "Premium 1500 INR price per set adds up over the season"
+          ]
         },
         {
           "id": "tn_st06",
@@ -514,7 +833,18 @@
             "flipkart": "https://www.flipkart.com/search?q=luxilon+alu+power"
           },
           "image": "https://m.media-amazon.com/images/I/71nXRxFGQDL._SL1500_.jpg",
-          "description": "The most used string on the ATP Tour. Excellent control and durability."
+          "description": "The most used string on the ATP Tour. Excellent control and durability.",
+          "pros": [
+            "Most-used string on the ATP Tour for two decades",
+            "1.25mm 16L gauge offers a unique mix of control and pop",
+            "Holds tension better than nearly any other polyester",
+            "Crisp predictable response across temperatures"
+          ],
+          "cons": [
+            "Stiff feel can aggravate elbow and shoulder injuries",
+            "Costliest mainstream polyester on the Indian market",
+            "Less spin bite than shaped polys like RPM or Hyper-G"
+          ]
         },
         {
           "id": "tn_st07",
@@ -534,7 +864,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71KJr8B2xmL._SL1500_.jpg",
-          "description": "Square-profile poly beloved on the junior and college circuit. Massive spin bite and crisp response."
+          "description": "Square-profile poly beloved on the junior and college circuit. Massive spin bite and crisp response.",
+          "pros": [
+            "Square profile bites the ball for elite topspin generation",
+            "Cult favourite on the US college and junior circuit",
+            "Crisp response is predictable at 50 lbs",
+            "More affordable than Luxilon ALU Power for similar feel"
+          ],
+          "cons": [
+            "Stiff response not friendly for chronic elbow sufferers",
+            "Drops tension faster than ALU Power across the lifespan",
+            "Limited dealer network in India outside metro stringers"
+          ]
         },
         {
           "id": "tn_st08",
@@ -554,7 +895,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71DKjNTLhHL._SL1500_.jpg",
-          "description": "Premium multifilament offering a natural-gut-like response. The choice for arm comfort and plush power."
+          "description": "Premium multifilament offering a natural-gut-like response. The choice for arm comfort and plush power.",
+          "pros": [
+            "Closest synthetic feel to natural gut at one-third the price",
+            "Plush 1.24mm gauge gives serious power to short swings",
+            "Excellent shock absorption for arm-injury rehab",
+            "Used by Daniil Medvedev's hybrid setup as the cross"
+          ],
+          "cons": [
+            "Frays and notches within 8-10 hours under heavy spin",
+            "Premium price point against polyesters at half the cost",
+            "Not viable for chronic string breakers above NTRP 4.5"
+          ]
         },
         {
           "id": "tn_st09",
@@ -574,7 +926,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61ZeUr-rPBL._SL1500_.jpg",
-          "description": "Long-standing US-made synthetic gut with titanium wraps. Reliable playability and value for club players."
+          "description": "Long-standing US-made synthetic gut with titanium wraps. Reliable playability and value for club players.",
+          "pros": [
+            "Titanium wraps add unusual snap-back for a synthetic gut",
+            "1.24mm 17g gauge is comfortable and offers some bite",
+            "US-made consistency between sets",
+            "Strong value at sub-1100 INR for a name-brand string"
+          ],
+          "cons": [
+            "Limited Indian distribution outside speciality stringers",
+            "Power-oriented response can over-launch flat hitters",
+            "Doesn't match polyester durability for big swingers"
+          ]
         }
       ]
     },
@@ -594,7 +957,18 @@
             "flipkart": "https://www.flipkart.com/search?q=cosco+tennis+ball"
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
-          "description": "Budget practice balls for recreational use. Widely available across India."
+          "description": "Budget practice balls for recreational use. Widely available across India.",
+          "pros": [
+            "Cheapest tennis ball in the Indian market",
+            "Pressureless build means it never goes dead",
+            "Doubles for casual cricket play in tight spaces",
+            "Available at every kirana sports shelf in India"
+          ],
+          "cons": [
+            "Light-duty felt wears flat in 2-3 sessions on hard court",
+            "Bounce inconsistency makes it unsuitable for real matches",
+            "Not ITF-approved so cannot be used in tournaments"
+          ]
         },
         {
           "id": "tn_b02",
@@ -609,7 +983,18 @@
             "flipkart": "https://www.flipkart.com/search?q=nivia+heavy+tennis+ball"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Durable pressureless training balls. Good for wall practice and ball machines."
+          "description": "Durable pressureless training balls. Good for wall practice and ball machines.",
+          "pros": [
+            "Heavyweight pressureless build lasts months for wall drills",
+            "6-ball pack is excellent value for ball-machine sessions",
+            "Standard-duty felt holds up better than budget tennis balls",
+            "Consistent bounce for groundstroke repetition"
+          ],
+          "cons": [
+            "Heavier-than-spec weight tires the arm in long sessions",
+            "Felt is too dense for tournament-grade match play",
+            "Slower court response can hurt timing if used long-term"
+          ]
         },
         {
           "id": "tn_b03",
@@ -624,7 +1009,18 @@
             "flipkart": "https://www.flipkart.com/search?q=wilson+championship+tennis+balls"
           },
           "image": "https://m.media-amazon.com/images/I/71DZMbA2OcL._SL1500_.jpg",
-          "description": "Popular tournament ball. Good bounce consistency and durability."
+          "description": "Popular tournament ball. Good bounce consistency and durability.",
+          "pros": [
+            "ITF-approved for sanctioned tournament play",
+            "Most widely sold pressurised match ball in India",
+            "Consistent bounce throughout the can life",
+            "Affordable entry into pressurised match-quality balls"
+          ],
+          "cons": [
+            "Regular-duty felt wears quickly on rough cement courts",
+            "Loses pressure within 1-2 weeks of opening",
+            "Not as durable as Wilson US Open Extra Duty"
+          ]
         },
         {
           "id": "tn_b04",
@@ -639,7 +1035,18 @@
             "flipkart": "https://www.flipkart.com/search?q=head+tour+tennis+balls"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Official ATP tour ball. Consistent bounce and excellent visibility."
+          "description": "Official ATP tour ball. Consistent bounce and excellent visibility.",
+          "pros": [
+            "Official ball at multiple ATP and WTA Tour events",
+            "ITF approved with consistent flight characteristics",
+            "Bright high-visibility felt holds colour longer than peers",
+            "Strong durability vs Wilson Championship in tests"
+          ],
+          "cons": [
+            "Costlier than Wilson Championship for similar matches",
+            "Regular-duty felt fluffs quickly on Indian hard courts",
+            "Pressure drops within 7-10 days of opening the can"
+          ]
         },
         {
           "id": "tn_b05",
@@ -654,7 +1061,18 @@
             "flipkart": "https://www.flipkart.com/search?q=dunlop+australian+open+tennis+balls"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Grand Slam tournament ball. Premium quality with excellent flight characteristics."
+          "description": "Grand Slam tournament ball. Premium quality with excellent flight characteristics.",
+          "pros": [
+            "Official ball of the Australian Open Grand Slam",
+            "Extra-duty felt lasts noticeably longer on hard courts",
+            "Premium HD Pro Cloth gives crisp predictable flight",
+            "ITF approved for international tournament play"
+          ],
+          "cons": [
+            "Premium pricing of up to 800 INR per can of 3",
+            "Heavier feel than tour-issue balls in early use",
+            "Limited stock availability outside metro retail"
+          ]
         },
         {
           "id": "tn_b06",
@@ -669,7 +1087,18 @@
             "flipkart": "https://www.flipkart.com/search?q=babolat+french+open+tennis+balls"
           },
           "image": "https://m.media-amazon.com/images/I/71kQj8ZXOPL._SL1500_.jpg",
-          "description": "Official French Open ball. Designed for clay and hard courts."
+          "description": "Official French Open ball. Designed for clay and hard courts.",
+          "pros": [
+            "Official ball of Roland Garros, the French Open Grand Slam",
+            "Clay-court felt resists shedding when sliding through dirt",
+            "ITF approved with reliable bounce and flight",
+            "Popular with clay-court coaches across Indian academies"
+          ],
+          "cons": [
+            "Most expensive ball can in this list (up to 850 INR)",
+            "Felt wears faster on cement than extra-duty hard-court balls",
+            "Erratic stock availability outside major Indian cities"
+          ]
         },
         {
           "id": "tn_b07",
@@ -689,7 +1118,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71RjJ8HmRQL._SL1500_.jpg",
-          "description": "Premium 4-ball can, official ball of ATP Rolex Paris Masters. Long-lasting extra-duty felt with consistent bounce."
+          "description": "Premium 4-ball can, official ball of ATP Rolex Paris Masters. Long-lasting extra-duty felt with consistent bounce.",
+          "pros": [
+            "Rare 4-ball can means more value per opening",
+            "Official ball of the ATP Rolex Paris Masters",
+            "Extra-duty felt outlasts most tour-issue rivals",
+            "Consistent bounce throughout an entire club match"
+          ],
+          "cons": [
+            "Limited Indian distribution makes it harder to source",
+            "Premium 900 INR ceiling pricing for casual use",
+            "Felt feels stiffer than Dunlop AO out of the can"
+          ]
         },
         {
           "id": "tn_b08",
@@ -709,7 +1149,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71BdWcBzLpL._SL1500_.jpg",
-          "description": "Consistent bounce and solid durability at a competitive price. A steady choice for league matches."
+          "description": "Consistent bounce and solid durability at a competitive price. A steady choice for league matches.",
+          "pros": [
+            "ITF approved at a competitive sub-700 INR price",
+            "Consistent bounce makes it a reliable league-match choice",
+            "Regular-duty felt stays playable through 2-3 long sets",
+            "Excellent value alternative to Wilson Championship"
+          ],
+          "cons": [
+            "Lower brand prestige than Wilson, Head or Dunlop balls",
+            "Felt sheds faster on rough Indian cement courts",
+            "Patchy stock availability outside major online retailers"
+          ]
         }
       ]
     }

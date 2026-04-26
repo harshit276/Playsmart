@@ -11,7 +11,7 @@ import random
 import jwt as pyjwt
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import datetime, timezone, timedelta
 from fastapi import UploadFile, File
 from fastapi.staticfiles import StaticFiles
@@ -135,7 +135,10 @@ class PlayerProfileCreate(BaseModel):
 
 class ProgressUpdate(BaseModel):
     plan_id: str
-    day: int
+    # Day can be a numeric index ("day 5") OR a day name ("Monday") — the
+    # research-data plan uses names, the older DB plan uses ints. Accept
+    # both so the training "Complete" button works for every plan source.
+    day: Union[int, str]
 
 # ─── Guest Default Data ───
 
@@ -634,6 +637,10 @@ async def get_equipment_recommendations(
                 "balls": "ball", "ball": "ball",
                 "rubbers": "tt_rubber", "rubber": "tt_rubber",
                 "blades": "tt_blade", "blade": "tt_blade",
+                # Ready-made TT rackets — pre-assembled for buyers who don't
+                # want to pick a blade and rubbers separately.
+                "ready_made": "tt_ready_made", "readymade": "tt_ready_made",
+                "tt_ready_made": "tt_ready_made",
             }
             db_category = secondary_map.get(category, category)
         items = []
@@ -668,6 +675,7 @@ async def get_equipment_recommendations(
             "racket": "rackets", "shoes": "shoes", "shuttlecock": "shuttlecocks",
             "string": "strings", "grip": "grips",
             "tt_blade": "blades", "tt_rubber": "rubbers", "tt_ball": "balls",
+            "tt_ready_made": "ready_made_rackets",
             "tennis_racket": "tennis_rackets", "tennis_shoes": "tennis_shoes",
             "tennis_string": "tennis_strings", "tennis_ball": "tennis_balls",
             "pb_paddle": "paddles", "pb_shoes": "shoes", "pb_ball": "balls",

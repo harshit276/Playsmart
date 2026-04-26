@@ -369,6 +369,37 @@ function RecCard({ rec, i, showShoeSpecs, budgetRange, detailsTab, setDetailsTab
               </TabsList>
 
               <TabsContent value="specs">
+                {/* Pros / Cons (curated per item) */}
+                {(eq.pros?.length > 0 || eq.cons?.length > 0) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    {eq.pros?.length > 0 && (
+                      <div className="bg-lime-400/5 border border-lime-400/20 rounded-xl p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-2">Pros</p>
+                        <ul className="space-y-1">
+                          {eq.pros.map((p, i) => (
+                            <li key={i} className="text-xs text-zinc-300 flex gap-2">
+                              <span className="text-lime-400 shrink-0">+</span>
+                              <span>{p}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {eq.cons?.length > 0 && (
+                      <div className="bg-amber-400/5 border border-amber-400/20 rounded-xl p-3">
+                        <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-2">Cons</p>
+                        <ul className="space-y-1">
+                          {eq.cons.map((c, i) => (
+                            <li key={i} className="text-xs text-zinc-300 flex gap-2">
+                              <span className="text-amber-400 shrink-0">−</span>
+                              <span>{c}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   {showShoeSpecs ? (
                     [["Weight", `${eq.weight_grams}g`], ["Cushioning", eq.cushioning], ["Sole", eq.sole_type], ["Ankle Support", eq.ankle_support], ["Breathability", `${eq.breathability}/10`], ["Durability", `${eq.durability}/10`]].filter(([, v]) => v != null && v !== "undefined" && v !== "undefined/10").map(([k, v]) => (
@@ -723,6 +754,7 @@ export default function EquipmentPage() {
   const [shoeData, setShoeData] = useState(null);
   const [gearData, setGearData] = useState(null);
   const [stringsData, setStringsData] = useState(null);
+  const [readyMadeData, setReadyMadeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailsTab, setDetailsTab] = useState(null);
 
@@ -780,6 +812,9 @@ export default function EquipmentPage() {
       strings: sport === "badminton"
         ? `/recommendations/equipment/${userId}?category=strings&sport=badminton${budgetParam}`
         : null,
+      readyMade: sport === "table_tennis"
+        ? `/recommendations/equipment/${userId}?category=ready_made&sport=table_tennis${budgetParam}`
+        : null,
     };
 
     // Hydrate from cache synchronously — instant render on revisits / budget switches
@@ -797,6 +832,7 @@ export default function EquipmentPage() {
     if (swrCalls.shoes?.cached) setShoeData(swrCalls.shoes.cached);
     if (swrCalls.gear?.cached) setGearData(swrCalls.gear.cached);
     if (swrCalls.strings?.cached) setStringsData(swrCalls.strings.cached);
+    if (swrCalls.readyMade?.cached) setReadyMadeData(swrCalls.readyMade.cached);
 
     // No cache → show spinner. With cache → keep current data visible.
     if (!anyCached) {
@@ -804,6 +840,7 @@ export default function EquipmentPage() {
       setShoeData(null);
       setGearData(null);
       setStringsData(null);
+      setReadyMadeData(null);
       setLoading(true);
     } else {
       setLoading(false);
@@ -816,6 +853,7 @@ export default function EquipmentPage() {
     if (swrCalls.shoes)  refreshes.push(swrCalls.shoes.fresh.then(d  => { setShoeData(d);   anySuccess = true; }).catch(() => {}));
     if (swrCalls.gear)   refreshes.push(swrCalls.gear.fresh.then(d   => { setGearData(d);   anySuccess = true; }).catch(() => {}));
     if (swrCalls.strings) refreshes.push(swrCalls.strings.fresh.then(d => { setStringsData(d); anySuccess = true; }).catch(() => {}));
+    if (swrCalls.readyMade) refreshes.push(swrCalls.readyMade.fresh.then(d => { setReadyMadeData(d); anySuccess = true; }).catch(() => {}));
 
     await Promise.allSettled(refreshes);
     if (!anySuccess) setFetchError(true);
@@ -992,7 +1030,14 @@ export default function EquipmentPage() {
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className={`bg-zinc-800 border-zinc-700 mb-6 w-full grid ${selectedSport === "badminton" ? "grid-cols-4" : "grid-cols-3"}`} data-testid="equipment-category-tabs">
+            <TabsList
+              className={`bg-zinc-800 border-zinc-700 mb-6 w-full grid ${
+                selectedSport === "badminton" || selectedSport === "table_tennis"
+                  ? "grid-cols-4"
+                  : "grid-cols-3"
+              }`}
+              data-testid="equipment-category-tabs"
+            >
               <TabsTrigger value="rackets" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
                 <Target className="w-4 h-4 mr-1.5" /> {SPORT_TAB_LABELS[activeSportForLabels]?.primary || "Rackets"}
               </TabsTrigger>
@@ -1002,6 +1047,11 @@ export default function EquipmentPage() {
               {selectedSport === "badminton" && (
                 <TabsTrigger value="strings" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
                   <Sparkles className="w-4 h-4 mr-1.5" /> Strings
+                </TabsTrigger>
+              )}
+              {selectedSport === "table_tennis" && (
+                <TabsTrigger value="ready_made" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
+                  <Sparkles className="w-4 h-4 mr-1.5" /> Ready-Made
                 </TabsTrigger>
               )}
               <TabsTrigger value="gear" className="data-[state=active]:bg-lime-400 data-[state=active]:text-black font-medium text-xs sm:text-sm">
@@ -1118,6 +1168,57 @@ export default function EquipmentPage() {
                       <div className="space-y-4">
                         {(stringsData?.also_explore || []).map((rec, i) => (
                           <RecCard key={rec.equipment.id} rec={rec} i={i + (stringsData?.recommendations || []).length} showShoeSpecs={false} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            )}
+
+            {/* Ready-Made TT Rackets (table_tennis only) — pre-assembled
+                rackets for buyers who don't want to pick blade + rubbers. */}
+            {selectedSport === "table_tennis" && (
+              <TabsContent value="ready_made">
+                <div className="space-y-4">
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-zinc-300">
+                      <span className="font-semibold text-blue-300">Pre-assembled rackets</span> — pick one and play immediately. No blade-+-rubber combinations to figure out.
+                    </p>
+                  </div>
+                  {(readyMadeData?.recommendations || []).length > 0 && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="w-4 h-4 text-lime-400" />
+                      <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide">
+                        Recommended Ready-Made Rackets ({BUDGET_RANGES[budgetRange]?.label || budgetRange})
+                      </h3>
+                    </div>
+                  )}
+                  {(readyMadeData?.recommendations || []).slice(0, 3).map((rec, i) => (
+                    <RecCard key={rec.equipment.id} rec={rec} i={i} showShoeSpecs={false} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
+                  ))}
+                  {(readyMadeData?.recommendations || []).length === 0 && (readyMadeData?.also_explore || []).length === 0 && (
+                    <p className="text-zinc-500 text-center py-8">No ready-made rackets found in this budget.</p>
+                  )}
+                  {([
+                    ...(readyMadeData?.recommendations || []).slice(3),
+                    ...(readyMadeData?.also_explore || []),
+                  ]).length > 0 && (
+                    <div className="mt-8">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Star className="w-4 h-4 text-amber-400" />
+                        <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wide">
+                          Other Suitable Options
+                        </h3>
+                      </div>
+                      <Separator className="bg-zinc-800 mb-4" />
+                      <div className="space-y-4">
+                        {[
+                          ...(readyMadeData?.recommendations || []).slice(3),
+                          ...(readyMadeData?.also_explore || []),
+                        ].map((rec, i) => (
+                          <RecCard key={rec.equipment.id} rec={rec} i={i + 3} showShoeSpecs={false} budgetRange={budgetRange} detailsTab={detailsTab} setDetailsTab={setDetailsTab} />
                         ))}
                       </div>
                     </div>

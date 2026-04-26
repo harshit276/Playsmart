@@ -48,7 +48,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
-          "description": "Ultra-budget Indian brand racket for absolute beginners and casual backyard play. Not suited for competitive play."
+          "description": "Ultra-budget Indian brand racket for absolute beginners and casual backyard play. Not suited for competitive play.",
+          "pros": [
+            "Sub-Rs.600 entry price — accessible for absolute first-timers",
+            "Aluminum + steel construction is hard to bend or break in casual use",
+            "Even balance is forgiving for unrefined swings"
+          ],
+          "cons": [
+            "Heavy 95g frame slows reaction time in real rallies",
+            "Max 18 lbs string tension caps any kind of crisp response",
+            "Steel shaft is unsuited for competitive or club-level play"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r02",
@@ -92,7 +103,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
-          "description": "Slightly better Cosco model with improved frame. Good for school-level players and beginners on a tight budget."
+          "description": "Slightly better Cosco model with improved frame. Good for school-level players and beginners on a tight budget.",
+          "pros": [
+            "Slightly lighter 90g frame moves better than the CBX-450",
+            "Up to 20 lbs tension allows a marginally crisper hit",
+            "Cheap enough to keep as a backyard / spare racket"
+          ],
+          "cons": [
+            "Aluminum frame still flexes too much for serious smashing",
+            "Steel shaft transmits shock — uncomfortable on mishits",
+            "Outclassed by any sub-Rs.1500 graphite racket"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r03",
@@ -135,7 +157,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
-          "description": "India's best-selling entry-level Yonex racket. The GR series is the go-to starter racket for millions of Indian beginners."
+          "description": "India's best-selling entry-level Yonex racket. The GR series is the go-to starter racket for millions of Indian beginners.",
+          "pros": [
+            "Trusted Yonex build at a sub-Rs.800 price point",
+            "90g even balance is well suited to first-time players learning all shots",
+            "Widely available across India — easy to replace or restring"
+          ],
+          "cons": [
+            "Aluminum frame won't hold tensions above ~20 lbs",
+            "No real power on smashes — purely a learning racket",
+            "Will feel sluggish once technique improves past beginner stage"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r04",
@@ -179,7 +212,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
-          "description": "Upgraded beginner racket with graphite construction and Muscle Power frame for extra repulsion."
+          "description": "Upgraded beginner racket with graphite construction and Muscle Power frame for extra repulsion.",
+          "pros": [
+            "Graphite construction at 85g is a real step up from aluminum starters",
+            "Muscle Power frame geometry adds noticeable repulsion off the string bed",
+            "Handles up to 24 lbs tension — fine for early intermediate play"
+          ],
+          "cons": [
+            "Even balance limits dedicated smashers' top-end power",
+            "Medium shaft can feel mushy to players who already prefer stiff frames",
+            "Premium for a beginner racket — 1800 INR is steep if you only play casually"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r05",
@@ -222,7 +266,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
-          "description": "Budget Li-Ning graphite racket. Good build quality at a competitive price point for Indian beginners."
+          "description": "Budget Li-Ning graphite racket. Good build quality at a competitive price point for Indian beginners.",
+          "pros": [
+            "Full-graphite frame at ~Rs.1000 is unusual value",
+            "Light 85g 4U weight is easy on the wrist for long sessions",
+            "Up to 22 lbs tension is enough for early-club-level play"
+          ],
+          "cons": [
+            "Build QC varies batch to batch — Li-Ning's budget end is inconsistent",
+            "Flexible shaft kills smash speed for stronger players",
+            "Resale value is poor compared to equivalent Yonex models"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r06",
@@ -266,7 +321,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
-          "description": "Affordable, lightweight beginner racket with flexible shaft for easy power generation. India-specific model, very popular."
+          "description": "Affordable, lightweight beginner racket with flexible shaft for easy power generation. India-specific model, very popular.",
+          "pros": [
+            "Ultra-light 78g (5U) frame is friendly for juniors and women players",
+            "Up to 26 lbs tension is generous for a beginner-tier racket",
+            "Nanomesh shaft adds repulsion without raising weight"
+          ],
+          "cons": [
+            "Even balance + flexible shaft = limited smash punch",
+            "5U frame can feel unstable on hard returns from heavier opponents",
+            "India-only model — limited overseas resale or replacement"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r07",
@@ -310,7 +376,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
-          "description": "India-specific intermediate racket with head-heavy balance. Good for developing smash power."
+          "description": "India-specific intermediate racket with head-heavy balance. Good for developing smash power.",
+          "pros": [
+            "Head-heavy balance at only 82g delivers smash bite without tiring the wrist",
+            "Rotational Generator System aids continuous attacking play",
+            "Up to 28 lbs tension supports an intermediate stringing setup"
+          ],
+          "cons": [
+            "India-specific 'i' model uses lower-grade graphite than the global Astrox line",
+            "Medium shaft is a compromise — neither ideal for power nor for control players",
+            "At Rs.3000-4500, you can find better deals from Apacs/Li-Ning at the same budget"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r08",
@@ -354,7 +431,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
-          "description": "Li-Ning's flagship power racket with Dynamic Optimum Frame for explosive smashes."
+          "description": "Li-Ning's flagship power racket with Dynamic Optimum Frame for explosive smashes.",
+          "pros": [
+            "Stiff shaft + head-heavy 4U build delivers explosive flat-game smashes",
+            "Carbon Fiber + TB Nano frame holds up to 30 lbs tension cleanly",
+            "Used on tour by several Chinese national players — proven attack racket"
+          ],
+          "cons": [
+            "Stiff shaft is brutally unforgiving for anyone below intermediate technique",
+            "12000 INR is firmly premium-tier — overkill for casual play",
+            "Limited Indian after-sales / warranty support compared to Yonex"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r09",
@@ -398,7 +486,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
-          "description": "Victor's power flagship. Extremely head-heavy for maximum smash power."
+          "description": "Victor's power flagship. Extremely head-heavy for maximum smash power.",
+          "pros": [
+            "88g 3U head-heavy frame produces some of the steepest smash angles in the category",
+            "HM Graphite + Pyrofil makes the frame torsionally stable on off-centre hits",
+            "Holds up to 30 lbs tension — caters to power-string setups"
+          ],
+          "cons": [
+            "Heavy + head-heavy = slow recovery; punishes weak footwork",
+            "Stiff shaft requires strong wrist and forearm to load properly",
+            "Victor's Indian distribution is patchy — restocks can be slow"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r10",
@@ -442,7 +541,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
-          "description": "The quintessential all-round racket. Pocketing Booster holds shuttles longer for precise placement."
+          "description": "The quintessential all-round racket. Pocketing Booster holds shuttles longer for precise placement.",
+          "pros": [
+            "Pocketing Booster genuinely increases dwell time for placement-oriented players",
+            "Even balance + medium flex makes it a true do-everything frame",
+            "88g 3U weight gives stability on defence and counter-drives"
+          ],
+          "cons": [
+            "Won't out-smash a dedicated head-heavy attack racket",
+            "10000+ INR price is hard to justify against the Astrox 88 line for most players",
+            "Counterfeits are common in India — buy only from authorised sellers"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r11",
@@ -485,7 +595,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
-          "description": "Top-tier doubles racket for rear-court power. Rotational Generator System for devastating smashes."
+          "description": "Top-tier doubles racket for rear-court power. Rotational Generator System for devastating smashes.",
+          "pros": [
+            "Tungsten-loaded head amplifies power transfer from rear court",
+            "Stiff shaft + Rotational Generator System rewards fast, full swings",
+            "Designed and proven for doubles rear-court attackers"
+          ],
+          "cons": [
+            "Stiff 4U frame is unforgiving for singles defence and recovery",
+            "Premium pricing (12000-16000 INR) puts it out of reach for most amateurs",
+            "Best paired with high-end strings — adds another Rs.800-1500 to setup cost"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r12",
@@ -528,7 +649,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51Yvf5GYXPL._SL1500_.jpg",
-          "description": "Ultimate power racket with NAMD technology for maximum shuttle deformation and steep angles."
+          "description": "Ultimate power racket with NAMD technology for maximum shuttle deformation and steep angles.",
+          "pros": [
+            "NAMD graphite delivers the steepest smash trajectory in Yonex's lineup",
+            "88g 3U head-heavy weight loads up massive power for backhand and jump smashes",
+            "Pro-tour proven (Momota, Axelsen)"
+          ],
+          "cons": [
+            "Brutally demanding — wrong technique leads to elbow/shoulder strain",
+            "17000 INR top-end + frequent restringing = expensive total cost of ownership",
+            "Counterfeits flood the Indian market; verify Yonex India hologram"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r13",
@@ -571,7 +703,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61QZoP1XVPL._SL1500_.jpg",
-          "description": "Decathlon's performance racket. Impressive specs at a fraction of premium brand prices."
+          "description": "Decathlon's performance racket. Impressive specs at a fraction of premium brand prices.",
+          "pros": [
+            "Carbon-fiber head-heavy build at half the price of equivalent Yonex models",
+            "Up to 28 lbs tension supports proper intermediate stringing",
+            "Backed by Decathlon's straightforward 2-year warranty / return policy"
+          ],
+          "cons": [
+            "No serious tournament credibility — more of a value-buy than aspirational gear",
+            "Resale value drops fast — niche brand outside Decathlon ecosystem",
+            "Stock availability fluctuates by Decathlon store"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_r21",
@@ -615,7 +758,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71tQI-5QPZL._SL1500_.jpg",
-          "description": "Malaysian brand Apacs's popular budget-friendly all-rounder. Surprisingly durable graphite build at this price; a common upgrade from aluminum starter rackets."
+          "description": "Malaysian brand Apacs's popular budget-friendly all-rounder. Surprisingly durable graphite build at this price; a common upgrade from aluminum starter rackets.",
+          "pros": [
+            "Full graphite frame at sub-Rs.2500 is rare value",
+            "Holds up to 30 lbs tension — overbuilt for its price tier",
+            "85g 4U even-balance suits transitioning beginners"
+          ],
+          "cons": [
+            "Apacs has limited brand recognition outside dedicated badminton circles",
+            "Spares (grommets, end caps) aren't easy to find in tier-2/3 Indian cities",
+            "Cosmetics chip more easily than premium Yonex/Li-Ning paint jobs"
+          ]
         },
         {
           "id": "bd_r22",
@@ -656,7 +809,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61k7Xg5JGeL._SL1500_.jpg",
-          "description": "World's lightest production badminton racket at 55g. Unusual combination of ultra-light + head-heavy — gives advanced attackers sniper-accurate control at the net while retaining smash speed. Premium price, niche appeal."
+          "description": "World's lightest production badminton racket at 55g. Unusual combination of ultra-light + head-heavy — gives advanced attackers sniper-accurate control at the net while retaining smash speed. Premium price, niche appeal.",
+          "pros": [
+            "55g ultra-light frame is the lightest production racket in the world",
+            "Surprising head-heavy balance gives sniper-fast net play with retained smash speed",
+            "Holds 32 lbs tension — extremely stiff for an ultra-light"
+          ],
+          "cons": [
+            "Niche feel — most players never adapt to a 55g frame",
+            "Frame durability is the real cost of the weight reduction",
+            "Limited stock in India; most buyers must import"
+          ]
         },
         {
           "id": "bd_r23",
@@ -696,7 +859,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61cGQk5pqZL._SL1500_.jpg",
-          "description": "Balanced intermediate racket that performs well beyond its price. Good starter for club-level players wanting to move past entry-level gear."
+          "description": "Balanced intermediate racket that performs well beyond its price. Good starter for club-level players wanting to move past entry-level gear.",
+          "pros": [
+            "Even-to-slightly-head-heavy balance covers attack and defence cleanly",
+            "Medium-stiff shaft rewards developing technique without punishing mishits",
+            "Genuine 30 lbs string tension support unusual at this Rs.2500-3500 bracket"
+          ],
+          "cons": [
+            "Cosmetic finish wears with regular play",
+            "Apacs models often re-launch under new sub-names — confusing buyers",
+            "Limited authorised service network in India"
+          ]
         },
         {
           "id": "bd_r24",
@@ -737,7 +910,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61wG5hx9MIL._SL1500_.jpg",
-          "description": "Aggressive head-heavy racket at a very accessible price. Built for players who want to smash hard without spending Yonex-tier money."
+          "description": "Aggressive head-heavy racket at a very accessible price. Built for players who want to smash hard without spending Yonex-tier money.",
+          "pros": [
+            "Genuine head-heavy 3U build at sub-Rs.3000 — rare price-to-attack ratio",
+            "Stiff shaft and Nano Carbon frame respond well to fast swings",
+            "Up to 30 lbs tension supports an aggressive string setup"
+          ],
+          "cons": [
+            "88g + head-heavy combo punishes weaker wrists with extended play",
+            "Stiff shaft is unforgiving for sub-intermediate technique",
+            "Brand resale value is weak compared to Yonex/Li-Ning"
+          ]
         },
         {
           "id": "bd_r25",
@@ -778,7 +961,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61qJvzOhZdL._SL1500_.jpg",
-          "description": "Danish brand FZ Forza's ultra-light head-light racket, ideal for doubles front-court play and defensive counters. Lightning-fast in rapid exchanges at the net."
+          "description": "Danish brand FZ Forza's ultra-light head-light racket, ideal for doubles front-court play and defensive counters. Lightning-fast in rapid exchanges at the net.",
+          "pros": [
+            "Head-light 81g 5U frame is ideal for fast doubles front-court racket head movement",
+            "Medium shaft balances control and repulsion for net interceptions",
+            "Distinctive Danish brand engineering — different feel from Asian rackets"
+          ],
+          "cons": [
+            "Head-light balance robs smash power from the rear court",
+            "FZ Forza spares and stringing services are scarce in India",
+            "Premium 2500-3500 INR pricing for a niche-purpose racket"
+          ]
         },
         {
           "id": "bd_r26",
@@ -819,7 +1012,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51yZAXFnRlL._SL1500_.jpg",
-          "description": "Head-heavy stiff shaft = classic attacker's racket. Used by several European tour players. Good Yonex Astrox alternative for advanced players wanting a different feel."
+          "description": "Head-heavy stiff shaft = classic attacker's racket. Used by several European tour players. Good Yonex Astrox alternative for advanced players wanting a different feel.",
+          "pros": [
+            "Stiff-shaft head-heavy 88g build hits like an Astrox 88D at lower cost",
+            "Holds 32 lbs tension — pro-level stringing capability",
+            "European tour pedigree — trusted by some Danish/Swedish players"
+          ],
+          "cons": [
+            "Demanding stiff frame — bad technique transfers shock straight to elbow",
+            "FZ Forza branding has weak prestige in the Indian market",
+            "Limited authorised dealers makes warranty claims slow"
+          ]
         },
         {
           "id": "bd_r27",
@@ -864,7 +1067,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61P9f1dKdNL._SL1500_.jpg",
-          "description": "Indian brand Hundred's popular entry-level all-rounder. Very affordable, widely stocked — a common first 'real' racket for school and college players."
+          "description": "Indian brand Hundred's popular entry-level all-rounder. Very affordable, widely stocked — a common first 'real' racket for school and college players.",
+          "pros": [
+            "Carbon-graphite construction at sub-Rs.1800 is competitive with Yonex GR/Voltric Lite range",
+            "85g even balance is genuinely all-round for school and college players",
+            "Indian brand — easy stock and replacement availability"
+          ],
+          "cons": [
+            "Flexible shaft caps top-end smash speed",
+            "Up to 26 lbs tension is on the lower side for the price",
+            "Frame paint chips easily on court contact"
+          ]
         },
         {
           "id": "bd_r28",
@@ -904,7 +1117,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61j5HSZwkYL._SL1500_.jpg",
-          "description": "Affordable head-heavy attacker racket from Hundred. Good step-up option for players outgrowing beginner frames but not ready for 5000+ INR gear."
+          "description": "Affordable head-heavy attacker racket from Hundred. Good step-up option for players outgrowing beginner frames but not ready for 5000+ INR gear.",
+          "pros": [
+            "True head-heavy 3U attack frame at Rs.1800-2500 — strong attack-per-rupee",
+            "Medium shaft is more forgiving than equivalently priced stiff alternatives",
+            "Carbon graphite holds up to 28 lbs tension"
+          ],
+          "cons": [
+            "88g 3U + head-heavy is fatiguing for under-conditioned players",
+            "Weak resale value vs. Yonex equivalents",
+            "Limited tournament-level credibility"
+          ]
         },
         {
           "id": "bd_r29",
@@ -944,7 +1167,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51RYVgLM-sL._SL1000_.jpg",
-          "description": "Mizuno's entry into the Indian badminton market. Balanced 5U frame good for players who want Japanese build quality without Yonex prices."
+          "description": "Mizuno's entry into the Indian badminton market. Balanced 5U frame good for players who want Japanese build quality without Yonex prices.",
+          "pros": [
+            "Light 80g 5U frame is easy to maneuver in fast exchanges",
+            "Slight head-heavy balance offers a hint of attack without sacrificing speed",
+            "Premium Japanese build quality at half the cost of comparable Yonex models"
+          ],
+          "cons": [
+            "Mizuno's badminton lineup has thin Indian distribution",
+            "5U weight feels insubstantial to players used to 3U/4U frames",
+            "Not many pro endorsements to anchor the brand"
+          ]
         },
         {
           "id": "bd_r30",
@@ -984,7 +1217,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71qIrF7MAlL._SL1500_.jpg",
-          "description": "Premium all-rounder aimed at advanced players who want a refined, neutral feel. Solid build quality typical of Japanese manufacturing."
+          "description": "Premium all-rounder aimed at advanced players who want a refined, neutral feel. Solid build quality typical of Japanese manufacturing.",
+          "pros": [
+            "Premium Japanese graphite + carbon nano build feels notably refined in hand",
+            "Even balance + medium-stiff shaft rewards advanced all-court technique",
+            "Holds 32 lbs string tension — supports pro-tier setups"
+          ],
+          "cons": [
+            "Limited-edition runs make sourcing and restocking unpredictable",
+            "Mizuno brand has low resale value in Indian badminton circles",
+            "9500 INR top-end price competes against very entrenched Yonex/Li-Ning options"
+          ]
         }
       ]
     },
@@ -1027,7 +1270,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Affordable court shoe for beginners. Decent grip and comfort."
+          "description": "Affordable court shoe for beginners. Decent grip and comfort.",
+          "pros": [
+            "Non-marking rubber sole works on all indoor surfaces",
+            "EVA cushion provides decent shock absorption for the price",
+            "Decathlon's clear sizing and 2-year warranty reduces buying risk"
+          ],
+          "cons": [
+            "340g is on the heavier end for a court shoe",
+            "Cushioning compresses faster than mid-tier alternatives",
+            "Lateral support is basic — not for explosive lunges"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sh02",
@@ -1065,7 +1319,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Budget Indian brand court shoe. Non-marking sole, basic cushioning for recreational play."
+          "description": "Budget Indian brand court shoe. Non-marking sole, basic cushioning for recreational play.",
+          "pros": [
+            "Sub-Rs.1800 court shoe with non-marking sole — entry-level value",
+            "Lightweight 330g for the price tier",
+            "Widely available across Indian retailers"
+          ],
+          "cons": [
+            "EVA cushion thins out quickly under regular weekly play",
+            "Minimal arch and ankle support — not for tournaments",
+            "Outsole grip degrades on dusty surfaces faster than gum-rubber alternatives"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sh03",
@@ -1103,7 +1368,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Entry-level Yonex court shoe with Power Cushion. Great for beginners wanting brand quality."
+          "description": "Entry-level Yonex court shoe with Power Cushion. Great for beginners wanting brand quality.",
+          "pros": [
+            "Yonex Power Cushion technology absorbs heel impact noticeably better than EVA",
+            "Light 310g build at the entry tier of Yonex's range",
+            "Trusted brand — easy to find replacements and proper sizing in India"
+          ],
+          "cons": [
+            "Entry Yonex model — outsole rubber is harder than premium 65Z3/Aerus shoes",
+            "Limited lateral stability for advanced multi-shuttle drills",
+            "4500 INR top end is steep for what is essentially a beginner shoe"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sh04",
@@ -1141,7 +1417,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Lightweight training shoe. Good for daily practice sessions."
+          "description": "Lightweight training shoe. Good for daily practice sessions.",
+          "pros": [
+            "Light 295g build — quick on lateral cuts and split-step recoveries",
+            "Cloud Lite cushioning balances comfort and responsiveness for daily training",
+            "Solid choice for high-volume practice players"
+          ],
+          "cons": [
+            "Upper mesh wears at the toe-bend area on hard court drags",
+            "Cloud Lite isn't quite at the level of Yonex Power Cushion+ for impact",
+            "Sizing runs narrow — wider Indian feet may need a half-size up"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sh05",
@@ -1179,7 +1466,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Victor's performance shoe with Energymax cushioning for powerful court movement."
+          "description": "Victor's performance shoe with Energymax cushioning for powerful court movement.",
+          "pros": [
+            "VSR rubber outsole grips synthetic and wooden courts equally well",
+            "Energymax cushion gives a notably energetic push-off feel",
+            "300g weight strikes a good speed/stability balance"
+          ],
+          "cons": [
+            "8500 INR pricing competes directly with Yonex 65Z3 — Victor brand carries less prestige in India",
+            "Replacement / spare insole availability is limited",
+            "Dealer network is much thinner than Yonex"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sh06",
@@ -1217,7 +1515,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Yonex flagship court shoe. Superior cushioning and stability for intense play."
+          "description": "Yonex flagship court shoe. Superior cushioning and stability for intense play.",
+          "pros": [
+            "Power Cushion+ heel system is the gold standard for high-impact landing shock absorption",
+            "Sole compound is engineered for grip on Yonex tournament courts",
+            "Used on the BWF tour — proven advanced-player shoe"
+          ],
+          "cons": [
+            "11000 INR top-end is genuinely expensive for amateurs",
+            "Stiffer ride than Aerus Z2 — less suitable for very light/quick players",
+            "Counterfeits are frequent in Indian online listings"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sh07",
@@ -1255,7 +1564,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Ultra-light court shoe for speed-focused players. Incredible agility on court."
+          "description": "Ultra-light court shoe for speed-focused players. Incredible agility on court.",
+          "pros": [
+            "Ultra-light 260g — among the lightest serious badminton shoes available",
+            "Power Cushion still delivers heel protection despite the low weight",
+            "Designed for speed-focused doubles and singles styles"
+          ],
+          "cons": [
+            "Reduced midsole material wears out faster than 65Z3 under heavy hitters",
+            "Narrow Asian last is uncomfortable for wider Indian foot shapes",
+            "12000 INR top end is premium for a shoe that may need replacing in 8-12 months"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sh08",
@@ -1294,7 +1614,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61WsGLrQn4L._SL1500_.jpg",
-          "description": "Mid-range court shoe at a beginner-friendly price. Good cushioning for footwork drills, gum-rubber outsole won't leave marks on indoor courts."
+          "description": "Mid-range court shoe at a beginner-friendly price. Good cushioning for footwork drills, gum-rubber outsole won't leave marks on indoor courts.",
+          "pros": [
+            "Gum-rubber outsole grips Indian indoor courts well, including older wooden floors",
+            "340g weight with medium cushion is fine for footwork drills and light training",
+            "Sub-Rs.3000 entry into a proper court shoe"
+          ],
+          "cons": [
+            "Heavier than mid-tier alternatives at similar price",
+            "Apacs sole compound wears faster on rough cement courts",
+            "Plain styling may not appeal to younger buyers"
+          ]
         },
         {
           "id": "bd_sh09",
@@ -1333,7 +1663,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61Q8j-4CTFL._SL1500_.jpg",
-          "description": "Popular choice at club level in India. Gel cushion system plus higher ankle support helps with quick lateral cuts."
+          "description": "Popular choice at club level in India. Gel cushion system plus higher ankle support helps with quick lateral cuts.",
+          "pros": [
+            "Gel cushion offers good heel impact protection for the Rs.2500-3500 tier",
+            "Higher ankle support helps prevent rolls during sharp lateral cuts",
+            "Indian brand — pricing, sizing and stock are predictable"
+          ],
+          "cons": [
+            "320g feels heavier than Yonex/Li-Ning competition at same level",
+            "Gel cushion compresses noticeably after 6-9 months of regular play",
+            "Limited colourway choices"
+          ]
         },
         {
           "id": "bd_sh10",
@@ -1372,7 +1712,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71qNC4HjlxL._SL1500_.jpg",
-          "description": "Mizuno's flagship badminton shoe. Lightweight (290g), aggressive X10 outsole grip, and the Wave Plate cushioning is legitimately one of the best in the sport. Direct competitor to Yonex Aerus Z."
+          "description": "Mizuno's flagship badminton shoe. Lightweight (290g), aggressive X10 outsole grip, and the Wave Plate cushioning is legitimately one of the best in the sport. Direct competitor to Yonex Aerus Z.",
+          "pros": [
+            "Mizuno Wave Plate cushioning is genuinely competitive with Yonex Power Cushion+",
+            "Light 290g for an advanced-level shoe",
+            "X10 outsole grip is among the stickiest on synthetic courts"
+          ],
+          "cons": [
+            "9000 INR top-end pricing rivals Yonex flagships without Yonex's Indian after-sales",
+            "Mizuno badminton sizing runs narrow — try in person if possible",
+            "Limited dealer network for spares and warranty claims"
+          ]
         }
       ]
     },
@@ -1415,7 +1765,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
-          "description": "Budget nylon shuttles for casual play. Durable and affordable for practice."
+          "description": "Budget nylon shuttles for casual play. Durable and affordable for practice.",
+          "pros": [
+            "Pack-of-6 nylon shuttles at Rs.150-300 — practically unbeatable cost-per-rally",
+            "Plastic skirt survives heavy hits and beginners' mishits",
+            "Medium speed works for typical Indian indoor club temperatures"
+          ],
+          "cons": [
+            "Flight is noticeably stiffer and less natural than feather shuttles",
+            "Skirt cracks after extended outdoor or hot-court play",
+            "Not allowed in tournament play"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sc02",
@@ -1453,7 +1814,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
-          "description": "Industry-standard nylon shuttle. Great for practice and recreational play."
+          "description": "Industry-standard nylon shuttle. Great for practice and recreational play.",
+          "pros": [
+            "Industry-standard nylon shuttle — consistent quality batch to batch",
+            "Yonex flight stamping makes speed selection reliable",
+            "High durability — single shuttle can last several hours of beginner play"
+          ],
+          "cons": [
+            "More expensive than Cosco / RSL nylon equivalents",
+            "Heavier feel than premium nylons during fast drives",
+            "Still not a substitute for feather shuttles in serious matches"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sc03",
@@ -1491,7 +1863,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
-          "description": "Premium nylon shuttle with closer-to-feather flight. Good for regular training."
+          "description": "Premium nylon shuttle with closer-to-feather flight. Good for regular training.",
+          "pros": [
+            "Closer-to-feather flight characteristics than Mavis 350",
+            "Medium-fast speed works for advanced training without burning feather budgets",
+            "Long durability for a premium nylon"
+          ],
+          "cons": [
+            "Still recognisably 'plasticky' to advanced players used to feather flight",
+            "Significantly pricier than the Mavis 350",
+            "Not tournament-legal for serious play"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sc04",
@@ -1529,7 +1912,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
-          "description": "High-quality feather shuttle. Excellent flight consistency for club-level play."
+          "description": "High-quality feather shuttle. Excellent flight consistency for club-level play.",
+          "pros": [
+            "Goose-feather construction delivers proper club-level flight feel",
+            "Pricing (Rs.1200-1800/tube) undercuts comparable Yonex tubes",
+            "Decent batch consistency for the price"
+          ],
+          "cons": [
+            "Medium durability — typical Indian rally count is 5-8 rallies per shuttle",
+            "Feather quality varies by batch more than Yonex AS series",
+            "Climate-sensitive — humid storage degrades flight noticeably"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sc05",
@@ -1567,7 +1961,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
-          "description": "Premium tournament-grade feather shuttle. Consistent flight and response."
+          "description": "Premium tournament-grade feather shuttle. Consistent flight and response.",
+          "pros": [
+            "Tournament-grade goose-feather flight consistency",
+            "Reliable Yonex stamping — predictable speed across tubes",
+            "Trusted choice for state-level and club tournaments"
+          ],
+          "cons": [
+            "Rs.1600-2200 per tube of 12 — expensive for casual players",
+            "Medium durability typical of feathers — 2-5 rallies in advanced play",
+            "Counterfeits are common — always verify Yonex India hologram"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_sc06",
@@ -1605,7 +2010,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QAFZG-HQL._SL1500_.jpg",
-          "description": "Tournament-grade feather shuttle. Used in international competitions. Best flight stability."
+          "description": "Tournament-grade feather shuttle. Used in international competitions. Best flight stability.",
+          "pros": [
+            "Used in international BWF competitions — gold-standard flight stability",
+            "Top-tier feather selection gives extremely consistent trajectories",
+            "Best 'feel' in the Yonex Aerosensa lineup short of AS-FF"
+          ],
+          "cons": [
+            "Rs.2000-2800 per tube is genuinely expensive for non-tournament play",
+            "Feathers crack within minutes of hard smashing",
+            "Shelf life is short once tube is opened — humidity ruins them"
+          ],
+          "image_search_failed": true
         }
       ]
     },
@@ -1649,7 +2065,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
-          "description": "Most popular badminton string worldwide. Excellent all-round performance and durability."
+          "description": "Most popular badminton string worldwide. Excellent all-round performance and durability.",
+          "pros": [
+            "Best-selling badminton string globally — predictable performance and tension hold",
+            "0.70mm gauge gives 9/10 durability — survives months of regular play",
+            "Strong all-round 7-9 balance across repulsion/durability/control"
+          ],
+          "cons": [
+            "Repulsion (7/10) lags behind dedicated power strings",
+            "Thicker gauge can feel 'dead' to advanced players used to thin strings",
+            "Less suited to attacking specialists chasing maximum smash speed"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_st02",
@@ -1688,7 +2115,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
-          "description": "Budget-friendly Li-Ning string. Good repulsion at an affordable price."
+          "description": "Budget-friendly Li-Ning string. Good repulsion at an affordable price.",
+          "pros": [
+            "Thinner 0.65mm gauge gives 8/10 repulsion at a budget price",
+            "Cheaper alternative to Yonex BG65 with similar all-round balance",
+            "Easy on stringers — beads up cleanly in the racket head"
+          ],
+          "cons": [
+            "Durability drops to 7/10 due to thinner gauge",
+            "Brand prestige and resale awareness lower than Yonex BG series",
+            "Tension hold is less consistent than Japanese-made strings"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_st03",
@@ -1727,7 +2165,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
-          "description": "High-repulsion string for powerful shots. Popular among intermediate and advanced players."
+          "description": "High-repulsion string for powerful shots. Popular among intermediate and advanced players.",
+          "pros": [
+            "9/10 repulsion delivers genuinely crisper smashes than BG65",
+            "0.68mm gauge balances power and reasonable durability",
+            "Distinctive 'snap' sound preferred by attacking players"
+          ],
+          "cons": [
+            "Durability drops to 7/10 — expect restringing every 4-6 weeks",
+            "Costs roughly 1.5x BG65 for the same metre length",
+            "Less forgiving on mishits — vibration transfers more to the arm"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_st04",
@@ -1766,7 +2215,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
-          "description": "Victor's power string. Great repulsion and crisp hitting sound."
+          "description": "Victor's power string. Great repulsion and crisp hitting sound.",
+          "pros": [
+            "9/10 repulsion at a price below Yonex BG80",
+            "0.68mm gauge gives strong power-to-durability ratio",
+            "Audible 'crack' on solid hits — satisfying feedback"
+          ],
+          "cons": [
+            "7/10 control is below comparable Yonex strings",
+            "Victor strings are harder to find at smaller Indian stringers",
+            "Tension hold drops faster than premium Yonex strings"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_st05",
@@ -1805,7 +2265,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61RWJKZ2-PL._SL1500_.jpg",
-          "description": "Hybrid string for enhanced spin and control. Used by pro players for deceptive shots."
+          "description": "Hybrid string for enhanced spin and control. Used by pro players for deceptive shots.",
+          "pros": [
+            "Hybrid 0.67mm/0.61mm gauges combine control mains with high-spin crosses",
+            "9/10 control rating — best in this list for placement and slice shots",
+            "Used by pro players including Marcus Gideon for deceptive shot work"
+          ],
+          "cons": [
+            "Durability is only 6/10 — expect frequent restringing",
+            "Hybrid setup requires a skilled stringer who knows the pattern",
+            "Cost premium over single-gauge alternatives"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_st06",
@@ -1840,7 +2311,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61ccv3mCnoL._SL1500_.jpg",
-          "description": "Apacs's all-rounder string. Decent repulsion with good durability. Popular cheap upgrade from stock strings."
+          "description": "Apacs's all-rounder string. Decent repulsion with good durability. Popular cheap upgrade from stock strings.",
+          "pros": [
+            "Sub-Rs.400 price tier — cheapest serious upgrade from factory strings",
+            "Balanced 7/7/7 spec sheet — reliable for casual to club play",
+            "0.68mm gauge is a good gauge for most racket frames"
+          ],
+          "cons": [
+            "No outstanding spec — does nothing better than the established Yonex BG strings",
+            "Lower brand recognition limits resale and stringer familiarity",
+            "Tension drops faster than Japanese strings of similar gauge"
+          ]
         },
         {
           "id": "bd_st07",
@@ -1875,7 +2356,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51uoqEZTJYL._SL1000_.jpg",
-          "description": "American-brand thin-gauge string favored by advanced attackers for sharp repulsion on smashes. Trade-off: lower durability — expect restringing every 3-4 weeks of regular play."
+          "description": "American-brand thin-gauge string favored by advanced attackers for sharp repulsion on smashes. Trade-off: lower durability — expect restringing every 3-4 weeks of regular play.",
+          "pros": [
+            "Thin 0.66mm gauge gives 9/10 repulsion — sharp smash bite",
+            "American-brand quality with consistent batch tolerances",
+            "Strong 8/10 control given the high repulsion"
+          ],
+          "cons": [
+            "Durability is only 6/10 — restring every 3-4 weeks of regular play",
+            "Ashaway is harder to source in India than Yonex/Victor",
+            "Pricing matches Yonex Aerobite without the same tournament-pedigree appeal"
+          ]
         },
         {
           "id": "bd_st08",
@@ -1910,7 +2401,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/51GAh1hQ2nL._SL1000_.jpg",
-          "description": "Japanese Gosen's thick, durable string. Ideal for hard hitters who break strings often. Modest repulsion but lasts 3-4× longer than thin strings."
+          "description": "Japanese Gosen's thick, durable string. Ideal for hard hitters who break strings often. Modest repulsion but lasts 3-4× longer than thin strings.",
+          "pros": [
+            "Thick 0.70mm gauge with 9/10 durability — lasts 3-4x longer than thin strings",
+            "Ideal for hard hitters who break strings frequently",
+            "Reliable Japanese Gosen build quality"
+          ],
+          "cons": [
+            "Repulsion is only 6/10 — mutes the racket's natural punch",
+            "Heavier feel than thin alternatives — slower-feeling drives and net pushes",
+            "Underwhelming for attacking players chasing smash speed"
+          ]
         }
       ]
     },
@@ -1953,7 +2454,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
-          "description": "Universal overgrip. Thin, tacky, and sweat-absorbing. Works for all players."
+          "description": "Universal overgrip. Thin, tacky, and sweat-absorbing. Works for all players.",
+          "pros": [
+            "0.6mm thin overgrip preserves the natural racket handle feel",
+            "High tackiness keeps the racket secure on long smash swings",
+            "Pack of 3 lasts roughly 3-6 weeks of regular play"
+          ],
+          "cons": [
+            "Wears through quickly under heavy sweat — needs replacement faster than towel grips",
+            "Synthetic feel may not appeal to players who prefer cotton/towel grips",
+            "Counterfeits are extremely common — buy only authorised lots"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_gr02",
@@ -1991,7 +2503,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
-          "description": "Excellent sweat absorption. Budget-friendly alternative to Yonex grips."
+          "description": "Excellent sweat absorption. Budget-friendly alternative to Yonex grips.",
+          "pros": [
+            "High sweat absorption suited to hot/humid Indian playing conditions",
+            "Cheaper than Yonex Super Grap by ~20% per piece",
+            "Pack of 3 — economical bulk option"
+          ],
+          "cons": [
+            "Tackiness (medium) is lower than Yonex Super Grap",
+            "Slightly thicker (0.65mm) — changes the handle diameter feel more than 0.6mm grips",
+            "Limited Victor branding appeal to non-Victor racket users"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_gr03",
@@ -2029,7 +2552,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
-          "description": "Cotton towel grip for sweaty hands. Very popular among Indian players due to hot climate."
+          "description": "Cotton towel grip for sweaty hands. Very popular among Indian players due to hot climate.",
+          "pros": [
+            "Cotton towel grip absorbs sweat far better than synthetic overgrips — ideal for humid Indian summers",
+            "Very high absorption rating means less mid-game grip slipping",
+            "1.2mm replacement grip provides a thicker, padded handle feel"
+          ],
+          "cons": [
+            "Lower 'tackiness' than synthetic overgrips — relies on grip pressure not stickiness",
+            "Towel attracts dust and dirt — needs frequent replacement",
+            "Adds noticeable handle thickness — not for players who prefer thin grips"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_gr04",
@@ -2067,7 +2601,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
-          "description": "Tacky and thin overgrip. Good alternative from Li-Ning."
+          "description": "Tacky and thin overgrip. Good alternative from Li-Ning.",
+          "pros": [
+            "0.6mm thin profile preserves handle feel like Yonex Super Grap",
+            "High tackiness — secure hold during long rallies",
+            "Cheaper alternative to Yonex Super Grap pack-of-3"
+          ],
+          "cons": [
+            "Medium absorption — less sweat capacity than Yonex AC102 towel grip",
+            "Adhesive backing wears faster than Yonex equivalents",
+            "Brand mismatch if you use a non-Li-Ning racket and care about look"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_gr05",
@@ -2105,7 +2650,18 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61pQFqDkSQL._SL1500_.jpg",
-          "description": "Wave-textured overgrip for extra grip during intense rallies. Premium Yonex option."
+          "description": "Wave-textured overgrip for extra grip during intense rallies. Premium Yonex option.",
+          "pros": [
+            "Wave-textured surface adds grip security during high-tempo rallies",
+            "Very high tackiness (highest in this list) holds even with sweaty hands",
+            "Premium feel preferred by advanced players"
+          ],
+          "cons": [
+            "Wave texture wears flat faster than smooth overgrips",
+            "Premium pricing (Rs.200-400 per piece, sold individually)",
+            "Texture preference is personal — some players hate the ribbed feel"
+          ],
+          "image_search_failed": true
         },
         {
           "id": "bd_g06",
@@ -2140,7 +2696,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61nT3g9rEQL._SL1500_.jpg",
-          "description": "Affordable cushion grip with good sweat absorbency. Comes as replacement grip — not an overgrip."
+          "description": "Affordable cushion grip with good sweat absorbency. Comes as replacement grip — not an overgrip.",
+          "pros": [
+            "Sub-Rs.150 pricing — cheapest cushion grip option in this list",
+            "0.75mm thickness gives a noticeable padded handle feel",
+            "8/10 absorbency suitable for sweaty Indian conditions"
+          ],
+          "cons": [
+            "Replacement grip (not overgrip) — requires removing existing handle wrap",
+            "Sold as a single unit — no pack discount",
+            "Thicker profile changes handle diameter, may not suit small-handed players"
+          ]
         },
         {
           "id": "bd_g07",
@@ -2175,7 +2741,17 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/61aRpxGrTqL._SL1500_.jpg",
-          "description": "Value 3-pack overgrip from Hundred. Tacky, thin, replace roughly every 2 weeks of regular play. Good way to experiment with grip feel without per-piece cost."
+          "description": "Value 3-pack overgrip from Hundred. Tacky, thin, replace roughly every 2 weeks of regular play. Good way to experiment with grip feel without per-piece cost.",
+          "pros": [
+            "3-pack pricing makes per-grip cost very competitive",
+            "Strong 8/10 tackiness — secure feel in fast rallies",
+            "Thin 0.6mm profile preserves handle feel"
+          ],
+          "cons": [
+            "6/10 absorbency lags behind Yonex Super Grap and towel grips",
+            "Hundred branding has less resale/aspirational appeal than Yonex",
+            "Adhesive end-strip can lift after a few weeks of heavy play"
+          ]
         }
       ]
     }

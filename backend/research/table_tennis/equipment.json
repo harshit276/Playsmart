@@ -1,6 +1,6 @@
 {
   "sport": "table_tennis",
-  "last_updated": "2026-04-22",
+  "last_updated": "2026-04-25",
   "currency_note": "INR prices reflect March 2026 Indian market.",
   "equipment_categories": [
     {
@@ -12,14 +12,38 @@
           "brand": "Cossack",
           "type": "Allround Blade",
           "level": "beginner",
-          "specs": {"weight": "85g", "plies": "5 wood", "composition": "All wood", "speed_rating": 5.0, "control_rating": 8.5, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 500, "max": 900}},
+          "specs": {
+            "weight": "85g",
+            "plies": "5 wood",
+            "composition": "All wood",
+            "speed_rating": 5.0,
+            "control_rating": 8.5,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 900
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cossack+Offensive+table+tennis+blade",
             "flipkart": "https://www.flipkart.com/search?q=cossack+offensive+table+tennis+blade"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "Budget Indian brand blade. Great value for beginners starting with custom setups."
+          "image_search_failed": true,
+          "description": "Budget Indian brand blade. Great value for beginners starting with custom setups.",
+          "pros": [
+            "Sub-Rs 1000 price makes it accessible for school/club starters",
+            "5-ply all-wood construction is forgiving for stroke development",
+            "8.5 control rating ideal for learning blocks and pushes",
+            "Lightweight 85g lets juniors swing through full strokes"
+          ],
+          "cons": [
+            "Speed of 5.0 is outgrown quickly once looping technique improves",
+            "Indian regional brand with inconsistent QC between batches",
+            "Limited online retail presence and almost zero resale value"
+          ]
         },
         {
           "id": "tt_bl02",
@@ -27,14 +51,38 @@
           "brand": "DHS (Double Happiness)",
           "type": "Allround Blade",
           "level": "beginner",
-          "specs": {"weight": "88g", "plies": "7 wood", "composition": "All wood", "speed_rating": 5.5, "control_rating": 8.0, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "specs": {
+            "weight": "88g",
+            "plies": "7 wood",
+            "composition": "All wood",
+            "speed_rating": 5.5,
+            "control_rating": 8.0,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 800,
+              "max": 1500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=DHS+PG7+table+tennis",
             "flipkart": "https://www.flipkart.com/search?q=dhs+pg7+table+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "Unbeatable value beginner blade from DHS. 7-ply wood gives decent speed with good control."
+          "image_search_failed": true,
+          "description": "Unbeatable value beginner blade from DHS. 7-ply wood gives decent speed with good control.",
+          "pros": [
+            "7-ply construction adds punch on flat hits vs typical 5-ply beginner blades",
+            "DHS QC is reliable batch-to-batch",
+            "Pairs well with Hurricane 3 for an authentic Chinese-style starter setup",
+            "Stiff feel teaches clean contact early"
+          ],
+          "cons": [
+            "Heavier head feel can fatigue younger players",
+            "Less dwell time than 5-ply allwood, so loops need more brushing",
+            "Plain cosmetics and no premium handle finish"
+          ]
         },
         {
           "id": "tt_bl03",
@@ -42,14 +90,38 @@
           "brand": "Stiga",
           "type": "Allround Blade",
           "level": "beginner",
-          "specs": {"weight": "75g", "plies": "5 wood", "composition": "All wood", "speed_rating": 4.5, "control_rating": 9.0, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 2500, "max": 3500}},
+          "specs": {
+            "weight": "75g",
+            "plies": "5 wood",
+            "composition": "All wood",
+            "speed_rating": 4.5,
+            "control_rating": 9.0,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Stiga+Allround+Classic",
             "flipkart": "https://www.flipkart.com/search?q=stiga+allround+classic"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "The gold standard beginner blade. 5-ply all-wood with outstanding control and feel."
+          "image_search_failed": true,
+          "description": "The gold standard beginner blade. 5-ply all-wood with outstanding control and feel.",
+          "pros": [
+            "75g headlight balance is the easiest in the category to handle",
+            "Best-in-class control rating (9.0) for learning placement and short game",
+            "Decades of pro coaching pedigree behind the design",
+            "Resells well as players upgrade"
+          ],
+          "cons": [
+            "Speed 4.5 caps competitive use to early club level",
+            "Premium price for an entry blade vs Chinese alternatives",
+            "Soft feel can feel mushy when paired with hard tensors"
+          ]
         },
         {
           "id": "tt_bl04",
@@ -57,14 +129,38 @@
           "brand": "Butterfly",
           "type": "Offensive Blade",
           "level": "intermediate",
-          "specs": {"weight": "86g", "plies": "5+2 arylate carbon", "composition": "Wood + Arylate Carbon", "speed_rating": 8.5, "control_rating": 7.0, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 10000, "max": 14000}},
+          "specs": {
+            "weight": "86g",
+            "plies": "5+2 arylate carbon",
+            "composition": "Wood + Arylate Carbon",
+            "speed_rating": 8.5,
+            "control_rating": 7.0,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 10000,
+              "max": 14000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Timo+Boll+ALC",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+timo+boll+alc"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "Premium intermediate blade with Arylate Carbon layers. Excellent balance of speed and control."
+          "image_search_failed": true,
+          "description": "Premium intermediate blade with Arylate Carbon layers. Excellent balance of speed and control.",
+          "pros": [
+            "Arylate-Carbon fibre adds power without the harsh feel of pure carbon",
+            "Used at world-tour level by Timo Boll - proven design",
+            "Forgiving sweet spot makes it usable from late intermediate up to pro",
+            "Pairs well with both Tenergy and Chinese tacky rubbers"
+          ],
+          "cons": [
+            "Premium Butterfly pricing is steep for an upgrading club player",
+            "Counterfeit ALC blades are widespread on Indian marketplaces",
+            "OFF speed punishes inconsistent technique"
+          ]
         },
         {
           "id": "tt_bl05",
@@ -72,14 +168,38 @@
           "brand": "DHS",
           "type": "Offensive Blade",
           "level": "intermediate",
-          "specs": {"weight": "90g", "plies": "5+2 carbon", "composition": "Wood + Carbon", "speed_rating": 8.0, "control_rating": 7.5, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 4000, "max": 6000}},
+          "specs": {
+            "weight": "90g",
+            "plies": "5+2 carbon",
+            "composition": "Wood + Carbon",
+            "speed_rating": 8.0,
+            "control_rating": 7.5,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4000,
+              "max": 6000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+Long+5+blade",
             "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+long+5"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "Ma Long's former blade. Hard feel with explosive power for aggressive play."
+          "image_search_failed": true,
+          "description": "Ma Long's former blade. Hard feel with explosive power for aggressive play.",
+          "pros": [
+            "Hard outer ply suits Chinese-style tacky rubbers (Hurricane 3) perfectly",
+            "Direct lineage from Ma Long's national team setup",
+            "Stiff carbon construction gives explosive third-ball attack",
+            "Half the price of comparable Butterfly ALC blades"
+          ],
+          "cons": [
+            "90g head-heavy feel is taxing over long sessions",
+            "Stiff feel reduces dwell on short pushes and chops",
+            "Limited handle finish refinement vs European brands"
+          ]
         },
         {
           "id": "tt_bl06",
@@ -87,14 +207,38 @@
           "brand": "Stiga",
           "type": "Offensive Blade",
           "level": "intermediate",
-          "specs": {"weight": "82g", "plies": "5+2 carbon", "composition": "Wood + TeXtreme Carbon", "speed_rating": 8.0, "control_rating": 7.5, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 6000, "max": 8000}},
+          "specs": {
+            "weight": "82g",
+            "plies": "5+2 carbon",
+            "composition": "Wood + TeXtreme Carbon",
+            "speed_rating": 8.0,
+            "control_rating": 7.5,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6000,
+              "max": 8000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Stiga+Carbonado+245",
             "flipkart": "https://www.flipkart.com/search?q=stiga+carbonado+245"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "TeXtreme carbon blade for maximum lightweight power. Fast with decent control."
+          "image_search_failed": true,
+          "description": "TeXtreme carbon blade for maximum lightweight power. Fast with decent control.",
+          "pros": [
+            "TeXtreme spread-tow carbon delivers power at just 82g",
+            "Large sweet spot is exceptionally forgiving for a carbon blade",
+            "Premium Swedish craftsmanship and handle finish",
+            "Good arc on loops despite the carbon layers"
+          ],
+          "cons": [
+            "Catapult effect can feel hollow on slow touch shots",
+            "Higher numbered Carbonados (245/45) overlap closely - confusing buyers",
+            "Tricky to find genuine stock in India outside specialist stores"
+          ]
         },
         {
           "id": "tt_bl07",
@@ -102,14 +246,38 @@
           "brand": "Butterfly",
           "type": "Offensive+ Blade",
           "level": "advanced",
-          "specs": {"weight": "87g", "plies": "5+2 arylate carbon", "composition": "Wood + Arylate Carbon", "speed_rating": 9.0, "control_rating": 6.5, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 14000, "max": 18000}},
+          "specs": {
+            "weight": "87g",
+            "plies": "5+2 arylate carbon",
+            "composition": "Wood + Arylate Carbon",
+            "speed_rating": 9.0,
+            "control_rating": 6.5,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 14000,
+              "max": 18000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Viscaria+blade",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+viscaria"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "Legendary blade used by Zhang Jike. Exceptional speed with good feel for advanced players."
+          "image_search_failed": true,
+          "description": "Legendary blade used by Zhang Jike. Exceptional speed with good feel for advanced players.",
+          "pros": [
+            "Iconic Koto outer ply gives a crisp, explosive contact",
+            "Used by Zhang Jike and Fan Zhendong - top-tier pedigree",
+            "Excellent for both Chinese tacky and European tensor pairings",
+            "Holds resale value better than almost any blade on the market"
+          ],
+          "cons": [
+            "OFF+ speed is unforgiving below strong intermediate level",
+            "One of the most counterfeited blades worldwide - vet sources carefully",
+            "Premium price (Rs 14k+) hard to justify for non-tournament players"
+          ]
         },
         {
           "id": "tt_bl08",
@@ -117,14 +285,39 @@
           "brand": "Butterfly",
           "type": "Offensive+ Blade",
           "level": "advanced",
-          "specs": {"weight": "89g", "plies": "5+2 super ZLC", "composition": "Wood + Super ZL Carbon", "speed_rating": 9.5, "control_rating": 6.0, "handle": "Flared (FL)"},
-          "price_ranges": {"INR": {"min": 22000, "max": 28000}},
+          "specs": {
+            "weight": "89g",
+            "plies": "5+2 super ZLC",
+            "composition": "Wood + Super ZL Carbon",
+            "speed_rating": 9.5,
+            "control_rating": 6.0,
+            "handle": "Flared (FL)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 22000,
+              "max": 28000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Zhang+Jike+Super+ZLC",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+zhang+jike+super+zlc"
           },
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
-          "description": "Top-tier professional blade. Maximum speed for elite players with precise technique."
+          "image_search_failed": true,
+          "description": "Top-tier professional blade. Maximum speed for elite players with precise technique.",
+          "pros": [
+            "Super ZLC fibre is the densest carbon weave Butterfly produces",
+            "Massive sweet spot for an OFF+ blade",
+            "Endorsed by Olympic and World champion Zhang Jike",
+            "Long fibres deliver consistent feel across the entire blade face"
+          ],
+          "cons": [
+            "Rs 22k-28k pricing limits it to dedicated competitive players",
+            "Stiffness can over-amplify rubbers like Dignics 09C",
+            "Control 6.0 means errors get magnified at the same rate as winners",
+            "Heavy counterfeit market - genuine units only via authorised dealers"
+          ]
         },
         {
           "id": "tt_bl09",
@@ -132,9 +325,30 @@
           "brand": "Tibhar",
           "type": "Allround+ Blade",
           "level": "intermediate",
-          "recommended_for": ["All-round players", "Loopers"],
-          "specs": {"weight": "85g", "plies": "5 wood", "composition": "All wood (Limba outer)", "speed_rating": 7.0, "control_rating": 8.5, "stiffness_rating": 5.0, "handle": "Flared (FL)", "head_size": "158x152mm"},
-          "price_ranges": {"INR": {"min": 4500, "max": 6500}, "USD": {"min": 58, "max": 83}},
+          "recommended_for": [
+            "All-round players",
+            "Loopers"
+          ],
+          "specs": {
+            "weight": "85g",
+            "plies": "5 wood",
+            "composition": "All wood (Limba outer)",
+            "speed_rating": 7.0,
+            "control_rating": 8.5,
+            "stiffness_rating": 5.0,
+            "handle": "Flared (FL)",
+            "head_size": "158x152mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4500,
+              "max": 6500
+            },
+            "USD": {
+              "min": 58,
+              "max": 83
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tibhar+Samsonov+Alpha+blade",
             "flipkart": "https://www.flipkart.com/search?q=tibhar+samsonov+alpha+blade",
@@ -145,7 +359,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71q0Y8vQ4kL._SL1500_.jpg",
-          "description": "Vladimir Samsonov's signature all-wood blade. Soft feel, great control, and excellent looping characteristics for technical players."
+          "image_search_failed": true,
+          "description": "Vladimir Samsonov's signature all-wood blade. Soft feel, great control, and excellent looping characteristics for technical players.",
+          "pros": [
+            "Limba outer plies deliver outstanding loop dwell",
+            "Perfect AL+ stepping-stone before moving to carbon blades",
+            "Samsonov pedigree - tuned for European technical loopers",
+            "Soft, vibrant feel reads spin clearly on returns"
+          ],
+          "cons": [
+            "Speed 7.0 may feel slow when paired with hard ESN tensors",
+            "Limba outer dents/marks easily without edge tape",
+            "Limited Indian distribution outside specialist TT stores"
+          ]
         },
         {
           "id": "tt_bl10",
@@ -153,9 +379,30 @@
           "brand": "Tibhar",
           "type": "Offensive Blade",
           "level": "intermediate",
-          "recommended_for": ["Offensive loopers", "Two-winged attackers"],
-          "specs": {"weight": "88g", "plies": "5 wood", "composition": "All wood (Koto outer)", "speed_rating": 8.0, "control_rating": 8.0, "stiffness_rating": 6.5, "handle": "Flared (FL)", "head_size": "158x152mm"},
-          "price_ranges": {"INR": {"min": 5500, "max": 7500}, "USD": {"min": 70, "max": 96}},
+          "recommended_for": [
+            "Offensive loopers",
+            "Two-winged attackers"
+          ],
+          "specs": {
+            "weight": "88g",
+            "plies": "5 wood",
+            "composition": "All wood (Koto outer)",
+            "speed_rating": 8.0,
+            "control_rating": 8.0,
+            "stiffness_rating": 6.5,
+            "handle": "Flared (FL)",
+            "head_size": "158x152mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5500,
+              "max": 7500
+            },
+            "USD": {
+              "min": 70,
+              "max": 96
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tibhar+Stratus+Power+Wood+blade",
             "flipkart": "https://www.flipkart.com/search?q=tibhar+stratus+power+wood",
@@ -166,7 +413,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71r1Y8vQ5kL._SL1500_.jpg",
-          "description": "Cult-classic 5-ply offensive blade with Koto outer. Delivers explosive power with surprisingly good control. A favorite in European leagues."
+          "image_search_failed": true,
+          "description": "Cult-classic 5-ply offensive blade with Koto outer. Delivers explosive power with surprisingly good control. A favorite in European leagues.",
+          "pros": [
+            "Koto outer ply gives carbon-like speed in an all-wood package",
+            "Balanced 8.0/8.0 speed/control - rare combination",
+            "European-league tested for two-winged attacking play",
+            "Excellent value vs comparable carbon blades"
+          ],
+          "cons": [
+            "Stiffness 6.5 is high for an all-wood - reduces touch on short game",
+            "Heavier 88g build doesn't suit smaller frames",
+            "Sparse stock through Indian retailers"
+          ]
         },
         {
           "id": "tt_bl11",
@@ -174,9 +433,30 @@
           "brand": "Donic",
           "type": "Offensive Blade",
           "level": "intermediate",
-          "recommended_for": ["All-round attackers", "Loopers"],
-          "specs": {"weight": "86g", "plies": "5+2 carbon with Senso handle", "composition": "Wood + Carbon (hollow handle)", "speed_rating": 8.5, "control_rating": 7.5, "stiffness_rating": 7.0, "handle": "Flared (FL)", "head_size": "157x150mm"},
-          "price_ranges": {"INR": {"min": 6500, "max": 8500}, "USD": {"min": 83, "max": 109}},
+          "recommended_for": [
+            "All-round attackers",
+            "Loopers"
+          ],
+          "specs": {
+            "weight": "86g",
+            "plies": "5+2 carbon with Senso handle",
+            "composition": "Wood + Carbon (hollow handle)",
+            "speed_rating": 8.5,
+            "control_rating": 7.5,
+            "stiffness_rating": 7.0,
+            "handle": "Flared (FL)",
+            "head_size": "157x150mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6500,
+              "max": 8500
+            },
+            "USD": {
+              "min": 83,
+              "max": 109
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Donic+Waldner+Senso+Carbon",
             "flipkart": "https://www.flipkart.com/search?q=donic+waldner+senso+carbon",
@@ -187,7 +467,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71s2Y8vQ6kL._SL1500_.jpg",
-          "description": "Jan-Ove Waldner signature with Senso hollow handle for lighter feel. Carbon layers boost speed while wood dominates for a classic touch."
+          "image_search_failed": true,
+          "description": "Jan-Ove Waldner signature with Senso hollow handle for lighter feel. Carbon layers boost speed while wood dominates for a classic touch.",
+          "pros": [
+            "Senso hollow-handle design shifts balance for a head-light feel",
+            "Carbon layers add OFF speed without killing wood feedback",
+            "Waldner-tuned for creative all-round attacking play",
+            "Excellent finishing on the Donic handle build"
+          ],
+          "cons": [
+            "Stiffness 7.0 + carbon limits short-game touch vs Samsonov Alpha",
+            "Hollow handle changes balance - some players dislike the feel",
+            "Mid-priced Donic blades are easy to overlook vs flashier brands"
+          ]
         },
         {
           "id": "tt_bl12",
@@ -195,9 +487,30 @@
           "brand": "Sanwei",
           "type": "Offensive Blade",
           "level": "beginner",
-          "recommended_for": ["Entry-level attackers", "Chinese style beginners"],
-          "specs": {"weight": "92g", "plies": "7 wood", "composition": "All wood (Limba/Ayous)", "speed_rating": 7.5, "control_rating": 8.0, "stiffness_rating": 6.0, "handle": "Flared (FL)", "head_size": "158x152mm"},
-          "price_ranges": {"INR": {"min": 1800, "max": 2800}, "USD": {"min": 23, "max": 36}},
+          "recommended_for": [
+            "Entry-level attackers",
+            "Chinese style beginners"
+          ],
+          "specs": {
+            "weight": "92g",
+            "plies": "7 wood",
+            "composition": "All wood (Limba/Ayous)",
+            "speed_rating": 7.5,
+            "control_rating": 8.0,
+            "stiffness_rating": 6.0,
+            "handle": "Flared (FL)",
+            "head_size": "158x152mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1800,
+              "max": 2800
+            },
+            "USD": {
+              "min": 23,
+              "max": 36
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Sanwei+Fextra+7+blade",
             "flipkart": "https://www.flipkart.com/search?q=sanwei+fextra+7+blade",
@@ -208,7 +521,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71t3Y8vQ7kL._SL1500_.jpg",
-          "description": "Outstanding budget 7-ply blade from Sanwei. Rivals blades 2-3x its price. A go-to recommendation for beginners who want Chinese-style power."
+          "image_search_failed": true,
+          "description": "Outstanding budget 7-ply blade from Sanwei. Rivals blades 2-3x its price. A go-to recommendation for beginners who want Chinese-style power.",
+          "pros": [
+            "Sub-Rs 3000 price for a genuine 7-ply offensive blade",
+            "Speed 7.5 with strong 8.0 control - exceptional value combination",
+            "Punches well above price class - reviewed favourably vs Stiga Clipper",
+            "Holds Chinese tacky rubbers (H3) extremely well"
+          ],
+          "cons": [
+            "92g head-heavy build is tiring for younger players",
+            "QC varies - weight can swing 4-5g batch to batch",
+            "Cosmetic finishing isn't on par with European brands"
+          ]
         },
         {
           "id": "tt_bl13",
@@ -216,9 +541,30 @@
           "brand": "Victas",
           "type": "Defensive Blade",
           "level": "advanced",
-          "recommended_for": ["Choppers", "Defenders"],
-          "specs": {"weight": "80g", "plies": "5 wood", "composition": "All wood defensive", "speed_rating": 4.0, "control_rating": 9.5, "stiffness_rating": 3.5, "handle": "Flared (FL)", "head_size": "164x158mm"},
-          "price_ranges": {"INR": {"min": 7500, "max": 10000}, "USD": {"min": 96, "max": 128}},
+          "recommended_for": [
+            "Choppers",
+            "Defenders"
+          ],
+          "specs": {
+            "weight": "80g",
+            "plies": "5 wood",
+            "composition": "All wood defensive",
+            "speed_rating": 4.0,
+            "control_rating": 9.5,
+            "stiffness_rating": 3.5,
+            "handle": "Flared (FL)",
+            "head_size": "164x158mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7500,
+              "max": 10000
+            },
+            "USD": {
+              "min": 96,
+              "max": 128
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Victas+Koji+Matsushita+blade",
             "flipkart": "https://www.flipkart.com/search?q=victas+koji+matsushita+blade",
@@ -229,7 +575,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71u4Y8vQ8kL._SL1500_.jpg",
-          "description": "The definitive modern defender blade. Oversized head with soft feel for deep, heavy chops. Named after legendary Japanese chopper Koji Matsushita."
+          "image_search_failed": true,
+          "description": "The definitive modern defender blade. Oversized head with soft feel for deep, heavy chops. Named after legendary Japanese chopper Koji Matsushita.",
+          "pros": [
+            "Oversized 164x158mm head gives huge sweet spot for deep chops",
+            "Soft 3.5 stiffness extends dwell time for heavy backspin",
+            "Defensive setup well-tested at world level (Koji Matsushita)",
+            "Lightweight 80g lets choppers cover wide angles without fatigue"
+          ],
+          "cons": [
+            "Speed 4.0 makes counter-attacking from off-table very tough",
+            "Niche use case - not transferable if you switch to attacking play",
+            "Oversized head doesn't fit standard racket cases",
+            "Limited Indian retail availability - mostly import only"
+          ]
         },
         {
           "id": "tt_bl14",
@@ -237,9 +596,30 @@
           "brand": "Andro",
           "type": "Offensive Blade",
           "level": "intermediate",
-          "recommended_for": ["Loopers", "Aggressive all-rounders"],
-          "specs": {"weight": "87g", "plies": "5 wood", "composition": "All wood (Limba outer, Kiri core)", "speed_rating": 7.8, "control_rating": 8.2, "stiffness_rating": 6.0, "handle": "Flared (FL)", "head_size": "157x150mm"},
-          "price_ranges": {"INR": {"min": 4000, "max": 6000}, "USD": {"min": 51, "max": 77}},
+          "recommended_for": [
+            "Loopers",
+            "Aggressive all-rounders"
+          ],
+          "specs": {
+            "weight": "87g",
+            "plies": "5 wood",
+            "composition": "All wood (Limba outer, Kiri core)",
+            "speed_rating": 7.8,
+            "control_rating": 8.2,
+            "stiffness_rating": 6.0,
+            "handle": "Flared (FL)",
+            "head_size": "157x150mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4000,
+              "max": 6000
+            },
+            "USD": {
+              "min": 51,
+              "max": 77
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Andro+Treiber+K+blade",
             "flipkart": "https://www.flipkart.com/search?q=andro+treiber+k+blade",
@@ -250,7 +630,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71v5Y8vQ9kL._SL1500_.jpg",
-          "description": "Andro's popular 5-ply offensive blade. Balanced feel with good dwell time for looping. Excellent middle-ground for players moving up from allround blades."
+          "image_search_failed": true,
+          "description": "Andro's popular 5-ply offensive blade. Balanced feel with good dwell time for looping. Excellent middle-ground for players moving up from allround blades.",
+          "pros": [
+            "Limba/Kiri build gives ideal loop dwell with OFF speed",
+            "Speed 7.8 with control 8.2 - true all-round upgrade path",
+            "Light Kiri core keeps the blade quick to manoeuvre",
+            "Modern looping characteristics suit ESN/Tibhar tensors"
+          ],
+          "cons": [
+            "Andro brand recognition is low in India vs Butterfly/DHS",
+            "Limba outer is soft - can dent with rough handling",
+            "Less explosive than Stratus Power Wood at the same price"
+          ]
         }
       ]
     },
@@ -263,14 +655,37 @@
           "brand": "DHS",
           "type": "Chinese Tacky Rubber",
           "level": "beginner",
-          "specs": {"sponge_thickness": "2.15mm", "speed": 7.5, "spin": 9.5, "control": 7.0, "surface": "Inverted pimples (tacky)"},
-          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "specs": {
+            "sponge_thickness": "2.15mm",
+            "speed": 7.5,
+            "spin": 9.5,
+            "control": 7.0,
+            "surface": "Inverted pimples (tacky)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 1000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+3+Neo",
             "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+3+neo"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Most popular Chinese rubber. Incredible spin generation at a very affordable price."
+          "image_search_failed": true,
+          "description": "Most popular Chinese rubber. Incredible spin generation at a very affordable price.",
+          "pros": [
+            "9.5 spin rating - among the spinniest rubbers at any price",
+            "Tacky topsheet gives unmatched short-serve and push variation",
+            "Sub-Rs 1000 price unmatched for Chinese national-style rubber",
+            "Factory-boosted Neo sponge adds catapult vs original Hurricane 3"
+          ],
+          "cons": [
+            "Heavy (~70g cut) - not friendly for arm fatigue",
+            "Requires faster blade swing to unlock the speed",
+            "Topsheet wears within 3-4 months of regular play"
+          ]
         },
         {
           "id": "tt_rb02",
@@ -278,14 +693,37 @@
           "brand": "Stiga",
           "type": "Tensor Rubber",
           "level": "beginner",
-          "specs": {"sponge_thickness": "2.1mm", "speed": 7.0, "spin": 8.5, "control": 8.5, "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 1800, "max": 2500}},
+          "specs": {
+            "sponge_thickness": "2.1mm",
+            "speed": 7.0,
+            "spin": 8.5,
+            "control": 8.5,
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1800,
+              "max": 2500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Stiga+Mantra+M",
             "flipkart": "https://www.flipkart.com/search?q=stiga+mantra+m"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Excellent beginner tensor rubber. Good speed and spin with forgiving control."
+          "image_search_failed": true,
+          "description": "Excellent beginner tensor rubber. Good speed and spin with forgiving control.",
+          "pros": [
+            "Balanced 8.5/8.5 spin/control suits learning loop technique",
+            "Medium hardness sponge is easy to brush-loop",
+            "Good value upgrade from generic stock rubbers",
+            "Stiga's reliable QC with consistent feel between sheets"
+          ],
+          "cons": [
+            "Modest 7.0 speed will plateau quickly for aggressive players",
+            "Premium pricing for a beginner-tier tensor",
+            "Outclassed by ESN-made tensors (Andro Hexer Grip) at similar cost"
+          ]
         },
         {
           "id": "tt_rb03",
@@ -293,14 +731,37 @@
           "brand": "Yasaka",
           "type": "Classic Rubber",
           "level": "beginner",
-          "specs": {"sponge_thickness": "2.0mm", "speed": 7.5, "spin": 8.0, "control": 8.5, "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 1200, "max": 1800}},
+          "specs": {
+            "sponge_thickness": "2.0mm",
+            "speed": 7.5,
+            "spin": 8.0,
+            "control": 8.5,
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 1800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yasaka+Mark+V",
             "flipkart": "https://www.flipkart.com/search?q=yasaka+mark+v"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Legendary classic rubber. The learning standard for generations of table tennis players."
+          "image_search_failed": true,
+          "description": "Legendary classic rubber. The learning standard for generations of table tennis players.",
+          "pros": [
+            "Coaching-grade rubber used worldwide for decades",
+            "Non-tensor build forces clean technique - excellent for development",
+            "Long lifespan thanks to non-boosted sponge",
+            "Predictable, linear feel ideal for stroke building"
+          ],
+          "cons": [
+            "Non-tensor speed feels dated against modern ESN sheets",
+            "Spin rating 8.0 trails contemporary loop-oriented rubbers",
+            "Less arc on loops vs tensors - harder to land off-table"
+          ]
         },
         {
           "id": "tt_rb04",
@@ -308,14 +769,37 @@
           "brand": "Butterfly",
           "type": "Tensor Rubber",
           "level": "intermediate",
-          "specs": {"sponge_thickness": "2.1mm", "speed": 8.5, "spin": 8.5, "control": 7.5, "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 2500, "max": 3500}},
+          "specs": {
+            "sponge_thickness": "2.1mm",
+            "speed": 8.5,
+            "spin": 8.5,
+            "control": 7.5,
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Rozena",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+rozena"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Butterfly's best intermediate rubber. Spring Sponge technology for excellent all-round play."
+          "image_search_failed": true,
+          "description": "Butterfly's best intermediate rubber. Spring Sponge technology for excellent all-round play.",
+          "pros": [
+            "Spring Sponge gives Tenergy-like feel at half the price",
+            "Lightweight sheet (~45g cut) easy on arm and blade",
+            "Forgiving for intermediates building modern loop technique",
+            "Genuine Butterfly QC and durability"
+          ],
+          "cons": [
+            "Speed 8.5 ceiling falls short of true high-end tensors",
+            "Stamina rubber wears faster than tour-grade Tenergy",
+            "Premium Butterfly markup vs equivalent ESN tensors"
+          ]
         },
         {
           "id": "tt_rb05",
@@ -323,14 +807,37 @@
           "brand": "Xiom",
           "type": "Tensor Rubber",
           "level": "intermediate",
-          "specs": {"sponge_thickness": "2.0mm", "speed": 8.0, "spin": 9.0, "control": 8.0, "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 2000, "max": 3000}},
+          "specs": {
+            "sponge_thickness": "2.0mm",
+            "speed": 8.0,
+            "spin": 9.0,
+            "control": 8.0,
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Xiom+Vega+Europe",
             "flipkart": "https://www.flipkart.com/search?q=xiom+vega+europe"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Excellent spin-oriented rubber. Forgiving sponge with great arc. Popular among intermediate players."
+          "image_search_failed": true,
+          "description": "Excellent spin-oriented rubber. Forgiving sponge with great arc. Popular among intermediate players.",
+          "pros": [
+            "Soft 45-degree sponge produces big spinny arcs on loops",
+            "Spin 9.0 + control 8.0 is one of the best ratios at price",
+            "Long-running ESN-made design with proven consistency",
+            "Particularly forgiving for backhand looping"
+          ],
+          "cons": [
+            "Soft sponge bottoms out on flat smashes",
+            "Lower speed makes it weak for over-the-table counters",
+            "Easily confused with Vega Pro/Asia variants when buying"
+          ]
         },
         {
           "id": "tt_rb06",
@@ -338,14 +845,38 @@
           "brand": "Butterfly",
           "type": "High-performance Tensor",
           "level": "advanced",
-          "specs": {"sponge_thickness": "2.1mm", "speed": 9.5, "spin": 10.0, "control": 6.5, "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 5000, "max": 7000}},
+          "specs": {
+            "sponge_thickness": "2.1mm",
+            "speed": 9.5,
+            "spin": 10.0,
+            "control": 6.5,
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5000,
+              "max": 7000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Tenergy+05",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+tenergy+05"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "The benchmark high-performance rubber. Incredible spin and speed for advanced players."
+          "image_search_failed": true,
+          "description": "The benchmark high-performance rubber. Incredible spin and speed for advanced players.",
+          "pros": [
+            "Industry benchmark - the rubber every other tensor is judged against",
+            "Spring Sponge + 36-degree top sheet gives unmatched loop arc",
+            "Used by world-tour pros across multiple eras",
+            "Exceptionally consistent batch-to-batch QC"
+          ],
+          "cons": [
+            "Premium pricing (Rs 5k-7k) is steep for a single rubber",
+            "Wears out within 3-4 months at competitive volume",
+            "Massive counterfeit market on Indian e-commerce",
+            "Demands strong stroke technique - punishing on weak contact"
+          ]
         },
         {
           "id": "tt_rb07",
@@ -353,14 +884,38 @@
           "brand": "Butterfly",
           "type": "Premium Tensor",
           "level": "advanced",
-          "specs": {"sponge_thickness": "2.1mm", "speed": 10.0, "spin": 10.0, "control": 6.0, "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 7000, "max": 9500}},
+          "specs": {
+            "sponge_thickness": "2.1mm",
+            "speed": 10.0,
+            "spin": 10.0,
+            "control": 6.0,
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7000,
+              "max": 9500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Dignics+05",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+dignics+05"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Butterfly's flagship rubber. Ultimate speed and spin for professional play."
+          "image_search_failed": true,
+          "description": "Butterfly's flagship rubber. Ultimate speed and spin for professional play.",
+          "pros": [
+            "Spring Sponge X technology adds 10-15% durability over Tenergy",
+            "Maximum 10.0 speed and spin for elite-level play",
+            "Harder feel rewards confident pro-level swings",
+            "Better high-throw arc than Tenergy 05 on power loops"
+          ],
+          "cons": [
+            "Rs 7k-9.5k for one rubber - hardest to justify in the lineup",
+            "Control 6.0 is unforgiving on touch and short play",
+            "Overkill for anything below national/state-level competition",
+            "Heavy fakes problem in the Indian market"
+          ]
         },
         {
           "id": "tt_rb08",
@@ -368,8 +923,24 @@
           "brand": "Tibhar",
           "type": "High-performance Tensor",
           "level": "advanced",
-          "specs": {"sponge_thickness": "2.1mm", "speed": 9.5, "spin": 9.5, "control": 7.0, "hardness": "47.5 degrees", "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 4500, "max": 6000}, "USD": {"min": 58, "max": 77}},
+          "specs": {
+            "sponge_thickness": "2.1mm",
+            "speed": 9.5,
+            "spin": 9.5,
+            "control": 7.0,
+            "hardness": "47.5 degrees",
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4500,
+              "max": 6000
+            },
+            "USD": {
+              "min": 58,
+              "max": 77
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tibhar+Evolution+MX-P",
             "flipkart": "https://www.flipkart.com/search?q=tibhar+evolution+mx-p",
@@ -380,7 +951,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71w6Y9vQaML._SL1500_.jpg",
-          "description": "Tibhar's best-selling high-end rubber. A direct Tenergy 05 rival with outstanding spin and a crisp feel. Hugely popular in European top leagues."
+          "image_search_failed": true,
+          "description": "Tibhar's best-selling high-end rubber. A direct Tenergy 05 rival with outstanding spin and a crisp feel. Hugely popular in European top leagues.",
+          "pros": [
+            "47.5 hardness gives crisp, direct feedback on every contact",
+            "ESN-made tensor with Tenergy-rivalling spin at lower price",
+            "Top choice in European Bundesliga rosters",
+            "Better counter-loop speed than Tenergy 05"
+          ],
+          "cons": [
+            "Hard sponge demands strong, fast strokes",
+            "Less forgiving on the backhand than softer ESN sheets",
+            "Sponge stiffens noticeably as it ages over 6 months"
+          ]
         },
         {
           "id": "tt_rb09",
@@ -388,8 +971,24 @@
           "brand": "Andro",
           "type": "High-performance Tensor",
           "level": "advanced",
-          "specs": {"sponge_thickness": "2.0mm", "speed": 9.3, "spin": 9.7, "control": 7.2, "hardness": "47 degrees", "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 4200, "max": 5800}, "USD": {"min": 54, "max": 74}},
+          "specs": {
+            "sponge_thickness": "2.0mm",
+            "speed": 9.3,
+            "spin": 9.7,
+            "control": 7.2,
+            "hardness": "47 degrees",
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4200,
+              "max": 5800
+            },
+            "USD": {
+              "min": 54,
+              "max": 74
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Andro+Rasanter+R47",
             "flipkart": "https://www.flipkart.com/search?q=andro+rasanter+r47",
@@ -400,7 +999,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71x7YavQbML._SL1500_.jpg",
-          "description": "Andro's spin-monster tensor with Energy Cell sponge. Huge arcs and dwell time, favored by modern loopers for its forgiving power."
+          "image_search_failed": true,
+          "description": "Andro's spin-monster tensor with Energy Cell sponge. Huge arcs and dwell time, favored by modern loopers for its forgiving power.",
+          "pros": [
+            "Energy Cell sponge produces massive loop arcs and dwell",
+            "9.7 spin paired with 7.2 control is a forgiving combo",
+            "Modern looping rubber tuned for over-the-table topspin",
+            "Slightly softer than MX-P - easier to brush-loop"
+          ],
+          "cons": [
+            "47-degree sponge still demands intermediate-plus technique",
+            "Energy Cell ages and softens within ~5 months heavy use",
+            "Andro brand has thin Indian retail footprint"
+          ]
         },
         {
           "id": "tt_rb10",
@@ -408,8 +1019,24 @@
           "brand": "Andro",
           "type": "Tensor Rubber",
           "level": "intermediate",
-          "specs": {"sponge_thickness": "2.1mm", "speed": 8.5, "spin": 9.2, "control": 8.0, "hardness": "45 degrees", "surface": "Inverted pimples (grippy)"},
-          "price_ranges": {"INR": {"min": 2800, "max": 3800}, "USD": {"min": 36, "max": 49}},
+          "specs": {
+            "sponge_thickness": "2.1mm",
+            "speed": 8.5,
+            "spin": 9.2,
+            "control": 8.0,
+            "hardness": "45 degrees",
+            "surface": "Inverted pimples (grippy)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2800,
+              "max": 3800
+            },
+            "USD": {
+              "min": 36,
+              "max": 49
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Andro+Hexer+Grip",
             "flipkart": "https://www.flipkart.com/search?q=andro+hexer+grip",
@@ -420,7 +1047,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71y8YbvQcML._SL1500_.jpg",
-          "description": "Ultra-grippy tensor with hexagonal sponge structure. Superb for short-game control and loop-drive play. Great intermediate upgrade from classic rubbers."
+          "image_search_failed": true,
+          "description": "Ultra-grippy tensor with hexagonal sponge structure. Superb for short-game control and loop-drive play. Great intermediate upgrade from classic rubbers.",
+          "pros": [
+            "Hexagonal sponge cells balance dwell and rebound nicely",
+            "Grippier topsheet than most tensors - excellent for opening loops",
+            "Strong all-round 8.5/9.2/8.0 spec for intermediates",
+            "Clear upgrade path from Mark V or Mantra M"
+          ],
+          "cons": [
+            "Lacks the explosive top-end of MX-P or R47",
+            "Hexagonal sponge claims are more marketing than measurable",
+            "Pricier than Vega Europe with comparable feel"
+          ]
         },
         {
           "id": "tt_rb11",
@@ -428,8 +1067,24 @@
           "brand": "Donic",
           "type": "High-performance Tensor",
           "level": "advanced",
-          "specs": {"sponge_thickness": "2.0mm", "speed": 9.5, "spin": 9.5, "control": 7.0, "hardness": "47.5 degrees", "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 4000, "max": 5500}, "USD": {"min": 51, "max": 71}},
+          "specs": {
+            "sponge_thickness": "2.0mm",
+            "speed": 9.5,
+            "spin": 9.5,
+            "control": 7.0,
+            "hardness": "47.5 degrees",
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4000,
+              "max": 5500
+            },
+            "USD": {
+              "min": 51,
+              "max": 71
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Donic+Bluefire+M1",
             "flipkart": "https://www.flipkart.com/search?q=donic+bluefire+m1",
@@ -440,7 +1095,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71z9YcvQdML._SL1500_.jpg",
-          "description": "Donic's iconic blue-sponge tensor. Explosive power-loop rubber with a crisp throw angle. Used by top German league players."
+          "image_search_failed": true,
+          "description": "Donic's iconic blue-sponge tensor. Explosive power-loop rubber with a crisp throw angle. Used by top German league players.",
+          "pros": [
+            "Iconic blue sponge - explosive on power loops",
+            "Crisp lower throw angle suits flatter, faster looping styles",
+            "German Bundesliga proven across multiple seasons",
+            "9.5/9.5 spec at sub-Rs 5500 is competitive value"
+          ],
+          "cons": [
+            "Lower throw angle is unforgiving over the net on opening loops",
+            "Hard sponge tires the playing arm in long sessions",
+            "Donic has less brand pull than Tibhar/Andro at this tier"
+          ]
         },
         {
           "id": "tt_rb12",
@@ -448,8 +1115,24 @@
           "brand": "Victas",
           "type": "Premium Tensor",
           "level": "advanced",
-          "specs": {"sponge_thickness": "2.0mm", "speed": 9.8, "spin": 9.6, "control": 6.5, "hardness": "50 degrees", "surface": "Inverted pimples"},
-          "price_ranges": {"INR": {"min": 5500, "max": 7000}, "USD": {"min": 71, "max": 90}},
+          "specs": {
+            "sponge_thickness": "2.0mm",
+            "speed": 9.8,
+            "spin": 9.6,
+            "control": 6.5,
+            "hardness": "50 degrees",
+            "surface": "Inverted pimples"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5500,
+              "max": 7000
+            },
+            "USD": {
+              "min": 71,
+              "max": 90
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Victas+V15+Extra",
             "flipkart": "https://www.flipkart.com/search?q=victas+v15+extra",
@@ -460,7 +1143,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71aAYdvQeML._SL1500_.jpg",
-          "description": "Hard Japanese-made tensor loved by Chinese and Japanese pros. Extreme power on full strokes with Euro-tensor feel. Requires confident technique."
+          "image_search_failed": true,
+          "description": "Hard Japanese-made tensor loved by Chinese and Japanese pros. Extreme power on full strokes with Euro-tensor feel. Requires confident technique.",
+          "pros": [
+            "50-degree hardness - bridges Japanese tensor and Chinese tacky feel",
+            "Used by top Chinese national players (Xu Xin) - tour-proven",
+            "Massive power on full-stroke loops and counters",
+            "Crisp Japanese-made build quality"
+          ],
+          "cons": [
+            "50-degree sponge too hard for anyone below advanced level",
+            "Control 6.5 is unforgiving - misses fly off the table",
+            "Premium price hard to justify under intermediate",
+            "Very firm feel can feel dead on slow touch shots"
+          ]
         },
         {
           "id": "tt_rb13",
@@ -468,8 +1164,24 @@
           "brand": "Friendship 729",
           "type": "Chinese Tacky Rubber",
           "level": "beginner",
-          "specs": {"sponge_thickness": "2.1mm", "speed": 7.5, "spin": 9.5, "control": 8.0, "hardness": "42 degrees", "surface": "Inverted pimples (tacky)"},
-          "price_ranges": {"INR": {"min": 500, "max": 900}, "USD": {"min": 7, "max": 12}},
+          "specs": {
+            "sponge_thickness": "2.1mm",
+            "speed": 7.5,
+            "spin": 9.5,
+            "control": 8.0,
+            "hardness": "42 degrees",
+            "surface": "Inverted pimples (tacky)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 900
+            },
+            "USD": {
+              "min": 7,
+              "max": 12
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Friendship+729+GeoSpin",
             "flipkart": "https://www.flipkart.com/search?q=friendship+729+geospin",
@@ -480,7 +1192,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71bBYevQfML._SL1500_.jpg",
-          "description": "Legendary budget Chinese rubber. Exceptionally tacky top sheet with great service and loop spin. Best price-to-performance rubber on the market."
+          "image_search_failed": true,
+          "description": "Legendary budget Chinese rubber. Exceptionally tacky top sheet with great service and loop spin. Best price-to-performance rubber on the market.",
+          "pros": [
+            "Sub-Rs 1000 with 9.5 spin - unbeatable price-to-performance",
+            "Tacky topsheet rivals Hurricane 3 for serve and short play",
+            "Softer 42-degree sponge is friendlier than Hurricane sponges",
+            "Great training rubber for learning Chinese-style spin"
+          ],
+          "cons": [
+            "Topsheet tackiness fades in ~6-8 weeks of competitive play",
+            "Lower speed ceiling vs Hurricane 3 Neo",
+            "QC variation between sheets is noticeable"
+          ]
         },
         {
           "id": "tt_rb14",
@@ -488,8 +1212,24 @@
           "brand": "DHS",
           "type": "Pro Chinese Tacky Rubber",
           "level": "advanced",
-          "specs": {"sponge_thickness": "2.15mm", "speed": 9.0, "spin": 10.0, "control": 7.5, "hardness": "40 degrees (National blue)", "surface": "Inverted pimples (tacky)"},
-          "price_ranges": {"INR": {"min": 6500, "max": 9000}, "USD": {"min": 83, "max": 115}},
+          "specs": {
+            "sponge_thickness": "2.15mm",
+            "speed": 9.0,
+            "spin": 10.0,
+            "control": 7.5,
+            "hardness": "40 degrees (National blue)",
+            "surface": "Inverted pimples (tacky)"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6500,
+              "max": 9000
+            },
+            "USD": {
+              "min": 83,
+              "max": 115
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+3+National+Blue",
             "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+3+national+blue",
@@ -500,7 +1240,20 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71cCYfvQgML._SL1500_.jpg",
-          "description": "The rubber used by Ma Long and Fan Zhendong. Factory-tuned professional-grade Hurricane 3 with blue sponge. Unmatched spin for Chinese-style loopers."
+          "image_search_failed": true,
+          "description": "The rubber used by Ma Long and Fan Zhendong. Factory-tuned professional-grade Hurricane 3 with blue sponge. Unmatched spin for Chinese-style loopers.",
+          "pros": [
+            "10.0 spin - the literal benchmark for tacky pro rubber",
+            "National blue sponge is factory-tuned beyond commercial Hurricane 3",
+            "Used by Ma Long and Fan Zhendong on the FH",
+            "Outstanding for heavy short underspin serves"
+          ],
+          "cons": [
+            "Heavy weight (~70g cut) - usually only used on FH",
+            "Demands extreme racket-head speed to unlock the catapult",
+            "Counterfeits flood the market - genuine sourcing is hard",
+            "Factory tuning fades as the booster effect dries out"
+          ]
         }
       ]
     },
@@ -513,14 +1266,35 @@
           "brand": "GKI",
           "type": "3-Star Ball",
           "level": "beginner",
-          "specs": {"star_rating": 3, "material": "ABS Poly", "diameter": "40mm"},
-          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "specs": {
+            "star_rating": 3,
+            "material": "ABS Poly",
+            "diameter": "40mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 200,
+              "max": 400
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=GKI+3+star+table+tennis+ball",
             "flipkart": "https://www.flipkart.com/search?q=gki+3+star+table+tennis+ball"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Affordable Indian brand 3-star balls. Good for recreational play and practice."
+          "image_search_failed": true,
+          "description": "Affordable Indian brand 3-star balls. Good for recreational play and practice.",
+          "pros": [
+            "Cheapest 3-star option on the Indian market",
+            "Widely available across local sports stores",
+            "Adequate roundness for casual recreational play",
+            "Best for multi-ball training where balls get lost frequently"
+          ],
+          "cons": [
+            "Bounce inconsistency between balls in the same pack",
+            "Cracks easily under hard topspin loops",
+            "Not ITTF-approved - cannot be used in sanctioned matches"
+          ]
         },
         {
           "id": "tt_ba02",
@@ -528,14 +1302,35 @@
           "brand": "Stag",
           "type": "3-Star Ball",
           "level": "beginner",
-          "specs": {"star_rating": 3, "material": "ABS Poly", "diameter": "40+mm"},
-          "price_ranges": {"INR": {"min": 250, "max": 450}},
+          "specs": {
+            "star_rating": 3,
+            "material": "ABS Poly",
+            "diameter": "40+mm"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 250,
+              "max": 450
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Stag+3+star+table+tennis+ball",
             "flipkart": "https://www.flipkart.com/search?q=stag+3+star+table+tennis+ball"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Indian brand tournament balls. Consistent bounce for regular practice."
+          "image_search_failed": true,
+          "description": "Indian brand tournament balls. Consistent bounce for regular practice.",
+          "pros": [
+            "Better roundness than GKI in the same price band",
+            "ABS Poly construction is more durable than older celluloid",
+            "Good entry-level practice ball for clubs/schools",
+            "Pan-India retail availability"
+          ],
+          "cons": [
+            "Not ITTF-approved despite the 3-star rating",
+            "Inconsistent weight across the pack",
+            "Loses pace and bite within ~2 weeks of heavy use"
+          ]
         },
         {
           "id": "tt_ba03",
@@ -543,14 +1338,36 @@
           "brand": "DHS",
           "type": "3-Star ITTF Approved",
           "level": "intermediate",
-          "specs": {"star_rating": 3, "material": "ABS Poly 40+", "diameter": "40+mm", "ITTF_approved": true},
-          "price_ranges": {"INR": {"min": 500, "max": 800}},
+          "specs": {
+            "star_rating": 3,
+            "material": "ABS Poly 40+",
+            "diameter": "40+mm",
+            "ITTF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=DHS+D40+3+star+table+tennis",
             "flipkart": "https://www.flipkart.com/search?q=dhs+d40+3+star"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "ITTF approved match ball. Consistent bounce and excellent roundness."
+          "image_search_failed": true,
+          "description": "ITTF approved match ball. Consistent bounce and excellent roundness.",
+          "pros": [
+            "ITTF-approved - usable in sanctioned tournaments",
+            "DHS QC delivers consistent bounce across the pack",
+            "Used at multiple ITTF World Tour events",
+            "Best value-for-money tournament-grade ball"
+          ],
+          "cons": [
+            "Seamed ABS Poly cracks faster than seamless variants",
+            "Pricier than club-tier balls without huge play difference for amateurs",
+            "Some batches of newer DHS DJ40+ feel softer/harder inconsistently"
+          ]
         },
         {
           "id": "tt_ba04",
@@ -558,14 +1375,36 @@
           "brand": "Nittaku",
           "type": "3-Star ITTF Approved",
           "level": "intermediate",
-          "specs": {"star_rating": 3, "material": "Poly 40+", "diameter": "40+mm", "ITTF_approved": true},
-          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "specs": {
+            "star_rating": 3,
+            "material": "Poly 40+",
+            "diameter": "40+mm",
+            "ITTF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 1000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nittaku+3+star+table+tennis+ball",
             "flipkart": "https://www.flipkart.com/search?q=nittaku+3+star+table+tennis"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Premium Japanese match ball. Excellent consistency for tournament play."
+          "image_search_failed": true,
+          "description": "Premium Japanese match ball. Excellent consistency for tournament play.",
+          "pros": [
+            "Premier 3-star reference ball used in Japanese top leagues",
+            "Outstanding sphericity and seam consistency",
+            "Generates clean, predictable spin response from rubbers",
+            "Long lifespan compared to most ABS Poly balls"
+          ],
+          "cons": [
+            "Pack-of-3 pricing makes it expensive per ball",
+            "Limited stock in Indian retail - often import-only",
+            "Premium price hard to justify for daily training use"
+          ]
         },
         {
           "id": "tt_ba05",
@@ -573,14 +1412,36 @@
           "brand": "Butterfly",
           "type": "3-Star ITTF Approved",
           "level": "advanced",
-          "specs": {"star_rating": 3, "material": "Poly 40+", "diameter": "40+mm", "ITTF_approved": true},
-          "price_ranges": {"INR": {"min": 800, "max": 1200}},
+          "specs": {
+            "star_rating": 3,
+            "material": "Poly 40+",
+            "diameter": "40+mm",
+            "ITTF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 800,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+G40+3+star",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+g40+3+star"
           },
           "image": "https://m.media-amazon.com/images/I/71Y7u0FWKoL._SL1500_.jpg",
-          "description": "Official WTT match ball. The highest quality ball for professional play."
+          "image_search_failed": true,
+          "description": "Official WTT match ball. The highest quality ball for professional play.",
+          "pros": [
+            "Official WTT and ITTF World Championships ball",
+            "Consistent hardness and bounce - tournament reference standard",
+            "Generates strong, predictable response from premium rubbers",
+            "Supreme roundness and seam quality"
+          ],
+          "cons": [
+            "Highest per-ball cost of any common 3-star option",
+            "Wears noticeably faster than DHS D40+",
+            "Overkill for non-tournament practice sessions"
+          ]
         },
         {
           "id": "tt_ba06",
@@ -588,8 +1449,22 @@
           "brand": "Sanwei",
           "type": "3-Star ITTF Approved",
           "level": "intermediate",
-          "specs": {"star_rating": 3, "material": "ABS Poly 40+ (seamless)", "diameter": "40+mm", "ITTF_approved": true},
-          "price_ranges": {"INR": {"min": 450, "max": 750}, "USD": {"min": 6, "max": 10}},
+          "specs": {
+            "star_rating": 3,
+            "material": "ABS Poly 40+ (seamless)",
+            "diameter": "40+mm",
+            "ITTF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 450,
+              "max": 750
+            },
+            "USD": {
+              "min": 6,
+              "max": 10
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Sanwei+Target+Pro+40+3+star",
             "flipkart": "https://www.flipkart.com/search?q=sanwei+target+pro+40+3+star",
@@ -600,7 +1475,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71dDYgvQhML._SL1500_.jpg",
-          "description": "Popular Chinese training ball loved by hardhitters. Hard feel with consistent bounce. Excellent durability for long practice sessions."
+          "image_search_failed": true,
+          "description": "Popular Chinese training ball loved by hardhitters. Hard feel with consistent bounce. Excellent durability for long practice sessions.",
+          "pros": [
+            "Seamless build means no seam-related bounce inconsistency",
+            "Outstanding durability for long multi-ball sessions",
+            "ITTF-approved at sub-Rs 750 for a 6-pack",
+            "Hard, lively feel suits Chinese-style hardhitters"
+          ],
+          "cons": [
+            "Hard feel can over-amplify spin off tacky rubbers",
+            "ITTF-approved but limited Indian retail availability",
+            "Occasionally inconsistent batch feel between production runs"
+          ]
         },
         {
           "id": "tt_ba07",
@@ -608,8 +1495,22 @@
           "brand": "Tibhar",
           "type": "3-Star ITTF Approved",
           "level": "intermediate",
-          "specs": {"star_rating": 3, "material": "ABS Poly 40+ (seamless)", "diameter": "40+mm", "ITTF_approved": true},
-          "price_ranges": {"INR": {"min": 700, "max": 1100}, "USD": {"min": 9, "max": 14}},
+          "specs": {
+            "star_rating": 3,
+            "material": "ABS Poly 40+ (seamless)",
+            "diameter": "40+mm",
+            "ITTF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 700,
+              "max": 1100
+            },
+            "USD": {
+              "min": 9,
+              "max": 14
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tibhar+3+Star+SL+40+ball",
             "flipkart": "https://www.flipkart.com/search?q=tibhar+3+star+sl+40",
@@ -620,7 +1521,19 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71eEYhvQiML._SL1500_.jpg",
-          "description": "German-engineered seamless 3-star ball. Crisp bounce with excellent round consistency. A top choice for club-level tournaments."
+          "image_search_failed": true,
+          "description": "German-engineered seamless 3-star ball. Crisp bounce with excellent round consistency. A top choice for club-level tournaments.",
+          "pros": [
+            "Seamless German engineering - excellent roundness",
+            "Crisp predictable bounce for club tournaments",
+            "Better consistency than most seamed ABS balls",
+            "Strong durability for the price tier"
+          ],
+          "cons": [
+            "Limited Indian distribution outside specialist TT retailers",
+            "Pricier than DHS D40+ without dramatic play difference",
+            "Less brand recognition vs DHS/Butterfly at events"
+          ]
         }
       ]
     },
@@ -634,8 +1547,12 @@
           "model": "Team School",
           "type": "Ready-Made Racket",
           "level": "beginner",
-          "skill_levels": ["Beginner"],
-          "play_styles": ["All-round"],
+          "skill_levels": [
+            "Beginner"
+          ],
+          "play_styles": [
+            "All-round"
+          ],
           "specs": {
             "weight": "170g",
             "blade_type": "5-ply wood",
@@ -646,18 +1563,43 @@
             "spin_rating": 4.5,
             "control_rating": 9.0
           },
-          "price_ranges": {"INR": {"min": 500, "max": 1000}},
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 1000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=JOOLA+Team+School+table+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=joola+team+school+table+tennis"
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=JOOLA+Team+School+table+tennis+racket", "price": "~₹700"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=joola+team+school+table+tennis", "price": "~₹650"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=JOOLA+Team+School+table+tennis+racket",
+              "price": "~Rs 700"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=joola+team+school+table+tennis",
+              "price": "~Rs 650"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/61XB8YJ3OuL._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "The cheapest quality racket from a reputable brand. Perfect for schools, clubs, and absolute beginners who want a proper ITTF-spec racket without investing in custom setup.",
-          "description": "Budget-friendly JOOLA ready-made with decent rubber for learning basic strokes. Ideal for recreational and school use."
+          "description": "Budget-friendly JOOLA ready-made with decent rubber for learning basic strokes. Ideal for recreational and school use.",
+          "pros": [
+            "Lowest priced racket from a major German brand",
+            "9.0 control rating is ideal for first-time players",
+            "Lightweight 170g works for kids and juniors",
+            "ITTF-spec geometry teaches proper technique"
+          ],
+          "cons": [
+            "1.5mm sponge limits any aggressive looping development",
+            "Speed and spin ratings (4.0/4.5) cap usefulness within months",
+            "Not suitable beyond basic recreational play"
+          ]
         },
         {
           "id": "tt_rm02",
@@ -666,8 +1608,12 @@
           "model": "Stayer 1200",
           "type": "Ready-Made Racket",
           "level": "beginner",
-          "skill_levels": ["Beginner"],
-          "play_styles": ["All-round"],
+          "skill_levels": [
+            "Beginner"
+          ],
+          "play_styles": [
+            "All-round"
+          ],
           "specs": {
             "weight": "175g",
             "blade_type": "5-ply wood",
@@ -678,18 +1624,43 @@
             "spin_rating": 5.0,
             "control_rating": 8.5
           },
-          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "price_ranges": {
+            "INR": {
+              "min": 800,
+              "max": 1500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Stayer+1200+table+tennis",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+stayer+1200"
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Butterfly+Stayer+1200+table+tennis", "price": "~₹1100"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=butterfly+stayer+1200", "price": "~₹1000"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=Butterfly+Stayer+1200+table+tennis",
+              "price": "~Rs 1100"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=butterfly+stayer+1200",
+              "price": "~Rs 1000"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/61yB8YJ3OuL._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "Entry-level Butterfly quality. The Yuki rubber provides good control for learning proper technique. A reliable first racket from the world's top TT brand.",
-          "description": "Affordable Butterfly ready-made for beginners. Good control and feel to build fundamental strokes."
+          "description": "Affordable Butterfly ready-made for beginners. Good control and feel to build fundamental strokes.",
+          "pros": [
+            "Genuine Butterfly QC at a beginner price",
+            "Yuki rubber delivers a softer, more forgiving touch than generic stock",
+            "Good entry into the Butterfly product family",
+            "Reliable bounce consistency for stroke practice"
+          ],
+          "cons": [
+            "1.5mm sponge limits spin generation",
+            "Outgrown quickly once a player starts looping",
+            "Pricier than the JOOLA Team School with similar performance"
+          ]
         },
         {
           "id": "tt_rm03",
@@ -698,8 +1669,13 @@
           "model": "Timo Boll 1000",
           "type": "Ready-Made Racket",
           "level": "beginner",
-          "skill_levels": ["Beginner", "Beginner+"],
-          "play_styles": ["All-round"],
+          "skill_levels": [
+            "Beginner",
+            "Beginner+"
+          ],
+          "play_styles": [
+            "All-round"
+          ],
           "specs": {
             "weight": "180g",
             "blade_type": "5-ply wood",
@@ -710,19 +1686,48 @@
             "spin_rating": 6.0,
             "control_rating": 8.0
           },
-          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "price_ranges": {
+            "INR": {
+              "min": 1500,
+              "max": 2500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Butterfly+Timo+Boll+1000",
             "flipkart": "https://www.flipkart.com/search?q=butterfly+timo+boll+1000"
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Butterfly+Timo+Boll+1000", "price": "~₹1800"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=butterfly+timo+boll+1000", "price": "~₹1700"},
-            {"name": "TableTennisStore", "url": "https://www.tabletennisstore.in/search?q=timo+boll+1000", "price": "~₹1900"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=Butterfly+Timo+Boll+1000",
+              "price": "~Rs 1800"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=butterfly+timo+boll+1000",
+              "price": "~Rs 1700"
+            },
+            {
+              "name": "TableTennisStore",
+              "url": "https://www.tabletennisstore.in/search?q=timo+boll+1000",
+              "price": "~Rs 1900"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/71XB8YJ3OuL._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "Endorsed by Timo Boll, one of Europe's greatest players. Addoy rubber offers noticeably better spin than cheaper models while keeping control forgiving. Best value in the Butterfly ready-made lineup.",
-          "description": "Mid-range Butterfly ready-made with Addoy rubber. Good balance of speed, spin, and control for progressing beginners."
+          "description": "Mid-range Butterfly ready-made with Addoy rubber. Good balance of speed, spin, and control for progressing beginners.",
+          "pros": [
+            "Addoy 1.7mm sponge enables real loop development",
+            "Endorsed by world-tour veteran Timo Boll",
+            "Best balance of speed/spin/control in Butterfly entry lineup",
+            "Solid pre-tournament racket for school/college events"
+          ],
+          "cons": [
+            "Heavier 180g build can fatigue younger players",
+            "Pre-glued setup limits future rubber experimentation",
+            "Performance ceiling well below custom intermediate setups"
+          ]
         },
         {
           "id": "tt_rm04",
@@ -731,8 +1736,13 @@
           "model": "Hurricane Wang",
           "type": "Ready-Made Racket",
           "level": "intermediate",
-          "skill_levels": ["Beginner+", "Intermediate"],
-          "play_styles": ["Offensive"],
+          "skill_levels": [
+            "Beginner+",
+            "Intermediate"
+          ],
+          "play_styles": [
+            "Offensive"
+          ],
           "specs": {
             "weight": "185g",
             "blade_type": "7-ply wood",
@@ -743,18 +1753,44 @@
             "spin_rating": 8.0,
             "control_rating": 6.5
           },
-          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=DHS+Hurricane+Wang+table+tennis",
             "flipkart": "https://www.flipkart.com/search?q=dhs+hurricane+wang"
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=DHS+Hurricane+Wang+table+tennis", "price": "~₹2500"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=dhs+hurricane+wang", "price": "~₹2400"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=DHS+Hurricane+Wang+table+tennis",
+              "price": "~Rs 2500"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=dhs+hurricane+wang",
+              "price": "~Rs 2400"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/71d7yG-mBBL._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "Features DHS Hurricane rubber known for incredible spin. 7-ply blade gives more power than 5-ply beginner rackets. The best ready-made for players who want to develop an attacking Chinese-style game.",
-          "description": "Offensive-oriented DHS ready-made with Hurricane rubber. Excellent spin potential for intermediate players transitioning to aggressive play."
+          "description": "Offensive-oriented DHS ready-made with Hurricane rubber. Excellent spin potential for intermediate players transitioning to aggressive play.",
+          "pros": [
+            "Genuine Hurricane tacky rubber on a ready-made - very rare",
+            "7-ply blade with 2mm sponge teaches Chinese-style attack early",
+            "8.0 spin rating is the best in the ready-made category",
+            "Strong upgrade path from JOOLA/Butterfly entry rackets"
+          ],
+          "cons": [
+            "185g head-heavy build is taxing for smaller frames",
+            "6.5 control will punish technical errors",
+            "Tacky rubber demands faster swings than typical ready-made buyers possess",
+            "Lower-grade Hurricane sheet vs the standalone Hurricane 3 Neo"
+          ]
         },
         {
           "id": "tt_rm05",
@@ -763,8 +1799,14 @@
           "model": "Torch",
           "type": "Ready-Made Racket",
           "level": "intermediate",
-          "skill_levels": ["Beginner+", "Intermediate"],
-          "play_styles": ["All-round", "Offensive"],
+          "skill_levels": [
+            "Beginner+",
+            "Intermediate"
+          ],
+          "play_styles": [
+            "All-round",
+            "Offensive"
+          ],
           "specs": {
             "weight": "178g",
             "blade_type": "5+2 ply (wood + carbon)",
@@ -775,19 +1817,48 @@
             "spin_rating": 7.0,
             "control_rating": 7.0
           },
-          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 4000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Stiga+Torch+table+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=stiga+torch+table+tennis"
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Stiga+Torch+table+tennis+racket", "price": "~₹3200"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=stiga+torch+table+tennis", "price": "~₹3000"},
-            {"name": "TableTennisStore", "url": "https://www.tabletennisstore.in/search?q=stiga+torch", "price": "~₹3100"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=Stiga+Torch+table+tennis+racket",
+              "price": "~Rs 3200"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=stiga+torch+table+tennis",
+              "price": "~Rs 3000"
+            },
+            {
+              "name": "TableTennisStore",
+              "url": "https://www.tabletennisstore.in/search?q=stiga+torch",
+              "price": "~Rs 3100"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/71XB8YJ3OuL._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "One of the few ready-made rackets with carbon layers in the blade. Offers noticeably more speed and a crisper feel than pure wood rackets. Great stepping stone before investing in a custom setup.",
-          "description": "Carbon-enhanced Stiga ready-made with Triumph rubber. Faster than pure wood rackets, suitable for advancing players."
+          "description": "Carbon-enhanced Stiga ready-made with Triumph rubber. Faster than pure wood rackets, suitable for advancing players.",
+          "pros": [
+            "Rare carbon-blade construction in the ready-made segment",
+            "Crisper, faster feel than all-wood ready-mades",
+            "178g balance is comfortable for both genders",
+            "Triumph rubber covers all-round and offensive play"
+          ],
+          "cons": [
+            "Carbon blade with stock rubbers feels unbalanced - blade out-classes the rubber",
+            "Customisation impossible without ruining the carbon blade with re-gluing",
+            "Crowded Rs 3000+ price band with stronger custom alternatives"
+          ]
         },
         {
           "id": "tt_rm06",
@@ -796,8 +1867,12 @@
           "model": "Shake 1000",
           "type": "Ready-Made Racket",
           "level": "intermediate",
-          "skill_levels": ["Intermediate"],
-          "play_styles": ["All-round"],
+          "skill_levels": [
+            "Intermediate"
+          ],
+          "play_styles": [
+            "All-round"
+          ],
           "specs": {
             "weight": "180g",
             "blade_type": "5-ply wood (Japanese Hinoki outer)",
@@ -808,18 +1883,43 @@
             "spin_rating": 7.5,
             "control_rating": 7.5
           },
-          "price_ranges": {"INR": {"min": 3000, "max": 5000}},
+          "price_ranges": {
+            "INR": {
+              "min": 3000,
+              "max": 5000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nittaku+Shake+1000+table+tennis",
             "flipkart": "https://www.flipkart.com/search?q=nittaku+shake+1000"
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Nittaku+Shake+1000+table+tennis", "price": "~₹3800"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=nittaku+shake+1000", "price": "~₹3600"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=Nittaku+Shake+1000+table+tennis",
+              "price": "~Rs 3800"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=nittaku+shake+1000",
+              "price": "~Rs 3600"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/71XB8YJ3OuL._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "Premium Japanese craftsmanship from Nittaku. Hinoki outer ply gives a distinctive soft, tactile feel that helps with touch and placement shots. The best ready-made for players who value feel and control.",
-          "description": "Japanese-made Nittaku ready-made with Hinoki wood and Jammin rubber. Excellent feel and touch for all-round play."
+          "description": "Japanese-made Nittaku ready-made with Hinoki wood and Jammin rubber. Excellent feel and touch for all-round play.",
+          "pros": [
+            "Hinoki outer ply gives distinctive Japanese tactile feel",
+            "Best feel/touch in the ready-made category",
+            "Premium Japanese build quality and finishing",
+            "Spin 7.5 with control 7.5 - balanced spec for technical play"
+          ],
+          "cons": [
+            "Speed 6.5 is on the slower side for offensive players",
+            "Hinoki dents and scuffs more easily than Limba/Koto",
+            "Limited Indian retail availability - mostly specialty stores"
+          ]
         },
         {
           "id": "tt_rm07",
@@ -828,9 +1928,18 @@
           "model": "Pro XD",
           "type": "Ready-Made Racket",
           "level": "intermediate",
-          "skill_levels": ["Beginner+", "Intermediate"],
-          "play_styles": ["Offensive", "All-round"],
-          "recommended_for": ["Progressing club players", "Aggressive all-rounders"],
+          "skill_levels": [
+            "Beginner+",
+            "Intermediate"
+          ],
+          "play_styles": [
+            "Offensive",
+            "All-round"
+          ],
+          "recommended_for": [
+            "Progressing club players",
+            "Aggressive all-rounders"
+          ],
           "specs": {
             "weight": "182g",
             "blade_type": "5-ply wood",
@@ -841,7 +1950,16 @@
             "spin_rating": 7.5,
             "control_rating": 7.5
           },
-          "price_ranges": {"INR": {"min": 2200, "max": 3500}, "USD": {"min": 28, "max": 45}},
+          "price_ranges": {
+            "INR": {
+              "min": 2200,
+              "max": 3500
+            },
+            "USD": {
+              "min": 28,
+              "max": 45
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tibhar+Pro+XD+table+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=tibhar+pro+xd+table+tennis",
@@ -852,12 +1970,32 @@
             ]
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Tibhar+Pro+XD+table+tennis+racket", "price": "~Rs 2800"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=tibhar+pro+xd+table+tennis", "price": "~Rs 2700"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=Tibhar+Pro+XD+table+tennis+racket",
+              "price": "~Rs 2800"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=tibhar+pro+xd+table+tennis",
+              "price": "~Rs 2700"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/71fFYivQjML._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "Genuine Tibhar quality in a ready-made package. The 1Q rubber provides noticeably better spin than stock beginner rubbers, ideal for players developing looping technique.",
-          "description": "Tibhar's well-regarded intermediate ready-made. Balanced speed and spin suitable for club players progressing from beginner rackets."
+          "description": "Tibhar's well-regarded intermediate ready-made. Balanced speed and spin suitable for club players progressing from beginner rackets.",
+          "pros": [
+            "1Q rubber outperforms most stock ready-made rubbers for spin",
+            "Balanced 7.0/7.5/7.5 spec - excellent stepping-stone racket",
+            "Genuine Tibhar quality at sub-Rs 3500 price",
+            "Good for players preparing for first club tournaments"
+          ],
+          "cons": [
+            "Tibhar has limited Indian distribution vs Butterfly/DHS",
+            "Pre-glued setup blocks future rubber experimentation",
+            "Heavier 182g build can feel sluggish for juniors"
+          ]
         },
         {
           "id": "tt_rm08",
@@ -866,9 +2004,17 @@
           "model": "Waldner 3000",
           "type": "Ready-Made Racket",
           "level": "intermediate",
-          "skill_levels": ["Intermediate"],
-          "play_styles": ["All-round", "Offensive"],
-          "recommended_for": ["Club players", "Loopers"],
+          "skill_levels": [
+            "Intermediate"
+          ],
+          "play_styles": [
+            "All-round",
+            "Offensive"
+          ],
+          "recommended_for": [
+            "Club players",
+            "Loopers"
+          ],
           "specs": {
             "weight": "180g",
             "blade_type": "5-ply wood",
@@ -879,7 +2025,16 @@
             "spin_rating": 8.0,
             "control_rating": 7.0
           },
-          "price_ranges": {"INR": {"min": 3500, "max": 5500}, "USD": {"min": 45, "max": 71}},
+          "price_ranges": {
+            "INR": {
+              "min": 3500,
+              "max": 5500
+            },
+            "USD": {
+              "min": 45,
+              "max": 71
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Donic+Waldner+3000+table+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=donic+waldner+3000+table+tennis",
@@ -890,12 +2045,32 @@
             ]
           },
           "stores": [
-            {"name": "Amazon India", "url": "https://www.amazon.in/s?k=Donic+Waldner+3000+table+tennis+racket", "price": "~Rs 4200"},
-            {"name": "Flipkart", "url": "https://www.flipkart.com/search?q=donic+waldner+3000+table+tennis", "price": "~Rs 4000"}
+            {
+              "name": "Amazon India",
+              "url": "https://www.amazon.in/s?k=Donic+Waldner+3000+table+tennis+racket",
+              "price": "~Rs 4200"
+            },
+            {
+              "name": "Flipkart",
+              "url": "https://www.flipkart.com/search?q=donic+waldner+3000+table+tennis",
+              "price": "~Rs 4000"
+            }
           ],
           "image": "https://m.media-amazon.com/images/I/71gGYjvQkML._SL1500_.jpg",
+          "image_search_failed": true,
           "why_good": "Top-tier Donic ready-made signed by Waldner. Features Coppa rubber with genuine offensive characteristics. One of the highest-performance ready-made options before going custom.",
-          "description": "Premium Donic ready-made with Coppa rubber. Strong offensive feel for advanced intermediate players."
+          "description": "Premium Donic ready-made with Coppa rubber. Strong offensive feel for advanced intermediate players.",
+          "pros": [
+            "Coppa rubber delivers true offensive characteristics on a ready-made",
+            "5-star rating - among the highest in the ready-made category",
+            "Waldner endorsement and Donic build quality",
+            "8.0 spin spec rivals custom intermediate setups"
+          ],
+          "cons": [
+            "Rs 5500 ceiling brings it close to better custom-blade pricing",
+            "Donic has thinner Indian retail than Butterfly/DHS",
+            "Pre-glued construction is wasteful when rubbers wear out"
+          ]
         }
       ]
     }
