@@ -3,9 +3,11 @@ import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import SEO from "@/components/SEO";
+import DemoVideo from "@/components/DemoVideo";
+import TokenEconomyStrip from "@/components/TokenEconomyStrip";
 import {
   Zap, Target, Dumbbell, BarChart3, Play, ChevronRight,
-  Video, Sparkles, TrendingUp, Film, Upload, UserPlus,
+  Video, Sparkles, TrendingUp, Coins, Upload, UserPlus,
   ArrowRight, BookOpen, Star, Users, Clock
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -15,9 +17,9 @@ const FEATURES = [
   { icon: Video, title: "AI Video Analysis", desc: "Upload any match or practice video and get instant, frame-by-frame technique feedback powered by computer vision.", color: "text-lime-400", bg: "bg-lime-400/10" },
   { icon: Dumbbell, title: "Smart Training Plans", desc: "Personalized weekly training programs that adapt to your skill level, goals, and available time.", color: "text-sky-400", bg: "bg-sky-400/10" },
   { icon: Target, title: "Equipment Recommendations", desc: "AI-powered gear suggestions based on your playing style, level, and budget — with price comparisons.", color: "text-purple-400", bg: "bg-purple-400/10" },
-  { icon: Film, title: "Highlight Reels", desc: "Auto-generate match highlights from your uploaded videos. Share your best moments instantly.", color: "text-amber-400", bg: "bg-amber-400/10" },
-  { icon: TrendingUp, title: "Progress Tracking", desc: "Track improvement over time with detailed stats, streak tracking, and skill development charts.", color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  { icon: Sparkles, title: "Multi-Sport Support", desc: "Full support for 7 sports with sport-specific AI models, drills, and coaching insights.", color: "text-rose-400", bg: "bg-rose-400/10" },
+  { icon: Users, title: "Host & Find Local Games", desc: "Post a match, find players nearby, build your local community. WhatsApp share built in.", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+  { icon: Coins, title: "Tokens & Rewards", desc: "Get 300 free tokens on signup. Earn more by referring friends, hosting games, and completing training.", color: "text-amber-400", bg: "bg-amber-400/10" },
+  { icon: TrendingUp, title: "Progress Tracking", desc: "Track improvement over time with detailed stats, streak tracking, and skill development charts.", color: "text-rose-400", bg: "bg-rose-400/10" },
 ];
 
 const SPORTS = [
@@ -154,6 +156,9 @@ export default function LandingPage() {
           <motion.p initial="hidden" animate="visible" custom={0.3} variants={fadeUp}
             className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="hero-subtitle">
             Upload a video. Get instant technique analysis, personalized training plans, and smart gear recommendations — like having a pro coach in your pocket.
+            <span className="block text-lime-400/90 text-sm sm:text-base mt-3 font-medium">
+              🪙 Sign up free — 300 tokens (3 analyses) on us.
+            </span>
           </motion.p>
 
           {/* Sport pills */}
@@ -170,12 +175,12 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
               className="bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide px-10 py-6 text-lg rounded-full shadow-[0_0_20px_rgba(190,242,100,0.3)] hover:shadow-[0_0_30px_rgba(190,242,100,0.5)] transition-all hover:scale-105 active:scale-95">
-              Get Started Free <ChevronRight className="w-5 h-5 ml-1" />
+              Try Free — 3 Analyses on Us <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
-            <Button onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+            <Button onClick={() => document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" })}
               variant="ghost" size="lg"
               className="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-lg transition-all">
-              See Features <ArrowRight className="w-5 h-5 ml-1" />
+              <Play className="w-5 h-5 mr-1.5" /> Watch 60-sec demo
             </Button>
           </motion.div>
         </div>
@@ -204,6 +209,12 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ============ DEMO VIDEO ============ */}
+      <DemoVideo />
+
+      {/* ============ TOKEN ECONOMY ============ */}
+      <TokenEconomyStrip />
 
       {/* ============ FEATURES ============ */}
       <section id="features" className="py-24 bg-zinc-950" data-testid="features-section">
@@ -455,7 +466,8 @@ export default function LandingPage() {
                 <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Video Analysis</Link></li>
                 <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Training Plans</Link></li>
                 <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Equipment Finder</Link></li>
-                <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Highlight Reels</Link></li>
+                <li><Link to="/wallet" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Tokens & Wallet</Link></li>
+                <li><Link to="/community" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Community Games</Link></li>
               </ul>
             </div>
 

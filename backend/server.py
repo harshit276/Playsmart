@@ -22,6 +22,7 @@ import time as _time
 import time
 import hashlib
 import httpx
+import json
 
 # ─── Cloudinary credentials ───
 # TODO: move these to env vars in Vercel / Railway dashboards.
@@ -568,6 +569,268 @@ async def _spend_tokens(user_id: str, kind: str, amount: int, metadata: dict = N
         })
     new_balance = await _credit_tokens(user_id, kind, -amount, metadata)
     return {"ok": True, "balance": new_balance if new_balance is not None else balance - amount}
+
+
+# ─── Cashfree payments ─────────────────────────────────────────────
+CASHFREE_APP_ID = os.environ.get("CASHFREE_APP_ID", "").strip()
+CASHFREE_SECRET_KEY = os.environ.get("CASHFREE_SECRET_KEY", "").strip()
+CASHFREE_WEBHOOK_SECRET = os.environ.get("CASHFREE_WEBHOOK_SECRET", "").strip()
+CASHFREE_ENV = os.environ.get("CASHFREE_ENV", "SANDBOX").strip().upper()
+CASHFREE_BASE_URL = (
+    "https://api.cashfree.com/pg" if CASHFREE_ENV == "PRODUCTION"
+    else "https://sandbox.cashfree.com/pg"
+)
+CASHFREE_API_VERSION = "2023-08-01"
+
+
+def _cashfree_headers() -> dict:
+    return {
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY,
+        "x-api-version": CASHFREE_API_VERSION,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+
+def _get_pack(pack_key: str) -> Optional[dict]:
+    return next((p for p in TOKEN_PACKS if p["key"] == pack_key), None)
+
+
+class CreateOrderRequest(BaseModel):
+    pack_key: str = Field(..., max_length=40)
+
+
+class VerifyOrderRequest(BaseModel):
+    order_id: str = Field(..., max_length=80)
+
+
+@api_router.post("/payments/create-order")
+async def create_payment_order(req: CreateOrderRequest, authorization: str = Header(None)):
+    """Create a Cashfree order and return the payment_session_id the
+    frontend SDK needs to launch checkout."""
+    user = await get_current_user(authorization)
+    pack = _get_pack(req.pack_key)
+    if not pack:
+        raise HTTPException(status_code=400, detail="Unknown pack")
+    if not (CASHFREE_APP_ID and CASHFREE_SECRET_KEY):
+        raise HTTPException(status_code=503, detail="Payments not configured. Set CASHFREE_APP_ID + CASHFREE_SECRET_KEY.")
+
+    order_id = f"ATH_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+    payload = {
+        "order_id": order_id,
+        "order_amount": float(pack["price_inr"]),
+        "order_currency": "INR",
+        "customer_details": {
+            "customer_id": user["id"],
+            "customer_email": (user.get("email") or "noemail@athlyticai.com")[:80],
+            "customer_phone": (user.get("phone") or "9999999999")[:14],
+        },
+        "order_meta": {
+            "return_url": f"https://athlyticai.com/wallet?order_id={{order_id}}",
+            "notify_url": "https://athlyticai.com/api/payments/webhook",
+        },
+        "order_note": f"AthlyticAI {pack['tokens']} tokens",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(f"{CASHFREE_BASE_URL}/orders",
+                                  headers=_cashfree_headers(), json=payload)
+            if r.status_code >= 400:
+                logger.error(f"Cashfree create-order failed {r.status_code}: {r.text[:300]}")
+                raise HTTPException(status_code=502, detail="Payment provider error")
+            data = r.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"create-order exception: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Payment provider unreachable")
+
+    payment_session_id = data.get("payment_session_id")
+    if not payment_session_id:
+        raise HTTPException(status_code=502, detail="No payment session returned")
+
+    # Persist the order so /payments/verify + webhook can validate later
+    try:
+        await asyncio.wait_for(db.payment_orders.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": user["id"],
+            "cashfree_order_id": order_id,
+            "cashfree_payment_session_id": payment_session_id,
+            "cashfree_payment_id": None,
+            "pack_key": pack["key"],
+            "tokens_amount": pack["tokens"],
+            "amount_inr": pack["price_inr"],
+            "status": "created",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "paid_at": None,
+        }), timeout=2.0)
+    except Exception as e:
+        logger.warning(f"create-order: DB persist failed (continuing): {e}")
+
+    return {
+        "order_id": order_id,
+        "payment_session_id": payment_session_id,
+        "amount": pack["price_inr"],
+        "currency": "INR",
+        "app_id": CASHFREE_APP_ID,
+        "env": CASHFREE_ENV,
+    }
+
+
+async def _credit_for_paid_order(user_id: str, order: dict, cf_payment_id: str) -> Optional[int]:
+    """Idempotent: only credits if this cashfree_payment_id hasn't been
+    processed yet (checked via token_transactions metadata). Returns
+    new balance or None on a duplicate / failure."""
+    pack = _get_pack(order.get("pack_key", ""))
+    if not pack:
+        return None
+    # Idempotency: if a `purchase` transaction already exists for this
+    # payment_id, skip.
+    try:
+        already = await asyncio.wait_for(
+            db.token_transactions.find_one(
+                {"user_id": user_id, "kind": "purchase",
+                 "metadata.cashfree_payment_id": cf_payment_id},
+                {"_id": 0, "id": 1},
+            ),
+            timeout=2.0,
+        )
+        if already:
+            return None
+    except Exception:
+        pass
+    new_balance = await _credit_tokens(user_id, "purchase", pack["tokens"], {
+        "pack_key": pack["key"],
+        "amount_inr": pack["price_inr"],
+        "cashfree_order_id": order.get("cashfree_order_id"),
+        "cashfree_payment_id": cf_payment_id,
+    })
+    # Mark the order paid
+    try:
+        await asyncio.wait_for(
+            db.payment_orders.update_one(
+                {"cashfree_order_id": order.get("cashfree_order_id")},
+                {"$set": {
+                    "status": "paid",
+                    "cashfree_payment_id": cf_payment_id,
+                    "paid_at": datetime.now(timezone.utc).isoformat(),
+                }},
+            ),
+            timeout=2.0,
+        )
+    except Exception:
+        pass
+    return new_balance
+
+
+@api_router.post("/payments/verify")
+async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(None)):
+    """Server-side verification — never trust the client's "I paid" callback.
+    Re-fetches the order from Cashfree and only credits if order_status == PAID."""
+    user = await get_current_user(authorization)
+
+    # Look up our order record (must belong to this user)
+    try:
+        order = await asyncio.wait_for(
+            db.payment_orders.find_one(
+                {"cashfree_order_id": req.order_id, "user_id": user["id"]},
+                {"_id": 0},
+            ),
+            timeout=2.0,
+        )
+    except Exception:
+        order = None
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # If already credited, return current balance
+    if order.get("status") == "paid":
+        return {"ok": True, "tokens_credited": order.get("tokens_amount", 0),
+                "balance": await _get_balance(user["id"]), "already_credited": True}
+
+    # Fetch order from Cashfree
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(f"{CASHFREE_BASE_URL}/orders/{req.order_id}",
+                                 headers=_cashfree_headers())
+            if r.status_code >= 400:
+                logger.error(f"Cashfree fetch-order failed {r.status_code}: {r.text[:300]}")
+                raise HTTPException(status_code=502, detail="Payment provider error")
+            data = r.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"verify exception: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Payment provider unreachable")
+
+    if data.get("order_status") != "PAID":
+        return {"ok": False, "status": data.get("order_status"), "balance": await _get_balance(user["id"])}
+
+    # Credit tokens — pull payment id from the payments list
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            pr = await client.get(f"{CASHFREE_BASE_URL}/orders/{req.order_id}/payments",
+                                  headers=_cashfree_headers())
+            payments = pr.json() if pr.status_code < 400 else []
+    except Exception:
+        payments = []
+    cf_payment_id = (payments[0].get("cf_payment_id") if payments else None) or req.order_id
+
+    new_balance = await _credit_for_paid_order(user["id"], order, str(cf_payment_id))
+    if new_balance is None:
+        # Already credited (race) — return current
+        return {"ok": True, "tokens_credited": 0,
+                "balance": await _get_balance(user["id"]), "already_credited": True}
+
+    return {"ok": True, "tokens_credited": order.get("tokens_amount", 0), "balance": new_balance}
+
+
+@api_router.post("/payments/webhook")
+async def cashfree_webhook(request: Request):
+    """Cashfree posts PAYMENT_SUCCESS_WEBHOOK events here. Verify HMAC,
+    then credit (idempotent on cf_payment_id). Belt + suspenders with
+    /payments/verify so dropped success-callbacks still get reconciled."""
+    raw = await request.body()
+    signature = request.headers.get("x-webhook-signature", "")
+    timestamp = request.headers.get("x-webhook-timestamp", "")
+    if CASHFREE_WEBHOOK_SECRET:
+        import hmac, hashlib, base64 as _b64
+        msg = (timestamp + raw.decode("utf-8", errors="ignore")).encode()
+        expected = _b64.b64encode(hmac.new(CASHFREE_WEBHOOK_SECRET.encode(), msg, hashlib.sha256).digest()).decode()
+        if not hmac.compare_digest(signature, expected):
+            logger.warning("Cashfree webhook: signature mismatch")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+    try:
+        body = json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    event_type = body.get("type", "")
+    if "PAYMENT_SUCCESS" not in event_type.upper():
+        return {"ok": True, "ignored": event_type}
+
+    data = body.get("data", {}) or {}
+    cf_order = (data.get("order") or {})
+    cf_payment = (data.get("payment") or {})
+    order_id = cf_order.get("order_id")
+    cf_payment_id = str(cf_payment.get("cf_payment_id") or cf_payment.get("payment_id") or "")
+    if not order_id or not cf_payment_id:
+        return {"ok": False, "error": "missing fields"}
+
+    try:
+        order = await asyncio.wait_for(
+            db.payment_orders.find_one({"cashfree_order_id": order_id}, {"_id": 0}),
+            timeout=2.0,
+        )
+    except Exception:
+        order = None
+    if not order:
+        logger.warning(f"webhook: order not found {order_id}")
+        return {"ok": False, "error": "order not found"}
+
+    new_balance = await _credit_for_paid_order(order["user_id"], order, cf_payment_id)
+    return {"ok": True, "credited": new_balance is not None, "balance": new_balance}
 
 
 async def _settle_pending_referrals(user_id: str) -> None:
@@ -2257,6 +2520,14 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
     )
 
     user = await get_current_user(authorization)
+
+    # Token spend gate. Raises HTTPException(402) with packs payload if
+    # the user is short — frontend opens the buy/earn modal. Server is
+    # the source of truth; client pre-check is purely UX hint.
+    analysis_cost = abs(TOKEN_RULES.get("analysis_spend", -100))
+    await _spend_tokens(user["id"], "analysis_spend", analysis_cost,
+                         {"source": "analyze_client_results"})
+
     try:
         profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}), timeout=5.0)
     except (Exception, asyncio.TimeoutError):

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { swrGet } from "@/lib/cachedFetch";
 import SEO from "@/components/SEO";
+import BuyTokensDialog from "@/components/BuyTokensDialog";
 
 const KIND_LABEL = {
   signup_grant: "Signup grant",
@@ -55,6 +56,7 @@ export default function WalletPage() {
   const [data, setData] = useState(null);
   const [packs, setPacks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [buyOpen, setBuyOpen] = useState(false);
 
   useEffect(() => { document.title = "Wallet | AthlyticAI"; }, []);
 
@@ -156,15 +158,16 @@ export default function WalletPage() {
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold flex items-center gap-1.5">
               <ShoppingCart className="w-3 h-3 text-purple-400" /> Buy tokens
             </p>
-            <Badge className="bg-zinc-800 text-zinc-400 text-[10px]">Coming soon · UPI / cards</Badge>
+            <Badge className="bg-purple-400/10 text-purple-300 border-purple-400/20 text-[10px]">UPI · cards · netbanking</Badge>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {(packs.length ? packs : []).map((p) => (
-              <div key={p.key} className={`relative rounded-xl border p-3 text-center transition-colors ${
-                p.highlight
-                  ? "border-lime-400/30 bg-lime-400/5"
-                  : "border-zinc-800 bg-zinc-800/40"
-              }`}>
+              <button key={p.key} onClick={() => setBuyOpen(true)}
+                className={`relative rounded-xl border p-3 text-center transition-all hover:scale-[1.02] cursor-pointer ${
+                  p.highlight
+                    ? "border-lime-400/30 bg-lime-400/5 hover:border-lime-400/50"
+                    : "border-zinc-800 bg-zinc-800/40 hover:border-purple-400/40"
+                }`}>
                 {p.highlight && (
                   <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-lime-400 text-black text-[9px] px-2">BEST VALUE</Badge>
                 )}
@@ -172,16 +175,14 @@ export default function WalletPage() {
                 <p className="font-heading font-black text-xl text-white mt-1">{p.tokens.toLocaleString("en-IN")}</p>
                 <p className="text-[10px] text-zinc-500">tokens</p>
                 <p className="text-sm font-bold text-purple-300 mt-2">₹{p.price_inr}</p>
-                <Button disabled size="sm"
-                  className="mt-2 w-full bg-zinc-800 text-zinc-500 hover:bg-zinc-800 cursor-not-allowed text-[10px] h-7 rounded-full">
-                  <Lock className="w-3 h-3 mr-1" /> Soon
-                </Button>
-              </div>
+                <p className="text-[9px] text-zinc-500 mt-1">Buy →</p>
+              </button>
             ))}
             {!packs.length && (
               <p className="col-span-full text-zinc-600 text-xs text-center py-4">Loading packs…</p>
             )}
           </div>
+          <BuyTokensDialog open={buyOpen} onOpenChange={setBuyOpen} />
         </motion.div>
 
         {/* Referral quick-share */}

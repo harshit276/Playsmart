@@ -17,6 +17,7 @@ import {
   Users, Cpu, Cloud, Lock, Footprints, Wind, Activity, Flame, Crosshair
 } from "lucide-react";
 import api from "@/lib/api";
+import InsufficientTokensModal from "@/components/InsufficientTokensModal";
 import ShareModal from "@/components/ShareModal";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import { NewBadgeOverlay } from "@/components/BadgeDisplay";
@@ -288,7 +289,9 @@ const DRILL_DIFFICULTY_STYLE = {
 };
 
 export default function AnalyzePage() {
-  const { user, profile, refreshProfile, login } = useAuth();
+  const { user, profile, refreshProfile, login, tokens } = useAuth();
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+  const [insufficientBalance, setInsufficientBalance] = useState(0);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isGuest = !user?.id;
@@ -473,6 +476,16 @@ export default function AnalyzePage() {
     if (!file) return;
     // mode selector removed — always run full analysis
 
+    // Token spend gate — UX hint, server enforces. If we know the user
+    // is short, intercept now so they don't burn an upload only to
+    // hit a 402 later. Guests/missing-balance get through (server gates).
+    const ANALYSIS_COST = 100;
+    if (user && tokens != null && tokens < ANALYSIS_COST) {
+      setInsufficientBalance(tokens);
+      setShowInsufficientModal(true);
+      return;
+    }
+
     setAnalyzing(true);
     setResult(null);
     setError(null);
@@ -606,6 +619,19 @@ export default function AnalyzePage() {
             throw new Error("Server enrichment failed");
           }
         } catch (serverErr) {
+          // 402 = insufficient tokens. Open the buy/earn modal and bail
+          // out — don't show the partial client-side result as success.
+          if (serverErr?.response?.status === 402) {
+            const detail = serverErr.response.data?.detail || {};
+            clearInterval(interval);
+            setAnalyzing(false);
+            setResult(null);
+            setProgress(0);
+            setInsufficientBalance(detail.balance ?? 0);
+            setShowInsufficientModal(true);
+            return;
+          }
+
           // Server enrichment failed — show full client-side results anyway
           clearInterval(interval);
           setProgress(100);
@@ -2274,6 +2300,12 @@ export default function AnalyzePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="analyze-page">
+      <InsufficientTokensModal
+        open={showInsufficientModal}
+        onOpenChange={setShowInsufficientModal}
+        balance={insufficientBalance}
+        required={100}
+      />
       <SEO
         title="AI Video Analysis - Analyze Your Badminton, Tennis, Table Tennis Shots"
         description="Upload a video and get instant AI-powered shot analysis. Detect smashes, drives, drops, and more. Get speed estimation, technique scoring, and personalized improvement tips. Free for badminton, tennis, table tennis, and pickleball."
