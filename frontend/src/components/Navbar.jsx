@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Badge } from "@/components/ui/badge";
 import {
   Zap, LogOut, BarChart3, Dumbbell, Target, CreditCard,
-  Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords
+  Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords, ShoppingCart
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getSportEmoji, getSportLabel } from "@/lib/sportConfig";
@@ -15,11 +15,11 @@ import { motion, AnimatePresence } from "framer-motion";
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/analyze", label: "Analyze", icon: Video },
+  { path: "/marketplace", label: "Marketplace", icon: ShoppingCart },
   { path: "/equipment", label: "Equipment", icon: Target },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/community?host=1", label: "Host Game", icon: Swords },
   { path: "/community", label: "Community", icon: Users },
-  { path: "/progress", label: "Progress", icon: BarChart3 },
 ];
 
 // Mobile bottom nav - 5 key items (like Instagram/YouTube)
@@ -32,6 +32,7 @@ const MOBILE_NAV_PRIMARY = [
 
 // "More" menu items on mobile
 const MOBILE_NAV_MORE = [
+  { path: "/marketplace", label: "Marketplace", icon: ShoppingCart },
   { path: "/equipment", label: "Equipment", icon: Target },
   { path: "/community", label: "Community", icon: Users },
   { path: "/progress", label: "Progress", icon: BarChart3 },
