@@ -1164,7 +1164,7 @@ export default function AnalyzePage() {
         email: fb.user.email || "",
         photo: fb.user.photoURL || "",
       });
-      login(data.token, data.user, data.has_profile);
+      login(data.token, data.user, data.has_profile, data.tokens);
       toast.success("Signed in — coaching unlocked!");
     } catch (err) {
       if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") return;

@@ -279,7 +279,7 @@ export default function AssessmentPage() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginSecondsLeft, setLoginSecondsLeft] = useState(0);
   const otpRefs = useRef([]);
-  const { refreshProfile, isAuthenticated, login } = useAuth();
+  const { refreshProfile, isAuthenticated, login, refreshTokens, tokens } = useAuth();
   const navigate = useNavigate();
 
   // Render immediately with FALLBACK_SPORTS — don't block the user on
@@ -350,6 +350,11 @@ export default function AssessmentPage() {
           await api.post("/tokens/redeem-referral", { code: refCode }, { timeout: 5000 });
         } catch (e) { /* invalid code or already redeemed — silent */ }
       }
+      // Refresh balance + celebrate the signup grant on the way to dash
+      try { await refreshTokens(); } catch {}
+      if (typeof tokens === "number" && tokens >= 300) {
+        toast.success("🪙 +300 tokens credited! That's 3 free video analyses.", { duration: 4000 });
+      }
       toast.success("Profile created! Let's see your recommendations.");
     } catch (err) {
       console.warn("Profile save failed, continuing anyway:", err);
@@ -402,7 +407,7 @@ export default function AssessmentPage() {
     try {
       const normalized = normalizePhone(loginPhone.trim());
       const { data } = await api.post("/auth/verify-otp", { phone: normalized, otp: code });
-      login(data.token, data.user, data.has_profile);
+      login(data.token, data.user, data.has_profile, data.tokens);
       toast.success("Logged in! Saving your profile...");
       setShowLoginModal(false);
       // Now save profile and redirect
@@ -1331,7 +1336,7 @@ export default function AssessmentPage() {
                       email: firebaseUser.email || "",
                       photo: firebaseUser.photoURL || "",
                     });
-                    login(data.token, data.user, data.has_profile);
+                    login(data.token, data.user, data.has_profile, data.tokens);
                     toast.success("Signed in! Saving your profile...");
                     setShowLoginModal(false);
                     try {

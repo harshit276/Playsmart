@@ -44,7 +44,8 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
   const [packs, setPacks] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(null); // {tokens, balance}
+  const [success, setSuccess] = useState(null); // {tokens, balance, demo}
+  const [isDemo, setIsDemo] = useState(false); // detected after first create-order
 
   useEffect(() => {
     if (!open) return;
@@ -66,27 +67,34 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
     try {
       // 1. Server creates the order
       const { data } = await api.post("/payments/create-order", { pack_key: pack.key }, { timeout: 12000 });
-      if (!data?.payment_session_id) throw new Error("Could not create payment order");
+      if (!data?.order_id) throw new Error("Could not create payment order");
+      if (data.demo_mode) setIsDemo(true);
 
-      // 2. Load + init Cashfree SDK
-      const Cashfree = await loadCashfreeSdk();
-      if (!Cashfree) throw new Error("Cashfree SDK didn't load");
-      const cashfree = Cashfree({ mode: data.env === "PRODUCTION" ? "production" : "sandbox" });
+      // Demo mode — skip Cashfree SDK entirely. Brief processing
+      // simulation, then go straight to verify (which credits tokens).
+      if (data.demo_mode) {
+        await new Promise((r) => setTimeout(r, 900));
+      } else {
+        // 2. Load + init Cashfree SDK
+        const Cashfree = await loadCashfreeSdk();
+        if (!Cashfree) throw new Error("Cashfree SDK didn't load");
+        const cashfree = Cashfree({ mode: data.env === "PRODUCTION" ? "production" : "sandbox" });
 
-      // 3. Open drop-in checkout
-      const result = await cashfree.checkout({
-        paymentSessionId: data.payment_session_id,
-        redirectTarget: "_modal",
-      });
+        // 3. Open drop-in checkout
+        const result = await cashfree.checkout({
+          paymentSessionId: data.payment_session_id,
+          redirectTarget: "_modal",
+        });
 
-      // Cashfree returns { error } or { paymentDetails: {...} }
-      if (result?.error) {
-        if (result.error.code === "ORDER_PAYMENT_FAILED" || result.error.code === "USER_DROPPED") {
-          toast.error("Payment cancelled");
-          setLoading(false);
-          return;
+        // Cashfree returns { error } or { paymentDetails: {...} }
+        if (result?.error) {
+          if (result.error.code === "ORDER_PAYMENT_FAILED" || result.error.code === "USER_DROPPED") {
+            toast.error("Payment cancelled");
+            setLoading(false);
+            return;
+          }
+          throw new Error(result.error.message || "Payment failed");
         }
-        throw new Error(result.error.message || "Payment failed");
       }
 
       // 4. Server-side verification — never trust client
@@ -133,6 +141,12 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
                 Pick a pack — UPI, cards, netbanking. Tokens never expire.
               </DialogDescription>
             </DialogHeader>
+
+            {isDemo && (
+              <div className="bg-amber-400/10 border border-amber-400/30 rounded-lg px-3 py-2 text-[11px] text-amber-300">
+                Demo mode — no real charge. Tokens are credited so you can test the flow.
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 mt-2">
               {packs.map((p) => {

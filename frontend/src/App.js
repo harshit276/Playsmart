@@ -71,10 +71,13 @@ function AuthProvider({ children }) {
   // Hydrate auth in the background — never block initial render
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
-  const login = (token, userData, hasProfile) => {
+  const login = (token, userData, hasProfile, initialTokens) => {
     localStorage.setItem("playsmart_token", token);
     localStorage.removeItem("guest_mode");
     setUser(userData);
+    // Prime balance immediately if /auth/firebase returned it (avoids the
+    // 0-then-300 flicker that used to happen when the credit was async).
+    if (typeof initialTokens === "number") setTokens(initialTokens);
     if (hasProfile) fetchMe();
     else fetchTokens(); // still fetch tokens so the navbar chip lights up
   };

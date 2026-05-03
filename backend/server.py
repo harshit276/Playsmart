@@ -235,16 +235,23 @@ async def firebase_auth(req: FirebaseAuthRequest):
     # Save/update user in background (don't wait for it)
     asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
 
-    # First-time signup grant — idempotent (skips if already credited).
-    # Runs in background so login response stays snappy.
-    async def _maybe_signup_grant():
-        try:
-            if not await _has_transaction(user_id, "signup_grant"):
-                await _credit_tokens(user_id, "signup_grant", TOKEN_RULES["signup_grant"],
-                                     {"email": email, "source": "firebase_auth"})
-        except Exception as e:
-            logger.warning(f"signup_grant background failed for {user_id[:8]}: {e}")
-    asyncio.create_task(_maybe_signup_grant())
+    # SYNCHRONOUS first-time signup grant — was previously fire-and-forget,
+    # which made fresh signups land on a dashboard showing 0 tokens until
+    # the background credit eventually persisted. Now we await so the
+    # response carries the actual balance.
+    tokens_balance = 0
+    try:
+        if not await _has_transaction(user_id, "signup_grant"):
+            new_balance = await _credit_tokens(
+                user_id, "signup_grant", TOKEN_RULES["signup_grant"],
+                {"email": email, "source": "firebase_auth"},
+            )
+            tokens_balance = new_balance if new_balance is not None else TOKEN_RULES["signup_grant"]
+        else:
+            tokens_balance = await _get_balance(user_id)
+    except Exception as e:
+        logger.warning(f"signup_grant failed for {user_id[:8]}: {e}")
+        tokens_balance = await _get_balance(user_id)
 
     # Quick profile check (1s timeout — if DB is slow, assume no profile)
     has_profile = False
@@ -261,6 +268,7 @@ async def firebase_auth(req: FirebaseAuthRequest):
         "token": token,
         "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
         "has_profile": has_profile,
+        "tokens": tokens_balance,
     }
 
 
@@ -389,6 +397,35 @@ async def get_me(authorization: str = Header(None)):
     asyncio.create_task(_maybe_daily_login_credit())
 
     return {"user": user, "profile": profile}
+
+
+# ─── Admin: nuke all accounts (dev / pre-launch reset) ───────────
+ADMIN_WIPE_KEY = os.environ.get("ADMIN_WIPE_KEY", "").strip()
+
+
+@api_router.delete("/admin/wipe-all-accounts")
+async def admin_wipe_all_accounts(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """Wipe every user-related collection. Dev/pre-launch only — gated by
+    a shared secret in ADMIN_WIPE_KEY env var. Set the env, then call once
+    via curl to nuke everything."""
+    if not ADMIN_WIPE_KEY or x_admin_key != ADMIN_WIPE_KEY:
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    collections = [
+        "users", "player_profiles", "video_analyses", "training_progress",
+        "token_transactions", "payment_orders", "referrals",
+        "friends", "friend_requests", "games", "equipment_enquiries",
+        "user_badges", "upload_streaks", "training_progress_personal",
+    ]
+    deleted = {}
+    for c in collections:
+        try:
+            res = await asyncio.wait_for(db[c].delete_many({}), timeout=10.0)
+            deleted[c] = res.deleted_count
+        except Exception as e:
+            deleted[c] = f"error: {e}"
+    logger.warning(f"ADMIN WIPE executed: {deleted}")
+    return {"ok": True, "deleted": deleted}
 
 
 # ─── Tokens (in-app currency) ─────────────────────────────────────
@@ -576,6 +613,11 @@ CASHFREE_APP_ID = os.environ.get("CASHFREE_APP_ID", "").strip()
 CASHFREE_SECRET_KEY = os.environ.get("CASHFREE_SECRET_KEY", "").strip()
 CASHFREE_WEBHOOK_SECRET = os.environ.get("CASHFREE_WEBHOOK_SECRET", "").strip()
 CASHFREE_ENV = os.environ.get("CASHFREE_ENV", "SANDBOX").strip().upper()
+# Demo mode — bypass real Cashfree entirely. Lets us click-test the
+# buy flow + token credit before real merchant KYC. Set DEMO_PAYMENTS=true
+# on Vercel to enable. When the user is ready for real, flip to false +
+# set CASHFREE_APP_ID/SECRET_KEY/WEBHOOK_SECRET.
+DEMO_PAYMENTS = os.environ.get("DEMO_PAYMENTS", "false").strip().lower() in ("true", "1", "yes")
 CASHFREE_BASE_URL = (
     "https://api.cashfree.com/pg" if CASHFREE_ENV == "PRODUCTION"
     else "https://sandbox.cashfree.com/pg"
@@ -613,6 +655,38 @@ async def create_payment_order(req: CreateOrderRequest, authorization: str = Hea
     pack = _get_pack(req.pack_key)
     if not pack:
         raise HTTPException(status_code=400, detail="Unknown pack")
+
+    # Demo mode — skip Cashfree entirely. Persist a demo order row so
+    # /payments/verify can credit on the subsequent call (idempotent).
+    if DEMO_PAYMENTS:
+        order_id = f"DEMO_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+        try:
+            await asyncio.wait_for(db.payment_orders.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": user["id"],
+                "cashfree_order_id": order_id,
+                "cashfree_payment_session_id": "demo",
+                "cashfree_payment_id": None,
+                "pack_key": pack["key"],
+                "tokens_amount": pack["tokens"],
+                "amount_inr": pack["price_inr"],
+                "status": "created",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "paid_at": None,
+                "demo": True,
+            }), timeout=2.0)
+        except Exception as e:
+            logger.warning(f"demo create-order: DB persist failed: {e}")
+        return {
+            "order_id": order_id,
+            "payment_session_id": "demo",
+            "amount": pack["price_inr"],
+            "currency": "INR",
+            "app_id": "demo",
+            "env": "DEMO",
+            "demo_mode": True,
+        }
+
     if not (CASHFREE_APP_ID and CASHFREE_SECRET_KEY):
         raise HTTPException(status_code=503, detail="Payments not configured. Set CASHFREE_APP_ID + CASHFREE_SECRET_KEY.")
 
@@ -748,6 +822,15 @@ async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(No
     if order.get("status") == "paid":
         return {"ok": True, "tokens_credited": order.get("tokens_amount", 0),
                 "balance": await _get_balance(user["id"]), "already_credited": True}
+
+    # Demo mode — credit immediately, no Cashfree round-trip.
+    if DEMO_PAYMENTS or order.get("demo") or req.order_id.startswith("DEMO_"):
+        new_balance = await _credit_for_paid_order(user["id"], order, f"DEMO_{order['cashfree_order_id']}")
+        if new_balance is None:
+            return {"ok": True, "tokens_credited": 0,
+                    "balance": await _get_balance(user["id"]), "already_credited": True}
+        return {"ok": True, "tokens_credited": order.get("tokens_amount", 0),
+                "balance": new_balance, "demo": True}
 
     # Fetch order from Cashfree
     try:

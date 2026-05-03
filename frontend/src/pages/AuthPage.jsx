@@ -54,8 +54,12 @@ export default function AuthPage() {
       photo,
     });
 
-    login(data.token, data.user, data.has_profile);
-    toast.success(`Welcome${name ? ", " + name : ""}!`);
+    login(data.token, data.user, data.has_profile, data.tokens);
+    if (typeof data.tokens === "number" && data.tokens >= 300) {
+      toast.success(`Welcome${name ? ", " + name : ""}! 🪙 ${data.tokens} tokens credited.`);
+    } else {
+      toast.success(`Welcome${name ? ", " + name : ""}!`);
+    }
     navigate(data.has_profile ? "/dashboard" : "/assessment");
   };
 

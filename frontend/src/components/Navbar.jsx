@@ -129,12 +129,12 @@ export default function Navbar() {
 
           {/* Right side: tokens + streak + user menu */}
           <div className="flex items-center gap-2">
-            {/* Token balance chip — clickable → /wallet */}
+            {/* Token balance chip — clickable → /wallet (visible on mobile too) */}
             {isAuthenticated && tokens != null && (
               <Link
                 to="/wallet"
                 title={`${tokens} AthlyticAI tokens`}
-                className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-purple-400/10 hover:bg-purple-400/20 rounded-full transition-colors"
+                className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-purple-400/10 hover:bg-purple-400/20 rounded-full transition-colors"
               >
                 <span className="text-xs">🪙</span>
                 <span className="text-xs font-bold text-purple-300">{tokens.toLocaleString("en-IN")}</span>
