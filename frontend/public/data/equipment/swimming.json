@@ -1,0 +1,437 @@
+{
+  "sport": "swimming",
+  "last_updated": "2026-03-24",
+  "currency_note": "INR prices reflect March 2026 Indian market.",
+  "equipment_categories": [
+    {
+      "category": "goggles",
+      "items": [
+        {
+          "id": "sw_g01",
+          "name": "Decathlon Nabaiji 100 Soft Goggles",
+          "brand": "Nabaiji (Decathlon)",
+          "type": "Recreational Goggles",
+          "level": "beginner",
+          "specs": {"lens": "Anti-fog, UV protection, clear", "seal": "Soft silicone", "strap": "Single split strap"},
+          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nabaiji+100+Soft+Goggles",
+            "flipkart": "https://www.flipkart.com/search?q=nabaiji+100+soft+goggles"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
+          "description": "India's most affordable branded swim goggle. Great starter option."
+        },
+        {
+          "id": "sw_g02",
+          "name": "Nivia Marine Swimming Goggles",
+          "brand": "Nivia",
+          "type": "Training Goggles",
+          "level": "beginner",
+          "specs": {"lens": "Anti-fog, UV protection, polycarbonate", "seal": "PVC gasket", "strap": "Adjustable silicone"},
+          "price_ranges": {"INR": {"min": 250, "max": 450}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Marine+Swimming+Goggles",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+marine+swimming+goggles"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
+          "description": "Budget Indian brand goggles. Decent anti-fog and comfortable fit."
+        },
+        {
+          "id": "sw_g03",
+          "name": "Cosco Aqua Dash Swimming Goggles",
+          "brand": "Cosco",
+          "type": "Recreational Goggles",
+          "level": "beginner",
+          "specs": {"lens": "Anti-fog, polycarbonate", "seal": "Silicone gasket", "strap": "Adjustable"},
+          "price_ranges": {"INR": {"min": 300, "max": 550}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Cosco+Aqua+Dash+Goggles",
+            "flipkart": "https://www.flipkart.com/search?q=cosco+aqua+dash+goggles"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
+          "description": "Affordable Indian-brand goggles for recreational swimming."
+        },
+        {
+          "id": "sw_g04",
+          "name": "Speedo Biofuse 2.0",
+          "brand": "Speedo",
+          "type": "Training Goggles",
+          "level": "intermediate",
+          "specs": {"lens": "Anti-fog, UV, wide vision", "seal": "Biofuse flexible seal", "strap": "Double head strap"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Biofuse+2.0+goggles",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+biofuse+2.0+goggles"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
+          "description": "Comfortable Speedo training goggles. Flexible seal for long sessions."
+        },
+        {
+          "id": "sw_g05",
+          "name": "Arena Cobra Ultra Swipe",
+          "brand": "Arena",
+          "type": "Racing Goggles",
+          "level": "intermediate",
+          "specs": {"lens": "Anti-fog Swipe, mirrored", "seal": "Low profile silicone", "strap": "Double strap"},
+          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Arena+Cobra+Ultra+Swipe+goggles",
+            "flipkart": "https://www.flipkart.com/search?q=arena+cobra+ultra+swipe"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
+          "description": "Premium racing goggles with Swipe anti-fog. Low drag hydrodynamic design."
+        },
+        {
+          "id": "sw_g06",
+          "name": "Speedo Fastskin Hyper Elite",
+          "brand": "Speedo",
+          "type": "Racing Goggles",
+          "level": "advanced",
+          "specs": {"lens": "IQ Fit, anti-fog, mirrored", "seal": "Ultra-thin silicone", "strap": "Double strap"},
+          "price_ranges": {"INR": {"min": 3500, "max": 5500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Fastskin+Hyper+Elite+goggles",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+fastskin+hyper+elite"
+          },
+          "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
+          "description": "Top-tier racing goggles. Ultra-low profile for maximum hydrodynamics."
+        }
+      ]
+    },
+    {
+      "category": "swimsuits",
+      "items": [
+        {
+          "id": "sw_ss01",
+          "name": "Decathlon Nabaiji 100 Plus Swimsuit",
+          "brand": "Nabaiji (Decathlon)",
+          "type": "Training Swimsuit (Women)",
+          "level": "beginner",
+          "specs": {"material": "Polyester (100%)", "chlorine_resistant": true, "fit": "Regular"},
+          "price_ranges": {"INR": {"min": 400, "max": 800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nabaiji+100+Plus+Swimsuit",
+            "flipkart": "https://www.flipkart.com/search?q=nabaiji+100+plus+swimsuit"
+          },
+          "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
+          "description": "Budget Decathlon swimsuit. Chlorine resistant polyester for pool use."
+        },
+        {
+          "id": "sw_ss02",
+          "name": "Decathlon Nabaiji 100 Jammer (Men)",
+          "brand": "Nabaiji (Decathlon)",
+          "type": "Training Jammer (Men)",
+          "level": "beginner",
+          "specs": {"material": "Polyester (100%)", "chlorine_resistant": true, "fit": "Regular knee length"},
+          "price_ranges": {"INR": {"min": 400, "max": 700}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nabaiji+100+Jammer+swimsuit",
+            "flipkart": "https://www.flipkart.com/search?q=nabaiji+100+jammer"
+          },
+          "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
+          "description": "Affordable men's jammer. Durable polyester for daily pool use."
+        },
+        {
+          "id": "sw_ss03",
+          "name": "Speedo Essential Endurance+ Jammer",
+          "brand": "Speedo",
+          "type": "Training Jammer (Men)",
+          "level": "intermediate",
+          "specs": {"material": "Endurance+ (Polyester blend)", "chlorine_resistant": true, "fit": "Athletic"},
+          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Essential+Endurance+Jammer",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+essential+endurance+jammer"
+          },
+          "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
+          "description": "Speedo's durable training jammer. Endurance+ fabric lasts 20x longer."
+        },
+        {
+          "id": "sw_ss04",
+          "name": "Arena Team Stripe Swimsuit (Women)",
+          "brand": "Arena",
+          "type": "Training Swimsuit (Women)",
+          "level": "intermediate",
+          "specs": {"material": "MaxLife (Polyester blend)", "chlorine_resistant": true, "fit": "Athletic, open back"},
+          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Arena+Team+Stripe+Swimsuit",
+            "flipkart": "https://www.flipkart.com/search?q=arena+team+stripe+swimsuit"
+          },
+          "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
+          "description": "Durable training suit from Arena. MaxLife fabric for extended use."
+        },
+        {
+          "id": "sw_ss05",
+          "name": "Speedo Fastskin LZR Pure Intent Jammer",
+          "brand": "Speedo",
+          "type": "Racing Jammer (Men)",
+          "level": "advanced",
+          "specs": {"material": "LZR Pulse+ fabric", "chlorine_resistant": false, "fit": "Competition tight", "FINA_approved": true},
+          "price_ranges": {"INR": {"min": 15000, "max": 25000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Fastskin+LZR+Pure+Intent+Jammer",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+fastskin+lzr+pure+intent"
+          },
+          "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
+          "description": "Top-tier FINA approved racing jammer. Maximum compression and hydrodynamics."
+        },
+        {
+          "id": "sw_ss06",
+          "name": "Arena Powerskin Carbon Air2 (Women)",
+          "brand": "Arena",
+          "type": "Racing Swimsuit (Women)",
+          "level": "advanced",
+          "specs": {"material": "Carbon fiber cage", "chlorine_resistant": false, "fit": "Competition tight, open back", "FINA_approved": true},
+          "price_ranges": {"INR": {"min": 18000, "max": 30000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Arena+Powerskin+Carbon+Air2",
+            "flipkart": "https://www.flipkart.com/search?q=arena+powerskin+carbon+air2"
+          },
+          "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
+          "description": "Elite racing suit with carbon fiber cage. Maximum compression for competition."
+        }
+      ]
+    },
+    {
+      "category": "swim_caps",
+      "items": [
+        {
+          "id": "sw_cap01",
+          "name": "Decathlon Nabaiji Silicone Swim Cap",
+          "brand": "Nabaiji (Decathlon)",
+          "type": "Silicone Cap",
+          "level": "beginner",
+          "specs": {"material": "Silicone", "size": "One size fits most"},
+          "price_ranges": {"INR": {"min": 150, "max": 300}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nabaiji+Silicone+Swim+Cap",
+            "flipkart": "https://www.flipkart.com/search?q=nabaiji+silicone+swim+cap"
+          },
+          "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
+          "description": "Budget silicone swim cap. Durable and easy to put on."
+        },
+        {
+          "id": "sw_cap02",
+          "name": "Nivia Classic Swim Cap",
+          "brand": "Nivia",
+          "type": "Silicone Cap",
+          "level": "beginner",
+          "specs": {"material": "Silicone", "size": "One size"},
+          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nivia+Classic+Swim+Cap",
+            "flipkart": "https://www.flipkart.com/search?q=nivia+classic+swim+cap"
+          },
+          "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
+          "description": "Affordable Indian brand silicone cap. Good for regular pool use."
+        },
+        {
+          "id": "sw_cap03",
+          "name": "Speedo Plain Moulded Silicone Cap",
+          "brand": "Speedo",
+          "type": "Silicone Cap",
+          "level": "intermediate",
+          "specs": {"material": "Moulded silicone", "size": "One size", "shape": "3D moulded"},
+          "price_ranges": {"INR": {"min": 500, "max": 900}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Plain+Moulded+Silicone+Cap",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+moulded+silicone+cap"
+          },
+          "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
+          "description": "Speedo's popular silicone cap. 3D moulded for comfortable fit."
+        },
+        {
+          "id": "sw_cap04",
+          "name": "Arena Moulded Pro II Silicone Cap",
+          "brand": "Arena",
+          "type": "Racing Cap",
+          "level": "intermediate",
+          "specs": {"material": "Premium silicone", "size": "One size", "shape": "3D dome shape"},
+          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Arena+Moulded+Pro+II+Cap",
+            "flipkart": "https://www.flipkart.com/search?q=arena+moulded+pro+ii+cap"
+          },
+          "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
+          "description": "Premium racing cap. Dome shape reduces drag in competition."
+        },
+        {
+          "id": "sw_cap05",
+          "name": "Speedo Fastskin Racing Cap",
+          "brand": "Speedo",
+          "type": "Racing Cap",
+          "level": "advanced",
+          "specs": {"material": "3D moulded silicone", "size": "S/M/L", "shape": "Hydrodynamic dome"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Fastskin+Racing+Cap",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+fastskin+racing+cap"
+          },
+          "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
+          "description": "Elite racing cap. Wrinkle-free fit for minimum drag."
+        }
+      ]
+    },
+    {
+      "category": "fins",
+      "items": [
+        {
+          "id": "sw_fn01",
+          "name": "Decathlon Nabaiji Short Fins",
+          "brand": "Nabaiji (Decathlon)",
+          "type": "Short Training Fins",
+          "level": "beginner",
+          "specs": {"blade_length": "Short (15cm)", "material": "Silicone + TPE", "fit": "Closed heel"},
+          "price_ranges": {"INR": {"min": 600, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nabaiji+Short+Swim+Fins",
+            "flipkart": "https://www.flipkart.com/search?q=nabaiji+short+swim+fins"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Affordable short fins for kick drills. Builds leg strength without changing technique."
+        },
+        {
+          "id": "sw_fn02",
+          "name": "Speedo Biofuse Training Fins",
+          "brand": "Speedo",
+          "type": "Short Training Fins",
+          "level": "beginner",
+          "specs": {"blade_length": "Short (17cm)", "material": "Silicone", "fit": "Open heel"},
+          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Biofuse+Training+Fins",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+biofuse+training+fins"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Comfortable Speedo training fins. Biofuse technology for natural feel."
+        },
+        {
+          "id": "sw_fn03",
+          "name": "Arena Powerfin Pro",
+          "brand": "Arena",
+          "type": "Short Training Fins",
+          "level": "intermediate",
+          "specs": {"blade_length": "Short (16cm)", "material": "Silicone", "fit": "Closed heel"},
+          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Arena+Powerfin+Pro",
+            "flipkart": "https://www.flipkart.com/search?q=arena+powerfin+pro"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Premium training fins. Angled blade for efficient kick training."
+        },
+        {
+          "id": "sw_fn04",
+          "name": "FINIS Zoomers Gold Fins",
+          "brand": "FINIS",
+          "type": "Short Training Fins",
+          "level": "intermediate",
+          "specs": {"blade_length": "Short (15cm)", "material": "Natural rubber", "fit": "Closed heel"},
+          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=FINIS+Zoomers+Gold+Fins",
+            "flipkart": "https://www.flipkart.com/search?q=finis+zoomers+gold+fins"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Natural rubber fins for serious training. Great for building kick tempo."
+        },
+        {
+          "id": "sw_fn05",
+          "name": "TYR Crossblade Training Fins",
+          "brand": "TYR",
+          "type": "Short Training Fins",
+          "level": "advanced",
+          "specs": {"blade_length": "Short (14cm)", "material": "Multi-density silicone", "fit": "Closed heel"},
+          "price_ranges": {"INR": {"min": 3000, "max": 5000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=TYR+Crossblade+Training+Fins",
+            "flipkart": "https://www.flipkart.com/search?q=tyr+crossblade+training+fins"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Advanced training fins with cross-blade design for varied resistance."
+        }
+      ]
+    },
+    {
+      "category": "pull_buoys",
+      "items": [
+        {
+          "id": "sw_pb01",
+          "name": "Decathlon Nabaiji Pull Buoy",
+          "brand": "Nabaiji (Decathlon)",
+          "type": "Pull Buoy",
+          "level": "beginner",
+          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "Medium"},
+          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Nabaiji+Pull+Buoy",
+            "flipkart": "https://www.flipkart.com/search?q=nabaiji+pull+buoy"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Affordable pull buoy for arm stroke drills. Good buoyancy for beginners."
+        },
+        {
+          "id": "sw_pb02",
+          "name": "Speedo Elite Pull Buoy",
+          "brand": "Speedo",
+          "type": "Pull Buoy",
+          "level": "intermediate",
+          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "High"},
+          "price_ranges": {"INR": {"min": 700, "max": 1200}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Speedo+Elite+Pull+Buoy",
+            "flipkart": "https://www.flipkart.com/search?q=speedo+elite+pull+buoy"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Speedo branded pull buoy. Ergonomic shape for comfortable use."
+        },
+        {
+          "id": "sw_pb03",
+          "name": "Arena Pull Kick Pro",
+          "brand": "Arena",
+          "type": "Pull Buoy / Kickboard Combo",
+          "level": "intermediate",
+          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "High", "dual_use": true},
+          "price_ranges": {"INR": {"min": 900, "max": 1500}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=Arena+Pull+Kick+Pro",
+            "flipkart": "https://www.flipkart.com/search?q=arena+pull+kick+pro"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Dual-purpose pull buoy and kickboard. Versatile training aid."
+        },
+        {
+          "id": "sw_pb04",
+          "name": "FINIS Axis Buoy",
+          "brand": "FINIS",
+          "type": "Pull Buoy",
+          "level": "advanced",
+          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "Medium-Low", "shape": "Ergonomic"},
+          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=FINIS+Axis+Buoy",
+            "flipkart": "https://www.flipkart.com/search?q=finis+axis+buoy"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Advanced pull buoy with aligned buoyancy. Forces proper body rotation."
+        },
+        {
+          "id": "sw_pb05",
+          "name": "TYR Pull Float",
+          "brand": "TYR",
+          "type": "Pull Buoy",
+          "level": "advanced",
+          "specs": {"material": "High-density EVA", "size": "Standard", "buoyancy": "Medium"},
+          "price_ranges": {"INR": {"min": 1000, "max": 1800}},
+          "buy_links": {
+            "amazon": "https://www.amazon.in/s?k=TYR+Pull+Float",
+            "flipkart": "https://www.flipkart.com/search?q=tyr+pull+float"
+          },
+          "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
+          "description": "Durable TYR pull float. High-density foam for consistent buoyancy."
+        }
+      ]
+    }
+  ]
+}
