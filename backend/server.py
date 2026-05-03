@@ -238,7 +238,23 @@ async def firebase_auth(req: FirebaseAuthRequest):
     # SYNCHRONOUS first-time signup grant — was previously fire-and-forget,
     # which made fresh signups land on a dashboard showing 0 tokens until
     # the background credit eventually persisted. Now we await so the
-    # response carries the actual balance.
+    # response carries the *actual* persisted balance (never an inflated
+    # number — if the DB write failed, the user sees 0 and the next /balance
+    # call will retry rather than a phantom 300 that breaks /spend).
+    # First, make sure the user doc exists BEFORE we try to credit, so the
+    # save and the credit don't race on document creation.
+    try:
+        await asyncio.wait_for(db.users.update_one(
+            {"id": user_id},
+            {"$setOnInsert": {"id": user_id, "email": email,
+                              "created_at": datetime.now(timezone.utc).isoformat(),
+                              "tokens": 0},
+             "$set": {"name": req.name, "photo": req.photo, "email": email}},
+            upsert=True,
+        ), timeout=3.0)
+    except Exception as e:
+        logger.warning(f"firebase_auth: user upsert failed for {user_id[:8]}: {e}")
+
     tokens_balance = 0
     try:
         if not await _has_transaction(user_id, "signup_grant"):
@@ -246,7 +262,9 @@ async def firebase_auth(req: FirebaseAuthRequest):
                 user_id, "signup_grant", TOKEN_RULES["signup_grant"],
                 {"email": email, "source": "firebase_auth"},
             )
-            tokens_balance = new_balance if new_balance is not None else TOKEN_RULES["signup_grant"]
+            # Honest balance — None means the credit DIDN'T persist. Return
+            # what we can read from the DB; if even that fails, return 0.
+            tokens_balance = new_balance if new_balance is not None else await _get_balance(user_id)
         else:
             tokens_balance = await _get_balance(user_id)
     except Exception as e:
@@ -273,12 +291,15 @@ async def firebase_auth(req: FirebaseAuthRequest):
 
 
 async def _save_user_background(user_id, email, name, photo):
-    """Save or update user document in background - does not block login response."""
+    """Save or update user document in background - does not block login response.
+    Match by `id` (not email) so we never collide with the token-credit upsert
+    that also keys by id — using two different match keys created duplicate
+    user docs and split the token balance across them."""
     try:
         await asyncio.wait_for(db.users.update_one(
-            {"email": email},
+            {"id": user_id},
             {"$setOnInsert": {"id": user_id, "email": email, "created_at": datetime.now(timezone.utc).isoformat()},
-             "$set": {"name": name, "photo": photo}},
+             "$set": {"name": name, "photo": photo, "email": email}},
             upsert=True,
         ), timeout=5.0)
     except Exception:
@@ -401,6 +422,38 @@ async def get_me(authorization: str = Header(None)):
 
 # ─── Admin: nuke all accounts (dev / pre-launch reset) ───────────
 ADMIN_WIPE_KEY = os.environ.get("ADMIN_WIPE_KEY", "").strip()
+
+
+@api_router.post("/admin/dedup-users")
+async def admin_dedup_users(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """Repair existing accounts that ended up with TWO docs in the users
+    collection due to the old race (one keyed by email, one by id with
+    tokens). Aggregates token sums per id, keeps the email-bearing doc,
+    deletes the rest. Idempotent — safe to run repeatedly."""
+    if not ADMIN_WIPE_KEY or x_admin_key != ADMIN_WIPE_KEY:
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    cursor = db.users.aggregate([
+        {"$group": {"_id": "$id", "docs": {"$push": "$$ROOT"}, "count": {"$sum": 1}}},
+        {"$match": {"count": {"$gt": 1}}},
+    ])
+    repaired = 0
+    async for group in cursor:
+        docs = group["docs"]
+        # Pick the doc with email/name (the "main" record). Sum all tokens.
+        primary = max(docs, key=lambda d: (1 if d.get("email") else 0, len(d)))
+        total_tokens = sum(int(d.get("tokens", 0) or 0) for d in docs)
+        await db.users.update_one(
+            {"_id": primary["_id"]},
+            {"$set": {"tokens": total_tokens}},
+        )
+        # Delete the others
+        for d in docs:
+            if d["_id"] == primary["_id"]:
+                continue
+            await db.users.delete_one({"_id": d["_id"]})
+        repaired += 1
+    return {"ok": True, "repaired": repaired}
 
 
 @api_router.delete("/admin/wipe-all-accounts")

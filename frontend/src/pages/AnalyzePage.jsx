@@ -289,7 +289,7 @@ const DRILL_DIFFICULTY_STYLE = {
 };
 
 export default function AnalyzePage() {
-  const { user, profile, refreshProfile, login, tokens } = useAuth();
+  const { user, profile, refreshProfile, login, tokens, refreshTokens } = useAuth();
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [insufficientBalance, setInsufficientBalance] = useState(0);
   const navigate = useNavigate();
@@ -629,6 +629,9 @@ export default function AnalyzePage() {
             setProgress(0);
             setInsufficientBalance(detail.balance ?? 0);
             setShowInsufficientModal(true);
+            // Sync the navbar chip with the server's actual balance so the
+            // user doesn't see "🪙 300" up top while the modal says "0".
+            try { refreshTokens?.(); } catch {}
             return;
           }
 
