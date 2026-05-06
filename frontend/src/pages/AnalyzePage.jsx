@@ -1083,6 +1083,37 @@ export default function AnalyzePage() {
 
   const renderUpload = () => (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      {/* Token-cost banner — always visible so user knows the price before
+          they click Analyze. Color-codes based on whether the user can
+          actually afford it. */}
+      {user && (
+        <div className={`mb-4 rounded-2xl border p-3 sm:p-4 flex items-center gap-3 flex-wrap ${
+          tokens != null && tokens < 100
+            ? "bg-amber-400/5 border-amber-400/30"
+            : "bg-purple-400/5 border-purple-400/30"
+        }`}>
+          <div className="w-10 h-10 rounded-xl bg-purple-400/15 flex items-center justify-center shrink-0 text-xl">
+            🪙
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">
+              {tokens != null && tokens < 100
+                ? `Need 100 tokens · You have ${tokens}`
+                : `This analysis costs 100 tokens · You have ${tokens ?? "—"}`}
+            </p>
+            <p className="text-[11px] text-zinc-400">
+              {tokens != null && tokens < 100
+                ? "Earn more for free or top up to continue."
+                : "Tokens never expire. Earn more by referring friends or hosting games."}
+            </p>
+          </div>
+          <Link to="/wallet"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-400/15 hover:bg-purple-400/25 text-purple-200 border border-purple-400/30 transition-colors">
+            Wallet →
+          </Link>
+        </div>
+      )}
+
       {/* Loading state pinned to top so user sees progress immediately */}
       {analyzing && (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}

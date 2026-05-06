@@ -666,11 +666,18 @@ CASHFREE_APP_ID = os.environ.get("CASHFREE_APP_ID", "").strip()
 CASHFREE_SECRET_KEY = os.environ.get("CASHFREE_SECRET_KEY", "").strip()
 CASHFREE_WEBHOOK_SECRET = os.environ.get("CASHFREE_WEBHOOK_SECRET", "").strip()
 CASHFREE_ENV = os.environ.get("CASHFREE_ENV", "SANDBOX").strip().upper()
-# Demo mode — bypass real Cashfree entirely. Lets us click-test the
-# buy flow + token credit before real merchant KYC. Set DEMO_PAYMENTS=true
-# on Vercel to enable. When the user is ready for real, flip to false +
-# set CASHFREE_APP_ID/SECRET_KEY/WEBHOOK_SECRET.
-DEMO_PAYMENTS = os.environ.get("DEMO_PAYMENTS", "false").strip().lower() in ("true", "1", "yes")
+# Demo mode — bypass real Cashfree entirely. AUTO-ENABLED when Cashfree
+# credentials are missing so the buy button always works during development
+# and pre-KYC. To force off (and surface the 503 instead), set
+# DEMO_PAYMENTS=false explicitly. To force on with real keys present, set
+# DEMO_PAYMENTS=true.
+_demo_env = os.environ.get("DEMO_PAYMENTS", "").strip().lower()
+if _demo_env in ("true", "1", "yes"):
+    DEMO_PAYMENTS = True
+elif _demo_env in ("false", "0", "no"):
+    DEMO_PAYMENTS = False
+else:
+    DEMO_PAYMENTS = not (CASHFREE_APP_ID and CASHFREE_SECRET_KEY)
 CASHFREE_BASE_URL = (
     "https://api.cashfree.com/pg" if CASHFREE_ENV == "PRODUCTION"
     else "https://sandbox.cashfree.com/pg"
