@@ -12,9 +12,13 @@ import { motion, AnimatePresence } from "framer-motion";
  *   isOpen:       boolean
  *   scanResult:   { frames: [{ imageDataUrl, people: [{box, score}], timestamp }], videoWidth, videoHeight }
  *   onSelect:     (box|null, idx) => void   // box=null means "analyze whole video"
+ *   onSelectAll:  (boxes[]) => void          // run analysis once per detected player
+ *   allowAnalyzeAll: boolean (default false) // show the "Analyze All Players" CTA
  *   onClose:      () => void
  */
-export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onClose }) {
+export default function PlayerSelectionModal({
+  isOpen, scanResult, onSelect, onSelectAll, allowAnalyzeAll = false, onClose,
+}) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
 
   // Pick the frame with the most people detected by default
@@ -194,6 +198,15 @@ export default function PlayerSelectionModal({ isOpen, scanResult, onSelect, onC
                 >
                   Skip — Analyze Whole Video
                 </Button>
+                {allowAnalyzeAll && onSelectAll && frame.people.length >= 2 && (
+                  <Button
+                    onClick={() => onSelectAll(frame.people.map((p) => p.box))}
+                    className="bg-sky-400 text-black hover:bg-sky-500 font-bold text-xs"
+                  >
+                    <Users className="w-3.5 h-3.5 mr-1.5" />
+                    Analyze All {frame.people.length} Players
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={onClose}

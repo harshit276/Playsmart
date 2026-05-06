@@ -497,35 +497,36 @@ export default function AnalyzePage() {
     const activeSport = profile?.active_sport || "badminton";
     const sportToAnalyze = selectedSport || (VIDEO_ANALYSIS_SPORTS.includes(activeSport) ? activeSport : "badminton");
 
-    if (processingMode === "client") {
-      // ─── Pre-scan the video for multiple players ───
-      setLoadingText("Scanning video for players...");
-      setProgress(5);
-      try {
-        const mod = await import("@/ai/videoProcessor");
-        if (typeof mod.scanVideoForPlayers === "function") {
-          const scan = await mod.scanVideoForPlayers(file, (msg) => {
-            setLoadingText(msg);
-          });
-          const maxPeople = Math.max(0, ...scan.frames.map((f) => f.people.length));
-          if (maxPeople >= 1) {
-            // Show confirmation modal — for 1 player just confirm, for 2+ let them choose
-            setScanResult(scan);
-            setPendingAnalysisSport(sportToAnalyze);
-            setShowPlayerModal(true);
-            setAnalyzing(false);
-            return;
-          }
+    // ─── Pre-scan the video for players (used by BOTH client + server modes) ───
+    setLoadingText("Scanning video for players...");
+    setProgress(5);
+    try {
+      const mod = await import("@/ai/videoProcessor");
+      if (typeof mod.scanVideoForPlayers === "function") {
+        const scan = await mod.scanVideoForPlayers(file, (msg) => {
+          setLoadingText(msg);
+        });
+        const maxPeople = Math.max(0, ...scan.frames.map((f) => f.people.length));
+        if (maxPeople >= 1) {
+          // Show modal for both client + server modes — handlePlayerSelected
+          // dispatches to the correct analysis path based on processingMode.
+          setScanResult(scan);
+          setPendingAnalysisSport(sportToAnalyze);
+          setShowPlayerModal(true);
+          setAnalyzing(false);
+          return;
         }
-      } catch (scanErr) {
-        console.warn("Player scan failed, proceeding without selection", scanErr);
       }
-
-      await runClientAnalysis(sportToAnalyze, null);
-      return;
+    } catch (scanErr) {
+      console.warn("Player scan failed, proceeding without selection", scanErr);
     }
 
-    await runServerAnalysis(sportToAnalyze);
+    // No players detected → analyze whole video
+    if (processingMode === "client") {
+      await runClientAnalysis(sportToAnalyze, null);
+    } else {
+      await runServerAnalysis(sportToAnalyze, null);
+    }
   };
 
   /**
@@ -667,7 +668,18 @@ export default function AnalyzePage() {
     setAnalyzing(false);
   };
 
-  const runServerAnalysis = async (sportToAnalyze) => {
+  // Map a normalized box {x, y, width, height} ∈ [0,1] to one of the
+  // backend's quadrant strings ("top-left", "bottom-right", etc.).
+  const _boxToQuadrant = (box) => {
+    if (!box) return "auto";
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    const horiz = cx < 0.5 ? "left" : "right";
+    const vert = cy < 0.5 ? "top" : "bottom";
+    return `${vert}-${horiz}`;
+  };
+
+  const runServerAnalysis = async (sportToAnalyze, customCropBox) => {
     setAnalyzing(true);
     setResult(null);
     setError(null);
@@ -688,9 +700,12 @@ export default function AnalyzePage() {
     try {
       const formData = new FormData();
       formData.append("video", file);
-      const playerParam = targetPlayer !== "auto" ? `&target_player=${targetPlayer}` : "";
+      // Player target: prefer the box selected from the modal, fall back to
+      // the explicit dropdown, else 'auto'.
+      const resolvedPlayer = customCropBox ? _boxToQuadrant(customCropBox) : targetPlayer;
+      const playerParam = resolvedPlayer && resolvedPlayer !== "auto" ? `&target_player=${resolvedPlayer}` : "";
       const { data } = await api.post(
-        `/analyze-video?sport=${sportToAnalyze}&analysis_mode=${analysisMode}${playerParam}`,
+        `/analyze-video?sport=${sportToAnalyze}&analysis_mode=${analysisMode}${playerParam}&predictor=auto`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" }, timeout: 300000 }
       );
@@ -728,8 +743,78 @@ export default function AnalyzePage() {
     setPendingAnalysisSport(null);
     setScanResult(null);
     if (!sportToAnalyze) return;
-    // box is null if user clicked "Skip — Analyze Whole Video"
-    await runClientAnalysis(sportToAnalyze, box);
+    // box is null if user clicked "Skip — Analyze Whole Video".
+    // Dispatch by processing mode: client = on-device, server = backend VLM.
+    if (processingMode === "client") {
+      await runClientAnalysis(sportToAnalyze, box);
+    } else {
+      await runServerAnalysis(sportToAnalyze, box);
+    }
+  };
+
+  // "Analyze All Players": fan out one server request per detected box,
+  // collect all responses, render as multiple result cards.
+  const handleAnalyzeAllPlayers = async (boxes) => {
+    setShowPlayerModal(false);
+    const sportToAnalyze = pendingAnalysisSport;
+    setPendingAnalysisSport(null);
+    setScanResult(null);
+    if (!sportToAnalyze || !boxes || boxes.length === 0) return;
+    if (processingMode === "client") {
+      // Client mode: only single-player on-device today; fall back to first.
+      await runClientAnalysis(sportToAnalyze, boxes[0]);
+      return;
+    }
+
+    setAnalyzing(true);
+    setResult(null);
+    setError(null);
+    setProgress(0);
+    setLoadingText(`Analyzing ${boxes.length} players in parallel...`);
+    try {
+      const formData = (box) => {
+        const fd = new FormData();
+        fd.append("video", file);
+        return fd;
+      };
+      const resolved = boxes.map((b) => _boxToQuadrant(b));
+      // Fire all requests in parallel — server-side, batched VLM still costs
+      // ~1 API call per player regardless of shot count.
+      const results = await Promise.all(resolved.map(async (player, i) => {
+        try {
+          const { data } = await api.post(
+            `/analyze-video?sport=${sportToAnalyze}&analysis_mode=${analysisMode}&target_player=${player}&predictor=auto`,
+            formData(boxes[i]),
+            { headers: { "Content-Type": "multipart/form-data" }, timeout: 300000 }
+          );
+          return { player_index: i, box: boxes[i], target_player: player, data };
+        } catch (err) {
+          return { player_index: i, box: boxes[i], target_player: player,
+                   error: err.response?.data?.detail || err.message || "Analysis failed" };
+        }
+      }));
+      setProgress(100);
+      setLoadingText("Complete!");
+      // Aggregate into a multi-player result envelope. The renderer can
+      // detect the `all_players` field and switch to multi-card view.
+      setResult({
+        success: results.some((r) => r.data?.success),
+        all_players: results,
+        sport: sportToAnalyze,
+        _processingMode: "server",
+      });
+      setViewingHistorical(false);
+      setActiveTab("results");
+      refreshProfile();
+      loadHistory();
+      const okCount = results.filter((r) => r.data?.success).length;
+      toast.success(`Analyzed ${okCount}/${boxes.length} players`);
+    } catch (err) {
+      const msg = err.message || "Multi-player analysis failed";
+      setError(msg);
+      toast.error(msg);
+    }
+    setAnalyzing(false);
   };
 
   const handlePlayerModalClose = () => {
@@ -1202,6 +1287,51 @@ export default function AnalyzePage() {
 
   const renderResults = () => {
     if (!result) return null;
+    // Multi-player branch: render one summary card per analyzed player.
+    if (result.all_players && Array.isArray(result.all_players)) {
+      return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          <div className="text-xs text-zinc-500">
+            Analyzed {result.all_players.length} players in {result.sport || "the video"}.
+          </div>
+          {result.all_players.map((p) => {
+            const d = p.data || {};
+            const sh = d.shot_analysis || {};
+            const co = d.coaching || {};
+            const ok = d.success;
+            return (
+              <div key={p.player_index} className="border border-zinc-800 rounded-2xl p-4 bg-zinc-900/60">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="font-heading font-bold text-white">
+                    Player {p.player_index + 1} <span className="text-xs text-zinc-500 ml-2">({p.target_player})</span>
+                  </div>
+                  {ok && (
+                    <Badge className="bg-lime-400/15 text-lime-300 border-lime-400/30 text-[11px]">
+                      {d.skill_level || "—"}
+                    </Badge>
+                  )}
+                </div>
+                {!ok ? (
+                  <div className="text-xs text-rose-400">Analysis failed: {p.error || "unknown error"}</div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 text-xs mb-3">
+                      <div><span className="text-zinc-500">Shot:</span> <span className="text-white font-semibold">{sh.shot_name || "—"}</span></div>
+                      <div><span className="text-zinc-500">Score:</span> <span className="text-white font-semibold">{sh.assessment?.overall_score ?? 0}/100</span></div>
+                      <div><span className="text-zinc-500">Speed:</span> <span className="text-white font-semibold">{d.speed_analysis?.estimated_speed_kmh ?? 0} km/h</span></div>
+                      <div><span className="text-zinc-500">Shots detected:</span> <span className="text-white font-semibold">{d.summary?.n_shots_detected ?? d.shots?.length ?? 0}</span></div>
+                    </div>
+                    {co.summary && <p className="text-zinc-300 text-sm mb-2">{co.summary}</p>}
+                    {co.shot_tip && <p className="text-lime-300 text-xs">💡 {co.shot_tip}</p>}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </motion.div>
+      );
+    }
+
     const shot = result.shot_analysis || {};
     const pro = result.pro_comparison || {};
     const coaching = result.coaching || {};
@@ -2353,7 +2483,9 @@ export default function AnalyzePage() {
         isOpen={showPlayerModal}
         scanResult={scanResult}
         onSelect={handlePlayerSelected}
+        onSelectAll={handleAnalyzeAllPlayers}
         onClose={handlePlayerModalClose}
+        allowAnalyzeAll={processingMode !== "client"}
       />
 
       {/* Share Modal */}

@@ -2188,10 +2188,19 @@ except OSError:
     ANALYSIS_TEMP_DIR.mkdir(exist_ok=True)
 
 
-def _run_ai_pipeline(video_path: str, sport: str = "badminton", target_player: str = "auto") -> dict:
+def _run_ai_pipeline(
+    video_path: str,
+    sport: str = "badminton",
+    target_player: str = "auto",
+    predictor: str = "auto",
+    vlm_backend: str = "auto",
+) -> dict:
     """Run AI analysis pipeline directly (imported, not via HTTP)."""
     from ai_pipeline import analyze_video as ai_analyze
-    return ai_analyze(video_path, sport=sport, target_player=target_player)
+    return ai_analyze(
+        video_path, sport=sport, target_player=target_player,
+        predictor=predictor, vlm_backend=vlm_backend,
+    )
 
 
 @api_router.post("/analyze-video")
@@ -2200,6 +2209,8 @@ async def analyze_video_endpoint(
     sport: str = Query("badminton"),
     analysis_mode: str = Query("full"),
     target_player: str = Query("auto"),
+    predictor: str = Query("auto"),    # "tcn" | "vlm" | "auto"
+    vlm_backend: str = Query("auto"),  # "auto" | "gemini" | "anthropic" | "openai" | "local"
     authorization: str = Header(None),
 ):
     """Upload a video, run AI analysis, transform to coach-like feedback, attach research data."""
@@ -2258,7 +2269,11 @@ async def analyze_video_endpoint(
         import functools
         loop = asyncio.get_event_loop()
         pipeline_result = await loop.run_in_executor(
-            None, functools.partial(_run_ai_pipeline, str(temp_path), sport=sport, target_player=target_player)
+            None, functools.partial(
+                _run_ai_pipeline, str(temp_path),
+                sport=sport, target_player=target_player,
+                predictor=predictor, vlm_backend=vlm_backend,
+            )
         )
 
         if not pipeline_result.get("success"):
