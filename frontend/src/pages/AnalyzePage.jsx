@@ -566,6 +566,18 @@ export default function AnalyzePage() {
         mode: analysisMode,
         targetPlayer,
         customCropBox,
+        // Delegate shot classification to Gemini (server-side). Browser still
+        // does pose extraction + metrics; we just upgrade shot_type +
+        // reasoning + speed via the lightweight VLM endpoint.
+        vlmClassify: async (payload) => {
+          try {
+            const { data } = await api.post("/classify-shots-vlm", payload, { timeout: 60000 });
+            return data?.shots || [];
+          } catch (e) {
+            console.warn("VLM classify failed (auth or quota):", e?.response?.data || e.message);
+            return [];
+          }
+        },
         onProgress: (info) => {
           // videoProcessor sends { step, percent, message }
           // Once real progress arrives, stop the fake interval steps
@@ -1083,36 +1095,54 @@ export default function AnalyzePage() {
 
   const renderUpload = () => (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-      {/* Token-cost banner — always visible so user knows the price before
-          they click Analyze. Color-codes based on whether the user can
-          actually afford it. */}
-      {user && (
-        <div className={`mb-4 rounded-2xl border p-3 sm:p-4 flex items-center gap-3 flex-wrap ${
-          tokens != null && tokens < 100
-            ? "bg-amber-400/5 border-amber-400/30"
-            : "bg-purple-400/5 border-purple-400/30"
-        }`}>
-          <div className="w-10 h-10 rounded-xl bg-purple-400/15 flex items-center justify-center shrink-0 text-xl">
-            🪙
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">
-              {tokens != null && tokens < 100
-                ? `Need 100 tokens · You have ${tokens}`
-                : `This analysis costs 100 tokens · You have ${tokens ?? "—"}`}
-            </p>
-            <p className="text-[11px] text-zinc-400">
-              {tokens != null && tokens < 100
-                ? "Earn more for free or top up to continue."
-                : "Tokens never expire. Earn more by referring friends or hosting games."}
-            </p>
-          </div>
+      {/* Token-cost banner — always visible so user knows the price BEFORE
+          uploading. Three states: guest, signed-in + enough, signed-in + short. */}
+      <div className={`mb-4 rounded-2xl border p-3 sm:p-4 flex items-center gap-3 flex-wrap ${
+        user && tokens != null && tokens < 100
+          ? "bg-amber-400/5 border-amber-400/30"
+          : "bg-purple-400/5 border-purple-400/30"
+      }`}>
+        <div className="w-10 h-10 rounded-xl bg-purple-400/15 flex items-center justify-center shrink-0 text-xl">
+          🪙
+        </div>
+        <div className="flex-1 min-w-0">
+          {!user ? (
+            <>
+              <p className="text-sm font-semibold text-white">
+                This analysis costs 100 tokens — sign up to get 300 free.
+              </p>
+              <p className="text-[11px] text-zinc-400">
+                That's 3 free analyses on us. Tokens never expire.
+              </p>
+            </>
+          ) : tokens != null && tokens < 100 ? (
+            <>
+              <p className="text-sm font-semibold text-white">Need 100 tokens · You have {tokens}</p>
+              <p className="text-[11px] text-zinc-400">Earn more for free or top up to continue.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-white">
+                This analysis costs 100 tokens · You have {tokens ?? "—"}
+              </p>
+              <p className="text-[11px] text-zinc-400">
+                Tokens never expire. Earn more by referring friends or hosting games.
+              </p>
+            </>
+          )}
+        </div>
+        {!user ? (
+          <Link to="/auth"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-lime-400 hover:bg-lime-500 text-black transition-colors">
+            Sign up free →
+          </Link>
+        ) : (
           <Link to="/wallet"
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-400/15 hover:bg-purple-400/25 text-purple-200 border border-purple-400/30 transition-colors">
             Wallet →
           </Link>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Loading state pinned to top so user sees progress immediately */}
       {analyzing && (

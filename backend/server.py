@@ -726,10 +726,13 @@ async def create_payment_order(req: CreateOrderRequest, authorization: str = Hea
     if not pack:
         raise HTTPException(status_code=400, detail="Unknown pack")
 
-    # Demo mode — skip Cashfree entirely. Persist a demo order row so
-    # /payments/verify can credit on the subsequent call (idempotent).
+    # Demo mode — skip Cashfree entirely. Encode the pack key INTO the
+    # order_id so /payments/verify can credit even if the Mongo write
+    # below times out (which sometimes caused "Order not found" on verify).
+    # Format: DEMO_<pack_key>_<timestamp>_<random>. The DB row is still
+    # written for audit but is no longer required for credit to land.
     if DEMO_PAYMENTS:
-        order_id = f"DEMO_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+        order_id = f"DEMO_{pack['key']}_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
         try:
             await asyncio.wait_for(db.payment_orders.insert_one({
                 "id": str(uuid.uuid4()),
@@ -744,9 +747,9 @@ async def create_payment_order(req: CreateOrderRequest, authorization: str = Hea
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "paid_at": None,
                 "demo": True,
-            }), timeout=2.0)
+            }), timeout=4.0)
         except Exception as e:
-            logger.warning(f"demo create-order: DB persist failed: {e}")
+            logger.warning(f"demo create-order: DB persist failed (pack encoded in order_id, will credit anyway): {e}")
         return {
             "order_id": order_id,
             "payment_session_id": "demo",
@@ -885,6 +888,33 @@ async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(No
         )
     except Exception:
         order = None
+
+    # Demo orders self-describe via the encoded order_id, so we can credit
+    # even if the create-order Mongo write timed out and there's no DB row.
+    # Format: DEMO_<pack_key>_<ts>_<rnd>
+    if not order and req.order_id.startswith("DEMO_"):
+        parts = req.order_id.split("_")
+        # Try every prefix length to recover the pack key (pack keys may
+        # contain underscores e.g. "pack_500", "pack_1500").
+        pack = None
+        for end in range(len(parts), 1, -1):
+            candidate = "_".join(parts[1:end]).lower()
+            p = _get_pack(candidate)
+            if p:
+                pack = p
+                break
+        if pack:
+            order = {
+                "user_id": user["id"],
+                "cashfree_order_id": req.order_id,
+                "pack_key": pack["key"],
+                "tokens_amount": pack["tokens"],
+                "amount_inr": pack["price_inr"],
+                "status": "created",
+                "demo": True,
+                "_synthetic": True,
+            }
+
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
