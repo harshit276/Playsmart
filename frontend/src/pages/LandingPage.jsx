@@ -107,6 +107,18 @@ export default function LandingPage() {
     api.get("/blog", { timeout: 5000 })
       .then(r => setBlogPosts((r.data || []).slice(0, 3)))
       .catch(() => {});
+    // Preload Firebase auth chunk + the AuthPage bundle so the Google
+    // sign-in popup is INSTANT on first click. Without this, the user
+    // sees a ~1-2s chunk download after clicking before the popup opens.
+    if (!isAuthenticated) {
+      const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 800));
+      idle(() => {
+        import("firebase/auth").catch(() => {});
+        import("@/lib/firebase").catch(() => {});
+        import("@/pages/AuthPage").catch(() => {});
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCTA = () => {

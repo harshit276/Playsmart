@@ -232,17 +232,44 @@ async def firebase_auth(req: FirebaseAuthRequest):
     user_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{email}"))
     token = create_token(user_id, email)
 
-    # Save/update user in background (don't wait for it)
-    asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
+    # Run the user-doc fetch + profile-fetch IN PARALLEL with tight timeouts.
+    # This is the hot path on every login — keeping it under ~1.5s wall time
+    # is the difference between "login feels instant" and "Google sign-in is
+    # painfully slow". Returning users skip the signup grant entirely.
+    async def _fetch_user():
+        try:
+            return await asyncio.wait_for(
+                db.users.find_one({"id": user_id}, {"_id": 0, "tokens": 1, "id": 1}),
+                timeout=1.5,
+            )
+        except Exception:
+            return None
 
-    # SYNCHRONOUS first-time signup grant — was previously fire-and-forget,
-    # which made fresh signups land on a dashboard showing 0 tokens until
-    # the background credit eventually persisted. Now we await so the
-    # response carries the *actual* persisted balance (never an inflated
-    # number — if the DB write failed, the user sees 0 and the next /balance
-    # call will retry rather than a phantom 300 that breaks /spend).
-    # First, make sure the user doc exists BEFORE we try to credit, so the
-    # save and the credit don't race on document creation.
+    async def _fetch_profile():
+        try:
+            return await asyncio.wait_for(
+                db.player_profiles.find_one({"user_id": user_id}, {"_id": 0, "user_id": 1}),
+                timeout=1.5,
+            )
+        except Exception:
+            return None
+
+    existing_user, existing_profile = await asyncio.gather(_fetch_user(), _fetch_profile())
+    has_profile = existing_profile is not None
+
+    # Returning user — fast path. Update name/photo in background; return
+    # the cached balance immediately. No grant attempt, no second DB hit.
+    if existing_user is not None:
+        asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
+        return {
+            "token": token,
+            "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
+            "has_profile": has_profile,
+            "tokens": int(existing_user.get("tokens", 0) or 0),
+        }
+
+    # NEW user — synchronous flow: upsert + credit + return real balance.
+    # Slower (~3-5s) but only happens once in a user's lifetime.
     try:
         await asyncio.wait_for(db.users.update_one(
             {"id": user_id},
@@ -257,30 +284,13 @@ async def firebase_auth(req: FirebaseAuthRequest):
 
     tokens_balance = 0
     try:
-        if not await _has_transaction(user_id, "signup_grant"):
-            new_balance = await _credit_tokens(
-                user_id, "signup_grant", TOKEN_RULES["signup_grant"],
-                {"email": email, "source": "firebase_auth"},
-            )
-            # Honest balance — None means the credit DIDN'T persist. Return
-            # what we can read from the DB; if even that fails, return 0.
-            tokens_balance = new_balance if new_balance is not None else await _get_balance(user_id)
-        else:
-            tokens_balance = await _get_balance(user_id)
+        new_balance = await _credit_tokens(
+            user_id, "signup_grant", TOKEN_RULES["signup_grant"],
+            {"email": email, "source": "firebase_auth"},
+        )
+        tokens_balance = new_balance if new_balance is not None else 0
     except Exception as e:
         logger.warning(f"signup_grant failed for {user_id[:8]}: {e}")
-        tokens_balance = await _get_balance(user_id)
-
-    # Quick profile check (1s timeout — if DB is slow, assume no profile)
-    has_profile = False
-    try:
-        profile = await asyncio.wait_for(
-            db.player_profiles.find_one({"user_id": user_id}, {"_id": 0, "user_id": 1}),
-            timeout=1.0
-        )
-        has_profile = profile is not None
-    except Exception:
-        pass  # DB slow — frontend will check via /auth/me later
 
     return {
         "token": token,
@@ -2183,6 +2193,72 @@ async def get_player_card(user_id: str):
 
 
 # ─── Video Analysis Routes ───
+
+# ──────────────────────────────────────────────────────────────────────
+# Lightweight VLM shot-classification endpoint.
+#
+# The full /analyze-video pipeline can't run on Vercel serverless (60s + 50MB
+# limits), so the browser does pose extraction + metrics on-device. This
+# endpoint accepts pre-extracted JPEG keyframes (already prepared by the
+# frontend's videoProcessor.js) and asks Gemini to classify each shot.
+# Stays well within Vercel's serverless budget — one short Gemini call per
+# request, no video decode.
+# ──────────────────────────────────────────────────────────────────────
+class ClassifyShotsRequest(BaseModel):
+    sport: str = "badminton"
+    target_player: str = "auto"
+    backend: str = "auto"   # auto | gemini | anthropic | openai | local
+    # Each shot is a list of JPEG-base64 keyframes (data:image/... or raw b64)
+    shots: list[list[str]]
+
+
+@api_router.post("/classify-shots-vlm")
+async def classify_shots_vlm(req: ClassifyShotsRequest, authorization: str = Header(None)):
+    """Per-shot keyframes -> VLM shot type + reasoning + power_level + tips.
+
+    Returns: {success, shots: [{shot_type, confidence, reasoning, alternatives,
+                                form_feedback, estimated_skill, power_level,
+                                speed_kmh, _meta}, ...]}
+    """
+    user = await get_current_user(authorization)
+    if not req.shots:
+        return {"success": True, "shots": []}
+
+    import base64
+    def _strip_b64(s: str) -> bytes:
+        if s.startswith("data:"):
+            s = s.split(",", 1)[1]
+        return base64.b64decode(s)
+
+    keyframes_per_shot: list[list[bytes]] = []
+    for shot in req.shots:
+        try:
+            keyframes_per_shot.append([_strip_b64(f) for f in shot if f])
+        except Exception:
+            keyframes_per_shot.append([])
+
+    try:
+        from ai_pipeline.vlm import VLMShotClassifier, estimate_speed_from_power
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+
+    def _run() -> list[dict]:
+        clf = VLMShotClassifier(backend=req.backend, sport=req.sport, use_cache=False)
+        return clf.predict_batch_from_keyframes(keyframes_per_shot, target_player=req.target_player)
+
+    loop = asyncio.get_event_loop()
+    try:
+        results = await loop.run_in_executor(None, _run)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"VLM call failed: {exc}")
+
+    # Attach speed estimate per shot from power_level (browser doesn't have the table)
+    for r in results:
+        speed = estimate_speed_from_power(req.sport, r.get("shot_type", "unknown"), r.get("power_level", "medium"))
+        r["estimated_speed_kmh"] = speed["estimated_speed_kmh"]
+        r["speed_source"] = speed["source"]
+    return {"success": True, "shots": results}
+
 
 if IS_SERVERLESS:
     ANALYSIS_TEMP_DIR = Path("/tmp/athlyticai_uploads")
