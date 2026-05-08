@@ -199,7 +199,7 @@ export default function MarketplacePage() {
 
         {/* Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 h-72 animate-pulse" />
             ))}
@@ -211,7 +211,7 @@ export default function MarketplacePage() {
             <p className="text-zinc-500 text-xs">Try a different sport or wider price range.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {filtered.map((item, i) => (
               <ProductCard key={`${item._sport}-${item.id}`} item={item} delay={i * 0.02} />
             ))}
@@ -222,6 +222,17 @@ export default function MarketplacePage() {
   );
 }
 
+// Per-sport gradients for the image fallback so cards don't all look the same.
+const SPORT_GRADIENT = {
+  badminton: "from-lime-500/20 via-emerald-700/20 to-zinc-900",
+  tennis: "from-amber-500/20 via-orange-700/20 to-zinc-900",
+  table_tennis: "from-sky-500/20 via-blue-700/20 to-zinc-900",
+  pickleball: "from-emerald-500/20 via-teal-700/20 to-zinc-900",
+  cricket: "from-blue-500/20 via-indigo-700/20 to-zinc-900",
+  football: "from-green-500/20 via-emerald-700/20 to-zinc-900",
+  swimming: "from-sky-500/20 via-cyan-700/20 to-zinc-900",
+};
+
 function ProductCard({ item, delay }) {
   const prices = item.marketplace_prices || [];
   const cheapest = prices.length
@@ -231,18 +242,27 @@ function ProductCard({ item, delay }) {
   const isLimited = item.availability === "limited_online";
   const fallbackPrice = item.price_ranges?.INR;
 
+  // Image: trust Amazon CDN (works), distrust Flipkart hotlinks (blocked
+  // by their CDN). Falls back to a branded gradient placeholder on error.
+  const initialImg = (item.image && !item.image_search_failed) ? item.image : null;
+  const isAmazonImg = initialImg && (initialImg.includes("media-amazon.com") || initialImg.includes("amazon.in"));
+  const [imgFailed, setImgFailed] = useState(!initialImg);
+  const showImage = initialImg && !imgFailed && isAmazonImg; // Amazon-only for now
+  const grad = SPORT_GRADIENT[item._sport] || SPORT_GRADIENT.badminton;
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
       className="bg-zinc-900/80 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-700 transition-colors flex flex-col">
-      {/* Image */}
-      <div className="relative aspect-[4/3] bg-zinc-950 overflow-hidden">
-        {item.image && !item.image_search_failed ? (
-          <img src={item.image} alt={item.name} loading="lazy"
-            className="w-full h-full object-contain"
-            onError={(e) => { e.target.style.display = "none"; }} />
+      {/* Image — Amazon-CDN only, sport-themed fallback otherwise */}
+      <div className={`relative aspect-[4/3] overflow-hidden bg-gradient-to-br ${grad}`}>
+        {showImage ? (
+          <img src={initialImg} alt={item.name} loading="lazy"
+            className="w-full h-full object-contain p-2"
+            onError={() => setImgFailed(true)} />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900">
-            <span className="text-6xl opacity-20">{sportEmoji}</span>
+          <div className="w-full h-full flex flex-col items-center justify-center text-center px-3">
+            <span className="text-5xl opacity-30 mb-1">{sportEmoji}</span>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">{item.brand}</p>
           </div>
         )}
         {item.level && (
@@ -252,7 +272,12 @@ function ProductCard({ item, delay }) {
         )}
         {isLimited && (
           <Badge className="absolute top-2 right-2 bg-amber-400/15 text-amber-300 border-amber-400/30 text-[10px] backdrop-blur-sm">
-            Limited online
+            Limited
+          </Badge>
+        )}
+        {prices.length >= 2 && (
+          <Badge className="absolute bottom-2 right-2 bg-purple-500/20 text-purple-200 border-purple-400/30 text-[10px] backdrop-blur-sm">
+            {prices.length} stores
           </Badge>
         )}
       </div>
