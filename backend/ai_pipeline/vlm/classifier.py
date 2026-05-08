@@ -18,7 +18,9 @@ from pathlib import Path
 
 from . import cache as _cache
 from .backends import VLMBackend, available_backends, pick_backend
-from .frame_extract import extract_keyframes, frame_to_jpeg_bytes
+# Note: frame_extract pulls cv2 (~50 MB on disk) which isn't available on
+# Vercel serverless. Imported lazily inside predict()/predict_batch() — the
+# keyframe-direct path (predict_batch_from_keyframes) doesn't need it at all.
 from .prompts import (
     GENERIC_SCHEMA_KEYS, SHOT_VOCAB, shot_vocabulary,
     system_prompt, user_message,
@@ -66,7 +68,8 @@ class VLMShotClassifier:
                 hit.setdefault("_meta", {})["cached"] = True
                 return hit
 
-        # 2. extract keyframes
+        # 2. extract keyframes (lazy cv2 import — not needed for serverless)
+        from .frame_extract import extract_keyframes, frame_to_jpeg_bytes
         frames = extract_keyframes(
             video_path,
             start_sec=start_sec, end_sec=end_sec,
@@ -165,6 +168,7 @@ class VLMShotClassifier:
 
         # Extract frames for the misses; track frames-per-shot so the model
         # can split the interleaved image stream back into per-shot groups.
+        from .frame_extract import extract_keyframes, frame_to_jpeg_bytes
         all_jpegs: list[bytes] = []
         frames_per_shot: list[int] = []
         for i in miss_indices:
