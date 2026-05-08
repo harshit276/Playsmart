@@ -337,8 +337,18 @@ class VLMShotClassifier:
         parsed_list = _parse_batch_response(raw, self.sport, len(nonzero_per_shot))
         parsed_iter = iter(parsed_list)
 
+        # When the parser couldn't extract any usable shots, attach the raw
+        # Gemini response to the first result's _meta so the user can see
+        # what came back. Trimmed to 800 chars.
+        all_unknown = all(
+            (p.get("shot_type") == "unknown" and (p.get("confidence") or 0) == 0)
+            for p in parsed_list
+        )
+        raw_preview = (raw or "")[:800] if all_unknown else None
+
         # Distribute parsed results back, accounting for shots with insufficient frames
         results: list[dict] = []
+        first_real = True
         for n in frames_per_shot:
             if n == 0:
                 results.append({
@@ -355,6 +365,9 @@ class VLMShotClassifier:
                 "backend": self.backend_name, "model": self.model_name,
                 "cached": False, "n_frames": n, "batched": True, "from_keyframes": True,
             }
+            if raw_preview and first_real:
+                parsed["_meta"]["raw_preview"] = raw_preview
+                first_real = False
             results.append(parsed)
 
         return results

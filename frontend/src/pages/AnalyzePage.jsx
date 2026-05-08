@@ -630,8 +630,12 @@ export default function AnalyzePage() {
             console.info(`[vlm] ${ms}ms — ${named}/${shots.length} shots classified by Gemini`,
                          shots.map((s) => `${s.shot_type}@${s.confidence?.toFixed?.(2)}`).join(", "));
             if (named === 0 && shots.length > 0) {
-              console.warn("[vlm] every shot returned 'unknown' — check Vercel env: is GEMINI_API_KEY set in Production?");
+              console.warn("[vlm] every shot returned 'unknown' — Gemini responded but the parse mapped nothing.");
               if (shots[0]?.reasoning) console.warn("[vlm] first reasoning:", shots[0].reasoning);
+              const rawPreview = shots[0]?._meta?.raw_preview || shots[0]?._meta?.error_friendly;
+              if (rawPreview) console.warn("[vlm] Gemini raw response preview:\n", rawPreview);
+              const errMeta = shots[0]?._meta?.error;
+              if (errMeta) console.warn("[vlm] _meta.error:", errMeta);
             }
             return shots;
           } catch (e) {
