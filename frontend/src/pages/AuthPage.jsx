@@ -63,6 +63,19 @@ export default function AuthPage() {
     navigate(data.has_profile ? "/dashboard" : "/assessment");
   };
 
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/demo-login", {});
+      login(data.token, data.user, data.has_profile, data.tokens);
+      toast.success(`Logged in as Demo Player · 🪙 ${data.tokens} tokens`);
+      navigate(data.has_profile ? "/dashboard" : "/assessment");
+    } catch (err) {
+      toast.error("Demo login failed: " + (err?.response?.data?.detail || err.message || "unknown"));
+    }
+    setLoading(false);
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
@@ -152,6 +165,16 @@ export default function AuthPage() {
                 </svg>
               )}
               {loading ? "Signing in..." : "Continue with Google"}
+            </Button>
+
+            {/* Demo account — instant 5000-token test login */}
+            <Button
+              onClick={handleDemoLogin}
+              disabled={loading}
+              className="w-full h-12 bg-purple-500/15 hover:bg-purple-500/25 text-purple-200 border border-purple-400/30 font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-colors"
+            >
+              <span className="text-base">🪙</span>
+              Try Demo Account (5000 tokens, no signup)
             </Button>
 
             {/* Divider */}

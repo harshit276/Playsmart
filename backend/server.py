@@ -445,6 +445,53 @@ async def get_me(authorization: str = Header(None)):
     return {"user": user, "profile": profile}
 
 
+# ─── Demo login (instant 5000-token test account) ───────────────
+# A fixed account with 5000 tokens preloaded so the user can test
+# every premium feature without going through Firebase + waiting on
+# Mongo writes. Persists best-effort (so multiple sessions share it),
+# but ALWAYS returns 5000 tokens in the auth response regardless of
+# DB state — the demo button must never feel broken.
+
+DEMO_USER_EMAIL = "demo@athlyticai.com"
+DEMO_USER_ID = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{DEMO_USER_EMAIL}"))
+DEMO_USER_TOKENS = 5000
+
+
+@api_router.post("/auth/demo-login")
+async def demo_login():
+    """Instant login as the demo account (5000 tokens preloaded). No password,
+    no Firebase popup — just returns a working JWT. The demo user is
+    upserted with tokens=5000 (best-effort; if Mongo is slow the response
+    still returns 5000 so the test flow never breaks)."""
+    token = create_token(DEMO_USER_ID, DEMO_USER_EMAIL)
+    # Best-effort: ensure the user doc exists with 5000 tokens. Never
+    # block more than 4s — the user gets logged in either way.
+    try:
+        await asyncio.wait_for(db.users.update_one(
+            {"id": DEMO_USER_ID},
+            {"$set": {
+                "id": DEMO_USER_ID, "email": DEMO_USER_EMAIL,
+                "name": "Demo Player", "photo": "",
+                "tokens": DEMO_USER_TOKENS,
+                "demo_account": True,
+                "last_demo_login": datetime.now(timezone.utc).isoformat(),
+            }, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True,
+        ), timeout=4.0)
+    except Exception as e:
+        logger.warning(f"demo-login: user upsert failed (returning 5000 anyway): {e}")
+    return {
+        "token": token,
+        "user": {
+            "id": DEMO_USER_ID, "email": DEMO_USER_EMAIL,
+            "name": "Demo Player", "photo": "",
+        },
+        "has_profile": False,
+        "tokens": DEMO_USER_TOKENS,
+        "demo": True,
+    }
+
+
 # ─── Admin: nuke all accounts (dev / pre-launch reset) ───────────
 ADMIN_WIPE_KEY = os.environ.get("ADMIN_WIPE_KEY", "").strip()
 
@@ -630,23 +677,37 @@ async def _credit_tokens(
 ) -> Optional[int]:
     """Credit (positive delta) or debit (negative delta) tokens. Writes a
     transaction log. Returns the new balance or None on DB failure.
-    Caller is responsible for idempotency / cap checks before calling."""
+    Caller is responsible for idempotency / cap checks before calling.
+
+    Retries once on timeout — token credits are user-visible and silent
+    failure (returning 0 to the UI) is much worse than an extra second."""
     if delta == 0:
         return await _get_balance(user_id)
+    result = None
+    last_err = None
+    for attempt in (1, 2):
+        try:
+            # Upsert tokens on the user doc atomically. $inc creates the field
+            # if missing — works even if the user doc was never written by
+            # _save_user_background (race condition safety).
+            result = await asyncio.wait_for(
+                db.users.find_one_and_update(
+                    {"id": user_id},
+                    {"$inc": {"tokens": delta}, "$setOnInsert": {"id": user_id}},
+                    upsert=True,
+                    return_document=True,
+                    projection={"_id": 0, "tokens": 1},
+                ),
+                timeout=6.0 if attempt == 1 else 8.0,
+            )
+            break
+        except Exception as e:
+            last_err = e
+            logger.warning(f"_credit_tokens attempt {attempt} failed for {user_id[:8]} {kind}: {e}")
+    if result is None:
+        logger.error(f"_credit_tokens GAVE UP after retries for {user_id[:8]} {kind} {delta}: {last_err}")
+        return None
     try:
-        # Upsert tokens on the user doc atomically. $inc creates the field
-        # if missing — works even if the user doc was never written by
-        # _save_user_background (race condition safety).
-        result = await asyncio.wait_for(
-            db.users.find_one_and_update(
-                {"id": user_id},
-                {"$inc": {"tokens": delta}, "$setOnInsert": {"id": user_id}},
-                upsert=True,
-                return_document=True,
-                projection={"_id": 0, "tokens": 1},
-            ),
-            timeout=3.0,
-        )
         new_balance = int((result or {}).get("tokens", delta))
         # Log transaction
         tx = {
@@ -946,9 +1007,22 @@ async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(No
     # Demo mode — credit immediately, no Cashfree round-trip.
     if DEMO_PAYMENTS or order.get("demo") or req.order_id.startswith("DEMO_"):
         new_balance = await _credit_for_paid_order(user["id"], order, f"DEMO_{order['cashfree_order_id']}")
+        # Distinguish "already credited" from "credit attempt failed":
+        # - balance reflects the expected total + already exists in tx log → success
+        # - balance is 0 OR no tx log entry → real failure, surface 503
         if new_balance is None:
-            return {"ok": True, "tokens_credited": 0,
-                    "balance": await _get_balance(user["id"]), "already_credited": True}
+            current = await _get_balance(user["id"])
+            already_logged = await _has_transaction(user["id"], "purchase",
+                                                     since_iso=(datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat())
+            if already_logged:
+                return {"ok": True, "tokens_credited": order.get("tokens_amount", 0),
+                        "balance": current, "already_credited": True}
+            # Genuine failure — don't silently report 0 added as success
+            raise HTTPException(status_code=503, detail={
+                "error": "credit_failed",
+                "message": "Payment processed but token credit failed. Try again or contact support.",
+                "balance": current,
+            })
         return {"ok": True, "tokens_credited": order.get("tokens_amount", 0),
                 "balance": new_balance, "demo": True}
 
