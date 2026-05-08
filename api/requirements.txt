@@ -15,3 +15,8 @@ httpx==0.27.0
 numpy>=1.24,<2
 scikit-learn>=1.4,<1.6
 joblib>=1.3
+
+# VLM backends — google-generativeai is the cheapest + has a free tier.
+# Used by /classify-shots-vlm, /compare-analyses, and the personalized
+# coaching call inside /analyze-client-results.
+google-generativeai>=0.8.0
