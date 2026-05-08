@@ -543,9 +543,19 @@ export default function AnalyzePage() {
     try {
       const mod = await import("@/ai/videoProcessor");
       if (typeof mod.scanVideoForPlayers === "function") {
-        const scan = await mod.scanVideoForPlayers(file, (msg) => {
+        // Soft cap: if the scan stalls (rare codec quirk, slow device),
+        // proceed without player selection rather than hang the UI.
+        const scanPromise = mod.scanVideoForPlayers(file, (msg) => {
           setLoadingText(msg);
         });
+        const scan = await Promise.race([
+          scanPromise,
+          new Promise((resolve) => setTimeout(() => resolve(null), 25000)),
+        ]);
+        if (!scan) {
+          console.warn("Player scan timed out, proceeding without selection");
+          throw new Error("scan timeout");
+        }
         const maxPeople = Math.max(0, ...scan.frames.map((f) => f.people.length));
         if (maxPeople >= 1) {
           // Show modal for both client + server modes — handlePlayerSelected
@@ -610,11 +620,27 @@ export default function AnalyzePage() {
         // does pose extraction + metrics; we just upgrade shot_type +
         // reasoning + speed via the lightweight VLM endpoint.
         vlmClassify: async (payload) => {
+          const t0 = Date.now();
+          console.info(`[vlm] sending ${payload.shots.length} shots (${payload.shots.reduce((a, s) => a + s.length, 0)} keyframes total) to /classify-shots-vlm`);
           try {
             const { data } = await api.post("/classify-shots-vlm", payload, { timeout: 60000 });
-            return data?.shots || [];
+            const ms = Date.now() - t0;
+            const shots = data?.shots || [];
+            const named = shots.filter((s) => s.shot_type && s.shot_type !== "unknown").length;
+            console.info(`[vlm] ${ms}ms — ${named}/${shots.length} shots classified by Gemini`,
+                         shots.map((s) => `${s.shot_type}@${s.confidence?.toFixed?.(2)}`).join(", "));
+            if (named === 0 && shots.length > 0) {
+              console.warn("[vlm] every shot returned 'unknown' — check Vercel env: is GEMINI_API_KEY set in Production?");
+              if (shots[0]?.reasoning) console.warn("[vlm] first reasoning:", shots[0].reasoning);
+            }
+            return shots;
           } catch (e) {
-            console.warn("VLM classify failed (auth or quota):", e?.response?.data || e.message);
+            const status = e?.response?.status;
+            const detail = e?.response?.data?.detail || e.message;
+            console.error(`[vlm] HTTP ${status}: ${detail}`);
+            if (status === 502 && /no VLM backend|GEMINI_API_KEY/i.test(detail || "")) {
+              toast.error("AI coach unavailable: backend not configured. (Check GEMINI_API_KEY in Vercel.)");
+            }
             return [];
           }
         },

@@ -37,6 +37,32 @@ import {
  * @param {string} targetPlayer - "auto"|"top-left"|"top-right"|"bottom-left"|"bottom-right"
  * @returns {{ sx: number, sy: number, sw: number, sh: number }}
  */
+// ─── Video event helpers (with timeouts so we never hang) ──────────────
+// Some browsers/codecs occasionally fail to fire `onseeked` or take many
+// seconds. Without a timeout the analyze flow gets stuck forever.
+
+function _waitForEvent(target, eventName, timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      try { target[`on${eventName}`] = null; } catch {}
+      try { target.onerror = null; } catch {}
+      clearTimeout(t);
+      resolve();
+    };
+    const t = setTimeout(finish, timeoutMs);
+    target[`on${eventName}`] = finish;
+    target.onerror = finish;
+  });
+}
+
+async function _seekTo(video, time, timeoutMs = 4000) {
+  video.currentTime = time;
+  await _waitForEvent(video, "seeked", timeoutMs);
+}
+
 function getCropRegion(videoWidth, videoHeight, targetPlayer) {
   const halfW = videoWidth / 2;
   const halfH = videoHeight / 2;
@@ -81,12 +107,9 @@ async function extractFrames(videoFile, targetFrameCount = 30, targetPlayer = "a
   video.muted = true;
   video.playsInline = true;
 
-  // Wait for metadata so we know duration and dimensions
-  await new Promise((resolve, reject) => {
-    video.onloadedmetadata = resolve;
-    video.onerror = () => reject(new Error("Failed to load video. The file may be corrupt or unsupported."));
-    video.load();
-  });
+  // Wait for metadata (with timeout so we don't hang on bad files)
+  video.load();
+  await _waitForEvent(video, "loadedmetadata", 8000);
 
   const duration = video.duration;
   if (!duration || !isFinite(duration) || duration <= 0) {
@@ -125,10 +148,7 @@ async function extractFrames(videoFile, targetFrameCount = 30, targetPlayer = "a
 
   for (let i = 0; i < targetFrameCount; i++) {
     const time = Math.min(i * interval, duration - 0.01);
-    video.currentTime = time;
-    await new Promise((resolve) => {
-      video.onseeked = resolve;
-    });
+    await _seekTo(video, time, 3000);
 
     ctx.drawImage(video, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, canvasSize, canvasSize);
     const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
@@ -1753,15 +1773,16 @@ export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBo
   video.playsInline = true;
   video.crossOrigin = "anonymous";
 
-  await new Promise((resolve, reject) => {
-    video.onloadedmetadata = resolve;
-    video.onerror = () => reject(new Error("Failed to load video metadata for keyframe extraction."));
-    video.load();
-  });
+  video.load();
+  await _waitForEvent(video, "loadedmetadata", 6000);
 
   const duration = video.duration;
   const vw = video.videoWidth;
   const vh = video.videoHeight;
+  if (!duration || !isFinite(duration) || !vw || !vh) {
+    URL.revokeObjectURL(objectUrl);
+    return [];
+  }
 
   let sx = 0, sy = 0, sw = vw, sh = vh;
   if (customCropBox) {
@@ -1789,13 +1810,8 @@ export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBo
     const shotFrames = [];
     for (const offs of useOffsets) {
       const t = Math.max(0.01, Math.min(duration - 0.01, peakTime + offs));
-      video.currentTime = t;
       try {
-        await new Promise((res, rej) => {
-          const onSeeked = () => { video.onseeked = null; video.onerror = null; res(); };
-          video.onseeked = onSeeked;
-          video.onerror = () => rej(new Error("seek failed"));
-        });
+        await _seekTo(video, t, 3000);
         ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
         const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
         shotFrames.push(dataUrl);
@@ -1834,11 +1850,8 @@ export async function scanVideoForPlayers(videoFile, onProgress) {
   video.playsInline = true;
   video.crossOrigin = "anonymous";
 
-  await new Promise((resolve, reject) => {
-    video.onloadedmetadata = resolve;
-    video.onerror = () => reject(new Error("Failed to load video metadata."));
-    video.load();
-  });
+  video.load();
+  await _waitForEvent(video, "loadedmetadata", 8000);
 
   const duration = video.duration;
   if (!duration || !isFinite(duration) || duration <= 0) {
@@ -1865,10 +1878,7 @@ export async function scanVideoForPlayers(videoFile, onProgress) {
   for (let si = 0; si < sampleTimes.length; si++) {
     const time = sampleTimes[si];
     report(`Scanning frame ${si + 1}/${sampleTimes.length}...`);
-    video.currentTime = Math.min(time, duration - 0.01);
-    await new Promise((resolve) => {
-      video.onseeked = resolve;
-    });
+    await _seekTo(video, Math.min(time, duration - 0.01), 3000);
 
     ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
 
@@ -1926,13 +1936,13 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     const tempUrl = URL.createObjectURL(videoFile);
     tempVideo.src = tempUrl;
     tempVideo.muted = true;
-    await new Promise((resolve, reject) => {
-      tempVideo.onloadedmetadata = resolve;
-      tempVideo.onerror = () => reject(new Error("Failed to load video metadata."));
-      tempVideo.load();
-    });
+    tempVideo.load();
+    await _waitForEvent(tempVideo, "loadedmetadata", 6000);
     const videoDuration = tempVideo.duration;
     URL.revokeObjectURL(tempUrl);
+    if (!videoDuration || !isFinite(videoDuration)) {
+      throw new Error("Could not read video metadata. Try a different file.");
+    }
 
     // Frame budget. Old cap of 150 was a disaster on long clips —
     // a 7-minute highlight got sampled at 0.36 fps, missing every smash.
@@ -2100,7 +2110,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // the LLM. Falls back gracefully to heuristic if the call fails.
     if (typeof options.vlmClassify === "function" && shotPeaks.length > 0) {
       try {
-        progress("classify", 70, "Asking Gemini coach...");
+        progress("classify", 70, "Coach is analyzing your shots...");
         const peakTimes = shotPeaks.map((p) => p.time);
         const keyframes = await extractKeyframesPerShot(
           videoFile, peakTimes, customCropBox,
