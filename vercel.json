@@ -21,6 +21,7 @@
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.py" },
     { "src": "/static/(.*)", "dest": "/frontend/static/$1" },
+    { "src": "/models/(.*)", "dest": "/frontend/models/$1" },
     { "src": "/icons/(.*)", "dest": "/frontend/icons/$1" },
     { "src": "/manifest.json", "dest": "/frontend/manifest.json" },
     { "src": "/service-worker.js", "dest": "/frontend/service-worker.js" },

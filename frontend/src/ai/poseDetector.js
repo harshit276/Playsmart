@@ -98,38 +98,46 @@ export async function initModel() {
   _errorMessage = null;
 
   _loadingPromise = (async () => {
-    const MAX_RETRIES = 2;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        // Prefer WebGL backend for faster inference, fall back to WASM/CPU.
+    // Self-hosted MoveNet under /models/movenet/* — same origin, no CDN.
+    // tfhub.dev was returning ERR_QUIC_PROTOCOL_ERROR / DNS failures for
+    // some users. Falls back to tfhub.dev only if the local fetch errors.
+    const SOURCES = [
+      "/models/movenet/singlepose-thunder/model.json",
+      "https://tfhub.dev/google/tfjs-model/movenet/singlepose/thunder/4/model.json?tfjs-format=file",
+    ];
+
+    let lastErr;
+    for (const modelUrl of SOURCES) {
+      const MAX_RETRIES = 2;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          await tf.setBackend("webgl");
-        } catch {
-          // WebGL unavailable — tf.ready() below will pick the best fallback.
-        }
-        await tf.ready();
+          try { await tf.setBackend("webgl"); } catch {}
+          await tf.ready();
 
-        const model = poseDetection.SupportedModels.MoveNet;
-        const detectorConfig = {
-          modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
-          enableSmoothing: true,
-        };
-
-        _detector = await poseDetection.createDetector(model, detectorConfig);
-        _state = "ready";
-        return _detector;
-      } catch (err) {
-        if (attempt < MAX_RETRIES) {
-          // Brief pause before retry
-          await new Promise((r) => setTimeout(r, 1000));
-          continue;
+          const model = poseDetection.SupportedModels.MoveNet;
+          const detectorConfig = {
+            modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+            enableSmoothing: true,
+            modelUrl,
+          };
+          _detector = await poseDetection.createDetector(model, detectorConfig);
+          _state = "ready";
+          return _detector;
+        } catch (err) {
+          lastErr = err;
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, 600));
+            continue;
+          }
+          // Move on to the next source URL
+          break;
         }
-        _state = "error";
-        _errorMessage = err?.message ?? "Unknown error loading MoveNet model";
-        _loadingPromise = null;
-        throw err;
       }
     }
+    _state = "error";
+    _errorMessage = lastErr?.message ?? "Failed to load pose model from all sources.";
+    _loadingPromise = null;
+    throw lastErr;
   })();
 
   return _loadingPromise;
@@ -147,27 +155,32 @@ export async function initMultiPoseModel() {
   if (_multiLoadingPromise) return _multiLoadingPromise;
 
   _multiLoadingPromise = (async () => {
-    try {
+    const SOURCES = [
+      "/models/movenet/multipose-lightning/model.json",
+      "https://tfhub.dev/google/tfjs-model/movenet/multipose/lightning/1/model.json?tfjs-format=file",
+    ];
+    let lastErr;
+    for (const modelUrl of SOURCES) {
       try {
-        await tf.setBackend("webgl");
-      } catch {
-        // fall back
+        try { await tf.setBackend("webgl"); } catch {}
+        await tf.ready();
+
+        const model = poseDetection.SupportedModels.MoveNet;
+        const detectorConfig = {
+          modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
+          enableSmoothing: false,
+          enableTracking: false,
+          modelUrl,
+        };
+        _multiDetector = await poseDetection.createDetector(model, detectorConfig);
+        return _multiDetector;
+      } catch (err) {
+        lastErr = err;
+        // try next source
       }
-      await tf.ready();
-
-      const model = poseDetection.SupportedModels.MoveNet;
-      const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
-        enableSmoothing: false,
-        enableTracking: false,
-      };
-
-      _multiDetector = await poseDetection.createDetector(model, detectorConfig);
-      return _multiDetector;
-    } catch (err) {
-      _multiLoadingPromise = null;
-      throw err;
     }
+    _multiLoadingPromise = null;
+    throw lastErr;
   })();
 
   return _multiLoadingPromise;
