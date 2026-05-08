@@ -261,11 +261,26 @@ async def firebase_auth(req: FirebaseAuthRequest):
     # the cached balance immediately. No grant attempt, no second DB hit.
     if existing_user is not None:
         asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
+        balance = int(existing_user.get("tokens", 0) or 0)
+        # Recovery: user doc exists but balance is 0 → previous signup
+        # created the user doc but the credit failed (Mongo timeout). Try
+        # again now if the signup_grant transaction never actually landed.
+        if balance == 0:
+            try:
+                if not await _has_transaction(user_id, "signup_grant"):
+                    new_balance = await _credit_tokens(
+                        user_id, "signup_grant", TOKEN_RULES["signup_grant"],
+                        {"email": email, "source": "firebase_auth_recovery"},
+                    )
+                    if new_balance is not None:
+                        balance = new_balance
+            except Exception as e:
+                logger.warning(f"firebase_auth recovery grant failed for {user_id[:8]}: {e}")
         return {
             "token": token,
             "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
             "has_profile": has_profile,
-            "tokens": int(existing_user.get("tokens", 0) or 0),
+            "tokens": balance,
         }
 
     # NEW user — synchronous flow: upsert + credit + return real balance.
@@ -877,17 +892,22 @@ async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(No
     Re-fetches the order from Cashfree and only credits if order_status == PAID."""
     user = await get_current_user(authorization)
 
-    # Look up our order record (must belong to this user)
-    try:
-        order = await asyncio.wait_for(
-            db.payment_orders.find_one(
-                {"cashfree_order_id": req.order_id, "user_id": user["id"]},
-                {"_id": 0},
-            ),
-            timeout=2.0,
-        )
-    except Exception:
+    # Demo orders self-describe via the encoded order_id (DEMO_<pack>_<ts>_<rnd>)
+    # so we can SKIP the order lookup entirely — saves a Mongo round-trip
+    # and avoids the "Order not found" path on cold starts.
+    if req.order_id.startswith("DEMO_"):
         order = None
+    else:
+        try:
+            order = await asyncio.wait_for(
+                db.payment_orders.find_one(
+                    {"cashfree_order_id": req.order_id, "user_id": user["id"]},
+                    {"_id": 0},
+                ),
+                timeout=2.0,
+            )
+        except Exception:
+            order = None
 
     # Demo orders self-describe via the encoded order_id, so we can credit
     # even if the create-order Mongo write timed out and there's no DB row.

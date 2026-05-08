@@ -122,37 +122,9 @@ export default function WalletPage() {
           </div>
         </motion.div>
 
-        {/* Earn more */}
+        {/* Buy packs — promoted to top of the page (above earn) since
+            it's the highest-intent action for users with low balance. */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 mb-6">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold mb-3 flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-lime-400" /> Earn more tokens
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <EarnAction
-              icon={UserPlus} label="Refer a friend"
-              detail={`+${rules.referral_credit || 200} when they finish their first analysis (you both get it)`}
-              onClick={() => navigate("/referral")}
-            />
-            <EarnAction
-              icon={Users} label="Host a community game"
-              detail={`+${rules.host_game || 50} per game · up to 5/day`}
-              onClick={() => navigate("/community?host=1")}
-            />
-            <EarnAction
-              icon={Dumbbell} label="Complete a training day"
-              detail={`+${rules.training_day || 20} per day · once daily`}
-              onClick={() => navigate("/training")}
-            />
-            <EarnAction
-              icon={Sparkles} label="Daily login bonus"
-              detail={`+${rules.daily_login || 25} per day for the first 7 days`}
-            />
-          </div>
-        </motion.div>
-
-        {/* Buy packs (placeholder until Phase 3 wires Cashfree) */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 mb-6">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold flex items-center gap-1.5">
@@ -183,6 +155,35 @@ export default function WalletPage() {
             )}
           </div>
           <BuyTokensDialog open={buyOpen} onOpenChange={setBuyOpen} />
+        </motion.div>
+
+        {/* Earn more — secondary action below buy */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 mb-6">
+          <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold mb-3 flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-lime-400" /> Earn more tokens
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <EarnAction
+              icon={UserPlus} label="Refer a friend"
+              detail={`+${rules.referral_credit || 200} when they finish their first analysis (you both get it)`}
+              onClick={() => navigate("/referral")}
+            />
+            <EarnAction
+              icon={Users} label="Host a community game"
+              detail={`+${rules.host_game || 50} per game · up to 5/day`}
+              onClick={() => navigate("/community?host=1")}
+            />
+            <EarnAction
+              icon={Dumbbell} label="Complete a training day"
+              detail={`+${rules.training_day || 20} per day · once daily`}
+              onClick={() => navigate("/training")}
+            />
+            <EarnAction
+              icon={Sparkles} label="Daily login bonus"
+              detail={`+${rules.daily_login || 25} per day for the first 7 days`}
+            />
+          </div>
         </motion.div>
 
         {/* Referral quick-share */}

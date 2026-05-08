@@ -28,6 +28,9 @@
     { "src": "/sitemap.xml", "dest": "/frontend/sitemap.xml" },
     { "src": "/_headers", "dest": "/frontend/_headers" },
     { "src": "/_redirects", "dest": "/frontend/_redirects" },
+    { "src": "/data/(.*)", "dest": "/frontend/data/$1" },
+    { "src": "/audio/(.*)", "dest": "/frontend/audio/$1" },
+    { "src": "/(.*\\.(json|png|jpg|jpeg|svg|webp|ico|mp3|mp4))", "dest": "/frontend/$1" },
     { "src": "/(.*)", "dest": "/frontend/index.html" }
   ]
 }

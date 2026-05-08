@@ -66,7 +66,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
     setLoading(true);
     try {
       // 1. Server creates the order
-      const { data } = await api.post("/payments/create-order", { pack_key: pack.key }, { timeout: 12000 });
+      const { data } = await api.post("/payments/create-order", { pack_key: pack.key }, { timeout: 30000 });
       if (!data?.order_id) throw new Error("Could not create payment order");
       if (data.demo_mode) setIsDemo(true);
 
@@ -98,7 +98,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
       }
 
       // 4. Server-side verification — never trust client
-      const verify = await api.post("/payments/verify", { order_id: data.order_id }, { timeout: 12000 });
+      const verify = await api.post("/payments/verify", { order_id: data.order_id }, { timeout: 30000 });
       if (verify.data?.ok) {
         setSuccess({ tokens: verify.data.tokens_credited, balance: verify.data.balance });
         refreshTokens();

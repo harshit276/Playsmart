@@ -149,7 +149,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Sign In button for guests */}
+            {/* Sign Up button for guests — leads with the free 300-token grant */}
             {isGuest && (
               <Button size="sm" onClick={() => {
                 localStorage.removeItem("guest_mode");
@@ -157,7 +157,7 @@ export default function Navbar() {
               }}
                 className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs sm:text-sm"
                 data-testid="nav-signin-btn">
-                Sign In
+                Sign Up
               </Button>
             )}
 
