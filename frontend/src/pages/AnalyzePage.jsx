@@ -677,6 +677,9 @@ export default function AnalyzePage() {
             video_info: clientResult.video_info || {},
             player_preview: clientResult.player_preview || null,
             weaknesses: clientResult.weaknesses || [],
+            // Send the per-shot list (with VLM reasoning/form_feedback if any)
+            // so the backend can use it for VLM coaching + return it for UI render.
+            shots: clientResult.shots || [],
           }, { timeout: 30000 });
 
           clearInterval(interval);

@@ -3076,6 +3076,10 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
             "active": sum(1 for s in segments if s.get("active")),
             "power_moments": sum(1 for s in segments if s.get("power")),
         } if segments else None,
+        # Pass per-shot list through (with VLM reasoning/form_feedback if browser
+        # ran VLM classification). The frontend's MatchInsights component renders
+        # AI-coach feedback per shot from these fields.
+        "shots": body.get("shots") or [],
     }
 
     # ─── Build coach-like feedback using research data ───

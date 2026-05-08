@@ -155,6 +155,14 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
           label: shot.type || "unknown",
           name: shot.name || shot.type || "unknown",
           pose,
+          // Carry through VLM extras so the per-shot card can surface them.
+          reasoning: shot.reasoning || null,
+          formFeedback: shot.formFeedback || null,
+          confidence: shot.confidence ?? null,
+          speed: shot.speed ?? null,
+          speedSource: shot.speedSource || null,
+          powerLevel: shot.powerLevel || null,
+          timestamp: shot.timestamp,
         });
 
         const pct = Math.round(((si + 1) / chosen.length) * 90);
@@ -298,6 +306,77 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
                       </div>
                     );
                   })}
+              </div>
+            </div>
+          )}
+
+          {/* Per-shot AI coach cards — only shown when VLM produced reasoning
+              for any shot (otherwise empty). Surfaces Gemini's per-shot
+              explanation, strengths, weaknesses, and tip. */}
+          {perShot.some((s) => s.reasoning || s.formFeedback) && (
+            <div className="pt-2 border-t border-zinc-800">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1">
+                <Target className="w-3 h-3 text-lime-400" /> Per-shot AI coach feedback
+              </p>
+              <div className="space-y-2">
+                {perShot.map((s, i) => {
+                  if (!s.reasoning && !s.formFeedback) return null;
+                  const ff = s.formFeedback || {};
+                  const conf = s.confidence != null ? Math.round(s.confidence * 100) : null;
+                  return (
+                    <div key={i} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                        <p className="text-sm font-semibold text-white">
+                          Shot {i + 1} · {s.name?.replace(/_/g, " ") || "Unknown"}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          {conf != null && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                              conf >= 80 ? "bg-lime-400/15 text-lime-300"
+                              : conf >= 50 ? "bg-amber-400/15 text-amber-300"
+                              : "bg-zinc-800 text-zinc-400"}`}>{conf}%</span>
+                          )}
+                          {s.powerLevel && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">
+                              {s.powerLevel}
+                            </span>
+                          )}
+                          {s.speed != null && s.speed > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                              {Math.round(s.speed)} km/h
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {s.reasoning && (
+                        <p className="text-xs text-zinc-300 mb-2">
+                          <span className="text-lime-400/80">Coach:</span> {s.reasoning}
+                        </p>
+                      )}
+                      {ff.tip && (
+                        <p className="text-xs text-amber-300 mb-2">💡 {ff.tip}</p>
+                      )}
+                      {Array.isArray(ff.strengths) && ff.strengths.length > 0 && (
+                        <ul className="space-y-0.5 mb-1">
+                          {ff.strengths.slice(0, 3).map((x, j) => (
+                            <li key={`s-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5">
+                              <span className="text-lime-400">✓</span><span>{x}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {Array.isArray(ff.weaknesses) && ff.weaknesses.length > 0 && (
+                        <ul className="space-y-0.5">
+                          {ff.weaknesses.slice(0, 3).map((x, j) => (
+                            <li key={`w-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5">
+                              <span className="text-amber-400">⚠</span><span>{x}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

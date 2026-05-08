@@ -2214,7 +2214,8 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       total_shots_detected: cleanShots.length,
       dominant_hand: dominantHand,
 
-      // Individual shots array (NEW)
+      // Individual shots array (NEW). Preserve VLM extras (reasoning,
+      // formFeedback, etc.) so per-shot AI coach feedback can render in the UI.
       shots: cleanShots.map((s) => ({
         type: s.type,
         name: s.name,
@@ -2226,6 +2227,12 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         speed: s.speed,
         speed_kmh: s.speed,
         duration: s.duration,
+        reasoning: s.reasoning || null,
+        formFeedback: s.formFeedback || null,
+        alternatives: s.alternatives || null,
+        vlmSkill: s.vlmSkill || null,
+        powerLevel: s.powerLevel || null,
+        speedSource: s.speedSource || null,
       })),
 
       // Shot distribution (NEW)
