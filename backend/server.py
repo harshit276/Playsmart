@@ -631,14 +631,22 @@ async def _ensure_referral_code(user_id: str, name_or_email: str = "") -> Option
 
 
 async def _get_balance(user_id: str) -> int:
-    try:
-        doc = await asyncio.wait_for(
-            db.users.find_one({"id": user_id}, {"_id": 0, "tokens": 1}),
-            timeout=2.0,
-        )
-        return int((doc or {}).get("tokens", 0))
-    except Exception:
-        return 0
+    """Read the user's token balance from Mongo. Retries once with a longer
+    timeout — a 2s timeout was tripping on Vercel cold starts and silently
+    returning 0, which then made every spend attempt fail with 402 even
+    when the user actually had a balance."""
+    last_err = None
+    for attempt in (1, 2):
+        try:
+            doc = await asyncio.wait_for(
+                db.users.find_one({"id": user_id}, {"_id": 0, "tokens": 1}),
+                timeout=5.0 if attempt == 1 else 8.0,
+            )
+            return int((doc or {}).get("tokens", 0))
+        except Exception as e:
+            last_err = e
+    logger.warning(f"_get_balance: both attempts failed for {user_id[:8]}: {last_err}")
+    return 0
 
 
 async def _has_transaction(user_id: str, kind: str, since_iso: str = None) -> bool:
@@ -735,6 +743,21 @@ async def _spend_tokens(user_id: str, kind: str, amount: int, metadata: dict = N
     with {required, balance, packs} when insufficient."""
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Spend amount must be positive")
+
+    # Demo account bypass — it's a test account, every action should work
+    # regardless of what Mongo thinks. Best-effort decrement, but never 402.
+    if user_id == DEMO_USER_ID:
+        try:
+            await asyncio.wait_for(db.users.update_one(
+                {"id": DEMO_USER_ID},
+                {"$inc": {"tokens": -amount}},
+            ), timeout=2.0)
+        except Exception:
+            pass
+        # Log the transaction best-effort for audit
+        asyncio.create_task(_log_demo_spend(kind, amount, metadata))
+        return {"ok": True, "balance": max(0, await _get_balance(user_id) - 0)}
+
     balance = await _get_balance(user_id)
     if balance < amount:
         raise HTTPException(status_code=402, detail={
@@ -745,6 +768,21 @@ async def _spend_tokens(user_id: str, kind: str, amount: int, metadata: dict = N
         })
     new_balance = await _credit_tokens(user_id, kind, -amount, metadata)
     return {"ok": True, "balance": new_balance if new_balance is not None else balance - amount}
+
+
+async def _log_demo_spend(kind: str, amount: int, metadata: dict = None):
+    try:
+        await asyncio.wait_for(db.token_transactions.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": DEMO_USER_ID,
+            "kind": kind,
+            "delta": -amount,
+            "balance_after": None,
+            "metadata": {**(metadata or {}), "demo": True},
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }), timeout=2.0)
+    except Exception:
+        pass
 
 
 # ─── Cashfree payments ─────────────────────────────────────────────
