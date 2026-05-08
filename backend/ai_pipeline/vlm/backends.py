@@ -32,7 +32,9 @@ class GeminiBackend(VLMBackend):
     name = "gemini"
 
     def __init__(self, model: str | None = None):
-        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        # Default to 2.0-flash: 1500/day on free tier vs 250/day on 2.5-flash.
+        # Comparable quality for shot classification. Override via GEMINI_MODEL.
+        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
         self._client = None
 
     def is_available(self) -> tuple[bool, str]:

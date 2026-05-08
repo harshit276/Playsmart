@@ -162,6 +162,7 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
           speed: shot.speed ?? null,
           speedSource: shot.speedSource || null,
           powerLevel: shot.powerLevel || null,
+          vlmMeta: shot.vlmMeta || null,
           timestamp: shot.timestamp,
         });
 
@@ -309,6 +310,24 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
               </div>
             </div>
           )}
+
+          {/* If Gemini was unavailable for every shot (quota / outage),
+              show a single tasteful banner instead of empty per-shot cards. */}
+          {(() => {
+            const allFailed = perShot.length > 0
+              && perShot.every((s) => !s.reasoning && !s.formFeedback)
+              && perShot.some((s) => s.vlmMeta?.error);
+            const sample = perShot.find((s) => s.vlmMeta?.error_friendly);
+            if (!allFailed) return null;
+            return (
+              <div className="pt-2 border-t border-zinc-800">
+                <div className="bg-zinc-800/40 border border-zinc-700 rounded-lg px-3 py-2 text-[11px] text-zinc-400 flex items-start gap-2">
+                  <span className="text-amber-400">⚠</span>
+                  <span>{sample?.vlmMeta?.error_friendly || "AI coach paused for this session — pose-based feedback only."}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Per-shot AI coach cards — only shown when VLM produced reasoning
               for any shot (otherwise empty). Surfaces Gemini's per-shot

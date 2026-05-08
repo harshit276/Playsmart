@@ -100,17 +100,17 @@ class VLMShotClassifier:
             err_class = exc.__class__.__name__
             friendly = err_msg[:200]
             if "429" in err_msg or "quota" in err_msg.lower() or "ResourceExhausted" in err_class:
-                friendly = ("Gemini free-tier quota exceeded. Wait ~24h for reset, "
-                           "or set ANTHROPIC_API_KEY / install Ollama for an alternative.")
+                friendly = "Gemini daily quota exceeded — coaching paused until reset."
             elif "401" in err_msg or "PermissionDenied" in err_class or "API_KEY_INVALID" in err_msg:
-                friendly = "API key invalid or revoked. Rotate at https://aistudio.google.com/apikey."
+                friendly = "API key invalid."
             return {
                 "shot_type": "unknown", "confidence": 0.0,
-                "reasoning": friendly,
+                "reasoning": "",
                 "alternatives": [], "form_feedback": {},
                 "estimated_skill": "Unknown",
                 "_meta": {"backend": self.backend_name, "model": self.model_name,
-                          "cached": False, "error": err_msg[:200]},
+                          "cached": False, "error": err_msg[:200],
+                          "error_friendly": friendly},
             }
 
         # 4. parse JSON (with fallback recovery)
@@ -211,18 +211,20 @@ class VLMShotClassifier:
             err_class = exc.__class__.__name__
             friendly = err_msg[:200]
             if "429" in err_msg or "quota" in err_msg.lower() or "ResourceExhausted" in err_class:
-                friendly = ("Gemini quota exceeded. Switch GEMINI_MODEL=gemini-2.0-flash "
-                           "(6× higher daily quota) or use VLM backend=local.")
+                friendly = "Gemini daily quota exceeded — coaching paused until reset."
             elif "401" in err_msg or "PermissionDenied" in err_class:
-                friendly = "API key invalid. Rotate at https://aistudio.google.com/apikey."
+                friendly = "API key invalid."
+            # Reasoning stays empty so the UI hides the per-shot coach line.
+            # The friendly + raw messages are surfaced via _meta only.
             for i in miss_indices:
                 results[i] = {
                     "shot_type": "unknown", "confidence": 0.0,
-                    "reasoning": friendly,
+                    "reasoning": "",
                     "alternatives": [], "form_feedback": {},
                     "estimated_skill": "Unknown",
                     "_meta": {"backend": self.backend_name, "model": self.model_name,
-                              "cached": False, "error": err_msg[:200]},
+                              "cached": False, "error": err_msg[:200],
+                              "error_friendly": friendly},
                 }
             return [r for r in results]  # type: ignore[misc]
 
@@ -316,18 +318,18 @@ class VLMShotClassifier:
             err_class = exc.__class__.__name__
             friendly = err_msg[:200]
             if "429" in err_msg or "quota" in err_msg.lower() or "ResourceExhausted" in err_class:
-                friendly = ("Gemini quota exceeded. Set GEMINI_MODEL=gemini-2.0-flash "
-                           "for higher daily quota or switch backend.")
+                friendly = "Gemini daily quota exceeded — coaching paused until reset."
             elif "401" in err_msg or "PermissionDenied" in err_class:
-                friendly = "API key invalid. Rotate at https://aistudio.google.com/apikey."
+                friendly = "API key invalid."
             return [
                 {
                     "shot_type": "unknown", "confidence": 0.0,
-                    "reasoning": friendly,
+                    "reasoning": "",
                     "alternatives": [], "form_feedback": {},
                     "estimated_skill": "Unknown", "power_level": "medium",
                     "_meta": {"backend": self.backend_name, "model": self.model_name,
-                              "cached": False, "error": err_msg[:200]},
+                              "cached": False, "error": err_msg[:200],
+                              "error_friendly": friendly},
                 }
                 for _ in keyframes_per_shot
             ]

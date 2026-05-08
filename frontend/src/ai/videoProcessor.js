@@ -2139,6 +2139,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
             if (v.alternatives) detectedShots[i].alternatives = v.alternatives;
             if (v.estimated_skill) detectedShots[i].vlmSkill = v.estimated_skill;
             if (v.power_level) detectedShots[i].powerLevel = v.power_level;
+            if (v._meta) detectedShots[i].vlmMeta = v._meta;
             if (v.estimated_speed_kmh) {
               detectedShots[i].speed = v.estimated_speed_kmh;
               detectedShots[i].speedSource = v.speed_source || "vlm_power_map";
@@ -2233,6 +2234,7 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         vlmSkill: s.vlmSkill || null,
         powerLevel: s.powerLevel || null,
         speedSource: s.speedSource || null,
+        vlmMeta: s.vlmMeta || null,
       })),
 
       // Shot distribution (NEW)
