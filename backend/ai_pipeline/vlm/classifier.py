@@ -261,6 +261,99 @@ class VLMShotClassifier:
         return [r for r in results]  # type: ignore[misc]
 
 
+    def predict_batch_from_keyframes(
+        self,
+        keyframes_per_shot: list[list[bytes]],
+        target_player: str = "auto",
+    ) -> list[dict]:
+        """Same as predict_batch, but accepts pre-extracted JPEG bytes per
+        shot (no video decode). Used when the browser already extracted
+        keyframes and POSTs them to the server.
+
+        keyframes_per_shot[i] is a list of JPEG bytes for shot i.
+        Returns N dicts in input order. Slots with <2 frames become unknown stubs.
+        """
+        if not keyframes_per_shot:
+            return []
+
+        # Filter shots with enough frames
+        all_jpegs: list[bytes] = []
+        frames_per_shot: list[int] = []
+        for jpegs in keyframes_per_shot:
+            if not jpegs or len(jpegs) < 2:
+                frames_per_shot.append(0)
+                continue
+            all_jpegs.extend(jpegs)
+            frames_per_shot.append(len(jpegs))
+
+        # Single-shot fallback: still goes through batch prompt for consistency,
+        # since per-shot prompt expects only one shot's frames
+        if not all_jpegs:
+            return [
+                {
+                    "shot_type": "unknown", "confidence": 0.0,
+                    "reasoning": "Could not extract enough frames.",
+                    "alternatives": [], "form_feedback": {},
+                    "estimated_skill": "Unknown", "power_level": "medium",
+                    "_meta": {"backend": self.backend_name, "model": self.model_name,
+                              "cached": False, "error": "insufficient frames"},
+                }
+                for _ in keyframes_per_shot
+            ]
+
+        nonzero_per_shot = [n for n in frames_per_shot if n > 0]
+        sys_prompt = system_prompt_batch(self.sport).replace("{n_shots}", str(len(nonzero_per_shot)))
+        usr_msg = user_message_batch(self.sport, nonzero_per_shot, target_player)
+
+        try:
+            raw = self._backend.call(sys_prompt, usr_msg, all_jpegs)
+        except Exception as exc:
+            err_msg = str(exc)
+            err_class = exc.__class__.__name__
+            friendly = err_msg[:200]
+            if "429" in err_msg or "quota" in err_msg.lower() or "ResourceExhausted" in err_class:
+                friendly = ("Gemini quota exceeded. Set GEMINI_MODEL=gemini-2.0-flash "
+                           "for higher daily quota or switch backend.")
+            elif "401" in err_msg or "PermissionDenied" in err_class:
+                friendly = "API key invalid. Rotate at https://aistudio.google.com/apikey."
+            return [
+                {
+                    "shot_type": "unknown", "confidence": 0.0,
+                    "reasoning": friendly,
+                    "alternatives": [], "form_feedback": {},
+                    "estimated_skill": "Unknown", "power_level": "medium",
+                    "_meta": {"backend": self.backend_name, "model": self.model_name,
+                              "cached": False, "error": err_msg[:200]},
+                }
+                for _ in keyframes_per_shot
+            ]
+
+        parsed_list = _parse_batch_response(raw, self.sport, len(nonzero_per_shot))
+        parsed_iter = iter(parsed_list)
+
+        # Distribute parsed results back, accounting for shots with insufficient frames
+        results: list[dict] = []
+        for n in frames_per_shot:
+            if n == 0:
+                results.append({
+                    "shot_type": "unknown", "confidence": 0.0,
+                    "reasoning": "Could not extract enough frames.",
+                    "alternatives": [], "form_feedback": {},
+                    "estimated_skill": "Unknown", "power_level": "medium",
+                    "_meta": {"backend": self.backend_name, "model": self.model_name,
+                              "cached": False, "error": "insufficient frames"},
+                })
+                continue
+            parsed = next(parsed_iter, None) or _stub("batch underflow")
+            parsed["_meta"] = {
+                "backend": self.backend_name, "model": self.model_name,
+                "cached": False, "n_frames": n, "batched": True, "from_keyframes": True,
+            }
+            results.append(parsed)
+
+        return results
+
+
 # ─── Convenience function: one-liner predict ───
 def predict_shot(
     video_path: str | Path,

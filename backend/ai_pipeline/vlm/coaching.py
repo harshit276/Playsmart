@@ -1,0 +1,201 @@
+"""VLM-driven text-only helpers: progress comparison + personalized coaching.
+
+Both functions reuse the existing backend abstraction (Gemini/Anthropic/OpenAI/
+local) but pass an empty image list — text-only calls are ~10x cheaper than
+the image-based shot classification.
+"""
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+
+from .backends import pick_backend
+
+
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+
+
+def _parse_json_safe(raw: str) -> dict:
+    if not raw or not raw.strip():
+        return {}
+    text = raw.strip()
+    m = _FENCE_RE.search(text)
+    if m:
+        text = m.group(1).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        s, e = text.find("{"), text.rfind("}")
+        if s >= 0 and e > s:
+            try:
+                return json.loads(text[s : e + 1])
+            except json.JSONDecodeError:
+                return {}
+    return {}
+
+
+def _summarize_analysis(a: dict) -> dict:
+    """Boil down a stored analysis to the fields a coach actually cares about."""
+    sa = a.get("shot_analysis") or {}
+    coach = a.get("coach_feedback") or {}
+    metrics = a.get("performance_scores") or a.get("detailed_metrics") or {}
+    shots = a.get("shots") or []
+    return {
+        "date": a.get("date") or a.get("created_at") or a.get("timestamp"),
+        "sport": a.get("sport"),
+        "skill_level": a.get("skill_level"),
+        "primary_shot": sa.get("shot_name") or sa.get("shot_type"),
+        "overall_score": sa.get("score") or sa.get("assessment", {}).get("overall_score"),
+        "grade": sa.get("grade") or sa.get("assessment", {}).get("grade"),
+        "weaknesses": [w.get("issue") for w in (sa.get("weaknesses") or []) if w.get("issue")][:5],
+        "metrics": {k: v for k, v in metrics.items() if isinstance(v, (int, float))},
+        "shots": [
+            {
+                "type": s.get("shot_type") or s.get("type"),
+                "score": s.get("overall_score") or s.get("score"),
+                "speed_kmh": (s.get("speed") or {}).get("estimated_speed_kmh") if isinstance(s.get("speed"), dict) else s.get("speed"),
+                "reasoning": s.get("reasoning"),
+                "form_feedback_tip": (s.get("form_feedback") or {}).get("tip"),
+            }
+            for s in shots[:6]
+        ],
+    }
+
+
+def compare_analyses(
+    old_analysis: dict, new_analysis: dict, days_between: int,
+    backend: str = "auto",
+) -> dict:
+    """Ask the VLM to produce a coach-quality comparison narrative.
+    Returns: {improved, regressed, next_focus, summary, score_delta, _meta}.
+    """
+    old = _summarize_analysis(old_analysis)
+    new = _summarize_analysis(new_analysis)
+    sport = new.get("sport") or old.get("sport") or "badminton"
+
+    sys_prompt = (
+        f"You are an expert {sport} coach reviewing a player's progress between two practice "
+        f"sessions {days_between} days apart. Be specific, honest, and actionable. Compare the "
+        f"actual numbers and per-shot reasoning — don't fabricate. If a metric got worse, say so. "
+        f"Cite specific shots when possible.\n\n"
+        f"Respond with valid JSON ONLY (no markdown fences) matching:\n"
+        '{\n'
+        '  "improved": ["<specific positive change>", "..."],\n'
+        '  "regressed": ["<specific negative change>", "..."],\n'
+        '  "next_focus": "<the ONE thing they should focus on for the next session>",\n'
+        '  "summary": "<2-3 sentence motivational coach-voice summary>",\n'
+        '  "score_delta_explanation": "<why the score changed (or didn\'t)>"\n'
+        '}\n'
+    )
+    user_msg = (
+        f"OLD SESSION ({old.get('date')}):\n{json.dumps(old, indent=2, default=str)}\n\n"
+        f"NEW SESSION ({new.get('date')}):\n{json.dumps(new, indent=2, default=str)}"
+    )
+
+    backend_obj = pick_backend(backend)
+    raw = backend_obj.call(sys_prompt, user_msg, [])
+    data = _parse_json_safe(raw)
+
+    score_old = old.get("overall_score") or 0
+    score_new = new.get("overall_score") or 0
+    return {
+        "improved": [str(x) for x in (data.get("improved") or [])][:5],
+        "regressed": [str(x) for x in (data.get("regressed") or [])][:5],
+        "next_focus": str(data.get("next_focus", "")),
+        "summary": str(data.get("summary", "")),
+        "score_delta_explanation": str(data.get("score_delta_explanation", "")),
+        "score_old": float(score_old) if score_old else 0.0,
+        "score_new": float(score_new) if score_new else 0.0,
+        "score_delta": round(float(score_new) - float(score_old), 1) if (score_old and score_new) else 0.0,
+        "days_between": days_between,
+        "_meta": {
+            "backend": backend_obj.name,
+            "model": backend_obj.model_name,
+        },
+    }
+
+
+def personalized_coaching(
+    analysis: dict, equipment_catalog: list[dict] | None = None,
+    backend: str = "auto",
+) -> dict:
+    """Generate VLM-tailored drills + equipment + weekly plan based on the
+    player's actual weaknesses + per-shot reasoning. Replaces template-based
+    suggestions with specific, evidence-grounded coaching.
+
+    equipment_catalog: optional list of {id, name, category, level, price_inr,
+                                          good_for: [tags]} so the VLM can recommend
+                                          actual SKUs instead of inventing them.
+    Returns: {priority_drills, equipment_recommendations, seven_day_plan,
+              key_focus_areas, motivational_message, _meta}.
+    """
+    summary = _summarize_analysis(analysis)
+    sport = summary.get("sport") or "badminton"
+    skill = summary.get("skill_level") or "Intermediate"
+
+    catalog_block = ""
+    if equipment_catalog:
+        # Send a trimmed catalog so the VLM picks from real SKUs we sell.
+        slim = [
+            {k: v for k, v in item.items()
+             if k in ("id", "name", "category", "level", "price_inr", "good_for")}
+            for item in equipment_catalog[:60]
+        ]
+        catalog_block = (
+            "\n\nAVAILABLE EQUIPMENT (recommend by id from this list — "
+            "do NOT invent products):\n" + json.dumps(slim, indent=2)
+        )
+
+    sys_prompt = (
+        f"You are an expert {sport} coach building a personalized practice plan. "
+        f"Use ONLY the player's actual weaknesses and per-shot reasoning below. "
+        f"Be specific — name drills the player can do today, not generic advice. "
+        f"Prioritize drills that directly address the named weaknesses.\n\n"
+        f"Respond with valid JSON ONLY:\n"
+        '{\n'
+        '  "key_focus_areas": ["<short tag>", "<short tag>", "<short tag>"],\n'
+        '  "priority_drills": [\n'
+        '    {\n'
+        '      "name": "<drill name>",\n'
+        '      "why": "<why this drill, citing the weakness it fixes>",\n'
+        '      "duration_min": <int 5-30>,\n'
+        '      "instructions": "<2-3 sentences how to do it>",\n'
+        '      "equipment_needed": ["<simple item>", "..."]\n'
+        '    }\n'
+        '  ],\n'
+        '  "equipment_recommendations": [\n'
+        '    {\n'
+        '      "item_id": "<id from catalog OR null if catalog empty>",\n'
+        '      "name": "<product or category>",\n'
+        '      "why": "<why this helps THIS player\'s weakness>"\n'
+        '    }\n'
+        '  ],\n'
+        '  "seven_day_plan": [\n'
+        '    {"day": 1, "focus": "<...>", "drills": ["<drill name>"], "minutes": <int>}\n'
+        '  ],\n'
+        '  "motivational_message": "<2 sentences in coach voice>"\n'
+        '}\n\n'
+        "Return 3-5 drills, 1-3 equipment recs, exactly 7 days in the plan."
+        f"{catalog_block}"
+    )
+    user_msg = (
+        f"PLAYER ANALYSIS ({skill} {sport} player):\n"
+        f"{json.dumps(summary, indent=2, default=str)}"
+    )
+
+    backend_obj = pick_backend(backend)
+    raw = backend_obj.call(sys_prompt, user_msg, [])
+    data = _parse_json_safe(raw)
+
+    return {
+        "key_focus_areas": [str(x) for x in (data.get("key_focus_areas") or [])][:5],
+        "priority_drills": [d for d in (data.get("priority_drills") or []) if isinstance(d, dict)][:6],
+        "equipment_recommendations": [e for e in (data.get("equipment_recommendations") or []) if isinstance(e, dict)][:5],
+        "seven_day_plan": [d for d in (data.get("seven_day_plan") or []) if isinstance(d, dict)][:7],
+        "motivational_message": str(data.get("motivational_message", "")),
+        "_meta": {
+            "backend": backend_obj.name,
+            "model": backend_obj.model_name,
+        },
+    }

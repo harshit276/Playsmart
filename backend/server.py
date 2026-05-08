@@ -2290,6 +2290,80 @@ async def classify_shots_vlm(req: ClassifyShotsRequest, authorization: str = Hea
     return {"success": True, "shots": results}
 
 
+# ──────────────────────────────────────────────────────────────────────
+# Reanalyze comparison: when a player uploads a new video for a shot they
+# analyzed before, compare old vs new and produce a coach-quality progress
+# narrative. Text-only Gemini call, very cheap (~$0.0001 per comparison).
+# ──────────────────────────────────────────────────────────────────────
+class CompareAnalysesRequest(BaseModel):
+    old_analysis_id: str
+    new_analysis_id: str
+    backend: str = "auto"
+
+
+@api_router.post("/compare-analyses")
+async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: str = Header(None)):
+    user = await get_current_user(authorization)
+
+    old = await db.video_analyses.find_one(
+        {"id": req.old_analysis_id, "user_id": user["id"]}, {"_id": 0}
+    )
+    new = await db.video_analyses.find_one(
+        {"id": req.new_analysis_id, "user_id": user["id"]}, {"_id": 0}
+    )
+    if not old:
+        raise HTTPException(status_code=404, detail=f"Old analysis {req.old_analysis_id} not found")
+    if not new:
+        raise HTTPException(status_code=404, detail=f"New analysis {req.new_analysis_id} not found")
+
+    def _to_ts(a: dict) -> float:
+        for k in ("date", "created_at", "timestamp"):
+            v = a.get(k)
+            if v is None:
+                continue
+            if isinstance(v, (int, float)):
+                return float(v)
+            if isinstance(v, datetime):
+                return v.timestamp()
+            if isinstance(v, str):
+                try:
+                    return datetime.fromisoformat(v.replace("Z", "+00:00")).timestamp()
+                except Exception:
+                    pass
+        return 0.0
+
+    days_between = max(0, int((_to_ts(new) - _to_ts(old)) / 86400)) if (_to_ts(new) and _to_ts(old)) else 0
+
+    try:
+        from ai_pipeline.vlm import compare_analyses as _compare_analyses
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+
+    def _run() -> dict:
+        return _compare_analyses(old, new, days_between, backend=req.backend)
+
+    loop = asyncio.get_event_loop()
+    try:
+        comparison = await loop.run_in_executor(None, _run)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Comparison failed: {exc}")
+
+    record = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "old_analysis_id": req.old_analysis_id,
+        "new_analysis_id": req.new_analysis_id,
+        "comparison": comparison,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await db.analysis_comparisons.insert_one(record)
+    except Exception as exc:
+        logger.warning(f"Failed to persist comparison: {exc}")
+
+    return {"success": True, "comparison": comparison, "comparison_id": record["id"]}
+
+
 if IS_SERVERLESS:
     ANALYSIS_TEMP_DIR = Path("/tmp/athlyticai_uploads")
 else:
@@ -3039,6 +3113,44 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         logger.warning(f"Score comparison error (non-fatal): {cmp_err}")
 
     # ─── Save to database (with timeout, non-fatal) ───
+    # ─── VLM-personalized coaching (drills + equipment + 7-day plan) ───
+    # Best-effort: text-only Gemini call (~$0.0001), fails open with empty
+    # dict so the static recommendations above still ship.
+    vlm_coaching: dict = {}
+    if os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"):
+        try:
+            from ai_pipeline.vlm import personalized_coaching
+            # Pass any equipment catalog the player has access to so the VLM
+            # picks from real SKUs instead of inventing products.
+            equipment_catalog: list = []
+            try:
+                from research_loader import get_all_equipment_categories
+                cats = get_all_equipment_categories(sport) or {}
+                for items in cats.values():
+                    if isinstance(items, list):
+                        equipment_catalog.extend(items)
+            except Exception:
+                equipment_catalog = []
+
+            ai_for_vlm = {
+                "sport": sport, "skill_level": detected_skill_level,
+                "shot_analysis": ai_result.get("shot_analysis"),
+                "performance_scores": performance_scores,
+                "shots": ai_result.get("shots") or body.get("shots") or [],
+                "coach_feedback": coach_feedback,
+            }
+
+            def _coach_run() -> dict:
+                return personalized_coaching(ai_for_vlm, equipment_catalog=equipment_catalog or None)
+
+            loop = asyncio.get_event_loop()
+            vlm_coaching = await asyncio.wait_for(
+                loop.run_in_executor(None, _coach_run), timeout=20.0,
+            )
+        except (Exception, asyncio.TimeoutError) as exc:
+            logger.warning(f"VLM coaching skipped: {exc.__class__.__name__}: {exc}")
+            vlm_coaching = {}
+
     analysis_record = {
         "id": file_id,
         "user_id": user["id"],
@@ -3057,6 +3169,7 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "performance_scores": performance_scores,
         "highlights": None,
         "segments_summary": ai_result.get("segments"),
+        "vlm_coaching": vlm_coaching,
     }
     try:
         await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=5.0)
@@ -3097,6 +3210,10 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "training_plan_7day": training_plan_7day,
         "earned_badges": earned_badges,
         "score_comparison": score_comparison,
+        # VLM-personalized coaching (priority_drills, equipment_recommendations,
+        # seven_day_plan, key_focus_areas, motivational_message). Empty dict if
+        # no LLM backend configured or the call timed out.
+        "vlm_coaching": vlm_coaching,
     }
 
 

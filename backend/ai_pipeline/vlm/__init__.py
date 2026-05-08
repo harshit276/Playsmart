@@ -17,6 +17,8 @@ auto-detection. Default is "auto" which picks the first available.
 from .classifier import VLMShotClassifier, predict_shot
 from .backends import available_backends
 from .speed import estimate_speed_from_power
+from .coaching import compare_analyses, personalized_coaching
 
 __all__ = ["VLMShotClassifier", "predict_shot", "available_backends",
-           "estimate_speed_from_power"]
+           "estimate_speed_from_power",
+           "compare_analyses", "personalized_coaching"]

@@ -1735,6 +1735,83 @@ function buildPlayerProfile(detectedShots, dominantHand) {
  * @returns {Promise<object>} Analysis results matching the server's response format
  */
 /**
+ * Extract a small set of keyframes per shot moment for VLM classification.
+ * For each peak time, captures frames around it (default: peak-0.3s, peak,
+ * peak+0.3s). Optionally crops to `customCropBox` (normalized 0-1) so we only
+ * send the selected player to the VLM.
+ *
+ * Returns: Array<Array<base64-jpeg-string>>
+ */
+export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBox = null, options = {}) {
+  const { framesPerShot = 3, maxDim = 720, jpegQuality = 0.7, offsets = [-0.3, 0, 0.3] } = options;
+  if (!peakTimes || peakTimes.length === 0) return [];
+
+  const video = document.createElement("video");
+  const objectUrl = URL.createObjectURL(videoFile);
+  video.src = objectUrl;
+  video.muted = true;
+  video.playsInline = true;
+  video.crossOrigin = "anonymous";
+
+  await new Promise((resolve, reject) => {
+    video.onloadedmetadata = resolve;
+    video.onerror = () => reject(new Error("Failed to load video metadata for keyframe extraction."));
+    video.load();
+  });
+
+  const duration = video.duration;
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+
+  let sx = 0, sy = 0, sw = vw, sh = vh;
+  if (customCropBox) {
+    sx = Math.max(0, Math.min(vw - 1, Math.round(customCropBox.x * vw)));
+    sy = Math.max(0, Math.min(vh - 1, Math.round(customCropBox.y * vh)));
+    sw = Math.max(1, Math.min(vw - sx, Math.round(customCropBox.width * vw)));
+    sh = Math.max(1, Math.min(vh - sy, Math.round(customCropBox.height * vh)));
+  }
+
+  const scale = Math.min(1, maxDim / Math.max(sw, sh));
+  const outW = Math.max(1, Math.round(sw * scale));
+  const outH = Math.max(1, Math.round(sh * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+
+  const useOffsets = framesPerShot === 3 ? offsets : Array.from({ length: framesPerShot }, (_, i) =>
+    -0.4 + (0.8 * i) / Math.max(1, framesPerShot - 1)
+  );
+
+  const out = [];
+  for (const peakTime of peakTimes) {
+    const shotFrames = [];
+    for (const offs of useOffsets) {
+      const t = Math.max(0.01, Math.min(duration - 0.01, peakTime + offs));
+      video.currentTime = t;
+      try {
+        await new Promise((res, rej) => {
+          const onSeeked = () => { video.onseeked = null; video.onerror = null; res(); };
+          video.onseeked = onSeeked;
+          video.onerror = () => rej(new Error("seek failed"));
+        });
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+        const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
+        shotFrames.push(dataUrl);
+      } catch {
+        // Skip this offset if seek failed
+      }
+    }
+    out.push(shotFrames);
+  }
+
+  URL.revokeObjectURL(objectUrl);
+  return out;
+}
+
+
+/**
  * Quickly scan a video to detect how many people are visible. Extracts a few
  * sample frames from the middle portion of the video and runs multi-person
  * detection on each. Returns the sample frames (as data URLs) along with the
@@ -2016,6 +2093,52 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
 
     // Release frame data to free memory
     frames.length = 0;
+
+    // ── VLM upgrade: replace heuristic shot type with Gemini's per-shot
+    // classification (when caller provides a vlmClassify hook). Pose-derived
+    // metrics stay on-device; only shot type + reasoning + speed come from
+    // the LLM. Falls back gracefully to heuristic if the call fails.
+    if (typeof options.vlmClassify === "function" && shotPeaks.length > 0) {
+      try {
+        progress("classify", 70, "Asking Gemini coach...");
+        const peakTimes = shotPeaks.map((p) => p.time);
+        const keyframes = await extractKeyframesPerShot(
+          videoFile, peakTimes, customCropBox,
+          { framesPerShot: 3, maxDim: 720, jpegQuality: 0.7 },
+        );
+        const vlmShots = await options.vlmClassify({
+          shots: keyframes,
+          sport,
+          target_player: targetPlayer,
+        });
+        if (Array.isArray(vlmShots) && vlmShots.length === detectedShots.length) {
+          for (let i = 0; i < detectedShots.length; i++) {
+            const v = vlmShots[i] || {};
+            const conf = Number(v.confidence) || 0;
+            // Only override if Gemini was reasonably sure; below 0.4 keep heuristic
+            if (v.shot_type && v.shot_type !== "unknown" && conf >= 0.4) {
+              detectedShots[i].type = v.shot_type;
+              detectedShots[i].name = String(v.shot_type)
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase());
+              detectedShots[i].confidence = conf;
+            }
+            // Always attach VLM extras when we have them
+            if (v.reasoning) detectedShots[i].reasoning = v.reasoning;
+            if (v.form_feedback) detectedShots[i].formFeedback = v.form_feedback;
+            if (v.alternatives) detectedShots[i].alternatives = v.alternatives;
+            if (v.estimated_skill) detectedShots[i].vlmSkill = v.estimated_skill;
+            if (v.power_level) detectedShots[i].powerLevel = v.power_level;
+            if (v.estimated_speed_kmh) {
+              detectedShots[i].speed = v.estimated_speed_kmh;
+              detectedShots[i].speedSource = v.speed_source || "vlm_power_map";
+            }
+          }
+        }
+      } catch (vlmErr) {
+        console.warn("[vlm] classification failed, keeping heuristic:", vlmErr);
+      }
+    }
 
     // Drop unknowns and clearly-junk shots from downstream stats.
     // (They pollute the distribution, score average, and profile.)

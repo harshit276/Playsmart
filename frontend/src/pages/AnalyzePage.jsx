@@ -337,6 +337,10 @@ export default function AnalyzePage() {
   const [shareData, setShareData] = useState(null);
   const [newBadge, setNewBadge] = useState(null);
   const [viewingHistorical, setViewingHistorical] = useState(false);
+  // Reanalyze flow: when set, the next analysis run will auto-trigger a
+  // VLM comparison vs this stored analysis after the new one saves.
+  const [reanalyzeContext, setReanalyzeContext] = useState(null);
+  const [comparisonResult, setComparisonResult] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   // Server-side analysis is disabled — TF.js client-side handles everything.
   const processingMode = "client";
@@ -470,6 +474,42 @@ export default function AnalyzePage() {
     setTargetPlayer("auto");
     setPlayerSelectorOpen(false);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  // Reanalyze flow: stash the old analysis and prompt the user to upload a
+  // new video. After it analyzes, we automatically call /compare-analyses.
+  const startReanalyze = (oldAnalysis) => {
+    setReanalyzeContext(oldAnalysis);
+    setComparisonResult(null);
+    setActiveTab("upload");
+    setResult(null);
+    setError(null);
+    // Pre-select the same sport so the new video is comparable
+    if (oldAnalysis.sport) {
+      try { setSelectedSport(oldAnalysis.sport); } catch {}
+    }
+    toast.info(`Upload a new ${oldAnalysis.shot_analysis?.shot_name || oldAnalysis.sport || "video"} to see your progress.`);
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
+  };
+
+  // Trigger backend comparison and show the result. Called after the new
+  // analysis completes when reanalyzeContext is set.
+  const fetchComparison = async (oldId, newId) => {
+    try {
+      const { data } = await api.post("/compare-analyses",
+        { old_analysis_id: oldId, new_analysis_id: newId },
+        { timeout: 60000 },
+      );
+      if (data?.success && data.comparison) {
+        setComparisonResult(data.comparison);
+        toast.success("Progress comparison ready!");
+      }
+    } catch (err) {
+      console.warn("Comparison failed:", err?.response?.data || err.message);
+      toast.error("Could not compare with previous session.");
+    } finally {
+      setReanalyzeContext(null);
+    }
   };
 
   const analyze = async () => {
@@ -627,6 +667,11 @@ export default function AnalyzePage() {
             toast.success("Analysis complete!");
             if (data.new_badges?.length > 0) {
               setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
+            }
+            // Reanalyze flow: kick off the comparison call now that both
+            // analyses exist on the server.
+            if (reanalyzeContext?.id && data.analysis_id) {
+              fetchComparison(reanalyzeContext.id, data.analysis_id);
             }
           } else {
             throw new Error("Server enrichment failed");
@@ -1407,9 +1452,137 @@ export default function AnalyzePage() {
     const badges = result.earned_badges || [];
     const scoreComparison = result.score_comparison || [];
     const coachFeedback = result.coach_feedback || {};
+    const vlmCoaching = result.vlm_coaching || {};
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+
+        {/* Progress comparison — shown after a "Reanalyze" flow completes.
+            Coach-quality narrative comparing the new session to the old one. */}
+        {comparisonResult && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="border-2 border-sky-400/30 bg-gradient-to-br from-sky-400/5 to-zinc-900/80 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-sky-300 font-semibold">Progress vs your last session</p>
+                <p className="text-zinc-500 text-xs">
+                  {comparisonResult.days_between} days · score
+                  <span className="text-zinc-300 mx-1">{Math.round(comparisonResult.score_old)}</span>→
+                  <span className="text-white font-semibold mx-1">{Math.round(comparisonResult.score_new)}</span>
+                  <span className={comparisonResult.score_delta > 0 ? "text-lime-400" : comparisonResult.score_delta < 0 ? "text-red-400" : "text-zinc-500"}>
+                    ({comparisonResult.score_delta > 0 ? "+" : ""}{comparisonResult.score_delta})
+                  </span>
+                </p>
+              </div>
+              <button
+                className="text-xs text-zinc-500 hover:text-zinc-300"
+                onClick={() => setComparisonResult(null)}
+                aria-label="dismiss progress comparison">×</button>
+            </div>
+            {comparisonResult.summary && (
+              <p className="text-zinc-200 text-sm mb-3">{comparisonResult.summary}</p>
+            )}
+            {comparisonResult.improved?.length > 0 && (
+              <div className="mb-2">
+                <p className="text-[11px] text-lime-400 font-semibold mb-1">↑ Improved</p>
+                <ul className="text-zinc-300 text-xs space-y-1 ml-3 list-disc">
+                  {comparisonResult.improved.map((x, i) => <li key={`imp-${i}`}>{x}</li>)}
+                </ul>
+              </div>
+            )}
+            {comparisonResult.regressed?.length > 0 && (
+              <div className="mb-2">
+                <p className="text-[11px] text-amber-400 font-semibold mb-1">↓ Watch out for</p>
+                <ul className="text-zinc-300 text-xs space-y-1 ml-3 list-disc">
+                  {comparisonResult.regressed.map((x, i) => <li key={`reg-${i}`}>{x}</li>)}
+                </ul>
+              </div>
+            )}
+            {comparisonResult.next_focus && (
+              <div className="mt-3 p-3 rounded-lg bg-sky-400/10 border border-sky-400/20">
+                <p className="text-[11px] text-sky-300 font-semibold mb-1">🎯 Next focus</p>
+                <p className="text-zinc-200 text-xs">{comparisonResult.next_focus}</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* AI coach plan — VLM-personalized drills + equipment + 7-day plan,
+            grounded in this analysis's actual weaknesses and per-shot reasoning. */}
+        {(vlmCoaching.priority_drills?.length > 0
+          || vlmCoaching.equipment_recommendations?.length > 0
+          || vlmCoaching.seven_day_plan?.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="border border-lime-400/30 bg-gradient-to-br from-lime-400/5 to-zinc-900/80 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge className="bg-lime-400/15 text-lime-300 border-lime-400/30 text-[10px]">AI Coach</Badge>
+              {vlmCoaching.key_focus_areas?.length > 0 && (
+                <p className="text-zinc-400 text-xs">
+                  Focus: {vlmCoaching.key_focus_areas.join(" · ")}
+                </p>
+              )}
+            </div>
+            {vlmCoaching.motivational_message && (
+              <p className="text-zinc-200 text-sm mb-4 italic">"{vlmCoaching.motivational_message}"</p>
+            )}
+
+            {vlmCoaching.priority_drills?.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[11px] uppercase tracking-wide text-lime-300 font-semibold mb-2">Priority drills</p>
+                <div className="space-y-2">
+                  {vlmCoaching.priority_drills.map((d, i) => (
+                    <div key={`drill-${i}`} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-semibold text-white">{d.name}</p>
+                        {d.duration_min && (
+                          <span className="text-[10px] text-zinc-500">{d.duration_min} min</span>
+                        )}
+                      </div>
+                      {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
+                      {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
+                      {d.equipment_needed?.length > 0 && (
+                        <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {vlmCoaching.equipment_recommendations?.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[11px] uppercase tracking-wide text-sky-300 font-semibold mb-2">Equipment that helps</p>
+                <div className="space-y-2">
+                  {vlmCoaching.equipment_recommendations.map((eq, i) => (
+                    <div key={`eq-${i}`} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-white">{eq.name}</p>
+                      {eq.why && <p className="text-xs text-sky-300/80 mt-0.5">{eq.why}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {vlmCoaching.seven_day_plan?.length > 0 && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-amber-300 font-semibold mb-2">7-day plan</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {vlmCoaching.seven_day_plan.map((d, i) => (
+                    <div key={`day-${i}`} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-2">
+                      <p className="text-xs font-semibold text-white">Day {d.day} · {d.minutes ? `${d.minutes} min` : ""}</p>
+                      {d.focus && <p className="text-xs text-amber-300/80">{d.focus}</p>}
+                      {Array.isArray(d.drills) && d.drills.length > 0 && (
+                        <p className="text-[10px] text-zinc-500 mt-0.5">{d.drills.join(" · ")}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Match Insights — multi-shot analysis with skill score + coaching narrative */}
         {file && !viewingHistorical && (
@@ -2484,6 +2657,30 @@ export default function AnalyzePage() {
                 {a.quick_summary && (
                   <p className="text-xs text-zinc-500 mt-2 ml-13 line-clamp-2">{a.quick_summary}</p>
                 )}
+                {/* Reanalyze CTA — appears for analyses ≥7 days old. Lets the
+                    player upload a fresh video and get a VLM-driven progress
+                    comparison vs this old session. */}
+                {(() => {
+                  const ageDays = a.date ? (Date.now() - new Date(a.date).getTime()) / 86_400_000 : 0;
+                  if (ageDays < 7) return null;
+                  return (
+                    <div className="mt-3 ml-13 flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-sky-400/30 text-sky-300 hover:bg-sky-400/10 text-[11px] h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startReanalyze(a);
+                        }}
+                      >
+                        <BarChart3 className="w-3 h-3 mr-1" />
+                        Reanalyze · see your progress
+                      </Button>
+                      <span className="text-[10px] text-zinc-600">{Math.floor(ageDays)} days ago</span>
+                    </div>
+                  );
+                })()}
               </motion.div>
             );
           })}
