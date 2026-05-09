@@ -217,6 +217,13 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
   // Don't render at all when there are no shots from the parent.
   if (!shotsAvailable) return null;
 
+  // Stable object URL for the player. Revoked when videoFile changes.
+  const playerUrl = useMemo(
+    () => (videoFile ? URL.createObjectURL(videoFile) : null),
+    [videoFile],
+  );
+  useEffect(() => () => { if (playerUrl) URL.revokeObjectURL(playerUrl); }, [playerUrl]);
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
       <div className="flex items-center justify-between mb-4">
@@ -231,6 +238,18 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
           </button>
         )}
       </div>
+
+      {/* Embedded clip player. Per-shot card click uses
+          data-playsmart-clip to find this <video> and seek to the moment. */}
+      {playerUrl && (
+        <video
+          src={playerUrl}
+          data-playsmart-clip
+          controls
+          playsInline
+          className="w-full rounded-lg bg-black mb-4 max-h-72 object-contain"
+        />
+      )}
 
       {(phase === "extracting" || phase === "narrating") && (
         <div>
@@ -255,6 +274,46 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
               Analyzed your top {MAX_SHOTS} shots for technique consistency.
             </div>
           )}
+
+          {/* Hero badge — celebrate the strongest moment of the session.
+              Triggered when any shot has VLM-judged powerLevel="max" OR speed
+              that puts them in the top tier for that sport's primary shot. */}
+          {(() => {
+            const maxShot = perShot.reduce((best, s) => {
+              const speed = Number(s.speed) || 0;
+              const isMax = s.powerLevel === "max";
+              const score = (isMax ? 1000 : 0) + speed;
+              return score > best.score ? { shot: s, score, speed, isMax } : best;
+            }, { shot: null, score: 0, speed: 0, isMax: false });
+            if (!maxShot.shot) return null;
+            const sh = maxShot.shot;
+            const speed = Math.round(maxShot.speed);
+            // Only celebrate when it's actually impressive
+            const sportPeakThresholds = {
+              badminton: { smash: 250, clear: 130, drop: 60, default: 100 },
+              tennis: { serve: 180, forehand: 130, default: 100 },
+              table_tennis: { default: 60 },
+              pickleball: { default: 60 },
+            };
+            const t = sportPeakThresholds[sport] || {};
+            const threshold = t[sh.label] || t.default || 80;
+            if (!maxShot.isMax && speed < threshold) return null;
+            const headline = maxShot.isMax
+              ? `You hit a Max-power ${sh.name?.replace(/_/g, ' ') || 'shot'}`
+              : `Peak ${sh.name?.replace(/_/g, ' ') || 'shot'}: ${speed} km/h`;
+            return (
+              <div className="bg-gradient-to-r from-amber-500/15 to-lime-400/15 border border-amber-400/40 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">⚡ Highlight of this session</p>
+                  <p className="text-sm font-bold text-white mt-0.5">{headline}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-lime-400">{speed}</p>
+                  <p className="text-[10px] text-zinc-500">km/h</p>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Headline — overall consistency. Needs ≥3 shots to be meaningful. */}
           {perShot.filter((s) => s.pose).length >= 3 ? (
@@ -342,8 +401,20 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
                   if (!s.reasoning && !s.formFeedback) return null;
                   const ff = s.formFeedback || {};
                   const conf = s.confidence != null ? Math.round(s.confidence * 100) : null;
+                  const ts = typeof s.timestamp === "number" ? s.timestamp : null;
+                  const onSeek = ts != null ? () => {
+                    // Bubble a custom event; any embedded player can listen.
+                    window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: ts } }));
+                    const v = document.querySelector("video[data-playsmart-clip]");
+                    if (v) { try { v.currentTime = Math.max(0, ts); v.play?.(); } catch {} }
+                  } : null;
                   return (
-                    <div key={i} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
+                    <div
+                      key={i}
+                      className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${onSeek ? "cursor-pointer hover:border-lime-400/40 transition-colors" : ""}`}
+                      onClick={onSeek || undefined}
+                      title={onSeek ? `Jump to ${ts.toFixed(1)}s in the video` : undefined}
+                    >
                       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
                         <p className="text-sm font-semibold text-white">
                           Shot {i + 1} · {s.name?.replace(/_/g, " ") || "Unknown"}

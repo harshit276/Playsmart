@@ -2423,6 +2423,44 @@ async def classify_shots_vlm(req: ClassifyShotsRequest, authorization: str = Hea
 
 
 # ──────────────────────────────────────────────────────────────────────
+# Sport auto-detection: 1-2 keyframes -> which of our 5 sports is this?
+# ~$0.0005 per call. Lets users upload without pre-selecting a sport.
+# ──────────────────────────────────────────────────────────────────────
+class DetectSportRequest(BaseModel):
+    backend: str = "auto"
+    keyframes: list[str]  # JPEG-base64 (data:image/... or raw)
+
+
+@api_router.post("/detect-sport-vlm")
+async def detect_sport_endpoint(req: DetectSportRequest, authorization: str = Header(None)):
+    await get_current_user(authorization)
+    if not req.keyframes:
+        return {"success": False, "error": "no keyframes provided"}
+
+    import base64
+    def _strip_b64(s: str) -> bytes:
+        if s.startswith("data:"):
+            s = s.split(",", 1)[1]
+        return base64.b64decode(s)
+    try:
+        jpegs = [_strip_b64(k) for k in req.keyframes if k][:3]
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+
+    try:
+        from ai_pipeline.vlm import detect_sport
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+
+    loop = asyncio.get_event_loop()
+    try:
+        result = await loop.run_in_executor(None, lambda: detect_sport(jpegs, backend=req.backend))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Sport detection failed: {exc}")
+    return {"success": True, **result}
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Reanalyze comparison: when a player uploads a new video for a shot they
 # analyzed before, compare old vs new and produce a coach-quality progress
 # narrative. Text-only Gemini call, very cheap (~$0.0001 per comparison).
@@ -3281,11 +3319,12 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
 
             loop = asyncio.get_event_loop()
             vlm_coaching = await asyncio.wait_for(
-                loop.run_in_executor(None, _coach_run), timeout=20.0,
+                loop.run_in_executor(None, _coach_run), timeout=35.0,
             )
+            logger.info(f"VLM coaching: keys={list(vlm_coaching.keys())} drills={len(vlm_coaching.get('priority_drills', []))}")
         except (Exception, asyncio.TimeoutError) as exc:
             logger.warning(f"VLM coaching skipped: {exc.__class__.__name__}: {exc}")
-            vlm_coaching = {}
+            vlm_coaching = {"_error": f"{exc.__class__.__name__}: {str(exc)[:200]}"}
 
     analysis_record = {
         "id": file_id,
@@ -9303,8 +9342,9 @@ def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
         if not improvements:
             improvements = ["You're well-rounded — push for higher pace or a stronger opponent next session."]
 
+        n_types = len(populated_dist)
         summary = (
-            f"{req.total_shots}-shot session, {len(populated_dist)} shot types, "
+            f"{req.total_shots}-shot session, {n_types} shot type{'s' if n_types != 1 else ''}, "
             f"overall consistency {req.overall_consistency:.0%}"
         )
         if populated_dist:
@@ -9357,8 +9397,9 @@ def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
     if not improvements:
         improvements = ["You're well-rounded — push for higher pace or a stronger opponent next session."]
 
+    n_patterns = len(populated)
     summary = (
-        f"{req.total_shots}-shot session, {len(populated)} motion patterns, "
+        f"{req.total_shots}-shot session, {n_patterns} motion pattern{'s' if n_patterns != 1 else ''}, "
         f"overall consistency {req.overall_consistency:.0%}"
     )
     next_focus = (

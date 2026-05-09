@@ -1755,6 +1755,42 @@ function buildPlayerProfile(detectedShots, dominantHand) {
  * @returns {Promise<object>} Analysis results matching the server's response format
  */
 /**
+ * Extract 1-2 keyframes from the middle of the video for sport auto-detect.
+ * Returns Array<base64-jpeg>.
+ */
+export async function extractDetectKeyframes(videoFile, options = {}) {
+  const { count = 2, maxDim = 480, jpegQuality = 0.6 } = options;
+  const video = document.createElement("video");
+  const url = URL.createObjectURL(videoFile);
+  video.src = url; video.muted = true; video.playsInline = true; video.crossOrigin = "anonymous";
+  video.load();
+  await _waitForEvent(video, "loadedmetadata", 6000);
+  const duration = video.duration;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!duration || !vw || !vh) { URL.revokeObjectURL(url); return []; }
+
+  const scale = Math.min(1, maxDim / Math.max(vw, vh));
+  const outW = Math.max(1, Math.round(vw * scale));
+  const outH = Math.max(1, Math.round(vh * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = outW; canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+
+  const times = count <= 1 ? [duration / 2] : [duration * 0.33, duration * 0.66];
+  const out = [];
+  for (const t of times) {
+    try {
+      await _seekTo(video, Math.min(t, duration - 0.01), 3000);
+      ctx.drawImage(video, 0, 0, vw, vh, 0, 0, outW, outH);
+      out.push(canvas.toDataURL("image/jpeg", jpegQuality));
+    } catch {}
+  }
+  URL.revokeObjectURL(url);
+  return out;
+}
+
+
+/**
  * Extract a small set of keyframes per shot moment for VLM classification.
  * For each peak time, captures frames around it (default: peak-0.3s, peak,
  * peak+0.3s). Optionally crops to `customCropBox` (normalized 0-1) so we only

@@ -535,7 +535,27 @@ export default function AnalyzePage() {
 
     const VIDEO_ANALYSIS_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball"];
     const activeSport = profile?.active_sport || "badminton";
-    const sportToAnalyze = selectedSport || (VIDEO_ANALYSIS_SPORTS.includes(activeSport) ? activeSport : "badminton");
+    let sportToAnalyze = selectedSport || (VIDEO_ANALYSIS_SPORTS.includes(activeSport) ? activeSport : "badminton");
+
+    // Auto-detect sport when the user picked "auto" — 1 quick Gemini call.
+    if (selectedSport === "auto") {
+      setLoadingText("Detecting sport...");
+      try {
+        const mod = await import("@/ai/videoProcessor");
+        const keyframes = await mod.extractDetectKeyframes(file, { count: 2 });
+        if (keyframes.length > 0) {
+          const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 30000 });
+          if (data?.success && data.sport) {
+            sportToAnalyze = data.sport;
+            console.info(`[sport] detected: ${data.sport} (conf=${data.confidence?.toFixed?.(2)})`);
+            toast.info(`Detected sport: ${data.sport.replace("_", " ")}`);
+          }
+        }
+      } catch (e) {
+        console.warn("[sport] detection failed, falling back to badminton:", e?.response?.data || e.message);
+        sportToAnalyze = "badminton";
+      }
+    }
 
     // ─── Pre-scan the video for players (used by BOTH client + server modes) ───
     setLoadingText("Scanning video for players...");
@@ -981,11 +1001,12 @@ export default function AnalyzePage() {
   );
 
   const SPORT_OPTIONS = [
+    { key: "auto", label: "Auto-detect", icon: "✨", videoAnalysis: true },
     { key: "badminton", label: "Badminton", icon: "🏸", videoAnalysis: true },
     { key: "tennis", label: "Tennis", icon: "🎾", videoAnalysis: true },
     { key: "table_tennis", label: "Table Tennis", icon: "🏓", videoAnalysis: true },
     { key: "pickleball", label: "Pickleball", icon: "⚡", videoAnalysis: true },
-    { key: "cricket", label: "Cricket", icon: "🏏", videoAnalysis: false },
+    { key: "cricket", label: "Cricket", icon: "🏏", videoAnalysis: true },
     { key: "football", label: "Football", icon: "⚽", videoAnalysis: false },
     { key: "swimming", label: "Swimming", icon: "🏊", videoAnalysis: false },
   ];
@@ -1486,6 +1507,12 @@ export default function AnalyzePage() {
     const scoreComparison = result.score_comparison || [];
     const coachFeedback = result.coach_feedback || {};
     const vlmCoaching = result.vlm_coaching || {};
+    // True when VLM produced real coaching content. When true, we hide the
+    // static template cards (Top 3 to improve / Pro tips / 7-day plan /
+    // Drills for you) so the user gets ONE coaching surface, not duplicated.
+    const vlmCoachingActive = !!(vlmCoaching.priority_drills?.length
+      || vlmCoaching.equipment_recommendations?.length
+      || vlmCoaching.seven_day_plan?.length);
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
@@ -1973,8 +2000,8 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── Top Issues (Coach Style) ── */}
-        {(shot.weaknesses?.length > 0 || coachFeedback.top_issues?.length > 0) && gate(
+        {/* ── Top Issues (Coach Style) — hidden when VLM coaching present ── */}
+        {!vlmCoachingActive && (shot.weaknesses?.length > 0 || coachFeedback.top_issues?.length > 0) && gate(
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="space-y-3" data-testid="weaknesses-card">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium flex items-center gap-1">
@@ -1999,7 +2026,11 @@ export default function AnalyzePage() {
                         w.severity === "high" ? "bg-red-500" :
                         w.severity === "low" ? "bg-lime-400" : "bg-amber-400"
                       }`} />
-                      <span className="text-sm font-semibold text-white">{w.area || "Technique"}</span>
+                      <span className="text-sm font-semibold text-white">{
+                        (w.area || "Technique")
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (c) => c.toUpperCase())
+                      }</span>
                       <Badge variant="outline" className={`text-[10px] uppercase ${
                         w.severity === "high" ? "border-red-500/30 text-red-400" :
                         w.severity === "low" ? "border-lime-400/30 text-lime-400" :
@@ -2129,8 +2160,8 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── (e) 7-Day Training Plan (dynamic) ── */}
-        {gate(
+        {/* ── (e) 7-Day Training Plan (dynamic) — hidden when VLM coach plan present ── */}
+        {!vlmCoachingActive && gate(
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
           className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
           <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -2253,8 +2284,8 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── Personalized Drills (derived from this video) ── */}
-        {contextualDrills.length > 0 && gate(
+        {/* ── Personalized Drills (derived from this video) — hidden when VLM coach drills present ── */}
+        {!vlmCoachingActive && contextualDrills.length > 0 && gate(
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2359,7 +2390,7 @@ export default function AnalyzePage() {
 
         {/* ── Connected: Gear + Training ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {gearTips.length > 0 && (
+          {!vlmCoachingActive && gearTips.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}
               className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
               <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -2379,7 +2410,7 @@ export default function AnalyzePage() {
             </motion.div>
           )}
 
-          {trainingPrios.length > 0 && (
+          {!vlmCoachingActive && trainingPrios.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44 }}
               className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
               <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">

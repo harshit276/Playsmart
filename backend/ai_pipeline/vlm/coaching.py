@@ -116,6 +116,49 @@ def compare_analyses(
     }
 
 
+SUPPORTED_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball", "cricket"]
+
+
+def detect_sport(frames_jpeg: list[bytes], backend: str = "auto") -> dict:
+    """Quick VLM call: which of our 5 sports is this video?
+
+    Send 1-2 keyframes, get back the sport name + confidence. ~$0.0001 per call.
+    Returns: {sport, confidence, _meta}.
+    """
+    if not frames_jpeg:
+        return {"sport": "badminton", "confidence": 0.0, "_meta": {"error": "no frames"}}
+
+    sys_prompt = (
+        "Identify which racquet/bat sport is shown in these frames. "
+        f"Choose exactly one of: {', '.join(SUPPORTED_SPORTS)}. "
+        "Look for the playing surface, equipment (racket size, ball type, court markings), "
+        "and player stance.\n\n"
+        "Respond with valid JSON only:\n"
+        '{"sport": "<one of the listed sports>", "confidence": <float 0-1>, "reasoning": "<one sentence>"}'
+    )
+    usr_msg = "Identify the sport in these keyframes."
+
+    backend_obj = pick_backend(backend)
+    try:
+        raw = backend_obj.call(sys_prompt, usr_msg, frames_jpeg[:2])
+    except Exception as exc:
+        return {"sport": "badminton", "confidence": 0.0,
+                "_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
+
+    data = _parse_json_safe(raw)
+    sport = str(data.get("sport", "badminton")).lower().strip().replace(" ", "_")
+    if sport not in SUPPORTED_SPORTS:
+        # Fuzzy match (e.g. "ping_pong" -> "table_tennis")
+        synonyms = {"ping_pong": "table_tennis", "padel": "tennis"}
+        sport = synonyms.get(sport, "badminton")
+    return {
+        "sport": sport,
+        "confidence": max(0.0, min(1.0, float(data.get("confidence", 0.5) or 0.5))),
+        "reasoning": str(data.get("reasoning", ""))[:200],
+        "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name},
+    }
+
+
 def personalized_coaching(
     analysis: dict, equipment_catalog: list[dict] | None = None,
     backend: str = "auto",
