@@ -3027,18 +3027,28 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         get_drills_for_issues, get_videos_for_issues,
     )
 
-    user = await get_current_user(authorization)
+    # Guests are allowed ONE free analysis (frontend tracks usage in
+    # localStorage and forces sign-up before the second). Backend just
+    # checks if there's a JWT — if yes, full enforcement; if no, skip
+    # spend + skip user-specific saves but still return enriched result.
+    user = await get_current_user_or_none(authorization)
+    is_guest = user is None
 
-    # Token spend gate. Raises HTTPException(402) with packs payload if
-    # the user is short — frontend opens the buy/earn modal. Server is
-    # the source of truth; client pre-check is purely UX hint.
-    analysis_cost = abs(TOKEN_RULES.get("analysis_spend", -100))
-    await _spend_tokens(user["id"], "analysis_spend", analysis_cost,
-                         {"source": "analyze_client_results"})
-
-    try:
-        profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}), timeout=5.0)
-    except (Exception, asyncio.TimeoutError):
+    if not is_guest:
+        # Token spend gate. Raises HTTPException(402) with packs payload if
+        # the user is short — frontend opens the buy/earn modal. Server is
+        # the source of truth; client pre-check is purely UX hint.
+        analysis_cost = abs(TOKEN_RULES.get("analysis_spend", -100))
+        await _spend_tokens(user["id"], "analysis_spend", analysis_cost,
+                             {"source": "analyze_client_results"})
+        try:
+            profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            profile = None
+    else:
+        # Synthetic guest user so the rest of the function can use user["id"]
+        # without branching on every line. Saves to DB skipped further down.
+        user = {"id": "guest", "name": "", "email": ""}
         profile = None
     body = await request.json()
 
@@ -3346,28 +3356,31 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "segments_summary": ai_result.get("segments"),
         "vlm_coaching": vlm_coaching,
     }
-    try:
-        await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=5.0)
-        analysis_record.pop("_id", None)
-    except (Exception, asyncio.TimeoutError):
-        analysis_record.pop("_id", None)
-        logger.warning("Failed to save analysis to DB (timeout or error)")
+    # Skip DB save for guests (no user_id to attach it to anyway).
+    if not is_guest:
+        try:
+            await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=5.0)
+            analysis_record.pop("_id", None)
+        except (Exception, asyncio.TimeoutError):
+            analysis_record.pop("_id", None)
+            logger.warning("Failed to save analysis to DB (timeout or error)")
 
     # NOTE: Each video analysis is INDEPENDENT and must NOT mutate the
     # user's profile. The profile is set explicitly via the quiz or via
     # "Save as my profile" from an analysis — never silently on upload.
 
-    # ─── Gamification (non-fatal) ───
+    # ─── Gamification (non-fatal, signed-in only) ───
     new_badges = []
-    try:
-        new_badges = await asyncio.wait_for(check_and_award_badges(user["id"], analysis_record), timeout=5.0)
-        await asyncio.wait_for(update_upload_streak(user["id"]), timeout=5.0)
-    except (Exception, asyncio.TimeoutError):
-        logger.warning("Gamification update failed (timeout or error)")
+    if not is_guest:
+        try:
+            new_badges = await asyncio.wait_for(check_and_award_badges(user["id"], analysis_record), timeout=5.0)
+            await asyncio.wait_for(update_upload_streak(user["id"]), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            logger.warning("Gamification update failed (timeout or error)")
 
-    # ─── Referral payoff: credit both sides on first analysis ─────
-    # Run in background so the analysis response stays fast.
-    asyncio.create_task(_settle_pending_referrals(user["id"]))
+        # ─── Referral payoff: credit both sides on first analysis ─────
+        # Run in background so the analysis response stays fast.
+        asyncio.create_task(_settle_pending_referrals(user["id"]))
 
     # Return full enriched result (same format as /analyze-video)
     return {
@@ -3389,6 +3402,9 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         # seven_day_plan, key_focus_areas, motivational_message). Empty dict if
         # no LLM backend configured or the call timed out.
         "vlm_coaching": vlm_coaching,
+        # Tells the frontend to surface the "sign up for 300 tokens" CTA
+        # at the top of the result view.
+        "guest_mode": is_guest,
     }
 
 

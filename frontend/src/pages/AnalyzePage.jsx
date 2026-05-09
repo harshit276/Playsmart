@@ -292,6 +292,7 @@ export default function AnalyzePage() {
   const { user, profile, refreshProfile, login, tokens, refreshTokens } = useAuth();
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [insufficientBalance, setInsufficientBalance] = useState(0);
+  const [showGuestUpgrade, setShowGuestUpgrade] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isGuest = !user?.id;
@@ -530,6 +531,16 @@ export default function AnalyzePage() {
       return;
     }
 
+    // Guests get ONE free analysis. After that, force sign-up — they can
+    // claim 300 tokens for free which unlocks ~3 more analyses.
+    if (!user) {
+      const used = localStorage.getItem("guest_analysis_used") === "true";
+      if (used) {
+        setShowGuestUpgrade(true);
+        return;
+      }
+    }
+
     setAnalyzing(true);
     setResult(null);
     setError(null);
@@ -701,9 +712,11 @@ export default function AnalyzePage() {
         throw new Error(clientResult?.error || "Analysis returned no results");
       }
 
-      // Send client results to backend for coaching enrichment (only if logged in)
-      const hasToken = !!localStorage.getItem('playsmart_token');
-      if (hasToken) {
+      // Send client results to backend for coaching enrichment.
+      // Guests get ONE free analysis (gated above by guest_analysis_used flag);
+      // their request goes through with no Authorization header → backend
+      // skips token spend + DB save but still returns the enriched result.
+      {
         setProgress(92);
         setLoadingText("Getting coaching feedback...");
         try {
@@ -730,19 +743,33 @@ export default function AnalyzePage() {
 
           if (data.success !== false) {
             data._processingMode = "client";
+            // Diagnostic: surface VLM coaching state for debugging
+            const vc = data.vlm_coaching || {};
+            const drillCount = Array.isArray(vc.priority_drills) ? vc.priority_drills.length : 0;
+            const eqCount = Array.isArray(vc.equipment_recommendations) ? vc.equipment_recommendations.length : 0;
+            console.info(`[vlm-coach] drills=${drillCount} equipment=${eqCount} keys=${Object.keys(vc).join(",")}`);
+            if (vc._error) console.warn("[vlm-coach] backend error:", vc._error);
             setResult(data);
             setViewingHistorical(false);
             setActiveTab("results");
-            refreshProfile();
-            loadHistory();
-            toast.success("Analysis complete!");
-            if (data.new_badges?.length > 0) {
-              setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
-            }
-            // Reanalyze flow: kick off the comparison call now that both
-            // analyses exist on the server.
-            if (reanalyzeContext?.id && data.analysis_id) {
-              fetchComparison(reanalyzeContext.id, data.analysis_id);
+            // Guest path: mark the free analysis used + auto-show the
+            // sign-up prompt so the next analyze attempt converts.
+            if (data.guest_mode || !user) {
+              try { localStorage.setItem("guest_analysis_used", "true"); } catch {}
+              setTimeout(() => setShowGuestUpgrade(true), 2500);
+              toast.success("Free analysis complete! Sign up for 300 free tokens to analyze more.");
+            } else {
+              refreshProfile();
+              loadHistory();
+              toast.success("Analysis complete!");
+              if (data.new_badges?.length > 0) {
+                setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
+              }
+              // Reanalyze flow: kick off the comparison call now that both
+              // analyses exist on the server.
+              if (reanalyzeContext?.id && data.analysis_id) {
+                fetchComparison(reanalyzeContext.id, data.analysis_id);
+              }
             }
           } else {
             throw new Error("Server enrichment failed");
@@ -775,17 +802,6 @@ export default function AnalyzePage() {
           setActiveTab("results");
           toast.info("Analysis complete! Coaching feedback will be available when connected.");
         }
-      } else {
-        // Guest user - show full client-side results directly
-        clearInterval(interval);
-        setProgress(100);
-        setLoadingText("Complete!");
-
-        clientResult._processingMode = "client";
-        setResult(clientResult);
-        setViewingHistorical(false);
-        setActiveTab("results");
-        toast.success("Analysis complete!");
       }
     } catch (err) {
       clearInterval(interval);
@@ -2752,6 +2768,34 @@ export default function AnalyzePage() {
         balance={insufficientBalance}
         required={100}
       />
+      {/* Guest upgrade prompt — shown after the free analysis completes
+          and on the second guest analyze attempt. */}
+      {showGuestUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowGuestUpgrade(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="bg-gradient-to-br from-lime-500/10 via-zinc-900 to-zinc-950 border border-lime-400/30 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center relative">
+            <div className="text-5xl mb-3">🪙</div>
+            <h2 className="font-heading font-black text-2xl sm:text-3xl text-white uppercase tracking-tight mb-2">
+              Sign up — get 300 tokens free
+            </h2>
+            <p className="text-zinc-300 text-sm mb-5 leading-relaxed">
+              You've used your one free analysis. Sign up to unlock 3 more analyses on us
+              (300 tokens), plus history, training plan, and equipment recs.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => navigate("/auth")}
+                className="w-full bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full h-11">
+                Sign up free →
+              </Button>
+              <button onClick={() => setShowGuestUpgrade(false)}
+                className="text-xs text-zinc-500 hover:text-zinc-300">
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <SEO
         title="AI Video Analysis - Analyze Your Badminton, Tennis, Table Tennis Shots"
         description="Upload a video and get instant AI-powered shot analysis. Detect smashes, drives, drops, and more. Get speed estimation, technique scoring, and personalized improvement tips. Free for badminton, tennis, table tennis, and pickleball."

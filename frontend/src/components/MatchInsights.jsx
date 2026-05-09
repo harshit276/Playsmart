@@ -214,15 +214,17 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
     }
   };
 
-  // Don't render at all when there are no shots from the parent.
-  if (!shotsAvailable) return null;
-
   // Stable object URL for the player. Revoked when videoFile changes.
+  // Hooks MUST be declared before any conditional return — keeping them
+  // here so they're called in the same order every render.
   const playerUrl = useMemo(
     () => (videoFile ? URL.createObjectURL(videoFile) : null),
     [videoFile],
   );
   useEffect(() => () => { if (playerUrl) URL.revokeObjectURL(playerUrl); }, [playerUrl]);
+
+  // Don't render at all when there are no shots from the parent.
+  if (!shotsAvailable) return null;
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
@@ -388,87 +390,12 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
             );
           })()}
 
-          {/* Per-shot AI coach cards — only shown when VLM produced reasoning
-              for any shot (otherwise empty). Surfaces Gemini's per-shot
-              explanation, strengths, weaknesses, and tip. */}
+          {/* Per-shot AI coach cards. With ≤4 shots we list each one. With
+              5+ we group by shot type so a 12-shot rally doesn't drown the
+              user in 12 cards — show one aggregated card per type with an
+              expandable list of individual shots. */}
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
-            <div className="pt-2 border-t border-zinc-800">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1">
-                <Target className="w-3 h-3 text-lime-400" /> Per-shot AI coach feedback
-              </p>
-              <div className="space-y-2">
-                {perShot.map((s, i) => {
-                  if (!s.reasoning && !s.formFeedback) return null;
-                  const ff = s.formFeedback || {};
-                  const conf = s.confidence != null ? Math.round(s.confidence * 100) : null;
-                  const ts = typeof s.timestamp === "number" ? s.timestamp : null;
-                  const onSeek = ts != null ? () => {
-                    // Bubble a custom event; any embedded player can listen.
-                    window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: ts } }));
-                    const v = document.querySelector("video[data-playsmart-clip]");
-                    if (v) { try { v.currentTime = Math.max(0, ts); v.play?.(); } catch {} }
-                  } : null;
-                  return (
-                    <div
-                      key={i}
-                      className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${onSeek ? "cursor-pointer hover:border-lime-400/40 transition-colors" : ""}`}
-                      onClick={onSeek || undefined}
-                      title={onSeek ? `Jump to ${ts.toFixed(1)}s in the video` : undefined}
-                    >
-                      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                        <p className="text-sm font-semibold text-white">
-                          Shot {i + 1} · {s.name?.replace(/_/g, " ") || "Unknown"}
-                        </p>
-                        <div className="flex items-center gap-1.5">
-                          {conf != null && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                              conf >= 80 ? "bg-lime-400/15 text-lime-300"
-                              : conf >= 50 ? "bg-amber-400/15 text-amber-300"
-                              : "bg-zinc-800 text-zinc-400"}`}>{conf}%</span>
-                          )}
-                          {s.powerLevel && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">
-                              {s.powerLevel}
-                            </span>
-                          )}
-                          {s.speed != null && s.speed > 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                              {Math.round(s.speed)} km/h
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {s.reasoning && (
-                        <p className="text-xs text-zinc-300 mb-2">
-                          <span className="text-lime-400/80">Coach:</span> {s.reasoning}
-                        </p>
-                      )}
-                      {ff.tip && (
-                        <p className="text-xs text-amber-300 mb-2">💡 {ff.tip}</p>
-                      )}
-                      {Array.isArray(ff.strengths) && ff.strengths.length > 0 && (
-                        <ul className="space-y-0.5 mb-1">
-                          {ff.strengths.slice(0, 3).map((x, j) => (
-                            <li key={`s-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5">
-                              <span className="text-lime-400">✓</span><span>{x}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {Array.isArray(ff.weaknesses) && ff.weaknesses.length > 0 && (
-                        <ul className="space-y-0.5">
-                          {ff.weaknesses.slice(0, 3).map((x, j) => (
-                            <li key={`w-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5">
-                              <span className="text-amber-400">⚠</span><span>{x}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <PerShotCoachSection perShot={perShot} />
           )}
 
           {/* Narrative */}
@@ -542,6 +469,208 @@ async function extractOneShotPose(videoEl, ctx, canvas, detector, cropBox, start
   }
   return extractPoseQuality(poseSeq, cropBox.w, cropBox.h, span);
 }
+
+// ─── Per-shot AI coach feedback section ───
+// Threshold below which we list each shot individually; above it we group
+// by shot type (e.g. "5 Smashes" expandable to 5 individual cards).
+const SHOT_GROUP_THRESHOLD = 5;
+
+function _seekToShot(timestamp) {
+  if (typeof timestamp !== "number") return;
+  window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: timestamp } }));
+  const v = document.querySelector("video[data-playsmart-clip]");
+  if (v) { try { v.currentTime = Math.max(0, timestamp); v.play?.(); } catch {} }
+}
+
+function _IndividualShotCard({ shot, label }) {
+  const ff = shot.formFeedback || {};
+  const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
+  const ts = typeof shot.timestamp === "number" ? shot.timestamp : null;
+  const onSeek = ts != null ? () => _seekToShot(ts) : null;
+  return (
+    <div
+      className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${onSeek ? "cursor-pointer hover:border-lime-400/40 transition-colors" : ""}`}
+      onClick={onSeek || undefined}
+      title={onSeek ? `Jump to ${ts.toFixed(1)}s in the video` : undefined}
+    >
+      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+        <p className="text-sm font-semibold text-white">{label}</p>
+        <div className="flex items-center gap-1.5">
+          {conf != null && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+              conf >= 80 ? "bg-lime-400/15 text-lime-300"
+              : conf >= 50 ? "bg-amber-400/15 text-amber-300"
+              : "bg-zinc-800 text-zinc-400"}`}>{conf}%</span>
+          )}
+          {shot.powerLevel && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">
+              {shot.powerLevel}
+            </span>
+          )}
+          {shot.speed != null && shot.speed > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+              {Math.round(shot.speed)} km/h
+            </span>
+          )}
+        </div>
+      </div>
+      {shot.reasoning && (
+        <p className="text-xs text-zinc-300 mb-2">
+          <span className="text-lime-400/80">Coach:</span> {shot.reasoning}
+        </p>
+      )}
+      {ff.tip && (<p className="text-xs text-amber-300 mb-2">💡 {ff.tip}</p>)}
+      {Array.isArray(ff.strengths) && ff.strengths.length > 0 && (
+        <ul className="space-y-0.5 mb-1">
+          {ff.strengths.slice(0, 3).map((x, j) => (
+            <li key={`s-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-lime-400">✓</span><span>{x}</span></li>
+          ))}
+        </ul>
+      )}
+      {Array.isArray(ff.weaknesses) && ff.weaknesses.length > 0 && (
+        <ul className="space-y-0.5">
+          {ff.weaknesses.slice(0, 3).map((x, j) => (
+            <li key={`w-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-amber-400">⚠</span><span>{x}</span></li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function _ShotGroupCard({ groupKey, shots: groupShots }) {
+  const [expanded, setExpanded] = useState(false);
+  const sample = groupShots[0];
+  const name = sample.name?.replace(/_/g, " ") || groupKey;
+  const count = groupShots.length;
+
+  // Aggregate stats
+  const speeds = groupShots.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
+  const peakSpeed = speeds.length ? Math.max(...speeds) : 0;
+  const avgConf = groupShots.reduce((a, s) => a + (s.confidence || 0), 0) / count;
+
+  // Dedup strengths / weaknesses across the group, pick top 3 of each
+  const allStrengths = new Set();
+  const allWeaknesses = new Set();
+  const allTips = new Set();
+  groupShots.forEach((s) => {
+    const ff = s.formFeedback || {};
+    (ff.strengths || []).slice(0, 2).forEach((x) => allStrengths.add(String(x)));
+    (ff.weaknesses || []).slice(0, 2).forEach((x) => allWeaknesses.add(String(x)));
+    if (ff.tip) allTips.add(String(ff.tip));
+  });
+  const strengths = Array.from(allStrengths).slice(0, 3);
+  const weaknesses = Array.from(allWeaknesses).slice(0, 3);
+  const tips = Array.from(allTips).slice(0, 2);
+
+  // Most representative reasoning = the longest one (most detail)
+  const reasoning = groupShots
+    .map((s) => s.reasoning || "")
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)[0] || "";
+
+  return (
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg overflow-hidden">
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+          <p className="text-sm font-semibold text-white capitalize">
+            {count} {name}{count === 1 ? "" : "s"}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-lime-400/15 text-lime-300">
+              avg {Math.round(avgConf * 100)}%
+            </span>
+            {peakSpeed > 0 && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                peak {Math.round(peakSpeed)} km/h
+              </span>
+            )}
+          </div>
+        </div>
+        {reasoning && (
+          <p className="text-xs text-zinc-300 mb-2">
+            <span className="text-lime-400/80">Coach (across {count} {name}{count === 1 ? "" : "s"}):</span> {reasoning}
+          </p>
+        )}
+        {tips.length > 0 && tips.map((t, i) => (
+          <p key={`t-${i}`} className="text-xs text-amber-300 mb-1">💡 {t}</p>
+        ))}
+        {strengths.length > 0 && (
+          <ul className="space-y-0.5 mt-2 mb-1">
+            {strengths.map((x, j) => (
+              <li key={`s-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-lime-400">✓</span><span>{x}</span></li>
+            ))}
+          </ul>
+        )}
+        {weaknesses.length > 0 && (
+          <ul className="space-y-0.5">
+            {weaknesses.map((x, j) => (
+              <li key={`w-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-amber-400">⚠</span><span>{x}</span></li>
+            ))}
+          </ul>
+        )}
+        <button
+          className="text-[11px] text-sky-400 hover:text-sky-300 mt-2"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? "Hide" : `View all ${count}`} individual {name}{count === 1 ? "" : "s"} {expanded ? "▲" : "▼"}
+        </button>
+      </div>
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2 border-t border-zinc-800/50">
+          {groupShots.map((s, i) => (
+            <_IndividualShotCard
+              key={i} shot={s}
+              label={`Shot at ${typeof s.timestamp === "number" ? s.timestamp.toFixed(1) + "s" : `#${i + 1}`}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PerShotCoachSection({ perShot }) {
+  // Filter to shots with VLM data
+  const usable = perShot.filter((s) => s.reasoning || s.formFeedback);
+  if (usable.length === 0) return null;
+
+  // Group when there are too many to list cleanly
+  const shouldGroup = usable.length >= SHOT_GROUP_THRESHOLD;
+
+  let groupedEntries = null;
+  if (shouldGroup) {
+    const groups = {};
+    usable.forEach((s) => {
+      const key = s.label || s.name || "unknown";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    groupedEntries = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+  }
+
+  return (
+    <div className="pt-2 border-t border-zinc-800">
+      <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1">
+        <Target className="w-3 h-3 text-lime-400" /> Per-shot AI coach feedback
+        {shouldGroup && <span className="text-zinc-600 normal-case font-normal">· grouped by type ({usable.length} shots total)</span>}
+      </p>
+      <div className="space-y-2">
+        {shouldGroup
+          ? groupedEntries.map(([key, group]) => (
+              <_ShotGroupCard key={key} groupKey={key} shots={group} />
+            ))
+          : usable.map((s, i) => (
+              <_IndividualShotCard
+                key={i} shot={s}
+                label={`Shot ${i + 1} · ${s.name?.replace(/_/g, " ") || "Unknown"}`}
+              />
+            ))}
+      </div>
+    </div>
+  );
+}
+
 
 function safeSeek(videoEl, t) {
   return new Promise((resolve) => {
