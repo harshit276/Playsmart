@@ -119,6 +119,141 @@ def compare_analyses(
 SUPPORTED_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball", "cricket"]
 
 
+def quiz_personalization(
+    quiz_data: dict, backend: str = "auto",
+    equipment_catalog: list[dict] | None = None,
+) -> dict:
+    """Take onboarding-quiz answers, return AI-personalized starter profile.
+
+    Cheaper than the full personalized_coaching call (text only, no per-shot
+    data) — used right after a player completes the equipment quiz.
+
+    Returns: {intro_message, strengths, focus_areas, equipment_picks,
+              starter_plan, _meta}.
+    """
+    sport = (quiz_data.get("sport") or "badminton").lower()
+    skill = quiz_data.get("skill_level") or "Beginner"
+    style = quiz_data.get("play_style") or "All-round"
+    freq = quiz_data.get("playing_frequency") or "weekly"
+    budget = quiz_data.get("budget_range") or "any"
+    notes = quiz_data.get("specific_preferences") or "none"
+
+    catalog_block = ""
+    if equipment_catalog:
+        slim = [
+            {k: v for k, v in item.items()
+             if k in ("id", "name", "category", "level", "price_inr", "good_for")}
+            for item in equipment_catalog[:60]
+        ]
+        catalog_block = (
+            "\n\nAVAILABLE EQUIPMENT (recommend by id from this list — "
+            "do NOT invent products):\n" + json.dumps(slim, indent=2)
+        )
+
+    sys_prompt = (
+        f"You are an expert {sport} coach onboarding a new player. They've just "
+        f"answered a setup quiz. Generate personalized starter recommendations "
+        f"that match their actual stated preferences. Be specific, not generic.\n\n"
+        "Respond with valid JSON only (no markdown):\n"
+        '{\n'
+        '  "intro_message": "<2 sentences welcoming the player + naming what we will work on>",\n'
+        '  "strengths": ["<2-3 short bullets they likely have based on style + skill>"],\n'
+        '  "focus_areas": ["<3-4 short bullets they should improve next, ordered by priority>"],\n'
+        '  "equipment_picks": [\n'
+        '    {\n'
+        '      "item_id": "<id from catalog OR null>",\n'
+        '      "category": "<racket | paddle | shoes | apparel | accessory>",\n'
+        '      "name": "<product or category recommendation>",\n'
+        '      "why": "<why this fits THIS player\'s skill+style+budget>"\n'
+        '    }\n'
+        '  ],\n'
+        '  "starter_plan": [\n'
+        '    {"day": 1, "focus": "<...>", "drills": ["<drill>"], "minutes": <int>}\n'
+        '  ]\n'
+        '}\n\n'
+        "starter_plan = exactly 7 days. equipment_picks = 2-4 items. "
+        "Tailor everything to the player's specific level + style + budget."
+        f"{catalog_block}"
+    )
+    user_msg = (
+        f"PLAYER QUIZ ANSWERS:\n"
+        f"- Sport: {sport}\n"
+        f"- Skill level: {skill}\n"
+        f"- Play style: {style}\n"
+        f"- Playing frequency: {freq}\n"
+        f"- Budget: {budget}\n"
+        f"- Other preferences: {notes}"
+    )
+
+    backend_obj = pick_backend(backend)
+    try:
+        raw = backend_obj.call(sys_prompt, user_msg, [])
+    except Exception as exc:
+        return {"_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
+
+    data = _parse_json_safe(raw)
+    return {
+        "intro_message": str(data.get("intro_message", ""))[:500],
+        "strengths": [str(x)[:120] for x in (data.get("strengths") or [])][:4],
+        "focus_areas": [str(x)[:120] for x in (data.get("focus_areas") or [])][:5],
+        "equipment_picks": [e for e in (data.get("equipment_picks") or []) if isinstance(e, dict)][:5],
+        "starter_plan": [d for d in (data.get("starter_plan") or []) if isinstance(d, dict)][:7],
+        "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name},
+    }
+
+
+def coach_chat(
+    question: str, sport: str | None = None, history: list[dict] | None = None,
+    context_docs: list[dict] | None = None, backend: str = "auto",
+) -> dict:
+    """Sport-coach chatbot reply via the same VLM backend the analyze pipeline
+    uses. Used as a fallback when Groq isn't configured.
+
+    Returns: {answer, _meta}.
+    """
+    history = history or []
+    context_docs = context_docs or []
+
+    ctx_block = ""
+    if context_docs:
+        ctx_block = "\n\nRELEVANT KNOWLEDGE BASE EXCERPTS:\n"
+        for d in context_docs[:5]:
+            title = (d.get("meta") or {}).get("name") or (d.get("meta") or {}).get("title", "")
+            ctx_block += f"- {d.get('kind', 'doc')}: {title}\n  {str(d.get('content', ''))[:300]}\n"
+
+    sys_prompt = (
+        "You are AthlyticAI's Virtual Coach. You help players with sports questions: "
+        "equipment recommendations, training, technique, rules, and player advice. "
+        "If the player asks something off-topic (cooking, politics, etc.), gently steer "
+        "them back to sports. Keep replies under 200 words. Use markdown lists for "
+        "structure when helpful. Cite specific products when context provides them."
+        + ((" Player's primary sport: " + sport) if sport else "")
+        + ctx_block
+    )
+
+    history_block = ""
+    if history:
+        for h in history[-6:]:
+            role = h.get("role", "user")
+            content = str(h.get("content", ""))[:500]
+            history_block += f"\n{role.upper()}: {content}"
+        history_block = "\n\nPREVIOUS TURNS:" + history_block + "\n\n"
+
+    user_msg = f"{history_block}USER QUESTION: {question}"
+
+    backend_obj = pick_backend(backend)
+    try:
+        raw = backend_obj.call(sys_prompt, user_msg, [])
+    except Exception as exc:
+        return {"answer": f"AI coach unavailable: {exc.__class__.__name__}",
+                "_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
+
+    return {
+        "answer": (raw or "").strip(),
+        "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name},
+    }
+
+
 def detect_sport(frames_jpeg: list[bytes], backend: str = "auto") -> dict:
     """Quick VLM call: which of our 5 sports is this video?
 

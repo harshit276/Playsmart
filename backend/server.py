@@ -5072,6 +5072,47 @@ async def submit_sport_quiz(data: SportQuizSubmission, authorization: str = Head
     else:
         strengths.append("Good technique")
 
+    # ─── AI-personalized quiz response (text-only Gemini, ~$0.0001) ───
+    # Replaces the static style_strengths dict with VLM-generated strengths,
+    # focus areas, equipment picks (from real catalog), and a 7-day starter
+    # plan tailored to skill+style+budget. Fails open: if VLM is unavailable,
+    # the static lookup above still applies.
+    quiz_ai = {}
+    if os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"):
+        try:
+            from ai_pipeline.vlm import quiz_personalization
+            from research_loader import get_all_equipment_categories
+            equipment_catalog: list = []
+            try:
+                cats = get_all_equipment_categories(data.sport) or {}
+                for items in cats.values():
+                    if isinstance(items, list):
+                        equipment_catalog.extend(items)
+            except Exception:
+                equipment_catalog = []
+            loop = asyncio.get_event_loop()
+            quiz_ai = await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: quiz_personalization(
+                    data.model_dump(),
+                    backend="auto",
+                    equipment_catalog=equipment_catalog or None,
+                )),
+                timeout=20.0,
+            )
+            # Override the static strengths/focus with AI versions when available
+            if quiz_ai.get("strengths"):
+                strengths = quiz_ai["strengths"]
+            if quiz_ai.get("focus_areas"):
+                focus_areas = quiz_ai["focus_areas"]
+            logger.info(f"Quiz AI: keys={list(quiz_ai.keys())}")
+        except (Exception, asyncio.TimeoutError) as exc:
+            logger.warning(f"Quiz AI personalization skipped: {exc.__class__.__name__}: {exc}")
+            quiz_ai = {"_error": f"{exc.__class__.__name__}: {str(exc)[:200]}"}
+
+    # Persist the AI personalization on the sport-specific profile so the
+    # frontend can display equipment picks + starter plan after onboarding.
+    sports_profiles[data.sport]["ai_personalization"] = quiz_ai
+
     # Switch active sport to the new one and update top-level fields
     update = {
         "selected_sports": selected,
@@ -5094,6 +5135,9 @@ async def submit_sport_quiz(data: SportQuizSubmission, authorization: str = Head
         "message": f"Sport quiz completed for {data.sport}",
         "active_sport": data.sport,
         "sport_profile": sports_profiles[data.sport],
+        # AI-personalized starter pack — frontend can render intro_message,
+        # equipment_picks, and starter_plan immediately after onboarding.
+        "ai_personalization": quiz_ai,
     }
 
 
@@ -8937,9 +8981,31 @@ async def coach_ask(req: CoachAskRequest):
         "Respond following the system rules. If you recommend a product, use its BUY_LINK as the markdown href."
     )
 
-    # Call Groq (OpenAI-compatible)
+    # Call Groq (OpenAI-compatible). When Groq isn't configured fall through
+    # to our VLM backend (Gemini), so the chatbot still works in production.
     if not GROQ_API_KEY:
-        # Fallback: return retrieval-only response (no LLM)
+        try:
+            from ai_pipeline.vlm import coach_chat as _coach_chat
+            loop = asyncio.get_event_loop()
+            res = await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: _coach_chat(
+                    q, sport=sport_hint, context_docs=docs[:5], backend="auto",
+                )),
+                timeout=20.0,
+            )
+            if res and res.get("answer"):
+                return {
+                    "answer": res["answer"],
+                    "sources": [
+                        {"kind": d["kind"], "title": d["meta"].get("name") or d["meta"].get("title"),
+                         "url": d["meta"].get("url"), "sport": d["meta"].get("sport")}
+                        for d in docs[:4]
+                    ],
+                    "mode": "vlm_fallback",
+                }
+        except Exception as exc:
+            logger.warning(f"VLM coach fallback failed: {exc}")
+        # Last-resort: retrieval-only
         fallback = _retrieval_only_answer(q, docs[:3])
         return {
             "answer": fallback,
