@@ -2528,7 +2528,7 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
     days_between = max(0, int((_to_ts(new) - _to_ts(old)) / 86400)) if (_to_ts(new) and _to_ts(old)) else 0
 
     try:
-        from ai_pipeline.vlm import compare_analyses as _compare_analyses, visual_compare as _visual_compare
+        from ai_pipeline.vlm import compare_analyses as _compare_analyses
     except ImportError as exc:
         raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
 
@@ -2558,35 +2558,12 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
         "weaknesses": {"resolved": resolved, "persistent": persistent, "emerged": emerged},
     }
 
-    # ─── Phase A: visual VLM compare (if both sessions have keyframes
-    # and they were the same shot type) ───
-    visual = None
     same_shot = _primary_shot_type(old) == _primary_shot_type(new) and _primary_shot_type(old) != "shot"
-    old_kf = (old.get("best_shot_keyframes") or {})
-    new_kf = (new.get("best_shot_keyframes") or {})
-    if same_shot and old_kf.get("frames") and new_kf.get("frames"):
-        import base64
-        def _strip_b64(s: str) -> bytes:
-            if s.startswith("data:"):
-                s = s.split(",", 1)[1]
-            return base64.b64decode(s)
-        try:
-            old_b = [_strip_b64(s) for s in old_kf["frames"][:3] if s]
-            new_b = [_strip_b64(s) for s in new_kf["frames"][:3] if s]
-            sport = new.get("sport") or old.get("sport") or "badminton"
-            shot = _primary_shot_type(new)
-            loop = asyncio.get_event_loop()
-            visual = await asyncio.wait_for(
-                loop.run_in_executor(None, lambda: _visual_compare(
-                    old_b, new_b, sport=sport, shot_type=shot,
-                    days_between=days_between, backend=req.backend,
-                )),
-                timeout=30.0,
-            )
-        except (Exception, asyncio.TimeoutError) as exc:
-            logger.warning(f"Visual compare skipped: {exc.__class__.__name__}: {exc}")
 
-    # ─── Original text-only narrative compare (always run, cheap) ───
+    # ─── Text-only AI Coach narrative compare (no images stored).
+    # The compare_analyses() helper already pulls the per-shot reasoning +
+    # form_feedback text from each session's saved shots, which is dense
+    # enough metadata to detect technique changes without needing keyframes. ───
     def _run() -> dict:
         return _compare_analyses(old, new, days_between, backend=req.backend)
     loop = asyncio.get_event_loop()
@@ -2616,7 +2593,6 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
     comparison = {
         "deltas": deltas,
         "narrative": narrative,
-        "visual": visual,  # may be None if no keyframes or different shots
         "drill_attribution": drill_attribution,
         "days_between": days_between,
         "same_shot_type": same_shot,
@@ -3300,12 +3276,9 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
             "power_moments": sum(1 for s in segments if s.get("power")),
         } if segments else None,
         # Pass per-shot list through (with VLM reasoning/form_feedback if browser
-        # ran VLM classification). The frontend's MatchInsights component renders
-        # AI-coach feedback per shot from these fields.
+        # ran VLM classification). The reasoning + form_feedback text is the
+        # primary metadata used for cross-session reanalysis comparisons.
         "shots": body.get("shots") or [],
-        # Best-shot keyframes (~150 KB) for cross-session visual comparison.
-        # Saved on the analysis record; consumed by /visual-compare endpoint.
-        "best_shot_keyframes": body.get("best_shot_keyframes") or None,
     }
 
     # ─── Build coach-like feedback using research data ───
@@ -3533,9 +3506,9 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "highlights": None,
         "segments_summary": ai_result.get("segments"),
         "vlm_coaching": vlm_coaching,
-        # Keyframes from the best-confidence shot (~150 KB) so a later
-        # reanalysis can pull them and ask the AI coach to compare form.
-        "best_shot_keyframes": body.get("best_shot_keyframes") or None,
+        # Per-shot list with VLM reasoning/form_feedback text — this is the
+        # metadata the AI Coach uses later when comparing two sessions.
+        "shots": body.get("shots") or [],
     }
     # Skip DB save for guests (no user_id to attach it to anyway).
     if not is_guest:

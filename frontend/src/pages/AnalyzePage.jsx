@@ -734,10 +734,9 @@ export default function AnalyzePage() {
             weaknesses: clientResult.weaknesses || [],
             // Send the per-shot list (with VLM reasoning/form_feedback if any)
             // so the backend can use it for VLM coaching + return it for UI render.
+            // The reasoning + form_feedback text is the metadata the AI Coach
+            // uses later for cross-session comparison — no images stored.
             shots: clientResult.shots || [],
-            // Best-shot keyframes — ~150 KB, used for cross-session visual
-            // comparison when the user reanalyzes the same shot type later.
-            best_shot_keyframes: clientResult.best_shot_keyframes || null,
           }, { timeout: 30000 });
 
           clearInterval(interval);
@@ -1536,14 +1535,22 @@ export default function AnalyzePage() {
           const score = d.score || {};
           const speed = d.speed_kmh || {};
           const w = d.weaknesses || {};
-          const visual = c.visual;
-          const verdictTone = visual?.overall_verdict === "improved" ? "border-lime-400/40 bg-lime-400/5"
-            : visual?.overall_verdict === "regressed" ? "border-red-400/40 bg-red-400/5"
-            : visual?.overall_verdict === "mixed" ? "border-amber-400/40 bg-amber-400/5"
+          // Verdict derived from score + weakness deltas (no visual call now)
+          const scoreUp = (score.delta || 0) > 2;
+          const scoreDown = (score.delta || 0) < -2;
+          const hasResolved = (w.resolved?.length || 0) > 0;
+          const hasEmerged = (w.emerged?.length || 0) > 0;
+          const verdict = scoreUp || (hasResolved && !hasEmerged) ? "improved"
+            : scoreDown || (hasEmerged && !hasResolved) ? "regressed"
+            : (hasResolved && hasEmerged) || (Math.abs(score.delta || 0) > 0.5) ? "mixed"
+            : "same";
+          const verdictTone = verdict === "improved" ? "border-lime-400/40 bg-lime-400/5"
+            : verdict === "regressed" ? "border-red-400/40 bg-red-400/5"
+            : verdict === "mixed" ? "border-amber-400/40 bg-amber-400/5"
             : "border-sky-400/30 bg-sky-400/5";
-          const verdictBadge = visual?.overall_verdict === "improved" ? "bg-lime-400 text-black"
-            : visual?.overall_verdict === "regressed" ? "bg-red-400 text-black"
-            : visual?.overall_verdict === "mixed" ? "bg-amber-400 text-black"
+          const verdictBadge = verdict === "improved" ? "bg-lime-400 text-black"
+            : verdict === "regressed" ? "bg-red-400 text-black"
+            : verdict === "mixed" ? "bg-amber-400 text-black"
             : "bg-sky-400 text-black";
           return (
             <motion.div
@@ -1551,11 +1558,9 @@ export default function AnalyzePage() {
               className={`border-2 rounded-2xl p-5 ${verdictTone} bg-gradient-to-br from-transparent to-zinc-900/80`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {visual?.overall_verdict && (
-                    <Badge className={`text-[10px] uppercase font-bold ${verdictBadge}`}>
-                      {visual.overall_verdict}
-                    </Badge>
-                  )}
+                  <Badge className={`text-[10px] uppercase font-bold ${verdictBadge}`}>
+                    {verdict}
+                  </Badge>
                   <p className="text-[10px] uppercase tracking-wide text-zinc-400 font-semibold">
                     Progress on your {c.shot_type?.replace(/_/g, " ") || "shot"} · {c.days_between} days
                   </p>
@@ -1594,28 +1599,34 @@ export default function AnalyzePage() {
                 )}
               </div>
 
-              {/* AI-coach visual verdict — what changed in form */}
-              {visual && visual.summary && (
+              {/* AI Coach verdict — derived from per-shot reasoning text
+                  (no images; the coach compares the textual descriptions
+                  the AI Coach wrote about each shot in both sessions). */}
+              {(c.narrative?.improved?.length || c.narrative?.regressed?.length || c.narrative?.persistent_issues?.length) && (
                 <div className="mb-4 bg-zinc-900/60 rounded-lg p-3">
-                  <p className="text-[11px] uppercase text-zinc-500 font-semibold mb-1">AI Coach verdict (visual)</p>
-                  <p className="text-zinc-200 text-sm mb-2">{visual.summary}</p>
-                  {[
-                    ["form_changes", "Form", "text-lime-300"],
-                    ["power_changes", "Power", "text-amber-300"],
-                    ["balance_changes", "Balance", "text-sky-300"],
-                    ["contact_changes", "Contact", "text-violet-300"],
-                  ].map(([key, label, color]) => (
-                    Array.isArray(visual[key]) && visual[key].length > 0 && (
-                      <div key={key} className="mb-1">
-                        <span className={`text-[10px] uppercase font-semibold ${color}`}>{label}: </span>
-                        <span className="text-zinc-300 text-xs">{visual[key].join("; ")}</span>
-                      </div>
-                    )
-                  ))}
-                  {Array.isArray(visual.regressions) && visual.regressions.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-zinc-800">
-                      <span className="text-[10px] uppercase text-red-400 font-semibold">Watch out: </span>
-                      <span className="text-zinc-300 text-xs">{visual.regressions.join("; ")}</span>
+                  <p className="text-[11px] uppercase text-zinc-500 font-semibold mb-2">AI Coach verdict</p>
+                  {c.narrative.improved?.length > 0 && (
+                    <div className="mb-2">
+                      <span className="text-[10px] uppercase font-semibold text-lime-300">↑ Improved: </span>
+                      <ul className="text-xs text-zinc-300 space-y-0.5 ml-3 list-disc">
+                        {c.narrative.improved.map((x, i) => <li key={`i-${i}`}>{x}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {c.narrative.regressed?.length > 0 && (
+                    <div className="mb-2">
+                      <span className="text-[10px] uppercase font-semibold text-red-400">↓ Regressed: </span>
+                      <ul className="text-xs text-zinc-300 space-y-0.5 ml-3 list-disc">
+                        {c.narrative.regressed.map((x, i) => <li key={`r-${i}`}>{x}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {c.narrative.persistent_issues?.length > 0 && (
+                    <div>
+                      <span className="text-[10px] uppercase font-semibold text-amber-300">↻ Still working on: </span>
+                      <ul className="text-xs text-zinc-300 space-y-0.5 ml-3 list-disc">
+                        {c.narrative.persistent_issues.map((x, i) => <li key={`p-${i}`}>{x}</li>)}
+                      </ul>
                     </div>
                   )}
                 </div>

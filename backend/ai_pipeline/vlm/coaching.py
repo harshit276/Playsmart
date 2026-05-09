@@ -36,9 +36,14 @@ def _parse_json_safe(raw: str) -> dict:
 
 
 def _summarize_analysis(a: dict) -> dict:
-    """Boil down a stored analysis to the fields a coach actually cares about."""
+    """Boil down a stored analysis to the fields a coach actually cares about.
+
+    Crucial for cross-session comparison: we include the per-shot AI Coach
+    reasoning + ALL form_feedback bullets (strengths/weaknesses/tip), since
+    that's the only signal of technique-level changes when no video/keyframes
+    are stored.
+    """
     sa = a.get("shot_analysis") or {}
-    coach = a.get("coach_feedback") or {}
     metrics = a.get("performance_scores") or a.get("detailed_metrics") or {}
     shots = a.get("shots") or []
     return {
@@ -54,11 +59,15 @@ def _summarize_analysis(a: dict) -> dict:
             {
                 "type": s.get("shot_type") or s.get("type"),
                 "score": s.get("overall_score") or s.get("score"),
+                "confidence": s.get("confidence"),
+                "power_level": s.get("power_level") or s.get("powerLevel"),
                 "speed_kmh": (s.get("speed") or {}).get("estimated_speed_kmh") if isinstance(s.get("speed"), dict) else s.get("speed"),
                 "reasoning": s.get("reasoning"),
-                "form_feedback_tip": (s.get("form_feedback") or {}).get("tip"),
+                "form_strengths": (s.get("form_feedback") or s.get("formFeedback") or {}).get("strengths") or [],
+                "form_weaknesses": (s.get("form_feedback") or s.get("formFeedback") or {}).get("weaknesses") or [],
+                "form_tip": (s.get("form_feedback") or s.get("formFeedback") or {}).get("tip"),
             }
-            for s in shots[:6]
+            for s in shots[:8]
         ],
     }
 
@@ -76,13 +85,22 @@ def compare_analyses(
 
     sys_prompt = (
         f"You are an expert {sport} coach reviewing a player's progress between two practice "
-        f"sessions {days_between} days apart. Be specific, honest, and actionable. Compare the "
-        f"actual numbers and per-shot reasoning — don't fabricate. If a metric got worse, say so. "
-        f"Cite specific shots when possible.\n\n"
+        f"sessions {days_between} days apart. The player is the same person.\n\n"
+        f"You don't have video — you have the AI-judged per-shot reasoning, form_strengths, "
+        f"form_weaknesses, and form_tip text from each session, plus the numeric scores. "
+        f"That's enough to detect real technique changes:\n"
+        f"- If the SAME weakness appears in both sessions, it's PERSISTENT.\n"
+        f"- If a weakness in OLD is missing from NEW, they likely improved (cite which one).\n"
+        f"- If NEW has a weakness OLD didn't, it's a NEW issue or a regression.\n"
+        f"- If reasoning text describes the SAME technique element (e.g. 'open stance') "
+        f"with different qualifiers ('slightly open' vs 'corrected'), call out the change.\n\n"
+        f"Be specific and grounded. Don't fabricate improvements that aren't visible in the text. "
+        f"If shot types differ between sessions, note that the comparison is partial.\n\n"
         f"Respond with valid JSON ONLY (no markdown fences) matching:\n"
         '{\n'
-        '  "improved": ["<specific positive change>", "..."],\n'
-        '  "regressed": ["<specific negative change>", "..."],\n'
+        '  "improved": ["<specific change citing OLD vs NEW evidence>", "..."],\n'
+        '  "regressed": ["<specific negative change citing evidence>", "..."],\n'
+        '  "persistent_issues": ["<weakness present in both sessions>", "..."],\n'
         '  "next_focus": "<the ONE thing they should focus on for the next session>",\n'
         '  "summary": "<2-3 sentence motivational coach-voice summary>",\n'
         '  "score_delta_explanation": "<why the score changed (or didn\'t)>"\n'
@@ -102,6 +120,7 @@ def compare_analyses(
     return {
         "improved": [str(x) for x in (data.get("improved") or [])][:5],
         "regressed": [str(x) for x in (data.get("regressed") or [])][:5],
+        "persistent_issues": [str(x) for x in (data.get("persistent_issues") or [])][:5],
         "next_focus": str(data.get("next_focus", "")),
         "summary": str(data.get("summary", "")),
         "score_delta_explanation": str(data.get("score_delta_explanation", "")),
@@ -117,75 +136,6 @@ def compare_analyses(
 
 
 SUPPORTED_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball", "cricket"]
-
-
-def visual_compare(
-    old_frames_jpeg: list[bytes], new_frames_jpeg: list[bytes],
-    sport: str, shot_type: str, days_between: int,
-    backend: str = "auto",
-) -> dict:
-    """Send old + new keyframes of the same shot type to the AI coach.
-    Returns structured form-change JSON: what improved, regressed, stayed.
-
-    This is the killer feature for reanalysis — instead of comparing JSON
-    summaries, the model actually SEES the form change. ~$0.005/call.
-
-    Returns: {form_changes, power_changes, balance_changes, contact_changes,
-              overall_verdict, confidence, summary, _meta}.
-    """
-    if not old_frames_jpeg or not new_frames_jpeg:
-        return {"_meta": {"error": "missing keyframes"}}
-
-    n_old = len(old_frames_jpeg)
-    n_new = len(new_frames_jpeg)
-    sys_prompt = (
-        f"You are an expert {sport} coach reviewing a player's progress on "
-        f"their {shot_type.replace('_', ' ')} over {days_between} days. "
-        f"You will be shown {n_old} keyframes from the OLD session followed by "
-        f"{n_new} keyframes from the NEW session. Compare the technique frame-to-frame.\n\n"
-        "Be specific and grounded — cite what you actually see in the frames "
-        "(racket angle, contact point, weight transfer, body rotation, follow-through). "
-        "Don't invent improvements that aren't visible. If form is unchanged, say so.\n\n"
-        "Respond with valid JSON only:\n"
-        '{\n'
-        '  "overall_verdict": "improved|same|regressed|mixed",\n'
-        '  "confidence": <0-1>,\n'
-        '  "summary": "<2 sentences in coach voice — what is the headline change>",\n'
-        '  "form_changes": ["<specific bullet — what changed in technique>"],\n'
-        '  "power_changes": ["<bullet — racket-head speed, body rotation, follow-through>"],\n'
-        '  "balance_changes": ["<bullet — stance, weight transfer, recovery>"],\n'
-        '  "contact_changes": ["<bullet — contact point relative to body, racket face angle>"],\n'
-        '  "regressions": ["<bullet — anything that got worse>"]\n'
-        '}\n\n'
-        "Each list: 0-3 bullets, only include what's actually visible. Empty list if nothing notable."
-    )
-    user_msg = (
-        f"OLD session ({n_old} frames first), then NEW session ({n_new} frames). "
-        f"Same player, same {shot_type.replace('_', ' ')}. Compare them."
-    )
-
-    backend_obj = pick_backend(backend)
-    try:
-        raw = backend_obj.call(sys_prompt, user_msg, old_frames_jpeg + new_frames_jpeg)
-    except Exception as exc:
-        return {"_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
-
-    data = _parse_json_safe(raw)
-    verdict = str(data.get("overall_verdict", "same")).lower().strip()
-    if verdict not in ("improved", "same", "regressed", "mixed"):
-        verdict = "same"
-    return {
-        "overall_verdict": verdict,
-        "confidence": max(0.0, min(1.0, float(data.get("confidence", 0.5) or 0.5))),
-        "summary": str(data.get("summary", ""))[:500],
-        "form_changes": [str(x)[:200] for x in (data.get("form_changes") or [])][:5],
-        "power_changes": [str(x)[:200] for x in (data.get("power_changes") or [])][:5],
-        "balance_changes": [str(x)[:200] for x in (data.get("balance_changes") or [])][:5],
-        "contact_changes": [str(x)[:200] for x in (data.get("contact_changes") or [])][:5],
-        "regressions": [str(x)[:200] for x in (data.get("regressions") or [])][:5],
-        "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name,
-                  "n_old_frames": n_old, "n_new_frames": n_new},
-    }
 
 
 def quiz_personalization(

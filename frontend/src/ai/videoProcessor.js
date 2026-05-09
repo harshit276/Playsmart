@@ -2144,7 +2144,6 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
     // classification (when caller provides a vlmClassify hook). Pose-derived
     // metrics stay on-device; only shot type + reasoning + speed come from
     // the LLM. Falls back gracefully to heuristic if the call fails.
-    let _comparisonKeyframes = null;  // populated below for the best shot
     if (typeof options.vlmClassify === "function" && shotPeaks.length > 0) {
       try {
         progress("classify", 70, "Coach is analyzing your shots...");
@@ -2153,9 +2152,8 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
           videoFile, peakTimes, customCropBox,
           { framesPerShot: 3, maxDim: 720, jpegQuality: 0.7 },
         );
-        // Keep keyframes around so we can attach the best shot's frames to
-        // the result for cross-session visual comparison (Phase A: reanalysis).
-        _comparisonKeyframes = keyframes;
+        // Keyframes used in-flight only — sent to the VLM for classification
+        // and then dropped. Not persisted on the result (no video/image storage).
         const vlmShots = await options.vlmClassify({
           shots: keyframes,
           sport,
@@ -2255,26 +2253,8 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       total_shots_detected: cleanShots.length,
       dominant_hand: dominantHand,
 
-      // Best-shot keyframes for cross-session visual comparison. Picks the
-      // single highest-confidence shot's 3 keyframes (~150 KB total) so we
-      // can later send them + a future session's frames to Gemini for a
-      // "what changed in form?" comparison. Stored on the analysis record.
-      best_shot_keyframes: (() => {
-        if (!_comparisonKeyframes) return null;
-        let bestIdx = 0;
-        for (let i = 1; i < detectedShots.length; i++) {
-          if ((detectedShots[i].confidence || 0) > (detectedShots[bestIdx].confidence || 0)) bestIdx = i;
-        }
-        const best = detectedShots[bestIdx];
-        const frames = _comparisonKeyframes[bestIdx] || [];
-        if (!best || !frames.length) return null;
-        return {
-          shot_type: best.type,
-          confidence: best.confidence,
-          timestamp: best.timestamp,
-          frames,  // base64 data URLs
-        };
-      })(),
+      // (No video/keyframe storage — comparisons run text-only on the per-shot
+      // reasoning + form_feedback below, which is dense enough for Gemini.)
 
       // Individual shots array (NEW). Preserve VLM extras (reasoning,
       // formFeedback, etc.) so per-shot AI coach feedback can render in the UI.
