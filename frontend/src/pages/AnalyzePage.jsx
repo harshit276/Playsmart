@@ -1029,37 +1029,9 @@ export default function AnalyzePage() {
     { key: "swimming", label: "Swimming", icon: "🏊", videoAnalysis: false },
   ];
 
-  const renderSportSelector = () => {
-    const activeSport = profile?.active_sport || "badminton";
-    const supportedSports = SPORT_OPTIONS.filter(s => s.videoAnalysis).map(s => s.key);
-    const currentSport = selectedSport || (supportedSports.includes(activeSport) ? activeSport : "badminton");
-    return (
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-        <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3">Sport in Video</p>
-        <div className="flex flex-wrap gap-2">
-          {SPORT_OPTIONS.map((s) => (
-            <button
-              key={s.key}
-              onClick={() => s.videoAnalysis && setSelectedSport(s.key)}
-              disabled={!s.videoAnalysis}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-                !s.videoAnalysis
-                  ? "border-zinc-800/50 bg-zinc-900/40 text-zinc-600 cursor-not-allowed opacity-60"
-                  : currentSport === s.key
-                    ? "border-lime-400/50 bg-lime-400/10 text-lime-400"
-                    : "border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:border-zinc-700"
-              }`}
-            >
-              <span className="mr-1">{s.icon}</span> {s.label}
-              {!s.videoAnalysis && (
-                <span className="ml-1.5 text-[9px] bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded-full uppercase tracking-wider">Soon</span>
-              )}
-            </button>
-          ))}
-        </div>
-      </motion.div>
-    );
-  };
+  // renderSportSelector was deleted: sport is now auto-detected from the
+  // uploaded video and confirmed in PlayerSelectionModal where the user can
+  // override if the detection is wrong.
 
   const playerPositionLabels = {
     "top-left": "Far Court - Left",
