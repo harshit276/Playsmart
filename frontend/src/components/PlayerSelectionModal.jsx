@@ -14,12 +14,26 @@ import { motion, AnimatePresence } from "framer-motion";
  *   onSelect:     (box|null, idx) => void   // box=null means "analyze whole video"
  *   onSelectAll:  (boxes[]) => void          // run analysis once per detected player
  *   allowAnalyzeAll: boolean (default false) // show the "Analyze All Players" CTA
+ *   detectedSport:           string|null    // VLM-detected sport (e.g. "table_tennis")
+ *   detectedSportConfidence: number|null    // 0-1
+ *   onSportOverride:         (sport) => void  // user picks a different sport
  *   onClose:      () => void
  */
+const SPORT_LABELS = {
+  badminton: { label: "Badminton", icon: "🏸" },
+  tennis: { label: "Tennis", icon: "🎾" },
+  table_tennis: { label: "Table Tennis", icon: "🏓" },
+  pickleball: { label: "Pickleball", icon: "⚡" },
+  cricket: { label: "Cricket", icon: "🏏" },
+};
+
 export default function PlayerSelectionModal({
-  isOpen, scanResult, onSelect, onSelectAll, allowAnalyzeAll = false, onClose,
+  isOpen, scanResult, onSelect, onSelectAll, allowAnalyzeAll = false,
+  detectedSport, detectedSportConfidence, onSportOverride, onClose,
 }) {
   const [hoveredIdx, setHoveredIdx] = useState(null);
+  const [sportOverrideOpen, setSportOverrideOpen] = useState(false);
+  const sportInfo = (detectedSport && SPORT_LABELS[detectedSport]) || null;
 
   // Pick the frame with the most people detected by default
   const bestFrameIdx = useMemo(() => {
@@ -94,6 +108,46 @@ export default function PlayerSelectionModal({
                 ? "We've detected the player in the video. Click 'Analyze This Player' to continue."
                 : "Tap the player you want to analyze. We'll focus the video on them for best results."}
           </p>
+
+          {/* Detected sport — surfaces what the VLM thinks this video is so
+              the user can correct before the heavy analysis runs. */}
+          {sportInfo && (
+            <div className="mb-4 bg-sky-400/5 border border-sky-400/30 rounded-lg px-3 py-2 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-lg">{sportInfo.icon}</span>
+                <div>
+                  <span className="text-zinc-200">Detected sport: </span>
+                  <span className="font-semibold text-sky-300">{sportInfo.label}</span>
+                  {detectedSportConfidence != null && (
+                    <span className="text-[10px] text-zinc-500 ml-2">{Math.round(detectedSportConfidence * 100)}% sure</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSportOverrideOpen((v) => !v)}
+                className="text-xs text-sky-400 hover:text-sky-300 underline"
+              >
+                {sportOverrideOpen ? "Cancel" : "Wrong? Change it"}
+              </button>
+              {sportOverrideOpen && (
+                <div className="w-full flex flex-wrap gap-1.5 mt-1">
+                  {Object.entries(SPORT_LABELS).map(([key, info]) => (
+                    <button
+                      key={key}
+                      onClick={() => { onSportOverride?.(key); setSportOverrideOpen(false); }}
+                      className={`text-xs px-2 py-1 rounded border transition-colors ${
+                        detectedSport === key
+                          ? "border-sky-400 bg-sky-400/15 text-sky-300"
+                          : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                      }`}
+                    >
+                      {info.icon} {info.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Frame with overlays */}
           <div className="relative w-full bg-black rounded-xl overflow-hidden mb-4">

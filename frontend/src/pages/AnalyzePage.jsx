@@ -341,6 +341,10 @@ export default function AnalyzePage() {
   // VLM comparison vs this stored analysis after the new one saves.
   const [reanalyzeContext, setReanalyzeContext] = useState(null);
   const [comparisonResult, setComparisonResult] = useState(null);
+  // Sport detected from the uploaded video (always set when VLM is up).
+  // Surfaced in the player selection modal so the user can override.
+  const [detectedSport, setDetectedSport] = useState(null);
+  const [detectedSportConfidence, setDetectedSportConfidence] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   // Server-side analysis is disabled — TF.js client-side handles everything.
   const processingMode = "client";
@@ -533,27 +537,41 @@ export default function AnalyzePage() {
     // Scroll to top so the user sees the loading panel immediately
     try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
 
-    const VIDEO_ANALYSIS_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball"];
+    const VIDEO_ANALYSIS_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball", "cricket"];
     const activeSport = profile?.active_sport || "badminton";
-    let sportToAnalyze = selectedSport || (VIDEO_ANALYSIS_SPORTS.includes(activeSport) ? activeSport : "badminton");
+    // The user's picked sport becomes a *hint*, not authoritative. We always
+    // auto-detect from the actual video frames so a TT video uploaded with
+    // sport=badminton selected doesn't get badminton-flavored results.
+    let sportToAnalyze = selectedSport && selectedSport !== "auto"
+      ? selectedSport
+      : (VIDEO_ANALYSIS_SPORTS.includes(activeSport) ? activeSport : "badminton");
+    let detected = null;
 
-    // Auto-detect sport when the user picked "auto" — 1 quick Gemini call.
-    if (selectedSport === "auto") {
-      setLoadingText("Detecting sport...");
-      try {
-        const mod = await import("@/ai/videoProcessor");
-        const keyframes = await mod.extractDetectKeyframes(file, { count: 2 });
-        if (keyframes.length > 0) {
-          const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 30000 });
-          if (data?.success && data.sport) {
-            sportToAnalyze = data.sport;
-            console.info(`[sport] detected: ${data.sport} (conf=${data.confidence?.toFixed?.(2)})`);
-            toast.info(`Detected sport: ${data.sport.replace("_", " ")}`);
-          }
+    setLoadingText("Detecting sport from video...");
+    try {
+      const mod = await import("@/ai/videoProcessor");
+      const keyframes = await mod.extractDetectKeyframes(file, { count: 2 });
+      if (keyframes.length > 0) {
+        const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 30000 });
+        if (data?.success && data.sport) {
+          detected = { sport: data.sport, confidence: data.confidence ?? 0 };
+          setDetectedSport(data.sport);
+          setDetectedSportConfidence(data.confidence ?? 0);
+          console.info(`[sport] detected: ${data.sport} (conf=${data.confidence?.toFixed?.(2)})`);
         }
-      } catch (e) {
-        console.warn("[sport] detection failed, falling back to badminton:", e?.response?.data || e.message);
-        sportToAnalyze = "badminton";
+      }
+    } catch (e) {
+      console.warn("[sport] detection failed, falling back to selection:", e?.response?.data || e.message);
+    }
+    // Use detected sport when user picked Auto OR when detection disagrees
+    // with the user's pick (with high confidence).
+    if (detected) {
+      if (selectedSport === "auto" || !selectedSport) {
+        sportToAnalyze = detected.sport;
+      } else if (detected.sport !== selectedSport && detected.confidence >= 0.75) {
+        // High-confidence override — let the player modal display this so
+        // the user can correct if they really meant the picked sport.
+        sportToAnalyze = detected.sport;
       }
     }
 
@@ -1270,8 +1288,9 @@ export default function AnalyzePage() {
         </motion.div>
       )}
 
-      {/* Sport Selection */}
-      {renderSportSelector()}
+      {/* Sport Selection — removed from upload UI. We auto-detect from the
+          actual video frames and confirm in the Player Selection modal where
+          the user can override if the detection is wrong. */}
 
       {/* Player Selection for Doubles */}
       {renderPlayerSelector()}
@@ -2808,6 +2827,15 @@ export default function AnalyzePage() {
         onSelectAll={handleAnalyzeAllPlayers}
         onClose={handlePlayerModalClose}
         allowAnalyzeAll={processingMode !== "client"}
+        detectedSport={detectedSport}
+        detectedSportConfidence={detectedSportConfidence}
+        onSportOverride={(sport) => {
+          setDetectedSport(sport);
+          // Update the pending sport so the next-stage analysis uses the
+          // user's override (otherwise it'd run with the auto-detected one).
+          setPendingAnalysisSport(sport);
+          setSelectedSport(sport);
+        }}
       />
 
       {/* Share Modal */}
