@@ -119,6 +119,75 @@ def compare_analyses(
 SUPPORTED_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball", "cricket"]
 
 
+def visual_compare(
+    old_frames_jpeg: list[bytes], new_frames_jpeg: list[bytes],
+    sport: str, shot_type: str, days_between: int,
+    backend: str = "auto",
+) -> dict:
+    """Send old + new keyframes of the same shot type to the AI coach.
+    Returns structured form-change JSON: what improved, regressed, stayed.
+
+    This is the killer feature for reanalysis — instead of comparing JSON
+    summaries, the model actually SEES the form change. ~$0.005/call.
+
+    Returns: {form_changes, power_changes, balance_changes, contact_changes,
+              overall_verdict, confidence, summary, _meta}.
+    """
+    if not old_frames_jpeg or not new_frames_jpeg:
+        return {"_meta": {"error": "missing keyframes"}}
+
+    n_old = len(old_frames_jpeg)
+    n_new = len(new_frames_jpeg)
+    sys_prompt = (
+        f"You are an expert {sport} coach reviewing a player's progress on "
+        f"their {shot_type.replace('_', ' ')} over {days_between} days. "
+        f"You will be shown {n_old} keyframes from the OLD session followed by "
+        f"{n_new} keyframes from the NEW session. Compare the technique frame-to-frame.\n\n"
+        "Be specific and grounded — cite what you actually see in the frames "
+        "(racket angle, contact point, weight transfer, body rotation, follow-through). "
+        "Don't invent improvements that aren't visible. If form is unchanged, say so.\n\n"
+        "Respond with valid JSON only:\n"
+        '{\n'
+        '  "overall_verdict": "improved|same|regressed|mixed",\n'
+        '  "confidence": <0-1>,\n'
+        '  "summary": "<2 sentences in coach voice — what is the headline change>",\n'
+        '  "form_changes": ["<specific bullet — what changed in technique>"],\n'
+        '  "power_changes": ["<bullet — racket-head speed, body rotation, follow-through>"],\n'
+        '  "balance_changes": ["<bullet — stance, weight transfer, recovery>"],\n'
+        '  "contact_changes": ["<bullet — contact point relative to body, racket face angle>"],\n'
+        '  "regressions": ["<bullet — anything that got worse>"]\n'
+        '}\n\n'
+        "Each list: 0-3 bullets, only include what's actually visible. Empty list if nothing notable."
+    )
+    user_msg = (
+        f"OLD session ({n_old} frames first), then NEW session ({n_new} frames). "
+        f"Same player, same {shot_type.replace('_', ' ')}. Compare them."
+    )
+
+    backend_obj = pick_backend(backend)
+    try:
+        raw = backend_obj.call(sys_prompt, user_msg, old_frames_jpeg + new_frames_jpeg)
+    except Exception as exc:
+        return {"_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
+
+    data = _parse_json_safe(raw)
+    verdict = str(data.get("overall_verdict", "same")).lower().strip()
+    if verdict not in ("improved", "same", "regressed", "mixed"):
+        verdict = "same"
+    return {
+        "overall_verdict": verdict,
+        "confidence": max(0.0, min(1.0, float(data.get("confidence", 0.5) or 0.5))),
+        "summary": str(data.get("summary", ""))[:500],
+        "form_changes": [str(x)[:200] for x in (data.get("form_changes") or [])][:5],
+        "power_changes": [str(x)[:200] for x in (data.get("power_changes") or [])][:5],
+        "balance_changes": [str(x)[:200] for x in (data.get("balance_changes") or [])][:5],
+        "contact_changes": [str(x)[:200] for x in (data.get("contact_changes") or [])][:5],
+        "regressions": [str(x)[:200] for x in (data.get("regressions") or [])][:5],
+        "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name,
+                  "n_old_frames": n_old, "n_new_frames": n_new},
+    }
+
+
 def quiz_personalization(
     quiz_data: dict, backend: str = "auto",
     equipment_catalog: list[dict] | None = None,

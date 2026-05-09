@@ -735,6 +735,9 @@ export default function AnalyzePage() {
             // Send the per-shot list (with VLM reasoning/form_feedback if any)
             // so the backend can use it for VLM coaching + return it for UI render.
             shots: clientResult.shots || [],
+            // Best-shot keyframes — ~150 KB, used for cross-session visual
+            // comparison when the user reanalyzes the same shot type later.
+            best_shot_keyframes: clientResult.best_shot_keyframes || null,
           }, { timeout: 30000 });
 
           clearInterval(interval);
@@ -1524,56 +1527,156 @@ export default function AnalyzePage() {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
 
-        {/* Progress comparison — shown after a "Reanalyze" flow completes.
-            Coach-quality narrative comparing the new session to the old one. */}
-        {comparisonResult && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="border-2 border-sky-400/30 bg-gradient-to-br from-sky-400/5 to-zinc-900/80 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-wide text-sky-300 font-semibold">Progress vs your last session</p>
-                <p className="text-zinc-500 text-xs">
-                  {comparisonResult.days_between} days · score
-                  <span className="text-zinc-300 mx-1">{Math.round(comparisonResult.score_old)}</span>→
-                  <span className="text-white font-semibold mx-1">{Math.round(comparisonResult.score_new)}</span>
-                  <span className={comparisonResult.score_delta > 0 ? "text-lime-400" : comparisonResult.score_delta < 0 ? "text-red-400" : "text-zinc-500"}>
-                    ({comparisonResult.score_delta > 0 ? "+" : ""}{comparisonResult.score_delta})
-                  </span>
-                </p>
+        {/* Progress comparison — rich multi-section card surfaced after a
+            Reanalyze flow. Sections: hero deltas, AI-coach visual verdict,
+            drill attribution (did the focus areas improve?), narrative. */}
+        {comparisonResult && (() => {
+          const c = comparisonResult;
+          const d = c.deltas || {};
+          const score = d.score || {};
+          const speed = d.speed_kmh || {};
+          const w = d.weaknesses || {};
+          const visual = c.visual;
+          const verdictTone = visual?.overall_verdict === "improved" ? "border-lime-400/40 bg-lime-400/5"
+            : visual?.overall_verdict === "regressed" ? "border-red-400/40 bg-red-400/5"
+            : visual?.overall_verdict === "mixed" ? "border-amber-400/40 bg-amber-400/5"
+            : "border-sky-400/30 bg-sky-400/5";
+          const verdictBadge = visual?.overall_verdict === "improved" ? "bg-lime-400 text-black"
+            : visual?.overall_verdict === "regressed" ? "bg-red-400 text-black"
+            : visual?.overall_verdict === "mixed" ? "bg-amber-400 text-black"
+            : "bg-sky-400 text-black";
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className={`border-2 rounded-2xl p-5 ${verdictTone} bg-gradient-to-br from-transparent to-zinc-900/80`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {visual?.overall_verdict && (
+                    <Badge className={`text-[10px] uppercase font-bold ${verdictBadge}`}>
+                      {visual.overall_verdict}
+                    </Badge>
+                  )}
+                  <p className="text-[10px] uppercase tracking-wide text-zinc-400 font-semibold">
+                    Progress on your {c.shot_type?.replace(/_/g, " ") || "shot"} · {c.days_between} days
+                  </p>
+                </div>
+                <button
+                  className="text-zinc-500 hover:text-zinc-300 text-lg leading-none"
+                  onClick={() => setComparisonResult(null)}
+                  aria-label="dismiss">×</button>
               </div>
-              <button
-                className="text-xs text-zinc-500 hover:text-zinc-300"
-                onClick={() => setComparisonResult(null)}
-                aria-label="dismiss progress comparison">×</button>
-            </div>
-            {comparisonResult.summary && (
-              <p className="text-zinc-200 text-sm mb-3">{comparisonResult.summary}</p>
-            )}
-            {comparisonResult.improved?.length > 0 && (
-              <div className="mb-2">
-                <p className="text-[11px] text-lime-400 font-semibold mb-1">↑ Improved</p>
-                <ul className="text-zinc-300 text-xs space-y-1 ml-3 list-disc">
-                  {comparisonResult.improved.map((x, i) => <li key={`imp-${i}`}>{x}</li>)}
-                </ul>
+
+              {/* Hero deltas */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                <div className="bg-zinc-900/60 rounded-lg p-3">
+                  <p className="text-[10px] uppercase text-zinc-500">Score</p>
+                  <p className="text-lg font-bold text-white">
+                    {Math.round(score.old)} → {Math.round(score.new)}
+                    <span className={`ml-2 text-sm ${score.delta > 0 ? "text-lime-400" : score.delta < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                      ({score.delta > 0 ? "+" : ""}{score.delta})
+                    </span>
+                  </p>
+                </div>
+                <div className="bg-zinc-900/60 rounded-lg p-3">
+                  <p className="text-[10px] uppercase text-zinc-500">Speed (km/h)</p>
+                  <p className="text-lg font-bold text-white">
+                    {Math.round(speed.old)} → {Math.round(speed.new)}
+                    <span className={`ml-2 text-sm ${speed.delta > 0 ? "text-lime-400" : speed.delta < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                      ({speed.delta > 0 ? "+" : ""}{speed.delta})
+                    </span>
+                  </p>
+                </div>
+                {d.skill_level?.changed && (
+                  <div className="bg-zinc-900/60 rounded-lg p-3">
+                    <p className="text-[10px] uppercase text-zinc-500">Level</p>
+                    <p className="text-lg font-bold text-lime-400">{d.skill_level.old} → {d.skill_level.new}</p>
+                  </div>
+                )}
               </div>
-            )}
-            {comparisonResult.regressed?.length > 0 && (
-              <div className="mb-2">
-                <p className="text-[11px] text-amber-400 font-semibold mb-1">↓ Watch out for</p>
-                <ul className="text-zinc-300 text-xs space-y-1 ml-3 list-disc">
-                  {comparisonResult.regressed.map((x, i) => <li key={`reg-${i}`}>{x}</li>)}
-                </ul>
-              </div>
-            )}
-            {comparisonResult.next_focus && (
-              <div className="mt-3 p-3 rounded-lg bg-sky-400/10 border border-sky-400/20">
-                <p className="text-[11px] text-sky-300 font-semibold mb-1">🎯 Next focus</p>
-                <p className="text-zinc-200 text-xs">{comparisonResult.next_focus}</p>
-              </div>
-            )}
-          </motion.div>
-        )}
+
+              {/* AI-coach visual verdict — what changed in form */}
+              {visual && visual.summary && (
+                <div className="mb-4 bg-zinc-900/60 rounded-lg p-3">
+                  <p className="text-[11px] uppercase text-zinc-500 font-semibold mb-1">AI Coach verdict (visual)</p>
+                  <p className="text-zinc-200 text-sm mb-2">{visual.summary}</p>
+                  {[
+                    ["form_changes", "Form", "text-lime-300"],
+                    ["power_changes", "Power", "text-amber-300"],
+                    ["balance_changes", "Balance", "text-sky-300"],
+                    ["contact_changes", "Contact", "text-violet-300"],
+                  ].map(([key, label, color]) => (
+                    Array.isArray(visual[key]) && visual[key].length > 0 && (
+                      <div key={key} className="mb-1">
+                        <span className={`text-[10px] uppercase font-semibold ${color}`}>{label}: </span>
+                        <span className="text-zinc-300 text-xs">{visual[key].join("; ")}</span>
+                      </div>
+                    )
+                  ))}
+                  {Array.isArray(visual.regressions) && visual.regressions.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-zinc-800">
+                      <span className="text-[10px] uppercase text-red-400 font-semibold">Watch out: </span>
+                      <span className="text-zinc-300 text-xs">{visual.regressions.join("; ")}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Drill attribution — did the focus areas pay off? */}
+              {Array.isArray(c.drill_attribution) && c.drill_attribution.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[11px] uppercase text-zinc-500 font-semibold mb-2">What you were told to work on</p>
+                  <div className="space-y-1.5">
+                    {c.drill_attribution.map((da, i) => {
+                      const tone = da.outcome === "resolved" ? "border-lime-400/40 text-lime-300"
+                        : da.outcome === "improving" ? "border-amber-400/40 text-amber-300"
+                        : da.outcome === "still working" ? "border-zinc-700 text-zinc-400"
+                        : "border-zinc-800 text-zinc-500";
+                      return (
+                        <div key={i} className={`border rounded-lg p-2 ${tone}`}>
+                          <span className="text-xs">{da.focus_area} · </span>
+                          <span className="text-[11px] uppercase font-semibold">{da.outcome}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Weakness diff */}
+              {(w.resolved?.length || w.emerged?.length) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                  {w.resolved?.length > 0 && (
+                    <div className="bg-lime-400/5 border border-lime-400/20 rounded-lg p-2">
+                      <p className="text-[10px] text-lime-400 font-semibold mb-1">✓ Resolved</p>
+                      <ul className="text-[11px] text-zinc-300 space-y-0.5">
+                        {w.resolved.map((x, i) => <li key={i}>• {x}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {w.emerged?.length > 0 && (
+                    <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg p-2">
+                      <p className="text-[10px] text-amber-400 font-semibold mb-1">⚠ New</p>
+                      <ul className="text-[11px] text-zinc-300 space-y-0.5">
+                        {w.emerged.map((x, i) => <li key={i}>• {x}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Narrative summary + next focus */}
+              {c.narrative?.summary && (
+                <p className="text-zinc-200 text-sm mb-2 italic">"{c.narrative.summary}"</p>
+              )}
+              {c.narrative?.next_focus && (
+                <div className="mt-3 p-3 rounded-lg bg-sky-400/10 border border-sky-400/20">
+                  <p className="text-[11px] text-sky-300 font-semibold mb-1">🎯 Focus for next session</p>
+                  <p className="text-zinc-200 text-xs">{c.narrative.next_focus}</p>
+                </div>
+              )}
+            </motion.div>
+          );
+        })()}
 
         {/* AI coach plan — VLM-personalized drills + equipment + 7-day plan,
             grounded in this analysis's actual weaknesses and per-shot reasoning. */}

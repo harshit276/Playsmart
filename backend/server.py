@@ -2471,6 +2471,29 @@ class CompareAnalysesRequest(BaseModel):
     backend: str = "auto"
 
 
+def _shot_set(analysis: dict) -> set:
+    """Normalized set of weakness phrases from an analysis (for diff)."""
+    out = set()
+    for w in (analysis.get("shot_analysis") or {}).get("weaknesses") or []:
+        if isinstance(w, dict):
+            t = (w.get("issue") or w.get("area") or "").strip().lower()
+            if t: out.add(t)
+        elif isinstance(w, str):
+            out.add(w.strip().lower())
+    # Also pull from per-shot VLM form_feedback if present
+    for s in analysis.get("shots") or []:
+        ff = (s.get("formFeedback") or s.get("form_feedback") or {})
+        for x in (ff.get("weaknesses") or []):
+            if isinstance(x, str): out.add(x.strip().lower())
+    return {x for x in out if x}
+
+
+def _primary_shot_type(analysis: dict) -> str:
+    """The shot type the player was working on, if identifiable."""
+    sa = analysis.get("shot_analysis") or {}
+    return (sa.get("shot_type") or "").lower().strip() or "shot"
+
+
 @api_router.post("/compare-analyses")
 async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: str = Header(None)):
     user = await get_current_user(authorization)
@@ -2505,18 +2528,100 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
     days_between = max(0, int((_to_ts(new) - _to_ts(old)) / 86400)) if (_to_ts(new) and _to_ts(old)) else 0
 
     try:
-        from ai_pipeline.vlm import compare_analyses as _compare_analyses
+        from ai_pipeline.vlm import compare_analyses as _compare_analyses, visual_compare as _visual_compare
     except ImportError as exc:
         raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
 
+    # ─── Phase B: quantitative deltas + drill attribution ───
+    old_score = ((old.get("shot_analysis") or {}).get("score") or
+                 (old.get("shot_analysis") or {}).get("assessment", {}).get("overall_score") or 0)
+    new_score = ((new.get("shot_analysis") or {}).get("score") or
+                 (new.get("shot_analysis") or {}).get("assessment", {}).get("overall_score") or 0)
+    old_speed = (old.get("speed_analysis") or {}).get("estimated_speed_kmh", 0)
+    new_speed = (new.get("speed_analysis") or {}).get("estimated_speed_kmh", 0)
+    old_skill = old.get("skill_level") or "—"
+    new_skill = new.get("skill_level") or "—"
+
+    old_weak = _shot_set(old)
+    new_weak = _shot_set(new)
+    resolved = sorted(old_weak - new_weak)[:5]
+    persistent = sorted(old_weak & new_weak)[:5]
+    emerged = sorted(new_weak - old_weak)[:5]
+
+    deltas = {
+        "score": {"old": float(old_score), "new": float(new_score),
+                  "delta": round(float(new_score) - float(old_score), 1)},
+        "speed_kmh": {"old": float(old_speed), "new": float(new_speed),
+                      "delta": round(float(new_speed) - float(old_speed), 1)},
+        "skill_level": {"old": old_skill, "new": new_skill,
+                        "changed": old_skill != new_skill},
+        "weaknesses": {"resolved": resolved, "persistent": persistent, "emerged": emerged},
+    }
+
+    # ─── Phase A: visual VLM compare (if both sessions have keyframes
+    # and they were the same shot type) ───
+    visual = None
+    same_shot = _primary_shot_type(old) == _primary_shot_type(new) and _primary_shot_type(old) != "shot"
+    old_kf = (old.get("best_shot_keyframes") or {})
+    new_kf = (new.get("best_shot_keyframes") or {})
+    if same_shot and old_kf.get("frames") and new_kf.get("frames"):
+        import base64
+        def _strip_b64(s: str) -> bytes:
+            if s.startswith("data:"):
+                s = s.split(",", 1)[1]
+            return base64.b64decode(s)
+        try:
+            old_b = [_strip_b64(s) for s in old_kf["frames"][:3] if s]
+            new_b = [_strip_b64(s) for s in new_kf["frames"][:3] if s]
+            sport = new.get("sport") or old.get("sport") or "badminton"
+            shot = _primary_shot_type(new)
+            loop = asyncio.get_event_loop()
+            visual = await asyncio.wait_for(
+                loop.run_in_executor(None, lambda: _visual_compare(
+                    old_b, new_b, sport=sport, shot_type=shot,
+                    days_between=days_between, backend=req.backend,
+                )),
+                timeout=30.0,
+            )
+        except (Exception, asyncio.TimeoutError) as exc:
+            logger.warning(f"Visual compare skipped: {exc.__class__.__name__}: {exc}")
+
+    # ─── Original text-only narrative compare (always run, cheap) ───
     def _run() -> dict:
         return _compare_analyses(old, new, days_between, backend=req.backend)
-
     loop = asyncio.get_event_loop()
     try:
-        comparison = await loop.run_in_executor(None, _run)
+        narrative = await loop.run_in_executor(None, _run)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Comparison failed: {exc}")
+        narrative = {"_error": str(exc)[:200]}
+
+    # ─── Drill attribution: did the OLD analysis flag a weakness that
+    # the NEW analysis no longer has? Surface it as "you fixed X". ───
+    old_focus = (old.get("vlm_coaching") or {}).get("key_focus_areas") or []
+    drill_attribution = []
+    for focus in old_focus[:3]:
+        focus_lower = focus.lower()
+        related_resolved = [w for w in resolved if any(t in w for t in focus_lower.split()) or any(t in focus_lower for t in w.split())]
+        related_persistent = [w for w in persistent if any(t in w for t in focus_lower.split()) or any(t in focus_lower for t in w.split())]
+        drill_attribution.append({
+            "focus_area": focus,
+            "resolved": related_resolved,
+            "persistent": related_persistent,
+            "outcome": "resolved" if related_resolved and not related_persistent
+                     else "improving" if related_resolved
+                     else "still working" if related_persistent
+                     else "no signal",
+        })
+
+    comparison = {
+        "deltas": deltas,
+        "narrative": narrative,
+        "visual": visual,  # may be None if no keyframes or different shots
+        "drill_attribution": drill_attribution,
+        "days_between": days_between,
+        "same_shot_type": same_shot,
+        "shot_type": _primary_shot_type(new),
+    }
 
     record = {
         "id": str(uuid.uuid4()),
@@ -2532,6 +2637,58 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
         logger.warning(f"Failed to persist comparison: {exc}")
 
     return {"success": True, "comparison": comparison, "comparison_id": record["id"]}
+
+
+# ─── Phase E: smart reanalysis suggestions ───
+@api_router.get("/reanalysis-suggestions/{user_id}")
+async def reanalysis_suggestions(user_id: str, authorization: str = Header(None)):
+    """Per-user list of shots due for a re-look. A shot type is "due" when
+    the player's last analysis of it was ≥14 days ago. Surfaces on the
+    dashboard so the prompt to reanalyze appears at the right moment, not
+    on every old history card."""
+    user = await get_current_user(authorization)
+    if user["id"] != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    cursor = db.video_analyses.find(
+        {"user_id": user_id},
+        {"_id": 0, "id": 1, "sport": 1, "shot_analysis": 1, "date": 1},
+    ).sort("date", -1).limit(200)
+    analyses = await cursor.to_list(length=200)
+
+    # Group by (sport, shot_type), keep most-recent per group
+    seen: dict = {}
+    for a in analyses:
+        sport = a.get("sport") or "badminton"
+        shot = ((a.get("shot_analysis") or {}).get("shot_type") or "").lower().strip()
+        if not shot or shot == "unknown":
+            continue
+        key = (sport, shot)
+        if key in seen:
+            continue
+        seen[key] = a
+
+    now = datetime.now(timezone.utc)
+    suggestions = []
+    for (sport, shot), a in seen.items():
+        date_str = a.get("date") or ""
+        try:
+            then = datetime.fromisoformat(str(date_str).replace("Z", "+00:00"))
+            days_ago = (now - then).days
+        except Exception:
+            continue
+        if days_ago < 14:
+            continue
+        suggestions.append({
+            "sport": sport,
+            "shot_type": shot,
+            "shot_name": shot.replace("_", " ").title(),
+            "last_analysis_id": a.get("id"),
+            "last_analyzed_days_ago": days_ago,
+            "last_score": (a.get("shot_analysis") or {}).get("score"),
+        })
+    suggestions.sort(key=lambda x: x["last_analyzed_days_ago"], reverse=True)
+    return {"suggestions": suggestions[:5]}
 
 
 if IS_SERVERLESS:
@@ -3146,6 +3303,9 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         # ran VLM classification). The frontend's MatchInsights component renders
         # AI-coach feedback per shot from these fields.
         "shots": body.get("shots") or [],
+        # Best-shot keyframes (~150 KB) for cross-session visual comparison.
+        # Saved on the analysis record; consumed by /visual-compare endpoint.
+        "best_shot_keyframes": body.get("best_shot_keyframes") or None,
     }
 
     # ─── Build coach-like feedback using research data ───
@@ -3373,6 +3533,9 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "highlights": None,
         "segments_summary": ai_result.get("segments"),
         "vlm_coaching": vlm_coaching,
+        # Keyframes from the best-confidence shot (~150 KB) so a later
+        # reanalysis can pull them and ask the AI coach to compare form.
+        "best_shot_keyframes": body.get("best_shot_keyframes") or None,
     }
     # Skip DB save for guests (no user_id to attach it to anyway).
     if not is_guest:
