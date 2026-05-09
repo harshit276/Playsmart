@@ -100,9 +100,9 @@ class VLMShotClassifier:
             err_class = exc.__class__.__name__
             friendly = err_msg[:200]
             if "429" in err_msg or "quota" in err_msg.lower() or "ResourceExhausted" in err_class:
-                friendly = "Gemini daily quota exceeded — coaching paused until reset."
+                friendly = "AI coach daily limit reached — try again tomorrow."
             elif "401" in err_msg or "PermissionDenied" in err_class or "API_KEY_INVALID" in err_msg:
-                friendly = "API key invalid."
+                friendly = "AI coach unavailable."
             return {
                 "shot_type": "unknown", "confidence": 0.0,
                 "reasoning": "",
@@ -211,9 +211,9 @@ class VLMShotClassifier:
             err_class = exc.__class__.__name__
             friendly = err_msg[:200]
             if "429" in err_msg or "quota" in err_msg.lower() or "ResourceExhausted" in err_class:
-                friendly = "Gemini daily quota exceeded — coaching paused until reset."
+                friendly = "AI coach daily limit reached — try again tomorrow."
             elif "401" in err_msg or "PermissionDenied" in err_class:
-                friendly = "API key invalid."
+                friendly = "AI coach unavailable (auth error)."
             # Reasoning stays empty so the UI hides the per-shot coach line.
             # The friendly + raw messages are surfaced via _meta only.
             for i in miss_indices:
@@ -318,9 +318,9 @@ class VLMShotClassifier:
             err_class = exc.__class__.__name__
             friendly = err_msg[:200]
             if "429" in err_msg or "quota" in err_msg.lower() or "ResourceExhausted" in err_class:
-                friendly = "Gemini daily quota exceeded — coaching paused until reset."
+                friendly = "AI coach daily limit reached — try again tomorrow."
             elif "401" in err_msg or "PermissionDenied" in err_class:
-                friendly = "API key invalid."
+                friendly = "AI coach unavailable (auth error)."
             return [
                 {
                     "shot_type": "unknown", "confidence": 0.0,

@@ -692,7 +692,7 @@ export default function AnalyzePage() {
             const detail = e?.response?.data?.detail || e.message;
             console.error(`[vlm] HTTP ${status}: ${detail}`);
             if (status === 502 && /no VLM backend|GEMINI_API_KEY/i.test(detail || "")) {
-              toast.error("AI coach unavailable: backend not configured. (Check GEMINI_API_KEY in Vercel.)");
+              toast.error("AI coach unavailable. We'll use on-device analysis only for now.");
             }
             return [];
           }
@@ -1651,6 +1651,67 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
+        {/* ── Match summary — moved here from below for at-a-glance read.
+            Skill level + style + speed badges + shot distribution upfront. */}
+        {result.multi_shot && result.shots?.length > 1 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
+            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
+              <Film className="w-3 h-3 text-sky-400" /> Match Summary — {result.total_shots_detected} shots detected
+            </p>
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              {result.skill_level && (
+                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px] uppercase font-bold">
+                  {result.skill_level} level
+                </Badge>
+              )}
+              {result.player_profile?.play_style && (
+                <Badge className="bg-sky-400/10 text-sky-400 border-sky-400/20 text-[10px] uppercase font-bold">
+                  {result.player_profile.play_style} Style
+                </Badge>
+              )}
+              {(() => {
+                const power = (result.shots || []).filter(
+                  (s) => ["smash", "drive", "clear"].includes(s.type) && s.speed > 0,
+                );
+                if (power.length === 0) return null;
+                const avg = Math.round(power.reduce((a, b) => a + b.speed, 0) / power.length);
+                return (
+                  <Badge className="bg-amber-400/10 text-amber-400 border-amber-400/20 text-[10px] uppercase font-bold">
+                    <Zap className="w-2.5 h-2.5 mr-1 inline" /> Avg {avg} km/h
+                  </Badge>
+                );
+              })()}
+            </div>
+            {result.shot_distribution && Object.keys(result.shot_distribution).length > 0 && (
+              <div className="space-y-2">
+                {Object.entries(result.shot_distribution)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([shotType, count], i) => {
+                    const pct = Math.round((count / result.total_shots_detected) * 100);
+                    const shotLabel = shotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                    return (
+                      <div key={shotType}>
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs font-medium text-zinc-300">{shotLabel}</span>
+                          <span className="text-xs text-zinc-500">{count}× ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.6, delay: 0.1 + i * 0.05 }}
+                            className="h-full rounded-full bg-lime-400"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Match Insights — multi-shot analysis with skill score + coaching narrative */}
         {file && !viewingHistorical && (
           <MatchInsights
@@ -1804,122 +1865,8 @@ export default function AnalyzePage() {
         </motion.div>
         )}
 
-        {/* ── Multi-Shot Summary (if match video) ── */}
-        {result.multi_shot && result.shots?.length > 1 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
-            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
-            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-              <Film className="w-3 h-3 text-sky-400" /> Match Analysis — {result.total_shots_detected} Shots Detected
-            </p>
-
-            {/* Skill level + Play style + Avg power-shot speed */}
-            <div className="flex items-center gap-2 flex-wrap mb-4">
-              {result.skill_level && (
-                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px] uppercase font-bold">
-                  {result.skill_level} level
-                </Badge>
-              )}
-              {result.player_profile?.play_style && (
-                <Badge className="bg-sky-400/10 text-sky-400 border-sky-400/20 text-[10px] uppercase font-bold">
-                  {result.player_profile.play_style} Style
-                </Badge>
-              )}
-              {(() => {
-                const power = (result.shots || []).filter(
-                  (s) => ["smash", "drive", "clear"].includes(s.type) && s.speed > 0,
-                );
-                if (power.length === 0) return null;
-                const avg = Math.round(power.reduce((a, b) => a + b.speed, 0) / power.length);
-                return (
-                  <Badge className="bg-amber-400/10 text-amber-400 border-amber-400/20 text-[10px] uppercase font-bold">
-                    <Zap className="w-2.5 h-2.5 mr-1 inline" /> Avg {avg} km/h
-                  </Badge>
-                );
-              })()}
-            </div>
-
-            {/* Shot distribution bars */}
-            {result.shot_distribution && Object.keys(result.shot_distribution).length > 0 && (
-              <div className="space-y-2 mb-4">
-                {Object.entries(result.shot_distribution)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([shotType, count], i) => {
-                    const pct = Math.round((count / result.total_shots_detected) * 100);
-                    const shotLabel = shotType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                    return (
-                      <div key={shotType}>
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-xs font-medium text-zinc-300">{shotLabel}</span>
-                          <span className="text-xs text-zinc-500">{count}x ({pct}%)</span>
-                        </div>
-                        <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.6, delay: 0.1 + i * 0.05 }}
-                            className="h-full rounded-full bg-lime-400"
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-
-            {/* Individual shots timeline */}
-            <details className="group">
-              <summary className="text-xs text-zinc-500 cursor-pointer hover:text-lime-400 flex items-center gap-1">
-                <ChevronRight className="w-3 h-3 group-open:rotate-90 transition-transform" /> View all shots
-              </summary>
-              <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
-                {result.shots.map((s, i) => (
-                  <div key={i} className="flex items-center justify-between bg-zinc-800/50 rounded-lg px-3 py-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
-                        s.grade === "A" ? "bg-lime-400 text-black" :
-                        s.grade === "B" ? "bg-sky-400 text-black" :
-                        s.grade === "C" ? "bg-amber-400 text-black" :
-                        "bg-red-500 text-white"
-                      }`}>{s.grade}</span>
-                      <span className="text-xs text-zinc-300 font-medium">{s.name}</span>
-                      {s.isBackhand && (
-                        <Badge className="text-[9px] bg-violet-400/10 text-violet-400 border-violet-400/20 px-1 py-0">BH</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {s.score != null && <span className="text-[10px] text-zinc-500">{s.score}/100</span>}
-                      {s.speed > 0 && <span className="text-[10px] text-lime-400 font-semibold">{s.speed} km/h</span>}
-                      {s.duration > 0 && <span className="text-[10px] text-zinc-600">{s.duration}s</span>}
-                      <span className="text-[10px] text-zinc-600">@{s.timestamp}s</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </details>
-
-            {/* Strengths and weaknesses */}
-            {result.player_profile?.strengths?.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-zinc-800/50">
-                <p className="text-[10px] text-zinc-500 uppercase mb-1 font-medium">Strong shots</p>
-                <div className="flex flex-wrap gap-1">
-                  {result.player_profile.strengths.map((s, i) => (
-                    <Badge key={i} className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px]">{s}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-            {result.player_profile?.weaknesses?.length > 0 && (
-              <div className="mt-2">
-                <p className="text-[10px] text-zinc-500 uppercase mb-1 font-medium">Needs work</p>
-                <div className="flex flex-wrap gap-1">
-                  {result.player_profile.weaknesses.map((w, i) => (
-                    <Badge key={i} className="bg-red-400/10 text-red-400 border-red-400/20 text-[10px]">{w}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
+        {/* (Match Summary card was relocated above — appears before Coaching
+            Insights now so the at-a-glance read happens first.) */}
 
         {/* ── Score Comparison with Previous ── */}
         {scoreComparison?.length > 0 && (

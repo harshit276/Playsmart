@@ -332,51 +332,52 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
             );
           })()}
 
-          {/* Headline — overall consistency. Needs ≥3 shots to be meaningful.
-              Now also surfaces VLM-judged level + average speed in one row,
-              so the "How am I doing overall?" question is answered upfront. */}
-          {perShot.filter((s) => s.pose).length >= 3 ? (
-            <div className="bg-zinc-800/50 rounded-xl p-3">
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-zinc-500">Overall technique consistency</p>
-                  <p className="text-3xl font-bold text-lime-400 mt-1">
-                    {overall ? Math.round(overall.consistency * 100) : 0}<span className="text-zinc-500 text-lg font-normal">%</span>
-                  </p>
+          {/* Quick Summary — three signals the player actually cares about,
+              stacked horizontally. Replaces the confusing "Overall technique
+              consistency 78%" headline. All three come from VLM data when
+              available, with sane fallbacks. */}
+          {perShot.length >= 1 ? (
+            (() => {
+              const levels = perShot.map((s) => s.vlmSkill).filter(Boolean);
+              const counts = levels.reduce((a, l) => { a[l] = (a[l] || 0) + 1; return a; }, {});
+              const topLevel = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+              const speeds = perShot.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
+              const avgSpeed = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : null;
+              const peakSpeed = speeds.length ? Math.max(...speeds) : null;
+              const types = new Set(perShot.map((s) => s.label).filter(Boolean));
+              const levelTone = topLevel === "Pro" ? "text-amber-300"
+                : topLevel === "Advanced" ? "text-lime-300"
+                : topLevel === "Intermediate" ? "text-sky-300"
+                : "text-zinc-300";
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="bg-zinc-800/50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">Shots</p>
+                    <p className="text-xl font-bold text-white mt-0.5">{perShot.length}</p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">{types.size} {types.size === 1 ? "type" : "types"}</p>
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">Level</p>
+                    <p className={`text-xl font-bold mt-0.5 ${levelTone}`}>{topLevel || "—"}</p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">AI Coach verdict</p>
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Speed</p>
+                    <p className="text-xl font-bold text-white mt-0.5">{avgSpeed != null ? `${avgSpeed}` : "—"}<span className="text-xs text-zinc-500 font-normal ml-1">km/h</span></p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">{peakSpeed != null ? `Peak ${peakSpeed}` : ""}</p>
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">Consistency</p>
+                    <p className="text-xl font-bold text-white mt-0.5">
+                      {overall && perShot.filter((s) => s.pose).length >= 3
+                        ? Math.round(overall.consistency * 100) + "%"
+                        : "—"}
+                    </p>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">Motion repeatability</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  {(() => {
-                    // Most-common VLM-estimated skill across shots
-                    const levels = perShot.map((s) => s.vlmSkill).filter(Boolean);
-                    if (levels.length === 0) return null;
-                    const counts = levels.reduce((a, l) => { a[l] = (a[l] || 0) + 1; return a; }, {});
-                    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-                    const tone = top === "Pro" ? "border-amber-400/40 text-amber-300 bg-amber-400/10"
-                              : top === "Advanced" ? "border-lime-400/40 text-lime-300 bg-lime-400/10"
-                              : top === "Intermediate" ? "border-sky-400/40 text-sky-300 bg-sky-400/10"
-                              : "border-zinc-700 text-zinc-300 bg-zinc-800";
-                    return (
-                      <span className={`text-[11px] px-2 py-1 rounded-full border ${tone} font-semibold`}>
-                        Level: {top}
-                      </span>
-                    );
-                  })()}
-                  {(() => {
-                    const speeds = perShot.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
-                    if (speeds.length === 0) return null;
-                    const avg = Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length);
-                    return (
-                      <span className="text-[11px] px-2 py-1 rounded-full border border-zinc-700 text-zinc-300 bg-zinc-800 font-semibold">
-                        Avg {avg} km/h
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
-              <p className="text-[10px] text-zinc-600 mt-1">
-                Calculated from on-device pose tracking — measures how repeatable your motion was across all shots (higher = forming muscle memory). The Level badge is Gemini's overall judgement of where you sit (Beginner → Pro).
-              </p>
-            </div>
+              );
+            })()
           ) : (
             <div className="bg-zinc-800/50 rounded-xl p-3">
               <p className="text-[10px] uppercase tracking-wider text-zinc-500">Sample size</p>
@@ -421,7 +422,7 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
             </div>
           )}
 
-          {/* If Gemini was unavailable for every shot (quota / outage),
+          {/* If the AI Coach was unavailable for every shot (quota / outage),
               show a single tasteful banner instead of empty per-shot cards. */}
           {(() => {
             const allFailed = perShot.length > 0

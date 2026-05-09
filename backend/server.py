@@ -3064,6 +3064,24 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
     player_preview = body.get("player_preview", None)
     weaknesses_raw = body.get("weaknesses", [])
 
+    # Prefer AI-coach-observed weaknesses (from per-shot VLM form_feedback)
+    # over the generic on-device "form/balance/consistency" buckets — they're
+    # specific, evidence-grounded, and read like real coach notes.
+    vlm_weaknesses = []
+    for s in (body.get("shots") or []):
+        ff = s.get("formFeedback") or s.get("form_feedback") or {}
+        for w in (ff.get("weaknesses") or []):
+            text = str(w).strip()
+            if text and not any(text.lower() == x.get("issue", "").lower()
+                                for x in vlm_weaknesses if isinstance(x, dict)):
+                vlm_weaknesses.append({
+                    "issue": text,
+                    "area": s.get("name") or s.get("type") or "Technique",
+                    "severity": "medium",
+                })
+    if vlm_weaknesses:
+        weaknesses_raw = vlm_weaknesses[:5]  # use VLM observations
+
     # Check if video analysis is supported for this sport
     from sports_config import get_sport_config
     sport_cfg = get_sport_config(sport)
