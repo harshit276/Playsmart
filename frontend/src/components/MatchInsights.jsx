@@ -277,55 +277,104 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
             </div>
           )}
 
-          {/* Hero badge — celebrate the strongest moment of the session.
-              Triggered when any shot has VLM-judged powerLevel="max" OR speed
-              that puts them in the top tier for that sport's primary shot. */}
+          {/* Hero badge — always celebrate the strongest moment of the
+              session so the user gets a reward, even on slower shots.
+              Lower thresholds = "Peak ... km/h", above thresholds gets
+              "Top-tier" framing, max-power gets the gold treatment. */}
           {(() => {
             const maxShot = perShot.reduce((best, s) => {
               const speed = Number(s.speed) || 0;
               const isMax = s.powerLevel === "max";
-              const score = (isMax ? 1000 : 0) + speed;
-              return score > best.score ? { shot: s, score, speed, isMax } : best;
-            }, { shot: null, score: 0, speed: 0, isMax: false });
+              const conf = Number(s.confidence) || 0;
+              // Score: prioritize max-power, then speed, then confidence as tiebreak.
+              const score = (isMax ? 10000 : 0) + speed * 10 + conf * 100;
+              return score > best.score ? { shot: s, score, speed, isMax, conf } : best;
+            }, { shot: null, score: 0, speed: 0, isMax: false, conf: 0 });
             if (!maxShot.shot) return null;
             const sh = maxShot.shot;
             const speed = Math.round(maxShot.speed);
-            // Only celebrate when it's actually impressive
             const sportPeakThresholds = {
-              badminton: { smash: 250, clear: 130, drop: 60, default: 100 },
-              tennis: { serve: 180, forehand: 130, default: 100 },
-              table_tennis: { default: 60 },
-              pickleball: { default: 60 },
+              badminton: { smash: 200, clear: 110, drop: 50, drive: 130, default: 80 },
+              tennis: { serve: 150, forehand: 110, default: 80 },
+              table_tennis: { default: 50 },
+              pickleball: { default: 50 },
+              cricket: { default: 100 },
             };
             const t = sportPeakThresholds[sport] || {};
-            const threshold = t[sh.label] || t.default || 80;
-            if (!maxShot.isMax && speed < threshold) return null;
-            const headline = maxShot.isMax
-              ? `You hit a Max-power ${sh.name?.replace(/_/g, ' ') || 'shot'}`
-              : `Peak ${sh.name?.replace(/_/g, ' ') || 'shot'}: ${speed} km/h`;
+            const peakThreshold = t[sh.label] || t.default || 80;
+            const isPeak = speed >= peakThreshold;
+            const shotName = sh.name?.replace(/_/g, ' ') || 'shot';
+            let label, headline, accent;
+            if (maxShot.isMax) {
+              label = "⚡ Max-power highlight";
+              headline = `You hit a Max-power ${shotName}`;
+              accent = "from-amber-500/20 to-lime-400/20 border-amber-400/50";
+            } else if (isPeak) {
+              label = "🔥 Top-tier shot";
+              headline = `Peak ${shotName}: ${speed} km/h`;
+              accent = "from-amber-500/15 to-lime-400/15 border-amber-400/40";
+            } else {
+              label = "⭐ Best shot of the session";
+              headline = `${shotName.charAt(0).toUpperCase() + shotName.slice(1)} at ${Math.round(maxShot.conf * 100)}% confidence`;
+              accent = "from-sky-400/10 to-zinc-800/10 border-sky-400/30";
+            }
             return (
-              <div className="bg-gradient-to-r from-amber-500/15 to-lime-400/15 border border-amber-400/40 rounded-xl p-3 flex items-center justify-between">
+              <div className={`bg-gradient-to-r border rounded-xl p-3 flex items-center justify-between ${accent}`}>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">⚡ Highlight of this session</p>
+                  <p className="text-[10px] uppercase tracking-wider text-amber-300 font-semibold">{label}</p>
                   <p className="text-sm font-bold text-white mt-0.5">{headline}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-lime-400">{speed}</p>
-                  <p className="text-[10px] text-zinc-500">km/h</p>
+                  <p className="text-2xl font-bold text-lime-400">{speed > 0 ? speed : Math.round(maxShot.conf * 100)}</p>
+                  <p className="text-[10px] text-zinc-500">{speed > 0 ? "km/h" : "% sure"}</p>
                 </div>
               </div>
             );
           })()}
 
-          {/* Headline — overall consistency. Needs ≥3 shots to be meaningful. */}
+          {/* Headline — overall consistency. Needs ≥3 shots to be meaningful.
+              Now also surfaces VLM-judged level + average speed in one row,
+              so the "How am I doing overall?" question is answered upfront. */}
           {perShot.filter((s) => s.pose).length >= 3 ? (
             <div className="bg-zinc-800/50 rounded-xl p-3">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Overall technique consistency</p>
-              <p className="text-3xl font-bold text-lime-400 mt-1">
-                {overall ? Math.round(overall.consistency * 100) : 0}<span className="text-zinc-500 text-lg font-normal">%</span>
-              </p>
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500">Overall technique consistency</p>
+                  <p className="text-3xl font-bold text-lime-400 mt-1">
+                    {overall ? Math.round(overall.consistency * 100) : 0}<span className="text-zinc-500 text-lg font-normal">%</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {(() => {
+                    // Most-common VLM-estimated skill across shots
+                    const levels = perShot.map((s) => s.vlmSkill).filter(Boolean);
+                    if (levels.length === 0) return null;
+                    const counts = levels.reduce((a, l) => { a[l] = (a[l] || 0) + 1; return a; }, {});
+                    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+                    const tone = top === "Pro" ? "border-amber-400/40 text-amber-300 bg-amber-400/10"
+                              : top === "Advanced" ? "border-lime-400/40 text-lime-300 bg-lime-400/10"
+                              : top === "Intermediate" ? "border-sky-400/40 text-sky-300 bg-sky-400/10"
+                              : "border-zinc-700 text-zinc-300 bg-zinc-800";
+                    return (
+                      <span className={`text-[11px] px-2 py-1 rounded-full border ${tone} font-semibold`}>
+                        Level: {top}
+                      </span>
+                    );
+                  })()}
+                  {(() => {
+                    const speeds = perShot.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
+                    if (speeds.length === 0) return null;
+                    const avg = Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length);
+                    return (
+                      <span className="text-[11px] px-2 py-1 rounded-full border border-zinc-700 text-zinc-300 bg-zinc-800 font-semibold">
+                        Avg {avg} km/h
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
               <p className="text-[10px] text-zinc-600 mt-1">
-                How repeatable your motion is across all shots — higher means muscle memory is forming.
+                Calculated from on-device pose tracking — measures how repeatable your motion was across all shots (higher = forming muscle memory). The Level badge is Gemini's overall judgement of where you sit (Beginner → Pro).
               </p>
             </div>
           ) : (
