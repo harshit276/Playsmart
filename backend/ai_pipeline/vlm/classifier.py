@@ -271,10 +271,16 @@ class VLMShotClassifier:
         self,
         keyframes_per_shot: list[list[bytes]],
         target_player: str = "auto",
+        target_box: dict | None = None,
     ) -> list[dict]:
         """Same as predict_batch, but accepts pre-extracted JPEG bytes per
         shot (no video decode). Used when the browser already extracted
         keyframes and POSTs them to the server.
+
+        target_box: optional {x, y, width, height} 0-1 — when present (typically
+            for doubles videos sent as full frames) the prompt tells Gemini to
+            FOCUS ONLY on the player at that spatial region and ignore the
+            other players. Avoids the "wrong player attributed" failure mode.
 
         keyframes_per_shot[i] is a list of JPEG bytes for shot i.
         Returns N dicts in input order. Slots with <2 frames become unknown stubs.
@@ -309,7 +315,7 @@ class VLMShotClassifier:
 
         nonzero_per_shot = [n for n in frames_per_shot if n > 0]
         sys_prompt = system_prompt_batch(self.sport).replace("{n_shots}", str(len(nonzero_per_shot)))
-        usr_msg = user_message_batch(self.sport, nonzero_per_shot, target_player)
+        usr_msg = user_message_batch(self.sport, nonzero_per_shot, target_player, target_box=target_box)
 
         try:
             raw = self._backend.call(sys_prompt, usr_msg, all_jpegs)

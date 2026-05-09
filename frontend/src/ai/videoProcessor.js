@@ -1793,13 +1793,27 @@ export async function extractDetectKeyframes(videoFile, options = {}) {
 /**
  * Extract a small set of keyframes per shot moment for VLM classification.
  * For each peak time, captures frames around it (default: peak-0.3s, peak,
- * peak+0.3s). Optionally crops to `customCropBox` (normalized 0-1) so we only
- * send the selected player to the VLM.
+ * peak+0.3s).
+ *
+ * IMPORTANT: we no longer crop tightly to the selected player's bbox. The
+ * player moves around the court during a rally, so a static crop quickly
+ * captures the wrong person (or empty court). Instead we send a wider region
+ * (or the full frame for doubles) and let Gemini identify the target player
+ * via spatial hints in the prompt.
+ *
+ * options.isMultiPlayer: when true, send the FULL frame so Gemini sees all
+ *   players in context. Caller is expected to pass a "focus on the {position}
+ *   player" hint in the prompt.
+ * options.expandFactor: when isMultiPlayer is false, multiply the customCropBox
+ *   by this factor to capture some surrounding court (default 1.5 = 50% wider).
  *
  * Returns: Array<Array<base64-jpeg-string>>
  */
 export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBox = null, options = {}) {
-  const { framesPerShot = 3, maxDim = 720, jpegQuality = 0.7, offsets = [-0.3, 0, 0.3] } = options;
+  const {
+    framesPerShot = 3, maxDim = 720, jpegQuality = 0.7,
+    offsets = [-0.3, 0, 0.3], isMultiPlayer = false, expandFactor = 1.5,
+  } = options;
   if (!peakTimes || peakTimes.length === 0) return [];
 
   const video = document.createElement("video");
@@ -1821,12 +1835,21 @@ export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBo
   }
 
   let sx = 0, sy = 0, sw = vw, sh = vh;
-  if (customCropBox) {
-    sx = Math.max(0, Math.min(vw - 1, Math.round(customCropBox.x * vw)));
-    sy = Math.max(0, Math.min(vh - 1, Math.round(customCropBox.y * vh)));
-    sw = Math.max(1, Math.min(vw - sx, Math.round(customCropBox.width * vw)));
-    sh = Math.max(1, Math.min(vh - sy, Math.round(customCropBox.height * vh)));
+  if (customCropBox && !isMultiPlayer) {
+    // Single-player video: crop wider than the bbox to catch the player as
+    // they move during the rally. expandFactor=1.5 = ~50% more headroom.
+    const cx = customCropBox.x + customCropBox.width / 2;
+    const cy = customCropBox.y + customCropBox.height / 2;
+    const ew = Math.min(1, customCropBox.width * expandFactor);
+    const eh = Math.min(1, customCropBox.height * expandFactor);
+    const ex = Math.max(0, Math.min(1 - ew, cx - ew / 2));
+    const ey = Math.max(0, Math.min(1 - eh, cy - eh / 2));
+    sx = Math.round(ex * vw);
+    sy = Math.round(ey * vh);
+    sw = Math.max(1, Math.round(ew * vw));
+    sh = Math.max(1, Math.round(eh * vh));
   }
+  // For multi-player (doubles) videos, sx/sy/sw/sh stay at full frame.
 
   const scale = Math.min(1, maxDim / Math.max(sw, sh));
   const outW = Math.max(1, Math.round(sw * scale));
@@ -2148,9 +2171,14 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
       try {
         progress("classify", 70, "Coach is analyzing your shots...");
         const peakTimes = shotPeaks.map((p) => p.time);
+        // Multi-player flag: if the caller flagged this as a doubles/multi
+        // video, send full frames so Gemini can identify the right player by
+        // position (rather than us blindly cropping to a stale bbox).
+        const isMultiPlayer = !!options.isMultiPlayer;
         const keyframes = await extractKeyframesPerShot(
           videoFile, peakTimes, customCropBox,
-          { framesPerShot: 3, maxDim: 720, jpegQuality: 0.7 },
+          { framesPerShot: 3, maxDim: 720, jpegQuality: 0.7,
+            isMultiPlayer, expandFactor: 1.6 },
         );
         // Keyframes used in-flight only — sent to the VLM for classification
         // and then dropped. Not persisted on the result (no video/image storage).
@@ -2158,6 +2186,10 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
           shots: keyframes,
           sport,
           target_player: targetPlayer,
+          // Pass the selected player's bbox so the backend prompt can tell
+          // Gemini exactly where to look on the wider frame.
+          target_box: customCropBox || null,
+          is_multi_player: isMultiPlayer,
         });
         if (Array.isArray(vlmShots) && vlmShots.length === detectedShots.length) {
           for (let i = 0; i < detectedShots.length; i++) {

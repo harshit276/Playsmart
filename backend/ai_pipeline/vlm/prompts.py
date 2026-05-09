@@ -179,16 +179,42 @@ The 'shots' array MUST have exactly {{n_shots}} entries in the same order as the
 For power_level: soft=gentle touch/no swing, medium=controlled stroke, hard=committed full swing, max=explosive whip / pro top-end power."""
 
 
-def user_message_batch(
-    sport: str, frames_per_shot: list[int], target_player: str = "auto"
-) -> str:
-    """Tells the model how the interleaved frames are grouped."""
-    where = ""
+def _box_focus_hint(target_box: dict | None, target_player: str = "auto") -> str:
+    """Translate a normalized {x,y,width,height} bbox into a natural-language
+    spatial hint Gemini can use to focus on the right player in a crowded
+    (doubles/multi-player) frame. Falls back to the simpler quadrant string
+    when no box is provided."""
+    if isinstance(target_box, dict):
+        try:
+            cx = float(target_box.get("x", 0)) + float(target_box.get("width", 0)) / 2
+            cy = float(target_box.get("y", 0)) + float(target_box.get("height", 0)) / 2
+            v_zone = "top" if cy < 0.4 else "bottom" if cy > 0.6 else "middle"
+            h_zone = "left" if cx < 0.4 else "right" if cx > 0.6 else "center"
+            corner = f"{v_zone}-{h_zone}".replace("middle-center", "center")
+            return (
+                f" Multiple players are visible. FOCUS ONLY on the player whose "
+                f"position is approximately at the {corner} area of the frame "
+                f"(normalized coords ~{cx:.2f}, {cy:.2f}). Ignore the other players "
+                f"— do not classify shots they hit. If the target player is not "
+                f"clearly visible in a given moment, set that shot to 'unknown'."
+            )
+        except Exception:
+            pass
     if target_player == "near":
-        where = " Focus on the bottom-half player closest to camera."
-    elif target_player == "far":
-        where = " Focus on the top-half player far from camera."
+        return " (focus on the bottom-half player closest to camera)"
+    if target_player == "far":
+        return " (focus on the top-half player far from camera)"
+    return ""
 
+
+def user_message_batch(
+    sport: str, frames_per_shot: list[int], target_player: str = "auto",
+    target_box: dict | None = None,
+) -> str:
+    """Tells the model how the interleaved frames are grouped + which player
+    to focus on. Pass target_box for doubles/multi-player frames so Gemini
+    knows the exact spatial region of the target player and ignores others."""
+    where = _box_focus_hint(target_box, target_player)
     layout = ", ".join(f"shot {i+1} = {n} frames" for i, n in enumerate(frames_per_shot))
     total = sum(frames_per_shot)
     return (

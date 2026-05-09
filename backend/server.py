@@ -2372,6 +2372,10 @@ class ClassifyShotsRequest(BaseModel):
     backend: str = "auto"   # auto | gemini | anthropic | openai | local
     # Each shot is a list of JPEG-base64 keyframes (data:image/... or raw b64)
     shots: list[list[str]]
+    # Doubles/multi-player context: when frames show multiple players,
+    # tell Gemini explicitly where in the frame to look (normalized box).
+    target_box: dict | None = None   # {x, y, width, height} 0-1
+    is_multi_player: bool = False
 
 
 @api_router.post("/classify-shots-vlm")
@@ -2406,7 +2410,14 @@ async def classify_shots_vlm(req: ClassifyShotsRequest, authorization: str = Hea
 
     def _run() -> list[dict]:
         clf = VLMShotClassifier(backend=req.backend, sport=req.sport, use_cache=False)
-        return clf.predict_batch_from_keyframes(keyframes_per_shot, target_player=req.target_player)
+        return clf.predict_batch_from_keyframes(
+            keyframes_per_shot,
+            target_player=req.target_player,
+            # When req.target_box is set (multi-player video), the prompt
+            # tells Gemini to focus only on that spatial region and ignore
+            # other players in the frame.
+            target_box=req.target_box,
+        )
 
     loop = asyncio.get_event_loop()
     try:

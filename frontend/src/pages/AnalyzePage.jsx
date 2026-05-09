@@ -661,10 +661,19 @@ export default function AnalyzePage() {
         return;
       }
 
+      // Detect doubles/multi-player video so the VLM call sends wider
+      // frames + a position hint instead of cropping tightly to a stale
+      // bbox (which fails when the player moves during a rally).
+      const maxPeopleSeen = scanResult?.frames
+        ? Math.max(0, ...scanResult.frames.map((f) => f.people?.length || 0))
+        : 1;
+      const isMultiPlayer = maxPeopleSeen >= 2;
+
       const clientResult = await analyzeVideo(file, sportToAnalyze, {
         mode: analysisMode,
         targetPlayer,
         customCropBox,
+        isMultiPlayer,
         // Delegate shot classification to Gemini (server-side). Browser still
         // does pose extraction + metrics; we just upgrade shot_type +
         // reasoning + speed via the lightweight VLM endpoint.
