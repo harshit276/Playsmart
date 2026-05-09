@@ -531,7 +531,7 @@ function _seekToShot(timestamp) {
   if (v) { try { v.currentTime = Math.max(0, timestamp); v.play?.(); } catch {} }
 }
 
-function _IndividualShotCard({ shot, label }) {
+function IndividualShotCard({ shot, label }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
   const ts = typeof shot.timestamp === "number" ? shot.timestamp : null;
@@ -587,7 +587,7 @@ function _IndividualShotCard({ shot, label }) {
   );
 }
 
-function _ShotGroupCard({ groupKey, shots: groupShots }) {
+function ShotGroupCard({ groupKey, shots: groupShots }) {
   const [expanded, setExpanded] = useState(false);
   const sample = groupShots[0];
   const name = sample.name?.replace(/_/g, " ") || groupKey;
@@ -668,7 +668,7 @@ function _ShotGroupCard({ groupKey, shots: groupShots }) {
       {expanded && (
         <div className="px-3 pb-3 space-y-2 border-t border-zinc-800/50">
           {groupShots.map((s, i) => (
-            <_IndividualShotCard
+            <IndividualShotCard
               key={i} shot={s}
               label={`Shot at ${typeof s.timestamp === "number" ? s.timestamp.toFixed(1) + "s" : `#${i + 1}`}`}
             />
@@ -707,10 +707,10 @@ function PerShotCoachSection({ perShot }) {
       <div className="space-y-2">
         {shouldGroup
           ? groupedEntries.map(([key, group]) => (
-              <_ShotGroupCard key={key} groupKey={key} shots={group} />
+              <ShotGroupCard key={key} groupKey={key} shots={group} />
             ))
           : usable.map((s, i) => (
-              <_IndividualShotCard
+              <IndividualShotCard
                 key={i} shot={s}
                 label={`Shot ${i + 1} · ${s.name?.replace(/_/g, " ") || "Unknown"}`}
               />
