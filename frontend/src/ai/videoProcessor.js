@@ -2180,6 +2180,15 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
           { framesPerShot: 3, maxDim: 720, jpegQuality: 0.7,
             isMultiPlayer, expandFactor: 1.6 },
         );
+        // Per-shot thumbnail (~10-20 KB, smaller than the VLM frames). Lets
+        // the result UI show "this is the moment" next to each shot card so
+        // the user can visually verify who hit which shot in doubles videos.
+        // In-memory only — not sent to backend, not persisted in Mongo.
+        const thumbnails = keyframes.map((shotFrames) => {
+          if (!shotFrames || shotFrames.length === 0) return null;
+          // Use the middle frame (peak); downsample by re-encoding via canvas
+          return shotFrames[Math.floor(shotFrames.length / 2)] || null;
+        });
         // Keyframes used in-flight only — sent to the VLM for classification
         // and then dropped. Not persisted on the result (no video/image storage).
         const vlmShots = await options.vlmClassify({
@@ -2214,6 +2223,10 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
               detectedShots[i].speed = v.estimated_speed_kmh;
               detectedShots[i].speedSource = v.speed_source || "vlm_power_map";
             }
+            // Thumbnail of the shot moment (in-memory only, never sent to
+            // backend). Lets the result UI show "this is the moment" so the
+            // user can visually verify which player Gemini classified.
+            if (thumbnails[i]) detectedShots[i].thumbnail = thumbnails[i];
           }
         }
       } catch (vlmErr) {
@@ -2308,6 +2321,10 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         powerLevel: s.powerLevel || null,
         speedSource: s.speedSource || null,
         vlmMeta: s.vlmMeta || null,
+        // Per-shot thumbnail (~10-15 KB) for visual verification in the UI.
+        // Kept on the in-memory result; only sent to backend if AnalyzePage
+        // chooses to (defaults to NOT persisting — see clientResult mapping).
+        thumbnail: s.thumbnail || null,
       })),
 
       // Shot distribution (NEW)

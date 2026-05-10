@@ -745,7 +745,11 @@ export default function AnalyzePage() {
             // so the backend can use it for VLM coaching + return it for UI render.
             // The reasoning + form_feedback text is the metadata the AI Coach
             // uses later for cross-session comparison — no images stored.
-            shots: clientResult.shots || [],
+            // Strip thumbnails (used for in-memory visual verification only).
+            shots: (clientResult.shots || []).map((s) => {
+              const { thumbnail, ...rest } = s;
+              return rest;
+            }),
           }, { timeout: 30000 });
 
           clearInterval(interval);
@@ -760,6 +764,15 @@ export default function AnalyzePage() {
             const eqCount = Array.isArray(vc.equipment_recommendations) ? vc.equipment_recommendations.length : 0;
             console.info(`[vlm-coach] drills=${drillCount} equipment=${eqCount} keys=${Object.keys(vc).join(",")}`);
             if (vc._error) console.warn("[vlm-coach] backend error:", vc._error);
+            // Merge in-memory thumbnails back onto each shot for the UI
+            // (backend strips them per the no-image-storage rule).
+            if (Array.isArray(data.shots) && Array.isArray(clientResult.shots)) {
+              for (let i = 0; i < data.shots.length && i < clientResult.shots.length; i++) {
+                if (clientResult.shots[i]?.thumbnail) {
+                  data.shots[i].thumbnail = clientResult.shots[i].thumbnail;
+                }
+              }
+            }
             setResult(data);
             setViewingHistorical(false);
             setActiveTab("results");

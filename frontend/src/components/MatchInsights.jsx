@@ -163,6 +163,9 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
           speedSource: shot.speedSource || null,
           powerLevel: shot.powerLevel || null,
           vlmMeta: shot.vlmMeta || null,
+          // Thumbnail of the shot moment — visual proof of which player
+          // the AI Coach attributed this shot to (esp. doubles videos).
+          thumbnail: shot.thumbnail || null,
           timestamp: shot.timestamp,
         });
 
@@ -543,6 +546,17 @@ function IndividualShotCard({ shot, label }) {
       onClick={onSeek || undefined}
       title={onSeek ? `Jump to ${ts.toFixed(1)}s in the video` : undefined}
     >
+      {/* Thumbnail — visual confirmation of who/what the AI Coach analyzed. */}
+      {shot.thumbnail && (
+        <div className="mb-2 -mx-3 -mt-3 rounded-t-lg overflow-hidden bg-black border-b border-zinc-800">
+          <img
+            src={shot.thumbnail}
+            alt={`Frame at ${ts != null ? ts.toFixed(1) + 's' : 'shot moment'}`}
+            className="w-full h-32 object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
         <p className="text-sm font-semibold text-white">{label}</p>
         <div className="flex items-center gap-1.5">
@@ -619,8 +633,31 @@ function ShotGroupCard({ groupKey, shots: groupShots }) {
     .filter(Boolean)
     .sort((a, b) => b.length - a.length)[0] || "";
 
+  // Strip of thumbnails — visual proof of the shots in this group. Click any
+  // thumbnail to seek to that moment.
+  const thumbedShots = groupShots.filter((s) => s.thumbnail).slice(0, 6);
+
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg overflow-hidden">
+      {thumbedShots.length > 0 && (
+        <div className="flex gap-1 p-2 bg-black/40 overflow-x-auto">
+          {thumbedShots.map((s, i) => {
+            const ts = typeof s.timestamp === "number" ? s.timestamp : null;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={ts != null ? (e) => { e.stopPropagation(); _seekToShot(ts); } : undefined}
+                className="shrink-0 rounded overflow-hidden border border-zinc-800 hover:border-lime-400/40 transition-colors"
+                title={ts != null ? `Jump to ${ts.toFixed(1)}s` : ""}
+              >
+                <img src={s.thumbnail} alt={`${name} ${i + 1}`}
+                     className="h-16 w-24 object-cover" loading="lazy" />
+              </button>
+            );
+          })}
+        </div>
+      )}
       <div className="p-3">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
           <p className="text-sm font-semibold text-white capitalize">
