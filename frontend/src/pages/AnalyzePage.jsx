@@ -563,7 +563,8 @@ export default function AnalyzePage() {
       const mod = await import("@/ai/videoProcessor");
       const keyframes = await mod.extractDetectKeyframes(file, { count: 2 });
       if (keyframes.length > 0) {
-        const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 30000 });
+        // 45s timeout — Vercel cold-start + first Gemini call can take 25-35s.
+        const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 45000 });
         if (data?.success && data.sport) {
           detected = { sport: data.sport, confidence: data.confidence ?? 0 };
           setDetectedSport(data.sport);
@@ -1787,9 +1788,44 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
+        {/* ── Honest "we couldn't read this video" banner: when AI Coach
+            failed for ALL shots (every shot is unknown OR confidence near 0),
+            don't show the misleading Pro/Attacking/etc heuristic badges.
+            Surface the AI Coach's reasoning if available so the user knows
+            why (e.g. "looks like table tennis, not badminton"). */}
+        {result.multi_shot && result.shots?.length > 1 && (() => {
+          const shots = result.shots || [];
+          const confident = shots.filter((s) => s.type && s.type !== "unknown" && (s.confidence ?? 0) >= 0.4);
+          const allFailed = shots.length > 0 && confident.length === 0;
+          if (!allFailed) return null;
+          // Pull the most informative reasoning from the failed shots
+          const sampleReason = shots.map((s) => s.reasoning).filter(Boolean)
+            .sort((a, b) => b.length - a.length)[0] || null;
+          return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              className="border-2 border-amber-400/40 bg-amber-400/5 rounded-2xl p-4">
+              <div className="flex items-start gap-2">
+                <span className="text-amber-300 text-lg leading-none">⚠</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-200 mb-1">AI Coach couldn't read this video</p>
+                  {sampleReason && (
+                    <p className="text-xs text-zinc-300 mb-2"><span className="text-amber-300/80">Coach: </span>{sampleReason}</p>
+                  )}
+                  <p className="text-[11px] text-zinc-500">
+                    Tip: pick a clearer side-angle clip with the player fully in frame.
+                    If the sport was wrong, re-upload — we'll auto-detect it.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+
         {/* ── Match summary — moved here from below for at-a-glance read.
-            Skill level + style + speed badges + shot distribution upfront. */}
-        {result.multi_shot && result.shots?.length > 1 && (
+            Skill level + style + speed badges + shot distribution upfront.
+            ONLY shown when at least one shot was confidently classified. */}
+        {result.multi_shot && result.shots?.length > 1
+          && (result.shots || []).some((s) => s.type && s.type !== "unknown" && (s.confidence ?? 0) >= 0.4) && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
