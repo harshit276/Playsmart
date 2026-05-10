@@ -546,19 +546,18 @@ function IndividualShotCard({ shot, label }) {
       onClick={onSeek || undefined}
       title={onSeek ? `Jump to ${ts.toFixed(1)}s in the video` : undefined}
     >
-      {/* Thumbnail — visual confirmation of who/what the AI Coach analyzed. */}
-      {shot.thumbnail && (
-        <div className="mb-2 -mx-3 -mt-3 rounded-t-lg overflow-hidden bg-black border-b border-zinc-800">
-          <img
-            src={shot.thumbnail}
-            alt={`Frame at ${ts != null ? ts.toFixed(1) + 's' : 'shot moment'}`}
-            className="w-full h-32 object-cover"
-            loading="lazy"
-          />
-        </div>
-      )}
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-        <p className="text-sm font-semibold text-white">{label}</p>
+        <div className="flex items-center gap-2 min-w-0">
+          {shot.thumbnail && (
+            <img
+              src={shot.thumbnail}
+              alt={`Player at ${ts != null ? ts.toFixed(1) + 's' : 'shot moment'}`}
+              className="shrink-0 rounded-md w-12 h-12 object-cover bg-black border border-zinc-800"
+              loading="lazy"
+            />
+          )}
+          <p className="text-sm font-semibold text-white truncate">{label}</p>
+        </div>
         <div className="flex items-center gap-1.5">
           {conf != null && (
             <span className={`text-[10px] px-1.5 py-0.5 rounded ${

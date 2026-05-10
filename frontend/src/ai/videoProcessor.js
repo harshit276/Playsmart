@@ -1755,6 +1755,63 @@ function buildPlayerProfile(detectedShots, dominantHand) {
  * @returns {Promise<object>} Analysis results matching the server's response format
  */
 /**
+ * Extract small cropped snippets of the SELECTED PLAYER at each shot moment,
+ * for use as visual proof in shot result cards. Crops to the user's
+ * `customCropBox` (expanded slightly for movement headroom). When no box
+ * is provided (auto-detect), returns null per shot so the UI omits the
+ * snippet rather than showing arbitrary regions.
+ *
+ * Returns: Array<base64-jpeg-string|null>  (one per peakTime)
+ */
+export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox, options = {}) {
+  if (!peakTimes || peakTimes.length === 0 || !customCropBox) return peakTimes.map(() => null);
+  const { maxDim = 180, jpegQuality = 0.7, expandFactor = 1.5 } = options;
+
+  const video = document.createElement("video");
+  const url = URL.createObjectURL(videoFile);
+  video.src = url; video.muted = true; video.playsInline = true; video.crossOrigin = "anonymous";
+  video.load();
+  await _waitForEvent(video, "loadedmetadata", 6000);
+  const duration = video.duration;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!duration || !vw || !vh) { URL.revokeObjectURL(url); return peakTimes.map(() => null); }
+
+  // Expand the crop box ~1.5x so the player stays in the snippet even when
+  // they shift position during the rally.
+  const cx = customCropBox.x + customCropBox.width / 2;
+  const cy = customCropBox.y + customCropBox.height / 2;
+  const ew = Math.min(1, customCropBox.width * expandFactor);
+  const eh = Math.min(1, customCropBox.height * expandFactor);
+  const ex = Math.max(0, Math.min(1 - ew, cx - ew / 2));
+  const ey = Math.max(0, Math.min(1 - eh, cy - eh / 2));
+  const sx = Math.round(ex * vw), sy = Math.round(ey * vh);
+  const sw = Math.max(1, Math.round(ew * vw)), sh = Math.max(1, Math.round(eh * vh));
+
+  // Output sized to maxDim on the longest side
+  const scale = Math.min(1, maxDim / Math.max(sw, sh));
+  const outW = Math.max(1, Math.round(sw * scale));
+  const outH = Math.max(1, Math.round(sh * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW; canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+
+  const out = [];
+  for (const t of peakTimes) {
+    try {
+      await _seekTo(video, Math.max(0.01, Math.min(duration - 0.01, t)), 3000);
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+      out.push(canvas.toDataURL("image/jpeg", jpegQuality));
+    } catch {
+      out.push(null);
+    }
+  }
+  URL.revokeObjectURL(url);
+  return out;
+}
+
+
+/**
  * Extract 1-2 keyframes from the middle of the video for sport auto-detect.
  * Returns Array<base64-jpeg>.
  */
@@ -2180,15 +2237,15 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
           { framesPerShot: 3, maxDim: 720, jpegQuality: 0.7,
             isMultiPlayer, expandFactor: 1.6 },
         );
-        // Per-shot thumbnail (~10-20 KB, smaller than the VLM frames). Lets
-        // the result UI show "this is the moment" next to each shot card so
-        // the user can visually verify who hit which shot in doubles videos.
-        // In-memory only — not sent to backend, not persisted in Mongo.
-        const thumbnails = keyframes.map((shotFrames) => {
-          if (!shotFrames || shotFrames.length === 0) return null;
-          // Use the middle frame (peak); downsample by re-encoding via canvas
-          return shotFrames[Math.floor(shotFrames.length / 2)] || null;
-        });
+        // Per-shot SNIPPET — small cropped image of the selected player at
+        // the shot moment (~5-15 KB each, ~150px max dim). When customCropBox
+        // is set we crop to that region so the user sees the player they
+        // picked rather than the whole court. Falls back to null when no
+        // box was selected — UI just omits the snippet in that case.
+        const thumbnails = customCropBox
+          ? await extractPlayerSnippets(videoFile, peakTimes, customCropBox,
+              { maxDim: 180, jpegQuality: 0.7, expandFactor: 1.5 })
+          : keyframes.map(() => null);
         // Keyframes used in-flight only — sent to the VLM for classification
         // and then dropped. Not persisted on the result (no video/image storage).
         const vlmShots = await options.vlmClassify({

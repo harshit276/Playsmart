@@ -3262,6 +3262,28 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
     player_preview = body.get("player_preview", None)
     weaknesses_raw = body.get("weaknesses", [])
 
+    # Prefer the AI Coach's skill judgement over the on-device heuristic.
+    # The browser's skill_level comes from a heuristic on score+speed which
+    # tends to over-call players "Pro" on a single good shot. Gemini's
+    # per-shot estimated_skill is grounded in actual technique observation.
+    vlm_skills_seen = []
+    for s in (body.get("shots") or []):
+        v_skill = s.get("vlmSkill") or s.get("vlm_skill") or s.get("estimated_skill")
+        if v_skill and v_skill != "Unknown":
+            vlm_skills_seen.append(v_skill)
+    if vlm_skills_seen:
+        from collections import Counter as _C
+        # Most-common AI Coach verdict across confident shots; cap upward
+        # mobility (don't promote past the heuristic-derived level by >1 tier)
+        ai_skill = _C(vlm_skills_seen).most_common(1)[0][0]
+        order = ["Beginner", "Intermediate", "Advanced", "Pro"]
+        if ai_skill in order:
+            try:
+                # Use AI verdict directly — it's the more honest signal.
+                skill_level = ai_skill
+            except Exception:
+                pass
+
     # Prefer AI-coach-observed weaknesses (from per-shot VLM form_feedback)
     # over the generic on-device "form/balance/consistency" buckets — they're
     # specific, evidence-grounded, and read like real coach notes.
