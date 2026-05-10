@@ -2038,7 +2038,12 @@ def _default_training_payload(active_sport: str, skill_level: str = "Beginner") 
 
 
 @api_router.get("/recommendations/training/{user_id}")
-async def get_training_recommendation(user_id: str, sport: Optional[str] = None, authorization: str = Header(None)):
+async def get_training_recommendation(
+    user_id: str,
+    sport: Optional[str] = None,
+    skill_level: Optional[str] = None,  # explicit override, e.g. ?skill_level=Advanced
+    authorization: str = Header(None),
+):
     active_sport = sport or "badminton"
     if user_id == "guest":
         return _default_training_payload(active_sport)
@@ -2056,7 +2061,9 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
         # drills from research data using beginner-level default
         return _default_training_payload(active_sport)
 
-    skill = profile.get("skill_level", "Beginner")
+    # Skill level: explicit query param > profile default. Lets the user
+    # filter the training page by level without changing their profile.
+    skill = skill_level or profile.get("skill_level", "Beginner")
 
     # Use explicit sport param first, then latest analysis sport, then profile active_sport
     if sport:
@@ -2181,12 +2188,59 @@ async def get_training_recommendation(user_id: str, sport: Optional[str] = None,
     except Exception as e:
         logger.warning(f"Training personalization error (non-fatal): {e}")
 
+    # ─── AI Coach personalized drills for the training page ───
+    # Generate drills tailored to the user's most recent analysis of THIS
+    # sport, so the training page surfaces "based on your last X session"
+    # recommendations alongside the static research-data plan.
+    ai_coach = {}
+    if os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"):
+        try:
+            recent = await asyncio.wait_for(db.video_analyses.find_one(
+                {"user_id": user_id, "sport": active_sport},
+                {"_id": 0}, sort=[("date", -1)],
+            ), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            recent = None
+        if recent:
+            try:
+                from ai_pipeline.vlm import personalized_coaching
+                from research_loader import get_all_equipment_categories
+                equipment_catalog: list = []
+                try:
+                    cats = get_all_equipment_categories(active_sport) or {}
+                    for items in cats.values():
+                        if isinstance(items, list):
+                            equipment_catalog.extend(items)
+                except Exception:
+                    equipment_catalog = []
+                ai_for_vlm = {
+                    "sport": active_sport, "skill_level": skill,
+                    "shot_analysis": recent.get("shot_analysis"),
+                    "performance_scores": recent.get("performance_scores"),
+                    "shots": recent.get("shots") or [],
+                    "coach_feedback": recent.get("coach_feedback"),
+                }
+                loop = asyncio.get_event_loop()
+                ai_coach = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda: personalized_coaching(
+                        ai_for_vlm, equipment_catalog=equipment_catalog or None,
+                    )),
+                    timeout=25.0,
+                )
+            except (Exception, asyncio.TimeoutError) as exc:
+                logger.warning(f"Training-page VLM coach skipped: {exc.__class__.__name__}: {exc}")
+                ai_coach = {"_error": str(exc)[:200]}
+
     return {
         "plan": plan,
         "drills": drills_map,
         "videos": videos_map,
         "profile_level": skill,
         "sport": active_sport,
+        # AI Coach personalized recommendations grounded in the user's most
+        # recent analysis for this sport. Empty dict if no analysis exists
+        # for this sport yet, or if VLM is unavailable.
+        "ai_coach": ai_coach,
     }
 
 

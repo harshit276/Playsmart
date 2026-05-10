@@ -120,7 +120,12 @@ export default function TrainingPage() {
   const [focusFilter, setFocusFilter] = useState("All");
   const [expandedDrill, setExpandedDrill] = useState(null);
 
-  const sport = profile?.active_sport || "badminton";
+  // Sport + skill-level filters are user-controlled (default to profile values
+  // but can be overridden to browse drills for any sport at any level).
+  const [sportFilter, setSportFilter] = useState(null);   // null = use profile
+  const [levelFilter, setLevelFilter] = useState(null);   // null = use profile
+  const sport = sportFilter || profile?.active_sport || "badminton";
+  const profileLevel = profile?.skill_level || "Beginner";
 
   /* ─── Load data ─── */
   const [fetchError, setFetchError] = useState(false);
@@ -129,7 +134,13 @@ export default function TrainingPage() {
     const userId = user?.id || "guest";
     setFetchError(false);
 
-    const planUrl = `/recommendations/training/${userId}`;
+    // Build URL with sport + level filters. Backend defaults to profile when
+    // either is missing, so this stays backward-compatible.
+    const params = new URLSearchParams();
+    if (sportFilter) params.set("sport", sportFilter);
+    if (levelFilter) params.set("skill_level", levelFilter);
+    const qs = params.toString();
+    const planUrl = `/recommendations/training/${userId}${qs ? `?${qs}` : ""}`;
     const progressUrl = `/progress/${userId}`;
 
     // Hydrate from cache instantly — subsequent visits skip the spinner
@@ -157,7 +168,7 @@ export default function TrainingPage() {
     }
     if (!anySuccess) setFetchError(true);
     setLoading(false);
-  }, [user?.id]);
+  }, [user?.id, sportFilter, levelFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -549,6 +560,104 @@ export default function TrainingPage() {
             </div>
           </motion.div>
         )}
+
+        {/* ═══ SPORT + LEVEL filters (always visible) ═══ */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ delay: 0.08 }} className="mb-4"
+        >
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Sport</span>
+            {[
+              { k: "badminton", l: "🏸 Badminton" },
+              { k: "tennis", l: "🎾 Tennis" },
+              { k: "table_tennis", l: "🏓 Table Tennis" },
+              { k: "pickleball", l: "⚡ Pickleball" },
+              { k: "cricket", l: "🏏 Cricket" },
+            ].map((s) => (
+              <button
+                key={s.k}
+                onClick={() => setSportFilter(s.k)}
+                className={`rounded-full text-xs px-3 py-1 transition-all ${
+                  sport === s.k
+                    ? "bg-lime-400 text-black font-semibold"
+                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
+                }`}
+              >{s.l}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Skill level</span>
+            {["Beginner", "Intermediate", "Advanced", "Pro"].map((lv) => {
+              const active = (levelFilter || profileLevel) === lv;
+              return (
+                <button
+                  key={lv}
+                  onClick={() => setLevelFilter(lv)}
+                  className={`rounded-full text-xs px-3 py-1 transition-all ${
+                    active
+                      ? "bg-sky-400 text-black font-semibold"
+                      : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
+                  }`}
+                >{lv}</button>
+              );
+            })}
+            {(sportFilter || levelFilter) && (
+              <button
+                onClick={() => { setSportFilter(null); setLevelFilter(null); }}
+                className="text-xs text-zinc-600 hover:text-lime-400 flex items-center gap-0.5 ml-1"
+              ><X className="w-3 h-3" /> Reset to my profile</button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* ═══ AI Coach personalized drills (based on most recent analysis for this sport) ═══ */}
+        {(() => {
+          const ai = planData?.ai_coach || {};
+          const drills = Array.isArray(ai.priority_drills) ? ai.priority_drills : [];
+          const focus = Array.isArray(ai.key_focus_areas) ? ai.key_focus_areas : [];
+          if (drills.length === 0) return null;
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-5 border border-lime-400/30 bg-gradient-to-br from-lime-400/5 to-zinc-900/80 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-[10px] uppercase tracking-wide text-lime-300 font-bold bg-lime-400/15 px-2 py-1 rounded">AI Coach</span>
+                <p className="text-xs text-zinc-400">
+                  Based on your most recent {sport.replace(/_/g, " ")} analysis
+                </p>
+              </div>
+              {ai.motivational_message && (
+                <p className="text-zinc-200 text-sm italic mb-3">"{ai.motivational_message}"</p>
+              )}
+              {focus.length > 0 && (
+                <p className="text-xs text-zinc-400 mb-3">
+                  Focus: {focus.map((f, i) => (
+                    <span key={i} className="text-lime-300/90 mr-2">{f}{i < focus.length - 1 ? " ·" : ""}</span>
+                  ))}
+                </p>
+              )}
+              <div className="space-y-2">
+                {drills.slice(0, 6).map((d, i) => (
+                  <div key={i} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                      <p className="text-sm font-semibold text-white">{d.name}</p>
+                      {d.duration_min && (
+                        <span className="text-[10px] text-zinc-500">{d.duration_min} min</span>
+                      )}
+                    </div>
+                    {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
+                    {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
+                    {Array.isArray(d.equipment_needed) && d.equipment_needed.length > 0 && (
+                      <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* ═══ FILTERS (compact) ═══ */}
         {(allFocusAreas.length > 2 || allDifficulties.length > 2) && (
