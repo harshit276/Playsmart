@@ -162,6 +162,9 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
           speed: shot.speed ?? null,
           speedSource: shot.speedSource || null,
           powerLevel: shot.powerLevel || null,
+          // AI Coach's per-shot skill estimate — used by the Level tile.
+          // (Was missing earlier — caused Level to render "—" even with VLM data.)
+          vlmSkill: shot.vlmSkill || null,
           vlmMeta: shot.vlmMeta || null,
           // Thumbnail of the shot moment — visual proof of which player
           // the AI Coach attributed this shot to (esp. doubles videos).
@@ -361,8 +364,17 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
                   </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Level</p>
-                    <p className={`text-xl font-bold mt-0.5 ${levelTone}`}>{topLevel || "—"}</p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">AI Coach verdict</p>
+                    {topLevel ? (
+                      <>
+                        <p className={`text-xl font-bold mt-0.5 ${levelTone}`}>{topLevel}</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">AI Coach verdict</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xl font-bold text-zinc-500 mt-0.5">—</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">AI Coach unavailable</p>
+                      </>
+                    )}
                   </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Speed</p>
@@ -371,12 +383,19 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
                   </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Consistency</p>
-                    <p className="text-xl font-bold text-white mt-0.5">
-                      {overall && perShot.filter((s) => s.pose).length >= 3
-                        ? Math.round(overall.consistency * 100) + "%"
-                        : "—"}
-                    </p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">Motion repeatability</p>
+                    {overall && perShot.filter((s) => s.pose).length >= 3 ? (
+                      <>
+                        <p className="text-xl font-bold text-white mt-0.5">
+                          {Math.round(overall.consistency * 100)}%
+                        </p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">Motion repeatability</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xl font-bold text-zinc-500 mt-0.5">—</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">Need 3+ shots</p>
+                      </>
+                    )}
                   </div>
                 </div>
               );
