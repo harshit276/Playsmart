@@ -561,7 +561,10 @@ export default function AnalyzePage() {
     setLoadingText("Detecting sport from video...");
     try {
       const mod = await import("@/ai/videoProcessor");
-      const keyframes = await mod.extractDetectKeyframes(file, { count: 2 });
+      // 1 mid-video keyframe is plenty for sport detection — halves the
+      // payload + Gemini processing vs 2 frames, leaves more headroom for
+      // Vercel cold-start latency.
+      const keyframes = await mod.extractDetectKeyframes(file, { count: 1 });
       if (keyframes.length > 0) {
         // 45s timeout — Vercel cold-start + first Gemini call can take 25-35s.
         const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 45000 });
