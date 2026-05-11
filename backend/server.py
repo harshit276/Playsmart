@@ -2070,11 +2070,12 @@ async def get_training_recommendation(
     authorization: str = Header(None),
 ):
     active_sport = sport or "badminton"
+    default_level = skill_level or "Beginner"
     if user_id == "guest":
-        return _default_training_payload(active_sport)
+        return _default_training_payload(active_sport, default_level)
     user = await get_current_user_or_none(authorization)
     if not user:
-        return _default_training_payload(active_sport)
+        return _default_training_payload(active_sport, default_level)
 
     try:
         profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
@@ -2082,9 +2083,18 @@ async def get_training_recommendation(
         logger.warning(f"training: profile fetch failed for {user_id[:8]}: {e}")
         profile = None
     if not profile:
-        # Profile fetch failed (DB down or user never assessed) — serve real
-        # drills from research data using beginner-level default
-        return _default_training_payload(active_sport)
+        # No profile yet — but the user may have analyses we can use to
+        # personalize. Try fetching their most recent analysis for the
+        # active sport and use its skill_level + weaknesses.
+        try:
+            recent = await asyncio.wait_for(db.video_analyses.find_one(
+                {"user_id": user_id, "sport": active_sport}, {"_id": 0},
+                sort=[("date", -1)],
+            ), timeout=5.0)
+        except (Exception, asyncio.TimeoutError):
+            recent = None
+        derived_level = skill_level or (recent or {}).get("skill_level") or "Beginner"
+        return _default_training_payload(active_sport, derived_level)
 
     # Skill level: explicit query param > profile default. Lets the user
     # filter the training page by level without changing their profile.

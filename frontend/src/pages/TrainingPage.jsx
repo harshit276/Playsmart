@@ -303,17 +303,96 @@ export default function TrainingPage() {
             <div className="bg-lime-400/5 border border-lime-400/20 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-lime-400 shrink-0" />
-                <p className="text-sm text-zinc-300">Sign in to get a personalized weekly plan</p>
+                <p className="text-sm text-zinc-300">Sign in to save your progress and get AI-personalized drills</p>
               </div>
               <a href="/auth" className="text-sm font-bold text-lime-400 hover:text-lime-300 shrink-0">Sign In &rarr;</a>
             </div>
           )}
-          {user && (
+          {user && !planData?.ai_coach?.priority_drills?.length && (
             <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4">
-              <p className="text-sm text-zinc-400">Complete your profile assessment to get a personalized weekly training plan.</p>
+              <p className="text-sm text-zinc-400">
+                Upload a video to analyze your shots — your training plan will adapt to what the AI Coach sees.
+                <a href="/analyze" className="text-lime-400 hover:text-lime-300 font-semibold ml-2">Analyze a video &rarr;</a>
+              </p>
             </div>
           )}
         </motion.div>
+
+        {/* Sport + level filters — same as the main view so guests / users
+            without a plan can still browse drills for any sport. */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }} className="mb-4">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Sport</span>
+            {[
+              { k: "badminton", l: "🏸 Badminton" },
+              { k: "tennis", l: "🎾 Tennis" },
+              { k: "table_tennis", l: "🏓 Table Tennis" },
+              { k: "pickleball", l: "⚡ Pickleball" },
+              { k: "cricket", l: "🏏 Cricket" },
+            ].map((s) => (
+              <button
+                key={s.k}
+                onClick={() => setSportFilter(s.k)}
+                className={`rounded-full text-xs px-3 py-1 transition-all ${
+                  sport === s.k
+                    ? "bg-lime-400 text-black font-semibold"
+                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
+                }`}
+              >{s.l}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Skill level</span>
+            {["Beginner", "Intermediate", "Advanced", "Pro"].map((lv) => {
+              const active = (levelFilter || profileLevel) === lv;
+              return (
+                <button
+                  key={lv}
+                  onClick={() => setLevelFilter(lv)}
+                  className={`rounded-full text-xs px-3 py-1 transition-all ${
+                    active
+                      ? "bg-sky-400 text-black font-semibold"
+                      : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
+                  }`}
+                >{lv}</button>
+              );
+            })}
+          </div>
+        </motion.div>
+
+        {/* AI Coach card (when an analysis exists for this sport) */}
+        {(() => {
+          const ai = planData?.ai_coach || {};
+          const drills = Array.isArray(ai.priority_drills) ? ai.priority_drills : [];
+          if (drills.length === 0) return null;
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className="mb-5 border border-lime-400/30 bg-gradient-to-br from-lime-400/5 to-zinc-900/80 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-[10px] uppercase tracking-wide text-lime-300 font-bold bg-lime-400/15 px-2 py-1 rounded">AI Coach</span>
+                <p className="text-xs text-zinc-400">Based on your most recent {sport.replace(/_/g, " ")} analysis</p>
+              </div>
+              {ai.motivational_message && (
+                <p className="text-zinc-200 text-sm italic mb-3">"{ai.motivational_message}"</p>
+              )}
+              <div className="space-y-2">
+                {drills.slice(0, 6).map((d, i) => (
+                  <div key={i} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                      <p className="text-sm font-semibold text-white">{d.name}</p>
+                      {d.duration_min && (
+                        <span className="text-[10px] text-zinc-500">{d.duration_min} min</span>
+                      )}
+                    </div>
+                    {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
+                    {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* Skill Areas */}
         {skillAreas.length > 0 && (
@@ -408,11 +487,16 @@ export default function TrainingPage() {
         )}
 
         {/* Empty state if nothing at all */}
-        {trainingVideos.length === 0 && skillAreas.length === 0 && (
+        {trainingVideos.length === 0 && skillAreas.length === 0 && !planData?.ai_coach?.priority_drills?.length && (
           <div className="text-center py-16">
             <Dumbbell className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-            <p className="text-zinc-400 text-lg font-medium mb-1">No training content yet</p>
-            <p className="text-zinc-600 text-sm">Training content for {sport.replace("_", " ")} is coming soon.</p>
+            <p className="text-zinc-400 text-lg font-medium mb-1">No content for {sport.replace("_", " ")} at this level yet</p>
+            <p className="text-zinc-600 text-sm mb-4">
+              Try a different sport or level above, or analyze a video to unlock personalized drills.
+            </p>
+            <a href="/analyze" className="inline-block px-4 py-2 rounded-full bg-lime-400 text-black font-bold text-sm hover:bg-lime-500">
+              Analyze a video &rarr;
+            </a>
           </div>
         )}
       </div>
