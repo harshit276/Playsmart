@@ -140,6 +140,7 @@ SUPPORTED_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball", "cricke
 
 def generic_drill_set(
     sport: str, skill_level: str, focus: str | None = None,
+    video_pool: list[dict] | None = None,
     backend: str = "auto",
 ) -> dict:
     """Generate a sport+level-aware drill set when we don't have a recent
@@ -147,11 +148,42 @@ def generic_drill_set(
     and profile-less users get content that actually changes when they
     flip sport / level filters. Cached server-side by (sport, level).
 
+    video_pool: optional list of {id, title, channel, url, thumbnail} dicts
+        — when provided, the AI Coach picks the single best matching video
+        for each drill from this pool. Saves us from inventing video IDs
+        we don't actually have. Frontend uses the matched id for the
+        thumbnail URL.
+
     Returns: {drills: [{name, why, instructions, duration_min,
-                        equipment_needed, level}], _meta}.
+                        equipment_needed, level, video_id, video_url,
+                        thumbnail_url}], _meta}.
     """
     sport = (sport or "badminton").lower()
     level = (skill_level or "Beginner").title()
+
+    video_block = ""
+    pool_by_id: dict[str, dict] = {}
+    if video_pool:
+        slim = []
+        for v in video_pool[:40]:
+            vid = v.get("id") or v.get("video_id") or ""
+            if not vid:
+                continue
+            slim.append({
+                "id": vid,
+                "title": v.get("title", "")[:120],
+                "channel": v.get("channel", "")[:60],
+                "skill_areas": v.get("skill_areas", []),
+            })
+            pool_by_id[vid] = v
+        if slim:
+            video_block = (
+                "\n\nVIDEO POOL — for each drill, pick the SINGLE best matching "
+                "video_id from this list (or null if no video clearly fits). "
+                "Do NOT invent ids — only choose from the list:\n"
+                + json.dumps(slim, indent=2)
+            )
+
     sys_prompt = (
         f"You are an expert {sport} coach. List the 6 highest-impact drills "
         f"a {level}-level player should be doing right now. Each drill must "
@@ -169,10 +201,12 @@ def generic_drill_set(
         '      "instructions": "<2-3 sentence how-to>",\n'
         '      "duration_min": <int 5-30>,\n'
         '      "equipment_needed": ["<simple item>"],\n'
-        '      "level": "<beginner|intermediate|advanced|pro>"\n'
+        '      "level": "<beginner|intermediate|advanced|pro>",\n'
+        '      "video_id": "<id from video pool OR null if no clear match>"\n'
         '    }\n'
         '  ]\n'
         '}'
+        + video_block
     )
     user_msg = f"6 best drills for a {level} {sport} player."
 
@@ -187,6 +221,11 @@ def generic_drill_set(
     for d in (data.get("drills") or [])[:6]:
         if not isinstance(d, dict):
             continue
+        vid = d.get("video_id")
+        if vid and not isinstance(vid, str):
+            vid = None
+        # Validate the matched id actually exists in the pool we passed
+        video_meta = pool_by_id.get(vid or "") if vid else None
         drills.append({
             "name": str(d.get("name", ""))[:120],
             "why": str(d.get("why", ""))[:200],
@@ -194,6 +233,13 @@ def generic_drill_set(
             "duration_min": int(d.get("duration_min") or 15),
             "equipment_needed": [str(x)[:60] for x in (d.get("equipment_needed") or [])][:5],
             "level": str(d.get("level", level)).lower(),
+            "video_id": video_meta.get("id") if video_meta else None,
+            "video_url": (video_meta.get("url") if video_meta else None),
+            "thumbnail_url": (
+                video_meta.get("thumbnail") or video_meta.get("thumbnail_url")
+                if video_meta else None
+            ),
+            "video_title": video_meta.get("title") if video_meta else None,
         })
     return {"drills": drills, "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name}}
 

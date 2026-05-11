@@ -589,19 +589,22 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
 
   if (wristSpeeds.length < 3) return [];
 
-  // Percentile-based threshold (avg-based was too strict on active clips —
-  // an active video pushes avg up so 2× avg only catches the very biggest
-  // peaks, missing softer drops/nets). Use the 60th percentile of non-zero
-  // speeds: this adapts to each clip's motion profile and catches roughly
-  // the top 40% of motion frames as candidate peaks.
+  // Percentile-based threshold (avg-based was too strict on active clips).
+  // Use the 70th percentile of non-zero speeds to bias toward fewer-but-real
+  // shots over many-with-false-positives.
   const nonZero = wristSpeeds.filter((w) => w.speed > 0).sort((a, b) => a.speed - b.speed);
-  const pIdx = Math.floor(nonZero.length * 0.60);
+  const pIdx = Math.floor(nonZero.length * 0.70);
   const percentileThresh = nonZero[pIdx]?.speed || 0;
   const avgSpeed = avg(wristSpeeds.map((w) => w.speed));
-  // Combine: needs to clear EITHER 1.3× avg OR the 60th percentile,
-  // whichever is lower. Avg path catches obvious shots in idle videos;
-  // percentile path catches softer shots in active rallies.
-  const threshold = Math.min(avgSpeed * 1.3, percentileThresh) || 0;
+  // Absolute floor: a real swing in a normalized frame produces wrist speed
+  // well above 0.6 frame-fractions/sec. Setup wandering / idle micro-motion
+  // is usually <0.3. Anchoring the floor here prevents "stagnant" frames
+  // from being picked up as shots (the user's primary complaint).
+  const ABS_FLOOR = 0.6;
+  const threshold = Math.max(
+    ABS_FLOOR,
+    Math.min(avgSpeed * 1.5, percentileThresh) || 0,
+  );
 
   // Adaptive minimum gap between peaks based on video duration
   const duration = timestamps.length > 0 ? timestamps[timestamps.length - 1] - timestamps[0] : 0;
@@ -2232,9 +2235,14 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         // video, send full frames so Gemini can identify the right player by
         // position (rather than us blindly cropping to a stale bbox).
         const isMultiPlayer = !!options.isMultiPlayer;
+        // 5 frames with asymmetric offsets capture windup → contact →
+        // follow-through better than 3 symmetric frames. Gives the AI Coach
+        // more chances to see the actual swing even when the motion peak
+        // isn't perfectly aligned with the contact moment.
         const keyframes = await extractKeyframesPerShot(
           videoFile, peakTimes, customCropBox,
-          { framesPerShot: 3, maxDim: 720, jpegQuality: 0.7,
+          { framesPerShot: 5, maxDim: 720, jpegQuality: 0.65,
+            offsets: [-0.5, -0.2, 0, 0.2, 0.5],
             isMultiPlayer, expandFactor: 1.6 },
         );
         // Per-shot SNIPPET — small cropped image of the selected player at

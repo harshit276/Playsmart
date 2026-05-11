@@ -385,21 +385,38 @@ export default function TrainingPage() {
                 <p className="text-zinc-200 text-sm italic mb-3">"{ai.motivational_message}"</p>
               )}
               <div className="space-y-2">
-                {drills.slice(0, 6).map((d, i) => (
-                  <div key={i} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
-                      <p className="text-sm font-semibold text-white">{d.name}</p>
-                      {d.duration_min && (
-                        <span className="text-[10px] text-zinc-500">{d.duration_min} min</span>
-                      )}
+                {drills.slice(0, 6).map((d, i) => {
+                  const thumb = d.thumbnail_url || (d.video_id ? `https://img.youtube.com/vi/${d.video_id}/hqdefault.jpg` : null);
+                  const Card = (
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg overflow-hidden hover:border-lime-400/40 transition-colors">
+                      <div className="flex gap-3">
+                        {thumb && (
+                          <div className="shrink-0 w-32 bg-black overflow-hidden">
+                            <img src={thumb} alt={d.name}
+                                 className="w-full h-full object-cover" loading="lazy"
+                                 onError={(e) => { e.target.style.display = 'none'; }} />
+                          </div>
+                        )}
+                        <div className="flex-1 p-3 min-w-0">
+                          <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                            <p className="text-sm font-semibold text-white truncate">{d.name}</p>
+                            {d.duration_min && (
+                              <span className="text-[10px] text-zinc-500 shrink-0">{d.duration_min} min</span>
+                            )}
+                          </div>
+                          {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
+                          {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
+                          {Array.isArray(d.equipment_needed) && d.equipment_needed.length > 0 && (
+                            <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
-                    {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
-                    {Array.isArray(d.equipment_needed) && d.equipment_needed.length > 0 && (
-                      <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                  return d.video_url
+                    ? <a key={i} href={d.video_url} target="_blank" rel="noopener noreferrer" className="block">{Card}</a>
+                    : <div key={i}>{Card}</div>;
+                })}
               </div>
             </motion.div>
           );
@@ -734,21 +751,38 @@ export default function TrainingPage() {
                 </p>
               )}
               <div className="space-y-2">
-                {drills.slice(0, 6).map((d, i) => (
-                  <div key={i} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
-                      <p className="text-sm font-semibold text-white">{d.name}</p>
-                      {d.duration_min && (
-                        <span className="text-[10px] text-zinc-500">{d.duration_min} min</span>
-                      )}
+                {drills.slice(0, 6).map((d, i) => {
+                  const thumb = d.thumbnail_url || (d.video_id ? `https://img.youtube.com/vi/${d.video_id}/hqdefault.jpg` : null);
+                  const Card = (
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg overflow-hidden hover:border-lime-400/40 transition-colors">
+                      <div className="flex gap-3">
+                        {thumb && (
+                          <div className="shrink-0 w-32 bg-black overflow-hidden">
+                            <img src={thumb} alt={d.name}
+                                 className="w-full h-full object-cover" loading="lazy"
+                                 onError={(e) => { e.target.style.display = 'none'; }} />
+                          </div>
+                        )}
+                        <div className="flex-1 p-3 min-w-0">
+                          <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+                            <p className="text-sm font-semibold text-white truncate">{d.name}</p>
+                            {d.duration_min && (
+                              <span className="text-[10px] text-zinc-500 shrink-0">{d.duration_min} min</span>
+                            )}
+                          </div>
+                          {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
+                          {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
+                          {Array.isArray(d.equipment_needed) && d.equipment_needed.length > 0 && (
+                            <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
-                    {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
-                    {Array.isArray(d.equipment_needed) && d.equipment_needed.length > 0 && (
-                      <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                  return d.video_url
+                    ? <a key={i} href={d.video_url} target="_blank" rel="noopener noreferrer" className="block">{Card}</a>
+                    : <div key={i}>{Card}</div>;
+                })}
               </div>
             </motion.div>
           );

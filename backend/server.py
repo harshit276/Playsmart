@@ -2065,6 +2065,9 @@ def _default_training_payload(active_sport: str, skill_level: str = "Beginner") 
     }
 
 
+_DRILL_CACHE_SCHEMA = 2  # bump this whenever the drill dict schema changes
+
+
 async def _ai_drills_with_cache(active_sport: str, skill: str) -> list:
     """Fetch AI-generated drills for (sport, level), using a 7-day Mongo
     cache to avoid repeat Gemini calls. Used by the training endpoint for
@@ -2077,7 +2080,7 @@ async def _ai_drills_with_cache(active_sport: str, skill: str) -> list:
         ), timeout=3.0)
     except Exception:
         cached = None
-    if cached and cached.get("drills"):
+    if cached and cached.get("drills") and cached.get("schema") == _DRILL_CACHE_SCHEMA:
         cached_at = cached.get("cached_at_ts", 0)
         if (datetime.now(timezone.utc).timestamp() - cached_at) < 7 * 24 * 3600:
             return cached["drills"]
@@ -2085,9 +2088,16 @@ async def _ai_drills_with_cache(active_sport: str, skill: str) -> list:
         return []
     try:
         from ai_pipeline.vlm import generic_drill_set
+        from research_loader import get_all_videos
+        try:
+            video_pool = get_all_videos(active_sport) or []
+        except Exception:
+            video_pool = []
         loop = asyncio.get_event_loop()
         res = await asyncio.wait_for(
-            loop.run_in_executor(None, lambda: generic_drill_set(active_sport, skill)),
+            loop.run_in_executor(None, lambda: generic_drill_set(
+                active_sport, skill, video_pool=video_pool or None,
+            )),
             timeout=20.0,
         )
         drills = res.get("drills") or []
@@ -2096,6 +2106,7 @@ async def _ai_drills_with_cache(active_sport: str, skill: str) -> list:
                 await asyncio.wait_for(db.ai_drill_cache.update_one(
                     {"key": cache_key},
                     {"$set": {"key": cache_key, "drills": drills,
+                              "schema": _DRILL_CACHE_SCHEMA,
                               "cached_at_ts": datetime.now(timezone.utc).timestamp(),
                               "sport": active_sport, "level": skill}},
                     upsert=True,
