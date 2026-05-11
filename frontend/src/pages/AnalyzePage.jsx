@@ -1608,6 +1608,19 @@ export default function AnalyzePage() {
     const scoreComparison = result.score_comparison || [];
     const coachFeedback = result.coach_feedback || {};
     const vlmCoaching = result.vlm_coaching || {};
+    // Single source of truth for skill level — Gemini's most-common per-shot
+    // verdict. Falls back to backend's skill_level (which the backend has
+    // already overridden with VLM data when available), then to "Intermediate".
+    // Both the Match Summary badge AND the Coaching Insights tile read this
+    // so they never disagree.
+    const aiSkillLevel = (() => {
+      const seen = (result.shots || [])
+        .map((s) => s.vlmSkill || s.vlm_skill || s.estimated_skill)
+        .filter((s) => s && s !== "Unknown" && s !== "unknown");
+      if (seen.length === 0) return result.skill_level || "Intermediate";
+      const counts = seen.reduce((a, l) => { a[l] = (a[l] || 0) + 1; return a; }, {});
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    })();
     // True when VLM produced real coaching content. When true, we hide the
     // static template cards (Top 3 to improve / Pro tips / 7-day plan /
     // Drills for you) so the user gets ONE coaching surface, not duplicated.
@@ -1901,9 +1914,9 @@ export default function AnalyzePage() {
               <Film className="w-3 h-3 text-sky-400" /> Match Summary — {result.total_shots_detected} shots detected
             </p>
             <div className="flex items-center gap-2 flex-wrap mb-4">
-              {result.skill_level && (
+              {aiSkillLevel && (
                 <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px] uppercase font-bold">
-                  {result.skill_level} level
+                  {aiSkillLevel} level
                 </Badge>
               )}
               {result.player_profile?.play_style && (

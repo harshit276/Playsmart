@@ -190,29 +190,27 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
       const overallStats = computeOverall(merged, videoEl.duration);
       setOverall(overallStats);
 
-      // Coaching narrative
-      setPhase("narrating");
-      setProgress(95);
-      setProgressMsg("Generating coaching feedback…");
-      const dist = groupByType(merged);
-      const ptq = buildPerTypeQuality(merged);
-      try {
-        const { data } = await api.post("/analysis/coaching-narrative", {
-          sport,
-          total_shots: merged.length,
-          duration_sec: videoEl.duration || null,
-          avg_recovery_sec: overallStats.avg_recovery_sec,
-          overall_consistency: overallStats.consistency,
-          distribution: dist,
-          per_type_quality: ptq,
-        }, { timeout: 25000 });
-        setNarrative(data);
-      } catch (e) {
-        console.warn("narrative failed", e);
-      }
-
+      // Coaching narrative — runs in the BACKGROUND (don't block the user).
+      // The user sees pose results + per-shot AI Coach feedback (which is
+      // already rendered above) immediately. The narrative card fades in
+      // when it's ready, or just stays hidden if the endpoint is slow/fails.
       setProgress(100);
       setPhase("done");
+
+      const dist = groupByType(merged);
+      const ptq = buildPerTypeQuality(merged);
+      // Don't await — let it resolve whenever, render when ready.
+      api.post("/analysis/coaching-narrative", {
+        sport,
+        total_shots: merged.length,
+        duration_sec: videoEl.duration || null,
+        avg_recovery_sec: overallStats.avg_recovery_sec,
+        overall_consistency: overallStats.consistency,
+        distribution: dist,
+        per_type_quality: ptq,
+      }, { timeout: 20000 })
+        .then(({ data }) => setNarrative(data))
+        .catch((e) => console.warn("narrative failed (non-blocking):", e?.response?.status, e?.message));
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || "Match analysis failed");
