@@ -35,29 +35,43 @@ export default function PlayerSelectionModal({
   const [sportOverrideOpen, setSportOverrideOpen] = useState(false);
   const sportInfo = (detectedSport && SPORT_LABELS[detectedSport]) || null;
 
-  // Pick the frame with the most people detected by default
+  // Pick the BEST frame: maximize (people_count × avg_confidence).
+  // Earlier we picked purely by people count, which sometimes selected a
+  // frame with a wide-shot player + a low-confidence detection of a
+  // ref/spectator. Weighting by confidence picks the cleanest frame.
   const bestFrameIdx = useMemo(() => {
     if (!scanResult?.frames?.length) return 0;
-    let best = 0;
-    for (let i = 1; i < scanResult.frames.length; i++) {
-      if (scanResult.frames[i].people.length > scanResult.frames[best].people.length) {
-        best = i;
-      }
+    let best = 0, bestScore = -1;
+    for (let i = 0; i < scanResult.frames.length; i++) {
+      const ppl = scanResult.frames[i].people || [];
+      if (ppl.length === 0) continue;
+      const avgConf = ppl.reduce((a, p) => a + (p.score || 0), 0) / ppl.length;
+      const score = ppl.length + avgConf;  // weight conf as tiebreaker
+      if (score > bestScore) { bestScore = score; best = i; }
     }
     return best;
   }, [scanResult]);
 
-  const [selectedFrameIdx, setSelectedFrameIdx] = useState(null);
-
   if (!isOpen || !scanResult || !scanResult.frames?.length) return null;
 
-  // Use best frame by default; user can override via frame switcher
-  const activeFrameIdx = selectedFrameIdx != null ? selectedFrameIdx : bestFrameIdx;
-  const frame = scanResult.frames[activeFrameIdx] || scanResult.frames[bestFrameIdx];
-  // Show the max player count across ALL frames for the title
-  const maxPlayers = Math.max(0, ...scanResult.frames.map((f) => f.people.length));
+  // Always use the best frame — no user-controllable frame switcher,
+  // which led to selecting the same player from different frames and
+  // getting different downstream analysis results.
+  const activeFrameIdx = bestFrameIdx;
+  const frame = scanResult.frames[activeFrameIdx];
+  // Max player count across ALL frames for the title
+  const maxPlayers = Math.max(0, ...scanResult.frames.map((f) => (f.people || []).length));
   const isSinglePlayer = maxPlayers === 1;
   const noPlayers = maxPlayers === 0;
+
+  // Quality signals for "video unclear" warning
+  const peopleCounts = scanResult.frames.map((f) => (f.people || []).length);
+  const allMaxConfidences = scanResult.frames.flatMap((f) => (f.people || []).map((p) => p.score || 0));
+  const maxConfidence = allMaxConfidences.length ? Math.max(...allMaxConfidences) : 0;
+  const minPpl = Math.min(...peopleCounts);
+  const maxPpl = Math.max(...peopleCounts);
+  const countsInconsistent = maxPpl - minPpl >= 2;  // e.g., 3 vs 1 detection across frames
+  const videoUnclear = maxConfidence < 0.40 || (countsInconsistent && maxConfidence < 0.65);
 
   return (
     <AnimatePresence>
@@ -181,8 +195,15 @@ export default function PlayerSelectionModal({
                     }}
                     aria-label={`Select player ${idx + 1}`}
                   >
-                    <div className="absolute -top-6 left-0 bg-lime-400 text-black text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap">
-                      Player {idx + 1}
+                    <div className="absolute -top-6 left-0 bg-lime-400 text-black text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap flex items-center gap-1">
+                      <span>Player {idx + 1}</span>
+                      {person.score != null && (
+                        <span className={`px-1 rounded text-[9px] ${
+                          person.score >= 0.7 ? "bg-black/30 text-black"
+                          : person.score >= 0.4 ? "bg-amber-900/40 text-amber-200"
+                          : "bg-red-900/50 text-red-200"
+                        }`}>{Math.round(person.score * 100)}%</span>
+                      )}
                     </div>
                   </button>
                 );
@@ -190,23 +211,15 @@ export default function PlayerSelectionModal({
             </div>
           </div>
 
-          {/* Frame selection — compact, only when multiple frames */}
-          {scanResult.frames.length > 1 && (
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs text-zinc-500">Frame:</span>
-              {scanResult.frames.map((f, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedFrameIdx(idx)}
-                  className={`text-xs w-7 h-7 rounded-full transition-colors ${
-                    idx === activeFrameIdx
-                      ? "bg-lime-400 text-black font-semibold"
-                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              ))}
+          {/* "Video unclear" warning — when detection confidence is poor or
+              detected player counts vary wildly across the sample frames. */}
+          {videoUnclear && (
+            <div className="mb-4 bg-amber-400/5 border border-amber-400/30 rounded-lg px-3 py-2 text-[11px] text-amber-200">
+              <p className="font-semibold mb-1">⚠ Video quality may be limiting analysis</p>
+              <p className="text-zinc-300">
+                Detection confidence is low {maxConfidence > 0 ? `(max ${Math.round(maxConfidence * 100)}%)` : ""}.
+                For best results, upload a clearer side-angle clip where the player is fully visible and the camera doesn't shake.
+              </p>
             </div>
           )}
 

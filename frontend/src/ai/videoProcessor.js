@@ -589,21 +589,19 @@ function findShotMoments(allKeypoints, timestamps, dominantHand) {
 
   if (wristSpeeds.length < 3) return [];
 
-  // Percentile-based threshold (avg-based was too strict on active clips).
-  // Use the 70th percentile of non-zero speeds to bias toward fewer-but-real
-  // shots over many-with-false-positives.
+  // Percentile-based threshold (adapts to clip motion profile).
   const nonZero = wristSpeeds.filter((w) => w.speed > 0).sort((a, b) => a.speed - b.speed);
-  const pIdx = Math.floor(nonZero.length * 0.70);
+  const pIdx = Math.floor(nonZero.length * 0.65);
   const percentileThresh = nonZero[pIdx]?.speed || 0;
   const avgSpeed = avg(wristSpeeds.map((w) => w.speed));
-  // Absolute floor: a real swing in a normalized frame produces wrist speed
-  // well above 0.6 frame-fractions/sec. Setup wandering / idle micro-motion
-  // is usually <0.3. Anchoring the floor here prevents "stagnant" frames
-  // from being picked up as shots (the user's primary complaint).
-  const ABS_FLOOR = 0.6;
+  // Absolute floor: real swings clear ~0.45 frame-fractions/sec even on
+  // slower shots (serves, drops). Idle wandering / setup is usually <0.3.
+  // 0.45 catches slower shots like TT/badminton serves while still
+  // filtering most non-shot micro-motion. Was 0.6 — too strict, missed serves.
+  const ABS_FLOOR = 0.45;
   const threshold = Math.max(
     ABS_FLOOR,
-    Math.min(avgSpeed * 1.5, percentileThresh) || 0,
+    Math.min(avgSpeed * 1.4, percentileThresh) || 0,
   );
 
   // Adaptive minimum gap between peaks based on video duration
