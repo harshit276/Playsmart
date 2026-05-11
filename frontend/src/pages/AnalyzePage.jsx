@@ -847,8 +847,11 @@ export default function AnalyzePage() {
             if (vc._error) console.warn("[vlm-coach] backend error:", vc._error);
             // If the backend couldn't persist the analysis (Mongo timeout
             // most often), warn the user so they don't expect it in history.
+            // Surface the actual error message when present.
             if (user && data.saved_to_history === false) {
-              toast.error("Analysis didn't save to history — try analyzing again to retry.");
+              const reason = data.save_error || data.error || "backend error";
+              console.error("[history-save] FAILED:", reason, data.traceback_tail || data._debug);
+              toast.error(`Analysis didn't save to history: ${reason.slice(0, 80)}`);
             }
             // Merge in-memory thumbnails back onto each shot for the UI
             // (backend strips them per the no-image-storage rule).

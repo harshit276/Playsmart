@@ -3519,6 +3519,55 @@ def _build_encouragement(top_issues: list, shot_name: str) -> str:
 
 @api_router.post("/analyze-client-results")
 async def analyze_client_results(request: Request, authorization: str = Header(None)):
+    """Wrap the real handler in a top-level try/except so a late crash
+    inside the enrichment doesn't return an opaque 500 — instead it
+    returns 200 with success=false + error details + still attempts to
+    save the basic client-side data."""
+    try:
+        return await _analyze_client_results_impl(request, authorization)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"[analyze-client-results] uncaught: {exc.__class__.__name__}: {exc}\n{tb}")
+        # Best-effort: persist the raw body so the analysis isn't lost
+        try:
+            body = await request.json()
+            user = await get_current_user_or_none(authorization)
+            if user:
+                emergency = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": user["id"],
+                    "sport": body.get("sport", "badminton"),
+                    "date": datetime.now(timezone.utc).isoformat(),
+                    "analysis_mode": "client",
+                    "skill_level": body.get("skill_level", "Beginner"),
+                    "shot_analysis": {
+                        "shot_type": body.get("shot_type"),
+                        "shot_name": (body.get("shot_type") or "shot").replace("_", " ").title(),
+                        "confidence": body.get("confidence", 0),
+                        "score": 50, "grade": "C",
+                        "weaknesses": body.get("weaknesses") or [],
+                    },
+                    "shots": body.get("shots") or [],
+                    "speed_analysis": body.get("speed") or {},
+                    "_emergency_save": True,
+                    "_error": f"{exc.__class__.__name__}: {str(exc)[:300]}",
+                }
+                await asyncio.wait_for(db.video_analyses.insert_one(emergency), timeout=8.0)
+                logger.info(f"[history-save] emergency OK id={emergency['id']} user={user['id'][:8]}")
+        except Exception as save_exc:
+            logger.error(f"[history-save] emergency FAILED: {save_exc}")
+        return {
+            "success": False,
+            "error": f"{exc.__class__.__name__}: {str(exc)[:200]}",
+            "traceback_tail": tb.splitlines()[-3:] if tb else [],
+            "saved_to_history": False,
+        }
+
+
+async def _analyze_client_results_impl(request: Request, authorization: str = Header(None)):
     """
     Receive analysis results computed client-side (in browser via TensorFlow.js)
     and enrich with coaching feedback, pro comparison, and save to database.
