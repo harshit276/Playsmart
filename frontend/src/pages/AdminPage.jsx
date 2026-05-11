@@ -128,6 +128,20 @@ export default function AdminPage() {
 // ── Stats tab ───────────────────────────────────────────────
 function StatsTab({ headers }) {
   const { data, loading, refresh } = useFetch("/admin/stats", headers);
+  const [testing, setTesting] = useState(false);
+  const sendTestNotification = async () => {
+    setTesting(true);
+    try {
+      const r = await api.post("/admin/test-notify", {}, { headers, timeout: 10000 });
+      const channels = Object.entries(r.data?.channels || {})
+        .filter(([, on]) => on).map(([k]) => k);
+      if (!channels.length) toast.error("No channels configured. Set TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID env vars.");
+      else toast.success(`Test sent to: ${channels.join(", ")}`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Test failed");
+    }
+    setTesting(false);
+  };
   if (loading) return <Spinner />;
   if (!data) return null;
   const tiles = [
@@ -142,11 +156,17 @@ function StatsTab({ headers }) {
   ];
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">Counts</p>
-        <Button onClick={refresh} size="sm" variant="ghost" className="text-zinc-400 text-xs">
-          <RefreshCw className="w-3 h-3 mr-1" /> Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={sendTestNotification} disabled={testing} size="sm" variant="outline"
+            className="border-amber-400/30 text-amber-300 hover:bg-amber-400/10 text-xs h-7">
+            {testing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔔"} Test notify
+          </Button>
+          <Button onClick={refresh} size="sm" variant="ghost" className="text-zinc-400 text-xs">
+            <RefreshCw className="w-3 h-3 mr-1" /> Refresh
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {tiles.map(t => (

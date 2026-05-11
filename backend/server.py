@@ -332,6 +332,12 @@ async def firebase_auth(req: FirebaseAuthRequest):
     except Exception as e:
         logger.warning(f"signup_grant failed for {user_id[:8]}: {e}")
 
+    # New-signup admin notification — fire-and-forget so we don't slow auth
+    asyncio.create_task(_notify_admin(
+        "🎉 New user signup",
+        f"Name: {req.name or '—'}\nEmail: {email}\nTokens credited: {tokens_balance}",
+    ))
+
     return {
         "token": token,
         "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
@@ -676,7 +682,10 @@ async def admin_update_enquiry(
     return {"ok": True}
 
 
-# Notification config
+# Notification config — Telegram preferred (free, instant). WhatsApp via
+# Twilio and email via Resend stay as optional fallbacks.
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 ADMIN_WHATSAPP_NUMBER = os.environ.get("ADMIN_WHATSAPP_NUMBER", "").strip()  # E.164: +919876543210
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
@@ -686,9 +695,29 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 
 
 async def _notify_admin(subject: str, body: str) -> None:
-    """Best-effort multi-channel admin notification: WhatsApp via Twilio +
-    email via Resend, both gated on env vars. Always logs to stdout."""
+    """Best-effort multi-channel admin notification. Each channel is
+    independent — Telegram (free) is the default, WhatsApp and email
+    stay as paid/extra options. Always logs to stdout as a baseline."""
     logger.info(f"ADMIN NOTIFY: {subject} — {body[:200]}")
+
+    # Telegram via Bot API — free, no rate limits for a single chat
+    if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            text = f"*{subject}*\n\n{body}"
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                await c.post(
+                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                    json={
+                        "chat_id": TELEGRAM_CHAT_ID,
+                        "text": text,
+                        "parse_mode": "Markdown",
+                        "disable_web_page_preview": True,
+                    },
+                )
+        except Exception as e:
+            logger.warning(f"Telegram notify failed: {e}")
+
+    # WhatsApp via Twilio (paid, optional)
     if ADMIN_WHATSAPP_NUMBER and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
         try:
             url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
@@ -700,6 +729,8 @@ async def _notify_admin(subject: str, body: str) -> None:
                 })
         except Exception as e:
             logger.warning(f"WhatsApp notify failed: {e}")
+
+    # Email via Resend (free 100/day, optional)
     if ADMIN_EMAIL and RESEND_API_KEY:
         try:
             async with httpx.AsyncClient(timeout=10.0) as c:
@@ -709,6 +740,26 @@ async def _notify_admin(subject: str, body: str) -> None:
                           "subject": f"[AthlyticAI] {subject}", "text": body})
         except Exception as e:
             logger.warning(f"Email notify failed: {e}")
+
+
+@api_router.post("/admin/test-notify")
+async def admin_test_notify(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """Fire a test notification to all configured channels. Use this to
+    confirm Telegram / WhatsApp / email setup without needing a real
+    signup or purchase. Returns which channels were attempted."""
+    _require_admin(x_admin_key)
+    await _notify_admin(
+        "🔔 Test notification",
+        "If you see this, your admin notification channel is working.",
+    )
+    return {
+        "ok": True,
+        "channels": {
+            "telegram": bool(TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID),
+            "whatsapp": bool(ADMIN_WHATSAPP_NUMBER and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN),
+            "email":    bool(ADMIN_EMAIL and RESEND_API_KEY),
+        },
+    }
 
 
 @api_router.delete("/admin/wipe-all-accounts")
@@ -1165,6 +1216,17 @@ async def _credit_for_paid_order(user_id: str, order: dict, cf_payment_id: str) 
         )
     except Exception:
         pass
+
+    # Admin notification — fire-and-forget so we never delay the user
+    is_demo = order.get("demo") or (cf_payment_id or "").startswith("DEMO_")
+    asyncio.create_task(_notify_admin(
+        f"💰 {'Demo' if is_demo else 'Real'} purchase · ₹{pack['price_inr']}",
+        f"User: {user_id[:12]}…\n"
+        f"Pack: {pack['key']} ({pack['tokens']} tokens)\n"
+        f"Amount: ₹{pack['price_inr']}\n"
+        f"Order: {order.get('cashfree_order_id')}\n"
+        f"Payment: {cf_payment_id}",
+    ))
     return new_balance
 
 
