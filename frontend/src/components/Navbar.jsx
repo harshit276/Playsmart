@@ -177,6 +177,18 @@ export default function Navbar() {
                   <DropdownMenuSeparator className="bg-zinc-800" />
                   <DropdownMenuItem
                     className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
+                    onClick={() => navigate("/profile")}
+                  >
+                    <Users className="w-4 h-4 mr-2" /> Profile & Quiz
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
+                    onClick={() => navigate("/wallet")}
+                  >
+                    <span className="w-4 mr-2 text-center">🪙</span> Wallet
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
                     onClick={() => navigate("/card")}
                   >
                     <CreditCard className="w-4 h-4 mr-2" /> My Card

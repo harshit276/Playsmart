@@ -211,13 +211,62 @@ export default function DashboardPage() {
           </p>
         </motion.div>
 
+        {/* Guest mode: hero with quiz + sign-in CTAs only. Skip the noisy
+            stats/streak/equipment cards until the user actually has data. */}
         {isGuestMode && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-            <div className="bg-lime-400/10 border border-lime-400/30 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
-              <p className="text-sm text-zinc-300"><Zap className="w-4 h-4 inline mr-1 text-lime-400" />Sign in to save your progress and get personalized recommendations.</p>
-              <Link to="/auth" className="text-sm font-medium text-lime-400 hover:text-lime-300 shrink-0">Sign In &rarr;</Link>
-            </div>
-          </motion.div>
+          <>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+              <div className="relative overflow-hidden bg-gradient-to-br from-lime-400/15 via-zinc-900 to-emerald-900/10 border border-lime-400/30 rounded-3xl p-6 sm:p-10">
+                <div className="absolute -right-8 -bottom-8 text-[180px] opacity-10 select-none">🏸</div>
+                <div className="relative max-w-xl">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime-400/15 border border-lime-400/30 text-[10px] uppercase tracking-wider text-lime-300 font-bold mb-3">
+                    <Sparkles className="w-3 h-3" /> Get started
+                  </div>
+                  <h2 className="font-heading font-bold text-2xl sm:text-3xl md:text-4xl text-white uppercase tracking-tight mb-2 leading-tight">
+                    Two steps to a personalized coach
+                  </h2>
+                  <p className="text-zinc-300 text-sm sm:text-base mb-5">
+                    Take a 30-second quiz, sign in to claim 300 free tokens (3 video analyses on us),
+                    and get a personalized dashboard.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link to="/assessment"
+                      className="inline-flex items-center gap-1.5 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-5 py-2.5 text-sm transition-colors">
+                      <Sparkles className="w-4 h-4" /> Take the Quiz
+                    </Link>
+                    <Link to="/auth"
+                      className="inline-flex items-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold rounded-full px-5 py-2.5 text-sm border border-zinc-700 transition-colors">
+                      Sign Up — get 300 🪙
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* What you get — quick at-a-glance grid so guests know what's behind the wall */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              {[
+                { icon: "🎯", label: "AI Video Analysis", desc: "Shot detection + technique" },
+                { icon: "🏋️", label: "Training Plan", desc: "Drills tuned to your level" },
+                { icon: "🛒", label: "Equipment Picks", desc: "Compare prices, find local" },
+                { icon: "👥", label: "Local Games", desc: "Host or join community matches" },
+              ].map((f) => (
+                <div key={f.label} className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
+                  <div className="text-2xl mb-1">{f.icon}</div>
+                  <p className="text-xs font-bold text-white">{f.label}</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5">{f.desc}</p>
+                </div>
+              ))}
+            </motion.div>
+          </>
+        )}
+
+        {/* Skip the rest of the dashboard for guests — sign-in / quiz first. */}
+        {isGuestMode && (
+          <div className="text-center py-8 text-zinc-500 text-xs">
+            <p>Sign in or take the quiz to unlock your personalized dashboard.</p>
+          </div>
         )}
 
         {/* Quiz prompt — logged-in user with no sport profile yet */}
@@ -246,6 +295,9 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
+        {/* My Sports + the rest of the dashboard render only for signed-in users. */}
+        {!isGuestMode && (
+        <>
         {/* ── My Sports Cards ── */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -747,6 +799,8 @@ export default function DashboardPage() {
             </motion.div>
           ))}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

@@ -399,6 +399,59 @@ export default function AnalyzePage() {
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
 
+  // Post-login replay: if the user signed in mid-analysis (guest path),
+  // re-send the result to /analyze-client-results so it lands in their
+  // history. The server will spend 100 tokens this time (they have 300
+  // from signup). Only fires once per stashed analysis.
+  useEffect(() => {
+    if (!user?.id) return;
+    let stash = null;
+    try {
+      const raw = sessionStorage.getItem("pending_analysis");
+      if (raw) stash = JSON.parse(raw);
+    } catch {}
+    if (!stash?.result) return;
+    // Old stash (>10 min) → ignore
+    if (Date.now() - (stash.savedAt || 0) > 10 * 60 * 1000) {
+      sessionStorage.removeItem("pending_analysis");
+      return;
+    }
+    // Clear immediately so we don't replay on re-renders
+    sessionStorage.removeItem("pending_analysis");
+
+    const r = stash.result;
+    const body = {
+      sport: stash.sport || r.sport || "badminton",
+      shot_type: r.shot_analysis?.shot_type || "unknown",
+      confidence: r.shot_analysis?.confidence || 0,
+      metrics: r.metrics || {},
+      speed: r.speed_analysis || {},
+      skill_level: r.skill_level || "Beginner",
+      shot_grade: r.shot_analysis?.grade || "C",
+      segments: r.segments?.power_moments || [],
+      video_info: r.video_info || {},
+      shots: r.shots || [],
+      weaknesses: r.shot_analysis?.weaknesses || [],
+    };
+    (async () => {
+      try {
+        const { data } = await api.post("/analyze-client-results", body, { timeout: 30000 });
+        // Update the on-screen result with the persisted analysis_id so
+        // the user can navigate to it from history later.
+        if (data?.analysis_id) setResult((prev) => ({ ...(prev || r), analysis_id: data.analysis_id }));
+        loadHistory();
+        refreshTokens?.();
+        toast.success("Analysis saved to your history.");
+      } catch (e) {
+        // 402 means they're somehow already short — don't spam the user
+        if (e?.response?.status !== 402) {
+          console.warn("post-login analysis replay failed", e);
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   const viewAnalysisDetail = async (analysisId) => {
     if (!analysisId || loadingDetail) return;
     setLoadingDetail(true);
@@ -1437,6 +1490,16 @@ export default function AnalyzePage() {
 
   const handleInlineGoogleSignIn = async () => {
     try {
+      // Stash the in-progress analysis so it survives the sign-in popup
+      // and we can re-attach it to the new user's history (+ deduct 100
+      // tokens for the previously-free analysis).
+      if (result) {
+        try {
+          sessionStorage.setItem("pending_analysis", JSON.stringify({
+            result, sport: selectedSport || result.sport, savedAt: Date.now(),
+          }));
+        } catch {}
+      }
       const { signInWithPopup } = await import("firebase/auth");
       const { auth, googleProvider } = await import("@/lib/firebase");
       const fb = await signInWithPopup(auth, googleProvider);
@@ -1448,7 +1511,10 @@ export default function AnalyzePage() {
         photo: fb.user.photoURL || "",
       });
       login(data.token, data.user, data.has_profile, data.tokens);
-      toast.success("Signed in — coaching unlocked!");
+      toast.success(`Signed in! 🪙 ${data.tokens || 300} tokens credited — coaching unlocked.`);
+      // The result we already have on screen will now show un-gated since
+      // user is authenticated. The pending_analysis stash gets picked up
+      // by the post-login useEffect below to save it to history server-side.
     } catch (err) {
       if (err?.code === "auth/popup-closed-by-user" || err?.code === "auth/cancelled-popup-request") return;
       console.error("Inline sign-in failed:", err);
@@ -1463,16 +1529,16 @@ export default function AnalyzePage() {
       </div>
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="bg-zinc-900/95 border border-lime-400/30 rounded-2xl p-5 max-w-sm text-center shadow-2xl">
-          <Lock className="w-8 h-8 text-lime-400 mx-auto mb-3" />
-          <h3 className="font-bold text-white mb-1">Unlock Full Coaching</h3>
+          <div className="text-3xl mb-2">🪙</div>
+          <h3 className="font-bold text-white mb-1">Unlock Full Coaching · 300 free tokens</h3>
           <p className="text-xs text-zinc-400 mb-4">
-            Sign in to see personalized training plans, pro tips, and track your improvement over time.
+            Sign in to keep this analysis, get personalized training, equipment picks, and 300 free tokens for more analyses.
           </p>
           <Button
             onClick={handleInlineGoogleSignIn}
             className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6"
           >
-            Sign in with Google
+            Sign in with Google →
           </Button>
         </div>
       </div>
