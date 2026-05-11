@@ -138,6 +138,66 @@ def compare_analyses(
 SUPPORTED_SPORTS = ["badminton", "tennis", "table_tennis", "pickleball", "cricket"]
 
 
+def generic_drill_set(
+    sport: str, skill_level: str, focus: str | None = None,
+    backend: str = "auto",
+) -> dict:
+    """Generate a sport+level-aware drill set when we don't have a recent
+    analysis to personalize against. Used by the training page so guests
+    and profile-less users get content that actually changes when they
+    flip sport / level filters. Cached server-side by (sport, level).
+
+    Returns: {drills: [{name, why, instructions, duration_min,
+                        equipment_needed, level}], _meta}.
+    """
+    sport = (sport or "badminton").lower()
+    level = (skill_level or "Beginner").title()
+    sys_prompt = (
+        f"You are an expert {sport} coach. List the 6 highest-impact drills "
+        f"a {level}-level player should be doing right now. Each drill must "
+        f"be appropriate for the level — beginners get fundamentals, "
+        f"intermediates get pattern work, advanced get pressure/tempo drills, "
+        f"pros get tactical refinement. Be concrete and specific to {sport}."
+        + (f" Focus area: {focus}." if focus else "")
+        + "\n\n"
+        "Respond with valid JSON only:\n"
+        '{\n'
+        '  "drills": [\n'
+        '    {\n'
+        '      "name": "<drill name>",\n'
+        '      "why": "<one sentence why this drill matters at this level>",\n'
+        '      "instructions": "<2-3 sentence how-to>",\n'
+        '      "duration_min": <int 5-30>,\n'
+        '      "equipment_needed": ["<simple item>"],\n'
+        '      "level": "<beginner|intermediate|advanced|pro>"\n'
+        '    }\n'
+        '  ]\n'
+        '}'
+    )
+    user_msg = f"6 best drills for a {level} {sport} player."
+
+    backend_obj = pick_backend(backend)
+    try:
+        raw = backend_obj.call(sys_prompt, user_msg, [])
+    except Exception as exc:
+        return {"drills": [], "_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
+
+    data = _parse_json_safe(raw)
+    drills = []
+    for d in (data.get("drills") or [])[:6]:
+        if not isinstance(d, dict):
+            continue
+        drills.append({
+            "name": str(d.get("name", ""))[:120],
+            "why": str(d.get("why", ""))[:200],
+            "instructions": str(d.get("instructions", ""))[:400],
+            "duration_min": int(d.get("duration_min") or 15),
+            "equipment_needed": [str(x)[:60] for x in (d.get("equipment_needed") or [])][:5],
+            "level": str(d.get("level", level)).lower(),
+        })
+    return {"drills": drills, "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name}}
+
+
 def quiz_personalization(
     quiz_data: dict, backend: str = "auto",
     equipment_catalog: list[dict] | None = None,

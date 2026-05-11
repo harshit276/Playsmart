@@ -360,20 +360,28 @@ export default function TrainingPage() {
           </div>
         </motion.div>
 
-        {/* AI Coach card (when an analysis exists for this sport) */}
+        {/* AI Coach card. Prefer analysis-grounded drills; fall back to
+            sport+level-generic drills when there's no analysis for this sport. */}
         {(() => {
           const ai = planData?.ai_coach || {};
-          const drills = Array.isArray(ai.priority_drills) ? ai.priority_drills : [];
+          const personalDrills = Array.isArray(ai.priority_drills) ? ai.priority_drills : [];
+          const genericDrills = Array.isArray(planData?.generic_drills) ? planData.generic_drills : [];
+          const drills = personalDrills.length > 0 ? personalDrills : genericDrills;
           if (drills.length === 0) return null;
+          const isPersonalized = personalDrills.length > 0;
           return (
             <motion.div
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
               className="mb-5 border border-lime-400/30 bg-gradient-to-br from-lime-400/5 to-zinc-900/80 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span className="text-[10px] uppercase tracking-wide text-lime-300 font-bold bg-lime-400/15 px-2 py-1 rounded">AI Coach</span>
-                <p className="text-xs text-zinc-400">Based on your most recent {sport.replace(/_/g, " ")} analysis</p>
+                <p className="text-xs text-zinc-400">
+                  {isPersonalized
+                    ? `Based on your most recent ${sport.replace(/_/g, " ")} analysis`
+                    : `Top drills for ${sport.replace(/_/g, " ")} at ${(levelFilter || profileLevel || "Beginner").toLowerCase()} level`}
+                </p>
               </div>
-              {ai.motivational_message && (
+              {isPersonalized && ai.motivational_message && (
                 <p className="text-zinc-200 text-sm italic mb-3">"{ai.motivational_message}"</p>
               )}
               <div className="space-y-2">
@@ -387,6 +395,9 @@ export default function TrainingPage() {
                     </div>
                     {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
                     {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
+                    {Array.isArray(d.equipment_needed) && d.equipment_needed.length > 0 && (
+                      <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
+                    )}
                   </div>
                 ))}
               </div>

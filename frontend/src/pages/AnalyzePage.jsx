@@ -821,6 +821,11 @@ export default function AnalyzePage() {
             const eqCount = Array.isArray(vc.equipment_recommendations) ? vc.equipment_recommendations.length : 0;
             console.info(`[vlm-coach] drills=${drillCount} equipment=${eqCount} keys=${Object.keys(vc).join(",")}`);
             if (vc._error) console.warn("[vlm-coach] backend error:", vc._error);
+            // If the backend couldn't persist the analysis (Mongo timeout
+            // most often), warn the user so they don't expect it in history.
+            if (user && data.saved_to_history === false) {
+              toast.error("Analysis didn't save to history — try analyzing again to retry.");
+            }
             // Merge in-memory thumbnails back onto each shot for the UI
             // (backend strips them per the no-image-storage rule).
             if (Array.isArray(data.shots) && Array.isArray(clientResult.shots)) {
@@ -1675,6 +1680,27 @@ export default function AnalyzePage() {
                   onClick={() => setComparisonResult(null)}
                   aria-label="dismiss">×</button>
               </div>
+
+              {/* Session mismatch warning — different sport, no shared shot
+                  types, or a multi-tier skill jump (often = different player). */}
+              {c.session_mismatch && (c.session_mismatch.sport_changed
+                  || c.session_mismatch.no_shared_shot_type
+                  || c.session_mismatch.skill_jumped) && (
+                <div className="mb-4 bg-amber-400/5 border border-amber-400/30 rounded-lg px-3 py-2 text-[11px] text-amber-200">
+                  <p className="font-semibold mb-1">⚠ The two sessions don't fully match</p>
+                  <ul className="space-y-0.5 text-zinc-300">
+                    {c.session_mismatch.sport_changed && (
+                      <li>• Sport changed since the last session — comparison may not be meaningful.</li>
+                    )}
+                    {c.session_mismatch.no_shared_shot_type && (
+                      <li>• No shared shot types ({c.session_mismatch.only_in_old.join("/")} vs {c.session_mismatch.only_in_new.join("/")}).</li>
+                    )}
+                    {c.session_mismatch.skill_jumped && (
+                      <li>• Skill level changed by 2+ tiers — could be a different player.</li>
+                    )}
+                  </ul>
+                </div>
+              )}
 
               {/* Hero deltas */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">

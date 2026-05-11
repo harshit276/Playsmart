@@ -2059,7 +2059,53 @@ def _default_training_payload(active_sport: str, skill_level: str = "Beginner") 
         "videos": videos_map,
         "skills": skills,
         "training_videos": training_videos,
+        # Filled in by the calling endpoint when it has access to the AI
+        # backend + Mongo cache. Defaults empty here (sync helper, no DB).
+        "generic_drills": [],
     }
+
+
+async def _ai_drills_with_cache(active_sport: str, skill: str) -> list:
+    """Fetch AI-generated drills for (sport, level), using a 7-day Mongo
+    cache to avoid repeat Gemini calls. Used by the training endpoint for
+    every code path (guest, no-profile, profile) so the page always has
+    level-aware content even before any analysis exists."""
+    cache_key = f"{active_sport}:{skill.lower()}"
+    try:
+        cached = await asyncio.wait_for(db.ai_drill_cache.find_one(
+            {"key": cache_key}, {"_id": 0},
+        ), timeout=3.0)
+    except Exception:
+        cached = None
+    if cached and cached.get("drills"):
+        cached_at = cached.get("cached_at_ts", 0)
+        if (datetime.now(timezone.utc).timestamp() - cached_at) < 7 * 24 * 3600:
+            return cached["drills"]
+    if not (os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY")):
+        return []
+    try:
+        from ai_pipeline.vlm import generic_drill_set
+        loop = asyncio.get_event_loop()
+        res = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: generic_drill_set(active_sport, skill)),
+            timeout=20.0,
+        )
+        drills = res.get("drills") or []
+        if drills:
+            try:
+                await asyncio.wait_for(db.ai_drill_cache.update_one(
+                    {"key": cache_key},
+                    {"$set": {"key": cache_key, "drills": drills,
+                              "cached_at_ts": datetime.now(timezone.utc).timestamp(),
+                              "sport": active_sport, "level": skill}},
+                    upsert=True,
+                ), timeout=3.0)
+            except Exception as exc:
+                logger.warning(f"AI drill cache write failed: {exc}")
+        return drills
+    except (Exception, asyncio.TimeoutError) as exc:
+        logger.warning(f"Generic drill set skipped: {exc.__class__.__name__}: {exc}")
+        return []
 
 
 @api_router.get("/recommendations/training/{user_id}")
@@ -2072,10 +2118,14 @@ async def get_training_recommendation(
     active_sport = sport or "badminton"
     default_level = skill_level or "Beginner"
     if user_id == "guest":
-        return _default_training_payload(active_sport, default_level)
+        payload = _default_training_payload(active_sport, default_level)
+        payload["generic_drills"] = await _ai_drills_with_cache(active_sport, default_level)
+        return payload
     user = await get_current_user_or_none(authorization)
     if not user:
-        return _default_training_payload(active_sport, default_level)
+        payload = _default_training_payload(active_sport, default_level)
+        payload["generic_drills"] = await _ai_drills_with_cache(active_sport, default_level)
+        return payload
 
     try:
         profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
@@ -2266,6 +2316,10 @@ async def get_training_recommendation(
                 logger.warning(f"Training-page VLM coach skipped: {exc.__class__.__name__}: {exc}")
                 ai_coach = {"_error": str(exc)[:200]}
 
+    # ─── AI-generated generic drill set per (sport, level) ───
+    # Cached helper — first request per (sport, level) pays Gemini, rest are free.
+    generic_drills = await _ai_drills_with_cache(active_sport, skill)
+
     return {
         "plan": plan,
         "drills": drills_map,
@@ -2276,6 +2330,10 @@ async def get_training_recommendation(
         # recent analysis for this sport. Empty dict if no analysis exists
         # for this sport yet, or if VLM is unavailable.
         "ai_coach": ai_coach,
+        # AI-generated drills for this (sport, level) combination, regardless
+        # of whether the user has an analysis. Frontend renders these when
+        # ai_coach is empty so the page is never barren.
+        "generic_drills": generic_drills,
     }
 
 
@@ -2660,6 +2718,32 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
 
     same_shot = _primary_shot_type(old) == _primary_shot_type(new) and _primary_shot_type(old) != "shot"
 
+    # Detect when the two sessions look very different — sport mismatch,
+    # no shot-type overlap, or skill jumped multiple tiers. We surface this
+    # to the UI as a banner so the user knows the comparison is best-effort
+    # rather than apples-to-apples.
+    old_sport = (old.get("sport") or "").lower()
+    new_sport = (new.get("sport") or "").lower()
+    old_types = {(s.get("shot_type") or s.get("type") or "").lower() for s in (old.get("shots") or [])}
+    new_types = {(s.get("shot_type") or s.get("type") or "").lower() for s in (new.get("shots") or [])}
+    old_types.discard(""); old_types.discard("unknown")
+    new_types.discard(""); new_types.discard("unknown")
+    type_overlap = list(old_types & new_types)
+    type_only_old = list(old_types - new_types)
+    type_only_new = list(new_types - old_types)
+    levels = ["Beginner", "Intermediate", "Advanced", "Pro"]
+    old_level_idx = levels.index(old.get("skill_level")) if old.get("skill_level") in levels else None
+    new_level_idx = levels.index(new.get("skill_level")) if new.get("skill_level") in levels else None
+    level_jump = abs((old_level_idx or 0) - (new_level_idx or 0)) if (old_level_idx is not None and new_level_idx is not None) else 0
+    session_mismatch = {
+        "sport_changed": bool(old_sport and new_sport and old_sport != new_sport),
+        "no_shared_shot_type": (len(old_types) > 0 and len(new_types) > 0 and len(type_overlap) == 0),
+        "skill_jumped": level_jump >= 2,
+        "shared_shot_types": type_overlap,
+        "only_in_old": type_only_old,
+        "only_in_new": type_only_new,
+    }
+
     # ─── Text-only AI Coach narrative compare (no images stored).
     # The compare_analyses() helper already pulls the per-shot reasoning +
     # form_feedback text from each session's saved shots, which is dense
@@ -2697,6 +2781,10 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
         "days_between": days_between,
         "same_shot_type": same_shot,
         "shot_type": _primary_shot_type(new),
+        # Edge-case flags so the frontend can warn the user that the
+        # comparison isn't apples-to-apples (different sport, no shared
+        # shot types, skill jump that hints at a different player).
+        "session_mismatch": session_mismatch,
     }
 
     record = {
@@ -3633,13 +3721,19 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         "shots": body.get("shots") or [],
     }
     # Skip DB save for guests (no user_id to attach it to anyway).
+    saved_ok = False
     if not is_guest:
         try:
-            await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=5.0)
+            # 12s timeout — was 5s, but on cold lambdas Mongo handshake +
+            # insert can take that long. We'd rather wait than silently lose
+            # the analysis from history.
+            await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=12.0)
             analysis_record.pop("_id", None)
-        except (Exception, asyncio.TimeoutError):
+            saved_ok = True
+            logger.info(f"Analysis {file_id} saved for user {user['id'][:8]}")
+        except (Exception, asyncio.TimeoutError) as save_exc:
             analysis_record.pop("_id", None)
-            logger.warning("Failed to save analysis to DB (timeout or error)")
+            logger.error(f"Failed to save analysis {file_id}: {save_exc.__class__.__name__}: {save_exc}")
 
     # NOTE: Each video analysis is INDEPENDENT and must NOT mutate the
     # user's profile. The profile is set explicitly via the quiz or via
@@ -3681,6 +3775,10 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         # Tells the frontend to surface the "sign up for 300 tokens" CTA
         # at the top of the result view.
         "guest_mode": is_guest,
+        # Whether the analysis was successfully persisted to history.
+        # When false, the frontend can warn the user "this didn't save —
+        # it won't appear in History or be available for reanalysis".
+        "saved_to_history": bool(saved_ok),
     }
 
 
