@@ -346,6 +346,8 @@ export default function AnalyzePage() {
   // Surfaced in the player selection modal so the user can override.
   const [detectedSport, setDetectedSport] = useState(null);
   const [detectedSportConfidence, setDetectedSportConfidence] = useState(null);
+  // Save-to-profile confirmation modal
+  const [showProfileUpdateModal, setShowProfileUpdateModal] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   // Server-side analysis is disabled — TF.js client-side handles everything.
   const processingMode = "client";
@@ -506,6 +508,28 @@ export default function AnalyzePage() {
       toast.success("Profile created from your analysis!");
     } catch (err) {
       toast.error("Failed to create profile");
+    }
+  };
+
+  // Update existing profile with derived fields from the current analysis.
+  // Targeted: only touches sports_profiles[sport] + top-level fields if
+  // this is the user's active sport.
+  const updateProfileFromAnalysis = async () => {
+    if (!result?.analysis_id || !user) {
+      toast.error("Sign in to update your profile.");
+      return;
+    }
+    try {
+      const { data } = await api.post("/profile/update-from-analysis", {
+        analysis_id: result.analysis_id,
+      });
+      if (data?.success) {
+        await refreshProfile();
+        toast.success(`Profile updated for ${data.sport.replace("_", " ")}!`);
+        setShowProfileUpdateModal(false);
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Failed to update profile");
     }
   };
 
@@ -2708,6 +2732,27 @@ export default function AnalyzePage() {
           </Button>
         </div>
 
+        {/* Save-to-profile CTA — every analysis result has the option to
+            update the user's profile for that sport. Shown only for logged-in
+            users with a successfully-saved analysis. */}
+        {user && result?.analysis_id && result?.saved_to_history !== false && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-sky-400/5 border border-sky-400/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Target className="w-5 h-5 text-sky-300 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white">Save these results to your {(result.sport || "sport").replace("_", " ")} profile</p>
+                <p className="text-xs text-zinc-400 truncate">Updates your skill level, play style, strengths, and focus areas based on this analysis.</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowProfileUpdateModal(true)}
+              className="bg-sky-400 text-black hover:bg-sky-500 font-bold text-xs shrink-0">
+              Update Profile
+            </Button>
+          </motion.div>
+        )}
+
         {/* ── (g) Upload Again CTA ── */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
           className="bg-gradient-to-r from-lime-400/10 to-sky-400/10 border border-lime-400/20 rounded-2xl p-5 text-center">
@@ -3080,6 +3125,84 @@ export default function AnalyzePage() {
           setSelectedSport(sport);
         }}
       />
+
+      {/* Save-to-profile confirmation modal — preview what changes,
+          confirm before writing. */}
+      {showProfileUpdateModal && result && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setShowProfileUpdateModal(false)}>
+          <div
+            className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-heading font-bold text-lg text-white mb-2">
+              Update your {(result.sport || "sport").replace("_", " ")} profile?
+            </h3>
+            <p className="text-sm text-zinc-400 mb-4">
+              We'll save these values from your analysis to your profile. Your training plan and recommendations will adapt.
+            </p>
+            <div className="space-y-2 mb-4 text-sm">
+              <div className="bg-zinc-800/40 rounded-lg p-3 flex items-center justify-between">
+                <span className="text-zinc-400">Skill level</span>
+                <span className="text-white font-semibold">{result.skill_level || "—"}</span>
+              </div>
+              <div className="bg-zinc-800/40 rounded-lg p-3 flex items-center justify-between">
+                <span className="text-zinc-400">Play style</span>
+                <span className="text-white font-semibold">{result.player_profile?.play_style || "All-round"}</span>
+              </div>
+              {(() => {
+                const seen = new Set();
+                const strengths = [];
+                for (const s of (result.shots || [])) {
+                  for (const x of ((s.formFeedback || s.form_feedback || {}).strengths || []).slice(0, 2)) {
+                    const k = String(x).trim().toLowerCase();
+                    if (k && !seen.has(k)) { seen.add(k); strengths.push(String(x).trim()); }
+                  }
+                }
+                return strengths.length > 0 && (
+                  <div className="bg-zinc-800/40 rounded-lg p-3">
+                    <p className="text-zinc-400 mb-1">Strengths</p>
+                    <ul className="text-white text-xs space-y-0.5 ml-3 list-disc">
+                      {strengths.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  </div>
+                );
+              })()}
+              {(() => {
+                const seen = new Set();
+                const focus = [];
+                for (const s of (result.shots || [])) {
+                  for (const x of ((s.formFeedback || s.form_feedback || {}).weaknesses || []).slice(0, 2)) {
+                    const k = String(x).trim().toLowerCase();
+                    if (k && !seen.has(k)) { seen.add(k); focus.push(String(x).trim()); }
+                  }
+                }
+                return focus.length > 0 && (
+                  <div className="bg-zinc-800/40 rounded-lg p-3">
+                    <p className="text-zinc-400 mb-1">Focus areas</p>
+                    <ul className="text-white text-xs space-y-0.5 ml-3 list-disc">
+                      {focus.slice(0, 3).map((s, i) => <li key={i}>{s}</li>)}
+                    </ul>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowProfileUpdateModal(false)}
+                variant="outline"
+                className="flex-1 border-zinc-700 text-zinc-300">
+                Cancel
+              </Button>
+              <Button
+                onClick={updateProfileFromAnalysis}
+                className="flex-1 bg-sky-400 text-black hover:bg-sky-500 font-bold">
+                Save to Profile
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Share Modal */}
       <ShareModal
