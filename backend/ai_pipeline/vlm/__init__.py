@@ -20,9 +20,11 @@ from .speed import estimate_speed_from_power
 from .coaching import (
     compare_analyses, personalized_coaching, detect_sport,
     quiz_personalization, coach_chat, generic_drill_set,
+    analyze_video_full,
 )
 
 __all__ = ["VLMShotClassifier", "predict_shot", "available_backends",
            "estimate_speed_from_power",
            "compare_analyses", "personalized_coaching", "detect_sport",
-           "quiz_personalization", "coach_chat", "generic_drill_set"]
+           "quiz_personalization", "coach_chat", "generic_drill_set",
+           "analyze_video_full"]

@@ -2760,6 +2760,75 @@ async def classify_shots_vlm(req: ClassifyShotsRequest, authorization: str = Hea
 
 
 # ──────────────────────────────────────────────────────────────────────
+# Whole-video analysis (OPT-IN high-accuracy mode).
+# The standard pipeline uses browser shot detection + per-shot keyframes.
+# This endpoint sends the FULL VIDEO (compressed) to Gemini so it can
+# identify AND classify every shot itself — no more browser heuristic
+# missing serves or triggering on stagnant frames. Costs ~$0.005-0.02 per
+# analysis vs ~$0.001 for the keyframe path. Slower (~12s vs ~6s).
+# ──────────────────────────────────────────────────────────────────────
+class AnalyzeVideoDirectRequest(BaseModel):
+    sport: str = "badminton"
+    target_player: str = "auto"
+    target_box: dict | None = None
+    backend: str = "auto"
+    mime_type: str = "video/mp4"
+    # Video bytes as base64 (data URL or raw). Browser is expected to
+    # compress to <4MB to fit Vercel's request body cap.
+    video_b64: str
+
+
+@api_router.post("/analyze-video-direct")
+async def analyze_video_direct_endpoint(
+    req: AnalyzeVideoDirectRequest, authorization: str = Header(None),
+):
+    """Whole-video Gemini analysis. Returns shot list with timestamps.
+    Used by the OPT-IN high-accuracy mode in the frontend; the standard
+    keyframe pipeline at /classify-shots-vlm is untouched."""
+    user = await get_current_user(authorization)
+    if not req.video_b64:
+        raise HTTPException(status_code=400, detail="No video provided")
+
+    import base64
+    try:
+        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+        video_bytes = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+    if len(video_bytes) < 1000:
+        raise HTTPException(status_code=400, detail="Video too small")
+    if len(video_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
+
+    try:
+        from ai_pipeline.vlm import analyze_video_full
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: analyze_video_full(
+                video_bytes, req.mime_type, req.sport,
+                target_player=req.target_player, target_box=req.target_box,
+                backend=req.backend,
+            )),
+            timeout=55.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Video analysis timed out (>55s)")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Video analysis failed: {exc}")
+
+    return {
+        "success": True,
+        "shots": result.get("shots") or [],
+        "_meta": result.get("_meta") or {},
+        "input_size_bytes": len(video_bytes),
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Sport auto-detection: 1-2 keyframes -> which of our 5 sports is this?
 # ~$0.0005 per call. Lets users upload without pre-selecting a sport.
 # ──────────────────────────────────────────────────────────────────────

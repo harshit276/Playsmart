@@ -301,6 +301,12 @@ export default function AnalyzePage() {
   const [previousScore, setPreviousScore] = useState(null);
   const [file, setFile] = useState(null);
   const [analysisMode, setAnalysisMode] = useState(searchParams.get("mode") || "full");
+  // Accuracy mode: "keyframes" (default, fast, ~$0.001) vs "video"
+  // (high-accuracy whole-video Gemini analysis, slower, ~$0.005-0.02).
+  // Stored separately from analysisMode so users can compare both paths.
+  const [accuracyMode, setAccuracyMode] = useState(
+    searchParams.get("accuracy") || localStorage.getItem("playsmart_accuracy_mode") || "keyframes"
+  );
   const [selectedSport, setSelectedSport] = useState(null);
 
   // Set page title
@@ -750,15 +756,56 @@ export default function AnalyzePage() {
         : 1;
       const isMultiPlayer = maxPeopleSeen >= 2;
 
+      // High-accuracy mode: fetch the whole-video classification from
+      // Gemini in parallel with the on-device analysis. Results are merged
+      // back below — Gemini's per-shot data overrides the on-device shot
+      // type/reasoning/speed when available.
+      let videoDirectShots = null;
+      let videoDirectError = null;
+      const videoDirectPromise = (accuracyMode === "video")
+        ? (async () => {
+            try {
+              setLoadingText("Sending video to AI Coach for full analysis...");
+              const t0 = Date.now();
+              // Convert video file to base64 (Vercel limit ~4.5 MB body).
+              // We send the original bytes — browser-side compression would
+              // be a follow-up if file sizes get too big.
+              if (file.size > 4 * 1024 * 1024) {
+                videoDirectError = `video too large (${(file.size / 1024 / 1024).toFixed(1)} MB > 4 MB)`;
+                return;
+              }
+              const buf = await file.arrayBuffer();
+              const bytes = new Uint8Array(buf);
+              let bin = "";
+              for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+              const b64 = btoa(bin);
+              console.info(`[video-direct] uploading ${(file.size / 1024).toFixed(0)} KB to Gemini...`);
+              const { data } = await api.post("/analyze-video-direct", {
+                sport: sportToAnalyze,
+                target_player: targetPlayer,
+                target_box: customCropBox || null,
+                mime_type: file.type || "video/mp4",
+                video_b64: b64,
+              }, { timeout: 90000 });
+              const ms = Date.now() - t0;
+              videoDirectShots = data?.shots || [];
+              console.info(`[video-direct] ${ms}ms — ${videoDirectShots.length} shots`,
+                videoDirectShots.map((s) => `${s.shot_type}@${(s.confidence || 0).toFixed(2)}`).join(", "));
+            } catch (e) {
+              videoDirectError = e?.response?.data?.detail || e.message;
+              console.warn("[video-direct] failed:", videoDirectError);
+            }
+          })()
+        : Promise.resolve();
+
       const clientResult = await analyzeVideo(file, sportToAnalyze, {
         mode: analysisMode,
         targetPlayer,
         customCropBox,
         isMultiPlayer,
-        // Delegate shot classification to Gemini (server-side). Browser still
-        // does pose extraction + metrics; we just upgrade shot_type +
-        // reasoning + speed via the lightweight VLM endpoint.
-        vlmClassify: async (payload) => {
+        // Skip the keyframe VLM call when whole-video mode is on — we'll
+        // merge those results instead.
+        vlmClassify: accuracyMode === "video" ? null : async (payload) => {
           const t0 = Date.now();
           console.info(`[vlm] sending ${payload.shots.length} shots (${payload.shots.reduce((a, s) => a + s.length, 0)} keyframes total) to /classify-shots-vlm`);
           try {
@@ -800,6 +847,47 @@ export default function AnalyzePage() {
 
       if (!clientResult || clientResult.error) {
         throw new Error(clientResult?.error || "Analysis returned no results");
+      }
+
+      // If high-accuracy mode was active, await the whole-video Gemini call
+      // and REPLACE the heuristic shots[] with Gemini's. Each shot gets a
+      // pose-derived thumbnail snapped to its timestamp_sec.
+      if (accuracyMode === "video") {
+        await videoDirectPromise;
+        if (videoDirectShots && videoDirectShots.length > 0) {
+          // Map video-direct shots to the shape the rest of the pipeline expects
+          try {
+            const vp = await import("@/ai/videoProcessor");
+            const peakTimes = videoDirectShots.map((s) => s.timestamp_sec || 0);
+            const snippets = customCropBox
+              ? await vp.extractPlayerSnippets(file, peakTimes, customCropBox,
+                  { maxDim: 180, jpegQuality: 0.7, expandFactor: 1.5 })
+              : peakTimes.map(() => null);
+            clientResult.shots = videoDirectShots.map((s, i) => ({
+              type: s.shot_type,
+              name: (s.shot_type || "shot").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+              confidence: s.confidence,
+              timestamp: Math.round((s.timestamp_sec || 0) * 10) / 10,
+              grade: s.confidence >= 0.7 ? "A" : s.confidence >= 0.5 ? "B" : "C",
+              score: Math.round((s.confidence || 0) * 100),
+              speed: null,  // backend can compute from power_level
+              reasoning: s.reasoning || null,
+              formFeedback: s.form_feedback || null,
+              alternatives: s.alternatives || null,
+              vlmSkill: s.estimated_skill || null,
+              powerLevel: s.power_level || null,
+              thumbnail: snippets[i] || null,
+            }));
+            clientResult.total_shots_detected = clientResult.shots.length;
+            clientResult.multi_shot = clientResult.shots.length > 1;
+            clientResult._accuracy_mode = "video";
+            console.info(`[video-direct] replaced ${clientResult.shots.length} shots from whole-video analysis`);
+          } catch (mergeErr) {
+            console.warn("[video-direct] merge failed, keeping keyframe shots:", mergeErr);
+          }
+        } else if (videoDirectError) {
+          toast.error(`High-accuracy mode failed: ${videoDirectError.slice(0, 80)} — using keyframe results.`);
+        }
       }
 
       // Send client results to backend for coaching enrichment.
@@ -1395,6 +1483,41 @@ export default function AnalyzePage() {
 
       {/* Player Selection for Doubles */}
       {renderPlayerSelector()}
+
+      {/* Accuracy mode toggle — opt-in whole-video Gemini analysis */}
+      <div className="mb-4">
+        <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2">Accuracy Mode</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => { setAccuracyMode("keyframes"); try { localStorage.setItem("playsmart_accuracy_mode", "keyframes"); } catch {} }}
+            className={`text-left rounded-xl border p-3 transition-all ${
+              accuracyMode === "keyframes"
+                ? "border-lime-400/50 bg-lime-400/5"
+                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+            }`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">Standard</span>
+              <span className="text-[10px] text-zinc-500">~6s · ~$0.001</span>
+            </div>
+            <p className="text-[11px] text-zinc-400">Browser finds shots, sends keyframes to AI Coach. Fast, low cost.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAccuracyMode("video"); try { localStorage.setItem("playsmart_accuracy_mode", "video"); } catch {} }}
+            className={`text-left rounded-xl border p-3 transition-all ${
+              accuracyMode === "video"
+                ? "border-sky-400/50 bg-sky-400/5"
+                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+            }`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">High accuracy 🎥</span>
+              <span className="text-[10px] text-zinc-500">~12s · ~$0.01</span>
+            </div>
+            <p className="text-[11px] text-zinc-400">Whole video to AI Coach — catches every shot, including serves. &lt;4 MB.</p>
+          </button>
+        </div>
+      </div>
 
       {/* Tips for best results */}
       <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 mb-4">

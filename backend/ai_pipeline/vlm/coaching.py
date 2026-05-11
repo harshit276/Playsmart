@@ -379,6 +379,161 @@ def coach_chat(
     }
 
 
+def analyze_video_full(
+    video_bytes: bytes, mime_type: str, sport: str,
+    target_player: str = "auto", target_box: dict | None = None,
+    backend: str = "auto",
+) -> dict:
+    """Send the whole video to Gemini in one inline-data request. Gemini
+    identifies shot moments AND classifies each one — eliminates the
+    browser-side wrist-speed heuristic that was missing serves and
+    triggering on stagnant frames.
+
+    Returns: {shots: [{timestamp_sec, shot_type, confidence, reasoning,
+                       alternatives, form_feedback, estimated_skill,
+                       power_level}], _meta}.
+
+    Cost: ~258 input tokens per second of video. A 20s clip = ~5K tokens
+    in, ~1K out. Total ~$0.005-0.02 per analysis on gemini-2.5-flash.
+    """
+    sport = (sport or "badminton").lower()
+    # Reuse the existing vocab/definitions from prompts.py without exporting
+    # the helpers — keep coaching.py self-contained.
+    from .prompts import SHOT_VOCAB, SHOT_DEFINITIONS
+    vocab = SHOT_VOCAB.get(sport, ["unknown"])
+    if sport in SHOT_DEFINITIONS:
+        defs = "\n".join(f"- {k}: {v}" for k, v in SHOT_DEFINITIONS[sport].items())
+    else:
+        defs = "\n".join(f"- {s}" for s in vocab)
+
+    box_hint = ""
+    if isinstance(target_box, dict):
+        try:
+            cx = float(target_box.get("x", 0)) + float(target_box.get("width", 0)) / 2
+            cy = float(target_box.get("y", 0)) + float(target_box.get("height", 0)) / 2
+            v_zone = "top" if cy < 0.4 else "bottom" if cy > 0.6 else "middle"
+            h_zone = "left" if cx < 0.4 else "right" if cx > 0.6 else "center"
+            corner = f"{v_zone}-{h_zone}".replace("middle-center", "center")
+            box_hint = (
+                f"\n\nFOCUS player: the {sport} player initially positioned at the "
+                f"{corner} area of the frame (normalized ~{cx:.2f}, {cy:.2f}). "
+                f"Track them through the video and only classify shots THEY hit. "
+                f"Ignore shots by other players."
+            )
+        except Exception:
+            pass
+
+    sys_prompt = (
+        f"You are an expert {sport} coach watching a player's practice video. "
+        f"Identify EVERY shot played in the video, in chronological order. "
+        f"For each shot, provide the timestamp (in seconds from video start) "
+        f"and a full coach-quality analysis.\n\n"
+        f"Use these shot types ONLY:\n{defs}\n\n"
+        f"Do NOT invent shot types. If a moment isn't clearly a shot (player "
+        f"is walking, recovering, or just preparing), DON'T list it. Only "
+        f"include moments where the player makes contact with the "
+        f"ball/shuttle. Order shots by timestamp.{box_hint}\n\n"
+        f"Respond with valid JSON ONLY (no markdown):\n"
+        '{\n'
+        '  "shots": [\n'
+        '    {\n'
+        f'      "timestamp_sec": <float, when contact happens>,\n'
+        f'      "shot_type": "<one of: {", ".join(vocab)}>",\n'
+        '      "confidence": <0-1>,\n'
+        '      "reasoning": "<one sentence — what you saw>",\n'
+        '      "alternatives": [{"shot": "<...>", "confidence": <0-1>}],\n'
+        '      "form_feedback": {\n'
+        '        "strengths": ["<bullet>", "..."],\n'
+        '        "weaknesses": ["<bullet>", "..."],\n'
+        '        "tip": "<one actionable tip>"\n'
+        '      },\n'
+        '      "estimated_skill": "<Beginner|Intermediate|Advanced|Pro>",\n'
+        '      "power_level": "<soft|medium|hard|max>"\n'
+        '    }\n'
+        '  ]\n'
+        '}'
+    )
+    user_msg = (
+        f"Watch this {sport} video. Identify every shot the player made, "
+        f"in chronological order, with timestamps."
+    )
+
+    backend_obj = pick_backend(backend)
+    # Pass video as an inline_data part. The Gemini backend.call() accepts
+    # arbitrary parts via frames_jpeg — but we need to bypass that and send
+    # a video MIME type. Direct SDK use:
+    try:
+        import google.generativeai as genai  # type: ignore
+        model = backend_obj._get() if hasattr(backend_obj, "_get") else None
+        if model is None:
+            # Fall back: build a model on the fly
+            import os as _os
+            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+            model = genai.GenerativeModel(backend_obj.model_name)
+        parts: list = [{"text": sys_prompt}, {"text": user_msg},
+                       {"mime_type": mime_type or "video/mp4", "data": video_bytes}]
+        resp = model.generate_content(
+            parts,
+            generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+        )
+        raw = resp.text
+    except Exception as exc:
+        return {"shots": [], "_meta": {"error": str(exc)[:300], "backend": backend_obj.name}}
+
+    data = _parse_json_safe(raw)
+    shots_out = []
+    for s in (data.get("shots") or [])[:20]:
+        if not isinstance(s, dict):
+            continue
+        shot = str(s.get("shot_type", "unknown")).lower().strip().replace(" ", "_")
+        if shot not in vocab and shot != "unknown":
+            match = next((v for v in vocab if v in shot or shot in v), None)
+            shot = match or "unknown"
+        conf = max(0.0, min(1.0, float(s.get("confidence", 0.0) or 0.0)))
+        skill = str(s.get("estimated_skill", "Intermediate")).strip().title()
+        if skill not in ("Beginner", "Intermediate", "Advanced", "Pro"):
+            skill = "Intermediate"
+        power = str(s.get("power_level", "medium")).strip().lower()
+        if power not in ("soft", "medium", "hard", "max"):
+            power = "medium"
+        ff = s.get("form_feedback") or {}
+        if not isinstance(ff, dict):
+            ff = {}
+        ff = {
+            "strengths": [str(x) for x in (ff.get("strengths") or [])[:5]],
+            "weaknesses": [str(x) for x in (ff.get("weaknesses") or [])[:5]],
+            "tip": str(ff.get("tip", "")),
+        }
+        alts = []
+        for a in (s.get("alternatives") or [])[:3]:
+            if isinstance(a, dict) and "shot" in a:
+                a_shot = str(a["shot"]).lower().strip().replace(" ", "_")
+                if a_shot in vocab:
+                    alts.append({
+                        "shot": a_shot,
+                        "confidence": max(0.0, min(1.0, float(a.get("confidence", 0.0) or 0.0))),
+                    })
+        try:
+            ts = float(s.get("timestamp_sec") or 0.0)
+        except Exception:
+            ts = 0.0
+        shots_out.append({
+            "timestamp_sec": ts,
+            "shot_type": shot,
+            "confidence": conf,
+            "reasoning": str(s.get("reasoning", ""))[:500],
+            "alternatives": alts,
+            "form_feedback": ff,
+            "estimated_skill": skill,
+            "power_level": power,
+        })
+    return {
+        "shots": shots_out,
+        "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name,
+                  "video_bytes": len(video_bytes), "mime_type": mime_type},
+    }
+
+
 def detect_sport(frames_jpeg: list[bytes], backend: str = "auto") -> dict:
     """Quick VLM call: which of our 5 sports is this video?
 
