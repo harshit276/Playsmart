@@ -1,18 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Zap, ArrowLeft, LogIn } from "lucide-react";
+import { Zap, ArrowLeft, LogIn, Phone } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup, getRedirectResult } from "firebase/auth";
+import { signInWithPopup, getRedirectResult, signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 import api from "@/lib/api";
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Phone OTP flow state
+  const [phoneStep, setPhoneStep] = useState("idle"); // idle | sending | sent | verifying
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const confirmationRef = useRef(null);
+  const recaptchaRef = useRef(null);
 
   // If already logged in, redirect
   useEffect(() => {
@@ -61,6 +68,58 @@ export default function AuthPage() {
       toast.success(`Welcome${name ? ", " + name : ""}!`);
     }
     navigate(data.has_profile ? "/dashboard" : "/assessment");
+  };
+
+  // ─── Phone OTP via Firebase (free up to 10K/month) ───
+  const ensureRecaptcha = () => {
+    if (recaptchaRef.current) return recaptchaRef.current;
+    // Invisible reCAPTCHA — Google's bot check; required by Firebase Phone.
+    recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+      size: "invisible",
+    });
+    return recaptchaRef.current;
+  };
+
+  const sendOtp = async () => {
+    const cleaned = phone.replace(/\s+/g, "");
+    if (!/^\+\d{10,15}$/.test(cleaned)) {
+      toast.error("Enter phone with country code, e.g. +919876543210");
+      return;
+    }
+    setPhoneStep("sending");
+    try {
+      const verifier = ensureRecaptcha();
+      const confirmation = await signInWithPhoneNumber(auth, cleaned, verifier);
+      confirmationRef.current = confirmation;
+      setPhoneStep("sent");
+      toast.success("OTP sent — check your SMS");
+    } catch (err) {
+      console.error("sendOtp failed:", err);
+      const msg = err?.code === "auth/invalid-phone-number" ? "Invalid phone number"
+        : err?.code === "auth/too-many-requests" ? "Too many attempts — try later"
+        : err?.code === "auth/invalid-app-credential" ? "Phone auth not enabled in Firebase Console yet"
+        : err?.message || "Couldn't send OTP";
+      toast.error(msg);
+      setPhoneStep("idle");
+      // Reset recaptcha so user can retry
+      try { recaptchaRef.current?.clear(); recaptchaRef.current = null; } catch {}
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!confirmationRef.current) { toast.error("Please request OTP first"); return; }
+    if (!/^\d{4,8}$/.test(otp)) { toast.error("Enter the OTP code"); return; }
+    setPhoneStep("verifying");
+    try {
+      const result = await confirmationRef.current.confirm(otp);
+      // Same backend flow as Google login — Firebase issues a token
+      // regardless of provider, so /auth/firebase handles both.
+      await processFirebaseUser(result.user);
+    } catch (err) {
+      console.error("verifyOtp failed:", err);
+      toast.error(err?.code === "auth/invalid-verification-code" ? "Wrong OTP — try again" : (err?.message || "Verification failed"));
+      setPhoneStep("sent");
+    }
   };
 
   const handleDemoLogin = async () => {
@@ -166,6 +225,56 @@ export default function AuthPage() {
               )}
               {loading ? "Signing in..." : "Continue with Google"}
             </Button>
+
+            {/* Phone OTP — Firebase Phone Auth (free, 10K/month). India-friendly. */}
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-2">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
+                <Phone className="w-3 h-3" /> Or sign in with phone
+              </p>
+              {phoneStep !== "sent" && phoneStep !== "verifying" ? (
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="+91 9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={loading || phoneStep === "sending"}
+                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                  />
+                  <Button onClick={sendOtp} disabled={loading || phoneStep === "sending"}
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg text-xs px-4">
+                    {phoneStep === "sending" ? "Sending…" : "Send OTP"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-zinc-400">
+                    Code sent to <span className="text-white font-mono">{phone}</span>
+                    <button onClick={() => { setPhoneStep("idle"); setOtp(""); }}
+                      className="ml-2 text-lime-400 hover:text-lime-300 underline">change</button>
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={8}
+                      placeholder="6-digit OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                      disabled={phoneStep === "verifying"}
+                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none font-mono tracking-widest"
+                    />
+                    <Button onClick={verifyOtp} disabled={phoneStep === "verifying"}
+                      className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-lg text-xs px-4">
+                      {phoneStep === "verifying" ? "Verifying…" : "Verify →"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {/* Invisible reCAPTCHA target — Firebase Phone Auth requires this */}
+              <div id="recaptcha-container" />
+            </div>
 
             {/* Demo account — instant 5000-token test login */}
             <Button
