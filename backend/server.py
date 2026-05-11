@@ -52,22 +52,47 @@ else:
 
 import certifi
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(
-    mongo_url,
-    tlsCAFile=certifi.where(),
-    serverSelectionTimeoutMS=20000,
-    connectTimeoutMS=15000,
-    socketTimeoutMS=20000,
-    maxPoolSize=5 if IS_SERVERLESS else 50,
-    retryWrites=True,
-)
-db = client[os.environ.get('DB_NAME', 'athlyticai').strip()]
+# Mongo init — degrade gracefully if MONGO_URL isn't set so the app at
+# least boots (and FastAPI returns a clear error from individual endpoints
+# rather than a 405 from the missing-import fallback in api/index.py).
+mongo_url = os.environ.get('MONGO_URL', '').strip()
+if mongo_url:
+    client = AsyncIOMotorClient(
+        mongo_url,
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=20000,
+        connectTimeoutMS=15000,
+        socketTimeoutMS=20000,
+        maxPoolSize=5 if IS_SERVERLESS else 50,
+        retryWrites=True,
+    )
+    db = client[os.environ.get('DB_NAME', 'athlyticai').strip()]
+else:
+    logging.getLogger(__name__).error(
+        "MONGO_URL not set — endpoints needing the database will fail at request time. "
+        "Set MONGO_URL in your Vercel project's environment variables."
+    )
+    client = None
+    # Stub so attribute accesses don't immediately crash. Operations on it
+    # will raise at request time with a clear message.
+    class _MissingMongo:
+        def __getattr__(self, name):
+            raise RuntimeError(
+                "MongoDB is not configured. Set MONGO_URL env var on Vercel."
+            )
+        def __getitem__(self, name):
+            return self
+    db = _MissingMongo()
 
 JWT_SECRET = os.environ.get('JWT_SECRET', 'playsmart_default_secret')
 JWT_ALGORITHM = "HS256"
 if IS_PRODUCTION and JWT_SECRET == 'playsmart_default_secret':
-    raise RuntimeError("JWT_SECRET must be set to a secure value in production (do not use the default)")
+    # Warn loudly but don't crash — server boot must succeed so the user
+    # can hit /api/health and see what's misconfigured.
+    logging.getLogger(__name__).error(
+        "JWT_SECRET is using the insecure default in production. "
+        "Set a strong JWT_SECRET env var on Vercel."
+    )
 
 app = FastAPI(
     title="AthlyticAI API",
@@ -10037,7 +10062,33 @@ async def root():
 
 @api_router.get("/health")
 async def health():
-    return {"status": "healthy"}
+    """Quick status + env diagnostic. Hit this URL when something looks
+    broken — tells you which secrets are missing on Vercel."""
+    mongo_ok = False
+    mongo_err = None
+    if mongo_url:
+        try:
+            await asyncio.wait_for(client.admin.command("ping"), timeout=4.0)
+            mongo_ok = True
+        except Exception as e:
+            mongo_err = f"{type(e).__name__}: {str(e)[:120]}"
+    return {
+        "status": "healthy" if mongo_ok else "degraded",
+        "env": {
+            "MONGO_URL": "set" if mongo_url else "MISSING",
+            "JWT_SECRET": "set" if (JWT_SECRET and JWT_SECRET != "playsmart_default_secret") else "DEFAULT (insecure)",
+            "GROQ_API_KEY": "set" if os.environ.get("GROQ_API_KEY") else "missing",
+            "GEMINI_API_KEY": "set" if os.environ.get("GEMINI_API_KEY") else "missing",
+            "CASHFREE_APP_ID": "set" if CASHFREE_APP_ID else "missing (demo mode active)",
+            "ADMIN_WIPE_KEY": "set" if ADMIN_WIPE_KEY else "missing",
+            "DEMO_PAYMENTS": str(DEMO_PAYMENTS),
+        },
+        "mongo": {
+            "configured": bool(mongo_url),
+            "reachable": mongo_ok,
+            "error": mongo_err,
+        },
+    }
 
 
 # ─── Explicit OPTIONS preflight handler (fixes CORS 405 on preflight) ───

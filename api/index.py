@@ -26,16 +26,23 @@ try:
         os.chdir(backend_dir)
     from server import app  # noqa: F811 - intentional override
 except Exception as e:
-    # If server import fails, serve debug info
+    # If server import fails, surface the real error on EVERY HTTP method —
+    # previously this only caught GET, so POSTs returned a misleading 405
+    # ("Method Not Allowed") which masked the underlying import failure.
+    import traceback as _tb
     _error = f"{type(e).__name__}: {str(e)}"
+    _trace = _tb.format_exc()
     _info = {
         "error": _error,
+        "trace": _trace.split("\n")[-15:],
         "backend_dir": backend_dir,
         "backend_exists": os.path.isdir(backend_dir),
         "env_mongo": "set" if os.environ.get("MONGO_URL") else "NOT SET",
         "env_db": os.environ.get("DB_NAME", "NOT SET"),
+        "env_groq": "set" if os.environ.get("GROQ_API_KEY") else "NOT SET",
+        "env_gemini": "set" if os.environ.get("GEMINI_API_KEY") else "NOT SET",
     }
 
-    @app.get("/api/{path:path}")
+    @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
     def fallback(path: str):
         return _info
