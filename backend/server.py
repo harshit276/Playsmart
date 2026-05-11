@@ -553,6 +553,164 @@ async def admin_dedup_users(x_admin_key: str = Header(None, alias="X-Admin-Key")
     return {"ok": True, "repaired": repaired}
 
 
+# ─── Admin dashboard endpoints ───
+# All admin routes are gated by ADMIN_WIPE_KEY (acts as the admin master
+# key — set it on Vercel and pass via X-Admin-Key header). Frontend
+# admin page stores the key in localStorage after a "login" prompt.
+
+def _require_admin(x_admin_key: str):
+    if not ADMIN_WIPE_KEY or x_admin_key != ADMIN_WIPE_KEY:
+        raise HTTPException(status_code=403, detail="forbidden")
+
+
+@api_router.get("/admin/stats")
+async def admin_stats(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """One-shot summary for the admin dashboard top tiles."""
+    _require_admin(x_admin_key)
+    async def _count(coll):
+        try:
+            return await asyncio.wait_for(db[coll].count_documents({}), timeout=4.0)
+        except Exception:
+            return -1
+    counts = {
+        "users":               await _count("users"),
+        "player_profiles":     await _count("player_profiles"),
+        "video_analyses":      await _count("video_analyses"),
+        "games":               await _count("games"),
+        "enquiries":           await _count("equipment_enquiries"),
+        "token_transactions":  await _count("token_transactions"),
+        "payment_orders":      await _count("payment_orders"),
+        "referrals":           await _count("referrals"),
+    }
+    revenue_inr = 0
+    tokens_credited = 0
+    tokens_spent = 0
+    try:
+        async for tx in db.token_transactions.find({}, {"_id": 0, "kind": 1, "delta": 1, "metadata": 1}):
+            d = int(tx.get("delta") or 0)
+            if d > 0: tokens_credited += d
+            else: tokens_spent += -d
+            if tx.get("kind") == "purchase":
+                revenue_inr += int((tx.get("metadata") or {}).get("amount_inr") or 0)
+    except Exception:
+        pass
+    return {
+        "counts": counts,
+        "tokens": {"credited": tokens_credited, "spent": tokens_spent,
+                   "outstanding": tokens_credited - tokens_spent},
+        "revenue_inr": revenue_inr,
+    }
+
+
+@api_router.get("/admin/users")
+async def admin_users(x_admin_key: str = Header(None, alias="X-Admin-Key"), limit: int = 100):
+    _require_admin(x_admin_key)
+    try:
+        rows = await asyncio.wait_for(
+            db.users.find({}, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 500)),
+            timeout=8.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    return {"users": rows, "count": len(rows)}
+
+
+@api_router.get("/admin/enquiries")
+async def admin_enquiries(x_admin_key: str = Header(None, alias="X-Admin-Key"), limit: int = 100):
+    _require_admin(x_admin_key)
+    try:
+        rows = await asyncio.wait_for(
+            db.equipment_enquiries.find({}, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 500)),
+            timeout=8.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    return {"enquiries": rows, "count": len(rows)}
+
+
+@api_router.get("/admin/transactions")
+async def admin_transactions(
+    x_admin_key: str = Header(None, alias="X-Admin-Key"),
+    limit: int = 100, kind: Optional[str] = None,
+):
+    _require_admin(x_admin_key)
+    q = {"kind": kind} if kind else {}
+    try:
+        rows = await asyncio.wait_for(
+            db.token_transactions.find(q, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 500)),
+            timeout=8.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    return {"transactions": rows, "count": len(rows)}
+
+
+@api_router.get("/admin/payments")
+async def admin_payments(x_admin_key: str = Header(None, alias="X-Admin-Key"), limit: int = 100):
+    _require_admin(x_admin_key)
+    try:
+        rows = await asyncio.wait_for(
+            db.payment_orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 500)),
+            timeout=8.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    return {"payments": rows, "count": len(rows)}
+
+
+@api_router.patch("/admin/enquiries/{enquiry_id}")
+async def admin_update_enquiry(
+    enquiry_id: str, payload: dict,
+    x_admin_key: str = Header(None, alias="X-Admin-Key"),
+):
+    """Mark enquiry status / add admin note."""
+    _require_admin(x_admin_key)
+    allowed = {"status", "admin_note"}
+    update = {k: v for k, v in (payload or {}).items() if k in allowed}
+    if not update:
+        raise HTTPException(status_code=400, detail="No allowed fields in payload")
+    update["updated_at"] = datetime.now(timezone.utc).isoformat()
+    res = await db.equipment_enquiries.update_one({"id": enquiry_id}, {"$set": update})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Enquiry not found")
+    return {"ok": True}
+
+
+# Notification config
+ADMIN_WHATSAPP_NUMBER = os.environ.get("ADMIN_WHATSAPP_NUMBER", "").strip()  # E.164: +919876543210
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886").strip()
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "").strip()
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
+
+
+async def _notify_admin(subject: str, body: str) -> None:
+    """Best-effort multi-channel admin notification: WhatsApp via Twilio +
+    email via Resend, both gated on env vars. Always logs to stdout."""
+    logger.info(f"ADMIN NOTIFY: {subject} — {body[:200]}")
+    if ADMIN_WHATSAPP_NUMBER and TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN:
+        try:
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                await c.post(url, auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN), data={
+                    "From": TWILIO_WHATSAPP_FROM,
+                    "To": f"whatsapp:{ADMIN_WHATSAPP_NUMBER}",
+                    "Body": f"*{subject}*\n\n{body}",
+                })
+        except Exception as e:
+            logger.warning(f"WhatsApp notify failed: {e}")
+    if ADMIN_EMAIL and RESEND_API_KEY:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                await c.post("https://api.resend.com/emails",
+                    headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                    json={"from": "AthlyticAI <noreply@athlyticai.com>", "to": [ADMIN_EMAIL],
+                          "subject": f"[AthlyticAI] {subject}", "text": body})
+        except Exception as e:
+            logger.warning(f"Email notify failed: {e}")
+
+
 @api_router.delete("/admin/wipe-all-accounts")
 async def admin_wipe_all_accounts(x_admin_key: str = Header(None, alias="X-Admin-Key")):
     """Wipe every user-related collection. Dev/pre-launch only — gated by
@@ -1475,6 +1633,16 @@ async def equipment_enquiry(req: EnquiryRequest):
         f"NEW LOCAL-SHOP ENQUIRY · {record['name']} · {record['phone']} · "
         f"{record['city'] or '?'} · product={record['product']} · sport={record['sport'] or '?'}"
     )
+    # Fire-and-forget admin notification (WhatsApp + email if configured)
+    body = (
+        f"Name: {record['name']}\n"
+        f"Phone: {record['phone']}\n"
+        f"City: {record['city'] or '—'}\n"
+        f"Product: {record['product']}\n"
+        f"Sport: {record['sport'] or '—'}\n"
+        + (f"Notes: {record['notes']}\n" if record.get('notes') else "")
+    )
+    asyncio.create_task(_notify_admin("New local-shop enquiry", body))
     return {"ok": True, "id": record["id"], "callback_eta_hours": "1-2"}
 
 
@@ -3733,18 +3901,33 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
     }
     # Skip DB save for guests (no user_id to attach it to anyway).
     saved_ok = False
+    save_error = None
     if not is_guest:
         try:
-            # 12s timeout — was 5s, but on cold lambdas Mongo handshake +
-            # insert can take that long. We'd rather wait than silently lose
-            # the analysis from history.
+            # 12s timeout. On cold lambdas Mongo handshake + insert can take
+            # that long. Save synchronously here — fire-and-forget after the
+            # response would risk lambda termination before the write completes.
             await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=12.0)
             analysis_record.pop("_id", None)
             saved_ok = True
-            logger.info(f"Analysis {file_id} saved for user {user['id'][:8]}")
+            logger.info(f"[history-save] OK id={file_id} user={user['id'][:8]} sport={sport}")
         except (Exception, asyncio.TimeoutError) as save_exc:
             analysis_record.pop("_id", None)
-            logger.error(f"Failed to save analysis {file_id}: {save_exc.__class__.__name__}: {save_exc}")
+            save_error = f"{save_exc.__class__.__name__}: {str(save_exc)[:150]}"
+            logger.error(f"[history-save] FAIL id={file_id} user={user['id'][:8]}: {save_error}")
+            # Retry once with a fresh client in case of connection drop
+            try:
+                await asyncio.wait_for(db.video_analyses.insert_one(analysis_record), timeout=8.0)
+                analysis_record.pop("_id", None)
+                saved_ok = True
+                save_error = None
+                logger.info(f"[history-save] OK on retry id={file_id} user={user['id'][:8]}")
+            except (Exception, asyncio.TimeoutError) as retry_exc:
+                analysis_record.pop("_id", None)
+                save_error = f"retry: {retry_exc.__class__.__name__}: {str(retry_exc)[:150]}"
+                logger.error(f"[history-save] FAIL on retry id={file_id}: {save_error}")
+    else:
+        logger.info(f"[history-save] SKIPPED — guest mode (no user)")
 
     # NOTE: Each video analysis is INDEPENDENT and must NOT mutate the
     # user's profile. The profile is set explicitly via the quiz or via
@@ -3790,6 +3973,15 @@ async def analyze_client_results(request: Request, authorization: str = Header(N
         # When false, the frontend can warn the user "this didn't save —
         # it won't appear in History or be available for reanalysis".
         "saved_to_history": bool(saved_ok),
+        "save_error": save_error,
+        # Helpful for diagnosing history sync: lets the user see in DevTools
+        # which user_id their analysis was attached to vs which user_id is
+        # being queried on the dashboard.
+        "_debug": {
+            "user_id": user.get("id") if user else None,
+            "is_guest": is_guest,
+            "analysis_id": file_id,
+        },
     }
 
 
@@ -5364,6 +5556,133 @@ async def switch_active_sport(sport: str = "", authorization: str = Header(None)
         }}
     )
     return {"message": f"Switched to {sport}", "active_sport": sport}
+
+
+class UpdateProfileFromAnalysisRequest(BaseModel):
+    analysis_id: str
+    # Allow user to opt out of any individual field
+    update_skill_level: bool = True
+    update_play_style: bool = True
+    update_strengths: bool = True
+    update_focus_areas: bool = True
+
+
+@api_router.post("/profile/update-from-analysis")
+async def update_profile_from_analysis(
+    req: UpdateProfileFromAnalysisRequest, authorization: str = Header(None),
+):
+    """Use a stored analysis's derived fields (skill level, play style, etc.)
+    to update the user's profile for the analyzed sport. Targeted — only
+    touches sports_profiles[sport] + top-level fields when this sport is
+    the active sport."""
+    user = await get_current_user(authorization)
+    analysis = await db.video_analyses.find_one(
+        {"id": req.analysis_id, "user_id": user["id"]}, {"_id": 0}
+    )
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    sport = analysis.get("sport") or "badminton"
+    skill_level = analysis.get("skill_level") or "Intermediate"
+
+    # Derive play style from shot distribution if not explicit
+    shots = analysis.get("shots") or []
+    dist: dict = {}
+    for s in shots:
+        t = s.get("type") or s.get("shot_type") or ""
+        if t and t != "unknown":
+            dist[t] = dist.get(t, 0) + 1
+    play_style = "All-round"
+    total = sum(dist.values())
+    if total > 0:
+        aggressive = sum(dist.get(k, 0) for k in ("smash", "drive", "smash_loop", "forehand_loop", "overhead", "pull", "cut"))
+        defensive = sum(dist.get(k, 0) for k in ("clear", "drop", "net_shot", "lift", "block", "chop", "push", "forward_defense", "back_foot_defense"))
+        if aggressive > defensive:
+            play_style = "Power" if sport == "badminton" else "Aggressive"
+        elif defensive > aggressive * 1.5:
+            play_style = "Defense"
+
+    # Strengths + focus areas from AI Coach (vlm_coaching) if available,
+    # else from per-shot form_feedback aggregation.
+    vc = analysis.get("vlm_coaching") or {}
+    strengths = list(vc.get("key_focus_areas") or [])  # use focus_areas as strengths? No.
+    # Actually pull from per-shot AI strengths aggregated
+    seen_str, seen_weak = set(), set()
+    strengths_text, weakness_text = [], []
+    for s in shots:
+        ff = s.get("formFeedback") or s.get("form_feedback") or {}
+        for x in (ff.get("strengths") or [])[:2]:
+            x = str(x).strip()
+            if x and x.lower() not in seen_str:
+                seen_str.add(x.lower()); strengths_text.append(x)
+        for x in (ff.get("weaknesses") or [])[:2]:
+            x = str(x).strip()
+            if x and x.lower() not in seen_weak:
+                seen_weak.add(x.lower()); weakness_text.append(x)
+    strengths = strengths_text[:5] if strengths_text else (vc.get("strengths") or [])[:5]
+    focus_areas = weakness_text[:5] if weakness_text else list(vc.get("key_focus_areas") or [])[:5]
+
+    profile = await db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    if not profile:
+        # No profile yet — create a minimal one with this sport's data
+        profile = {"user_id": user["id"], "selected_sports": [sport]}
+
+    sports_profiles = profile.get("sports_profiles", {}) or {}
+    sp = dict(sports_profiles.get(sport, {}))
+    changed: list[str] = []
+    if req.update_skill_level:
+        sp["skill_level"] = skill_level
+        changed.append("skill_level")
+    if req.update_play_style:
+        sp["play_style"] = play_style
+        changed.append("play_style")
+    if req.update_strengths and strengths:
+        sp["strengths"] = strengths
+        changed.append("strengths")
+    if req.update_focus_areas and focus_areas:
+        sp["focus_areas"] = focus_areas
+        changed.append("focus_areas")
+    sp["last_updated_from_analysis"] = req.analysis_id
+    sp["last_updated_at"] = datetime.now(timezone.utc).isoformat()
+    sports_profiles[sport] = sp
+
+    selected = list(profile.get("selected_sports") or [])
+    if sport not in selected:
+        selected.append(sport)
+
+    update: dict = {
+        "sports_profiles": sports_profiles,
+        "selected_sports": selected,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    # If this sport IS the user's active sport, also update top-level fields
+    # so the home dashboard reflects the change.
+    if profile.get("active_sport") == sport or not profile.get("active_sport"):
+        if req.update_skill_level:
+            update["skill_level"] = skill_level
+        if req.update_play_style:
+            update["play_style"] = play_style
+        if req.update_strengths and strengths:
+            update["strengths"] = strengths
+        if req.update_focus_areas and focus_areas:
+            update["focus_areas"] = focus_areas
+        update["active_sport"] = sport
+
+    await db.player_profiles.update_one(
+        {"user_id": user["id"]}, {"$set": update}, upsert=True,
+    )
+
+    return {
+        "success": True,
+        "sport": sport,
+        "updated": changed,
+        "new_values": {
+            "skill_level": skill_level,
+            "play_style": play_style,
+            "strengths": strengths,
+            "focus_areas": focus_areas,
+        },
+    }
 
 
 class SportQuizSubmission(BaseModel):

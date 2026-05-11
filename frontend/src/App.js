@@ -32,6 +32,7 @@ const WalletPage = lazy(() => import("@/pages/WalletPage"));
 const ReferralPage = lazy(() => import("@/pages/ReferralPage"));
 const MarketplacePage = lazy(() => import("@/pages/MarketplacePage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const AdminPage = lazy(() => import("@/pages/AdminPage"));
 
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -144,6 +145,7 @@ function AppRoutes() {
       <Route path="/referral" element={<ReferralPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/admin" element={<AdminPage />} />
       <Route path="/equipment" element={<EquipmentPage />} />
       <Route path="/training" element={<TrainingPage />} />
       <Route path="/progress" element={<ProgressPage />} />
