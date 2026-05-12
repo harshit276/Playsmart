@@ -201,6 +201,12 @@ export default function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-zinc-800" />
                   <DropdownMenuItem
+                    className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
+                    onClick={() => navigate("/help")}
+                  >
+                    <span className="w-4 mr-2 text-center">?</span> Help & Support
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     className="text-red-400 focus:bg-zinc-800 cursor-pointer"
                     onClick={() => { logout(); navigate("/"); }}
                     data-testid="logout-btn"

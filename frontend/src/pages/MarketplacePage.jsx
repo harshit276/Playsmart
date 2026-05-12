@@ -385,9 +385,10 @@ function ProductCard({ item, delay }) {
   const fallbackPrice = item.price_ranges?.INR;
   const grad = SPORT_GRADIENT[item._sport] || SPORT_GRADIENT.badminton;
 
-  // productImageFor returns either the real Amazon image or a Pollinations
-  // generated one. Both are <img> URLs we can render directly.
-  const { url: imgUrl, generated } = productImageFor(item, { width: 480, height: 480 });
+  // Try the item's real image URL. On error, fall through to a clean
+  // branded placeholder — no AI generation, since it was unreliable for
+  // branded products.
+  const { url: imgUrl } = productImageFor(item);
   const [imgErr, setImgErr] = useState(false);
   const showImage = imgUrl && !imgErr;
   const sportEmoji = (SPORTS.find((s) => s.key === item._sport) || {}).emoji || "🎯";
@@ -395,16 +396,27 @@ function ProductCard({ item, delay }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
       className="bg-zinc-900/80 border border-zinc-800 rounded-2xl overflow-hidden hover:border-zinc-700 transition-colors flex flex-col">
-      {/* Image */}
+      {/* Image — real photo if available, else a polished branded placeholder */}
       <div className={`relative aspect-square overflow-hidden bg-gradient-to-br ${grad}`}>
         {showImage ? (
-          <img src={imgUrl} alt={item.name} loading="lazy"
+          <img src={imgUrl} alt={item.name} loading="lazy" referrerPolicy="no-referrer"
             className="w-full h-full object-contain"
             onError={() => setImgErr(true)} />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-center px-3">
-            <span className="text-5xl opacity-30 mb-1">{sportEmoji}</span>
-            <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">{item.brand}</p>
+          // Polished placeholder: huge sport emoji watermark + bold brand
+          // name + product type label. Looks intentional, never broken.
+          <div className="w-full h-full flex flex-col items-center justify-center text-center px-3 relative">
+            <span className="absolute text-[140px] opacity-[0.07] select-none leading-none">{sportEmoji}</span>
+            <div className="relative z-10">
+              <p className="font-heading font-black text-2xl uppercase tracking-tight text-white drop-shadow-lg">
+                {item.brand}
+              </p>
+              {item.type && (
+                <p className="text-[10px] uppercase tracking-widest text-zinc-300/80 mt-1.5">
+                  {item.type}
+                </p>
+              )}
+            </div>
           </div>
         )}
         {item.level && (
@@ -421,11 +433,6 @@ function ProductCard({ item, delay }) {
           <Badge className="absolute bottom-2 right-2 bg-purple-500/20 text-purple-200 border-purple-400/30 text-[9px] backdrop-blur-sm">
             {prices.length} stores
           </Badge>
-        )}
-        {generated && (
-          <span className="absolute bottom-2 left-2 text-[8px] uppercase tracking-wider text-zinc-400/60 bg-black/40 px-1.5 py-0.5 rounded-full backdrop-blur-sm flex items-center gap-1">
-            <Sparkles className="w-2 h-2" /> AI
-          </span>
         )}
       </div>
 

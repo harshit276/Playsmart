@@ -742,6 +742,54 @@ async def _notify_admin(subject: str, body: str) -> None:
             logger.warning(f"Email notify failed: {e}")
 
 
+# ─── Support / contact form ──────────────────────────────────────
+class SupportTicketRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+    email: str = Field(..., min_length=3, max_length=120)
+    subject: str = Field(..., min_length=1, max_length=160)
+    message: str = Field(..., min_length=5, max_length=2000)
+    category: Optional[str] = Field(None, max_length=40)  # bug | account | payment | feedback | other
+
+
+@api_router.post("/support/contact")
+async def support_contact(req: SupportTicketRequest):
+    """Public endpoint — any user (guest or logged-in) can submit a
+    support ticket. Persists to DB best-effort + notifies admin via
+    Telegram/email/WhatsApp (whichever is configured)."""
+    record = {
+        "id": str(uuid.uuid4()),
+        "name": req.name.strip(),
+        "email": req.email.strip().lower(),
+        "subject": req.subject.strip(),
+        "message": req.message.strip(),
+        "category": (req.category or "other").strip(),
+        "status": "open",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await asyncio.wait_for(db.support_tickets.insert_one({**record}), timeout=3.0)
+    except Exception as e:
+        logger.warning(f"support ticket DB write failed: {e}")
+    asyncio.create_task(_notify_admin(
+        f"📩 Support · {record['category']} · {record['subject']}",
+        f"From: {record['name']} <{record['email']}>\n\n{record['message']}",
+    ))
+    return {"ok": True, "id": record["id"]}
+
+
+@api_router.get("/admin/support-tickets")
+async def admin_support_tickets(x_admin_key: str = Header(None, alias="X-Admin-Key"), limit: int = 100):
+    _require_admin(x_admin_key)
+    try:
+        rows = await asyncio.wait_for(
+            db.support_tickets.find({}, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 500)),
+            timeout=8.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    return {"tickets": rows, "count": len(rows)}
+
+
 @api_router.post("/admin/test-notify")
 async def admin_test_notify(x_admin_key: str = Header(None, alias="X-Admin-Key")):
     """Fire a test notification to all configured channels. Use this to
@@ -3714,13 +3762,19 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
     user = await get_current_user_or_none(authorization)
     is_guest = user is None
 
+    # Token gate: check balance UPFRONT but don't debit yet. We only
+    # charge after the analysis succeeds (at the bottom of the function)
+    # — this way a server error never burns the user's tokens.
+    analysis_cost = abs(TOKEN_RULES.get("analysis_spend", -100))
     if not is_guest:
-        # Token spend gate. Raises HTTPException(402) with packs payload if
-        # the user is short — frontend opens the buy/earn modal. Server is
-        # the source of truth; client pre-check is purely UX hint.
-        analysis_cost = abs(TOKEN_RULES.get("analysis_spend", -100))
-        await _spend_tokens(user["id"], "analysis_spend", analysis_cost,
-                             {"source": "analyze_client_results"})
+        balance = await _get_balance(user["id"])
+        if balance < analysis_cost:
+            raise HTTPException(status_code=402, detail={
+                "error": "insufficient_tokens",
+                "required": analysis_cost,
+                "balance": balance,
+                "packs": TOKEN_PACKS,
+            })
         try:
             profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user["id"]}, {"_id": 0}), timeout=5.0)
         except (Exception, asyncio.TimeoutError):
@@ -4125,6 +4179,16 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
         # ─── Referral payoff: credit both sides on first analysis ─────
         # Run in background so the analysis response stays fast.
         asyncio.create_task(_settle_pending_referrals(user["id"]))
+
+    # Charge tokens NOW — only after the analysis fully succeeded. If any
+    # of the work above raised, we never reach this point and the user
+    # isn't charged. Cleaner than spend-then-refund-on-error.
+    if not is_guest:
+        try:
+            await _credit_tokens(user["id"], "analysis_spend", -analysis_cost,
+                                  {"source": "analyze_client_results", "analysis_id": file_id})
+        except Exception as e:
+            logger.warning(f"analysis_spend debit failed for {user['id'][:8]} (work succeeded — user got it free): {e}")
 
     # Return full enriched result (same format as /analyze-video)
     return {

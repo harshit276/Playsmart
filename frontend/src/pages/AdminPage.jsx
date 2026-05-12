@@ -106,12 +106,13 @@ export default function AdminPage() {
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="bg-zinc-800 border-zinc-700 mb-6 w-full grid grid-cols-5 max-w-xl">
+          <TabsList className="bg-zinc-800 border-zinc-700 mb-6 w-full grid grid-cols-3 sm:grid-cols-6 max-w-2xl">
             <TabsTrigger value="stats" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Stats</TabsTrigger>
             <TabsTrigger value="users" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Users</TabsTrigger>
             <TabsTrigger value="enquiries" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Enquiries</TabsTrigger>
             <TabsTrigger value="transactions" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Tokens</TabsTrigger>
             <TabsTrigger value="payments" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Payments</TabsTrigger>
+            <TabsTrigger value="support" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Support</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stats"><StatsTab headers={headers} /></TabsContent>
@@ -119,6 +120,7 @@ export default function AdminPage() {
           <TabsContent value="enquiries"><EnquiriesTab headers={headers} /></TabsContent>
           <TabsContent value="transactions"><TransactionsTab headers={headers} /></TabsContent>
           <TabsContent value="payments"><PaymentsTab headers={headers} /></TabsContent>
+          <TabsContent value="support"><SupportTab headers={headers} /></TabsContent>
         </Tabs>
       </div>
     </div>
@@ -362,6 +364,43 @@ function PaymentsTab({ headers }) {
           </tr>
         ))}
       </Table>
+    </div>
+  );
+}
+
+// ── Support tickets tab ───────────────────────────────────
+function SupportTab({ headers }) {
+  const { data, loading, refresh } = useFetch("/admin/support-tickets?limit=200", headers);
+  if (loading) return <Spinner />;
+  const rows = data?.tickets || [];
+  return (
+    <div>
+      <Header title={`${rows.length} tickets`} onRefresh={refresh} />
+      {rows.length === 0 ? (
+        <p className="text-zinc-500 text-sm py-8 text-center">No support tickets yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {rows.map(t => (
+            <div key={t.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+              <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="text-sm font-bold text-white">{t.subject}</p>
+                    <Badge className="bg-zinc-800 text-zinc-400 text-[10px]">{t.category || "other"}</Badge>
+                  </div>
+                  <p className="text-xs text-zinc-300">
+                    {t.name} · <a href={`mailto:${t.email}`} className="text-amber-300 underline">{t.email}</a>
+                  </p>
+                  <p className="text-[10px] text-zinc-600 mt-0.5">{fmtDate(t.created_at)}</p>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-300 whitespace-pre-wrap leading-relaxed bg-zinc-800/40 rounded-lg p-3 mt-2">
+                {t.message}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

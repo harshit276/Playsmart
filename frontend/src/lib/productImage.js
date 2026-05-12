@@ -1,91 +1,33 @@
 /**
  * productImage — resolves the best image URL for a product card.
  *
- * Priority:
- *   1. Trust Amazon CDN URLs (m.media-amazon.com / amazon.in) — these
- *      hotlink reliably and look real.
- *   2. Otherwise generate one via Pollinations.ai — free image-gen
- *      service, no API key, returns the image directly via URL.
- *      Cached at their CDN so repeat loads are fast.
+ * Honest scope:
+ *   • If the item has a usable image URL (Amazon CDN, Flipkart CDN,
+ *     official brand site), let the browser try to load it. Most
+ *     existing data has Flipkart `rukminim2.flixcart.com` URLs that
+ *     sometimes 404 — the card swaps to the placeholder on error.
+ *   • If no image at all, return null so the card renders the rich
+ *     brand-name placeholder instead. We tried AI generation via
+ *     Pollinations earlier — too slow + irrelevant for branded
+ *     products — so we don't go down that road anymore.
  *
- * Returns the URL string + a flag indicating whether it's the
- * generated fallback (so the card can show a small "AI image" marker
- * if we want).
+ * Returns: { url: string|null, generated: false }
+ * `generated` is kept in the contract for backward-compat with cards
+ * that show an "AI" badge — always false now.
  */
-
-const POLLINATIONS_BASE = "https://image.pollinations.ai/prompt/";
-
-const SPORT_HINT = {
-  badminton: "badminton",
-  tennis: "tennis",
-  table_tennis: "table tennis",
-  pickleball: "pickleball",
-  cricket: "cricket",
-  football: "football soccer",
-  swimming: "swimming",
-};
-
-const CATEGORY_HINT = {
-  rackets: "racket",
-  tennis_rackets: "racket",
-  paddles: "paddle",
-  blades: "blade",
-  rubbers: "rubber",
-  ready_made_rackets: "table tennis racket",
-  shoes: "court shoes",
-  tennis_shoes: "tennis shoes",
-  pb_shoes: "court shoes",
-  cricket_shoes: "cricket shoes",
-  football_boots: "football boots",
-  bats: "cricket bat",
-  balls: "ball",
-  tennis_balls: "tennis balls",
-  cricket_ball: "cricket ball",
-  shuttlecocks: "shuttlecock",
-  strings: "string",
-  tennis_strings: "string",
-  grips: "grip",
-  goggles: "swim goggles",
-  swimsuits: "swimsuit",
-  pads: "pads",
-  gloves: "gloves",
-  helmets: "helmet",
-};
-
-function isAmazonCdn(url) {
-  if (!url || typeof url !== "string") return false;
-  return /m\.media-amazon\.com|amazon\.in/.test(url);
-}
 
 /**
- * @param {object} item — equipment item with name/brand/_sport/_category etc.
- * @param {object} opts — { width, height }
- * @returns {{ url: string, generated: boolean }}
+ * @param {object} item — equipment item with name/brand/image etc.
+ * @returns {{ url: string|null, generated: false }}
  */
-export function productImageFor(item, opts = {}) {
-  const w = opts.width || 400;
-  const h = opts.height || 400;
-  const existing = item?.image;
-  const failed = item?.image_search_failed;
-
-  // Trust Amazon CDN images even without explicit verification.
-  if (existing && !failed && isAmazonCdn(existing)) {
+export function productImageFor(item /*, opts */) {
+  const existing = item?.image_url || item?.image;
+  // If the item carries any URL, hand it back. The card's <img> onError
+  // will fall through to the branded placeholder on broken links.
+  // We previously tried to drop non-Amazon URLs sight-unseen — that was
+  // overkill, plenty of Flipkart URLs do load.
+  if (existing && typeof existing === "string" && existing.startsWith("http")) {
     return { url: existing, generated: false };
   }
-
-  // Otherwise generate via Pollinations. Build a prompt from brand + name
-  // + sport + category + "product photo white background" so the model
-  // knows what we want.
-  const sport = SPORT_HINT[item?._sport || item?.sport] || item?._sport || "";
-  const category = CATEGORY_HINT[item?._category] || item?.type || "";
-  const promptParts = [
-    item?.brand || "",
-    item?.name || "",
-    sport,
-    category,
-    "product photo on white background, professional studio lighting, centered",
-  ].filter(Boolean);
-  const prompt = promptParts.join(" ");
-  const url = `${POLLINATIONS_BASE}${encodeURIComponent(prompt)}?width=${w}&height=${h}&nologo=true&model=flux`;
-  return { url, generated: true };
+  return { url: null, generated: false };
 }
