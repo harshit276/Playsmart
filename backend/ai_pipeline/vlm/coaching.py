@@ -415,10 +415,20 @@ def analyze_video_full(
             h_zone = "left" if cx < 0.4 else "right" if cx > 0.6 else "center"
             corner = f"{v_zone}-{h_zone}".replace("middle-center", "center")
             box_hint = (
-                f"\n\nFOCUS player: the {sport} player initially positioned at the "
-                f"{corner} area of the frame (normalized ~{cx:.2f}, {cy:.2f}). "
-                f"Track them through the video and only classify shots THEY hit. "
-                f"Ignore shots by other players."
+                f"\n\nIMPORTANT — TARGET PLAYER ISOLATION:\n"
+                f"Multiple players are likely in this video. Identify the {sport} "
+                f"player initially positioned at the {corner} area of the frame "
+                f"(normalized ~{cx:.2f}, {cy:.2f}). Note their clothing color, "
+                f"body type, and court side. Track that same player throughout "
+                f"the entire video.\n\n"
+                f"STRICT RULES for shot inclusion:\n"
+                f"1. ONLY include shots hit by the target player. Skip every shot "
+                f"hit by any other player on the court.\n"
+                f"2. In each shot's reasoning, REFERENCE the target player "
+                f"explicitly (e.g., 'the target player wearing X in the {corner}'). "
+                f"If you can't confirm it's the same target player, SKIP the shot.\n"
+                f"3. When in doubt, omit. Fewer accurate shots > many shots that "
+                f"may belong to other players."
             )
         except Exception:
             pass

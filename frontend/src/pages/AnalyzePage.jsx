@@ -331,6 +331,9 @@ export default function AnalyzePage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState("");
+  const [loadingSubtext, setLoadingSubtext] = useState("");
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const [loadingStartedAt, setLoadingStartedAt] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
@@ -406,6 +409,80 @@ export default function AnalyzePage() {
   }, [user?.id]);
 
   useEffect(() => { loadHistory(); }, [loadHistory]);
+
+  // Smooth-progress + rotating subtext so the loading panel never appears
+  // frozen between real progress callbacks. `displayProgress` interpolates
+  // toward `progress`; `loadingSubtext` rotates through phase-appropriate
+  // micro-hints every ~3.5s while analyzing.
+  useEffect(() => {
+    if (!analyzing) {
+      setDisplayProgress(0);
+      setLoadingSubtext("");
+      return;
+    }
+    const id = setInterval(() => {
+      setDisplayProgress((prev) => {
+        // Interpolate ~25% of the gap each tick; cap below the real value to
+        // avoid overshoot. Never let the bar exceed `progress`.
+        const target = progress;
+        if (prev >= target) return target;
+        const gap = target - prev;
+        const step = Math.max(0.4, gap * 0.18);
+        return Math.min(target, prev + step);
+      });
+    }, 120);
+    return () => clearInterval(id);
+  }, [analyzing, progress]);
+
+  useEffect(() => {
+    if (!analyzing) return;
+    const HINTS_BY_PHASE = {
+      scan: [
+        "Locating players in frame...",
+        "Tracking court positions...",
+        "Picking the cleanest shot moments...",
+      ],
+      analyze: [
+        "Watching your form frame-by-frame...",
+        "Measuring shoulder, elbow & wrist angles...",
+        "Comparing to pro-level reference...",
+        "Estimating shuttle/ball speed...",
+      ],
+      coach: [
+        "Drafting your personalized feedback...",
+        "Picking drills that match your level...",
+        "Choosing pros with similar style...",
+      ],
+      save: [
+        "Saving to your history...",
+        "Updating your progress profile...",
+        "Almost there...",
+      ],
+    };
+    const phase = progress < 25 ? "scan" : progress < 70 ? "analyze" : progress < 92 ? "coach" : "save";
+    const hints = HINTS_BY_PHASE[phase];
+    let idx = 0;
+    setLoadingSubtext(hints[0]);
+    const id = setInterval(() => {
+      idx = (idx + 1) % hints.length;
+      setLoadingSubtext(hints[idx]);
+    }, 3500);
+    return () => clearInterval(id);
+  }, [analyzing, progress]);
+
+  useEffect(() => {
+    if (analyzing && !loadingStartedAt) setLoadingStartedAt(Date.now());
+    if (!analyzing && loadingStartedAt) setLoadingStartedAt(null);
+  }, [analyzing, loadingStartedAt]);
+
+  // Ticker forces a re-render every second while analyzing so the elapsed
+  // counter stays accurate even during long plateaus between real progress.
+  const [, _setElapsedTick] = useState(0);
+  useEffect(() => {
+    if (!analyzing) return;
+    const id = setInterval(() => _setElapsedTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [analyzing]);
 
   // Post-login replay: if the user signed in mid-analysis (guest path),
   // re-send the result to /analyze-client-results so it lands in their
@@ -1488,31 +1565,115 @@ export default function AnalyzePage() {
       </div>
 
       {/* Loading state pinned to top so user sees progress immediately */}
-      {analyzing && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="mb-6 bg-zinc-900/80 border border-lime-400/30 rounded-2xl p-6 text-center shadow-lg shadow-lime-400/10">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-10 h-10 border-2 border-lime-400 border-t-transparent rounded-full mx-auto mb-3"
-          />
-          <p className="font-heading font-semibold text-white uppercase tracking-tight mb-2 text-sm">
-            Analyzing your video
-          </p>
-          <motion.p
-            key={loadingText}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-zinc-400 text-xs mb-3"
-          >
-            {loadingText}
-          </motion.p>
-          <div className="max-w-xs mx-auto">
-            <Progress value={progress} className="h-1.5 bg-zinc-800 [&>div]:bg-lime-400 [&>div]:rounded-full [&>div]:transition-all [&>div]:duration-700" />
-          </div>
-          <p className="text-zinc-600 text-[10px] mt-2">{progress}%</p>
-        </motion.div>
-      )}
+      {analyzing && (() => {
+        const STAGES = [
+          { key: "scan", label: "Scan", min: 0, max: 25 },
+          { key: "analyze", label: "Analyze", min: 25, max: 70 },
+          { key: "coach", label: "Coach", min: 70, max: 92 },
+          { key: "save", label: "Save", min: 92, max: 100 },
+        ];
+        const activeStageIdx = STAGES.findIndex((s) => progress < s.max);
+        const currentStage = activeStageIdx === -1 ? STAGES.length - 1 : activeStageIdx;
+        const elapsed = loadingStartedAt ? Math.floor((Date.now() - loadingStartedAt) / 1000) : 0;
+        return (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            className="mb-6 bg-zinc-900/80 border border-lime-400/30 rounded-2xl p-5 shadow-lg shadow-lime-400/10 overflow-hidden">
+            {/* Header row: spinner + title + elapsed */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-7 h-7 border-2 border-lime-400 border-t-transparent rounded-full flex-shrink-0"
+                />
+                <div className="text-left">
+                  <p className="font-heading font-semibold text-white uppercase tracking-tight text-sm leading-tight">
+                    Analyzing your video
+                  </p>
+                  <motion.p
+                    key={loadingText}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-zinc-300 text-xs mt-0.5"
+                  >
+                    {loadingText || "Getting started..."}
+                  </motion.p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-lime-400 text-sm font-mono font-bold tabular-nums">{Math.round(displayProgress)}%</p>
+                <p className="text-zinc-500 text-[10px] tabular-nums">{elapsed}s elapsed</p>
+              </div>
+            </div>
+
+            {/* Progress bar with continuous shimmer overlay so it never looks frozen */}
+            <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden mb-4">
+              <motion.div
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-lime-500 to-lime-400 rounded-full"
+                style={{ width: `${displayProgress}%` }}
+                transition={{ ease: "easeOut" }}
+              />
+              <motion.div
+                className="absolute inset-y-0 w-1/4 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                animate={{ x: ["-100%", "400%"] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+                style={{ width: `${Math.max(displayProgress, 8)}%` }}
+              />
+            </div>
+
+            {/* Stage indicator row */}
+            <div className="flex items-center justify-between">
+              {STAGES.map((stage, idx) => {
+                const isDone = idx < currentStage;
+                const isActive = idx === currentStage;
+                return (
+                  <div key={stage.key} className="flex-1 flex flex-col items-center gap-1.5 relative">
+                    <div className="relative">
+                      <motion.div
+                        animate={isActive ? { scale: [1, 1.15, 1], opacity: [1, 0.6, 1] } : { scale: 1, opacity: 1 }}
+                        transition={isActive ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" } : {}}
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          isDone ? "bg-lime-400" : isActive ? "bg-lime-400 ring-2 ring-lime-400/30" : "bg-zinc-700"
+                        }`}
+                      />
+                    </div>
+                    <span className={`text-[10px] uppercase tracking-wider ${
+                      isDone || isActive ? "text-lime-400" : "text-zinc-600"
+                    }`}>{stage.label}</span>
+                    {idx < STAGES.length - 1 && (
+                      <div className={`absolute top-1 left-[calc(50%+0.625rem)] right-[calc(-50%+0.625rem)] h-px ${
+                        isDone ? "bg-lime-400/50" : "bg-zinc-700"
+                      }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Rotating subtle hint so the user always sees motion */}
+            <motion.p
+              key={loadingSubtext}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.7 }}
+              transition={{ duration: 0.5 }}
+              className="text-center text-zinc-500 text-[11px] mt-3 italic"
+            >
+              {loadingSubtext || "Setting up..."}
+            </motion.p>
+
+            {elapsed > 25 && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-zinc-600 text-[10px] mt-2"
+              >
+                Longer videos take a bit more time — hang tight, this won't fail silently.
+              </motion.p>
+            )}
+          </motion.div>
+        );
+      })()}
 
       {/* Sport Selection — removed from upload UI. We auto-detect from the
           actual video frames and confirm in the Player Selection modal where

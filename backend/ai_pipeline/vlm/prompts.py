@@ -192,11 +192,20 @@ def _box_focus_hint(target_box: dict | None, target_player: str = "auto") -> str
             h_zone = "left" if cx < 0.4 else "right" if cx > 0.6 else "center"
             corner = f"{v_zone}-{h_zone}".replace("middle-center", "center")
             return (
-                f" Multiple players are visible. FOCUS ONLY on the player whose "
-                f"position is approximately at the {corner} area of the frame "
-                f"(normalized coords ~{cx:.2f}, {cy:.2f}). Ignore the other players "
-                f"— do not classify shots they hit. If the target player is not "
-                f"clearly visible in a given moment, set that shot to 'unknown'."
+                f"\n\nIMPORTANT — TARGET PLAYER ISOLATION:\n"
+                f"Multiple players are visible. Track ONLY the player whose initial "
+                f"position is at the {corner} area of the frame (normalized coords "
+                f"~{cx:.2f}, {cy:.2f}). Identify this player by their court side, "
+                f"clothing color, and body type, and track them through the entire video.\n\n"
+                f"STRICT RULES:\n"
+                f"1. If a shot is hit by ANYONE who is NOT the target player, "
+                f"DO NOT include it. Skip it entirely — do not add it with shot_type='unknown'.\n"
+                f"2. In your reasoning, ALWAYS reference the target player explicitly "
+                f"(e.g., 'the target player in the bottom-left makes contact with...'). "
+                f"If you can't confirm it's the target player, skip the shot.\n"
+                f"3. When in doubt, fewer shots is better than wrong shots. Quality over quantity.\n"
+                f"4. If the target player moves out of frame, just don't include shots "
+                f"from that period — pick them back up when the target returns to view."
             )
         except Exception:
             pass
