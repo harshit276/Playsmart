@@ -1997,7 +1997,16 @@ export async function extractDetectKeyframes(videoFile, options = {}) {
 export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBox = null, options = {}) {
   const {
     framesPerShot = 3, maxDim = 720, jpegQuality = 0.7,
-    offsets = [-0.3, 0, 0.3], isMultiPlayer = false, expandFactor = 1.5,
+    offsets = [-0.3, 0, 0.3], isMultiPlayer = false,
+    // When a target box is provided, draw a red rectangle around the target
+    // player on the FULL frame instead of cropping. Keeps shuttle/ball
+    // trajectory, court lines, and opponent context intact for the VLM while
+    // still disambiguating which player to focus on. Same token cost as the
+    // previous crop path. Disable with annotateTargetBox=false to fall back
+    // to the legacy crop (useful for A/B testing).
+    annotateTargetBox = true,
+    boxConfidence = 1.0,
+    expandFactor = 1.5,
   } = options;
   if (!peakTimes || peakTimes.length === 0) return [];
 
@@ -2019,10 +2028,16 @@ export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBo
     return [];
   }
 
+  // Decide annotate-vs-crop. We annotate when we have a target box AND
+  // confidence is high enough to trust it. Falls back to legacy crop only
+  // when annotateTargetBox is explicitly disabled.
+  const useAnnotate = !!(customCropBox && annotateTargetBox && boxConfidence >= 0.7);
+  const useCrop = !!(customCropBox && !isMultiPlayer && !useAnnotate);
+
   let sx = 0, sy = 0, sw = vw, sh = vh;
-  if (customCropBox && !isMultiPlayer) {
-    // Single-player video: crop wider than the bbox to catch the player as
-    // they move during the rally. expandFactor=1.5 = ~50% more headroom.
+  if (useCrop) {
+    // Legacy single-player crop (kept for A/B). Loses shuttle context — only
+    // used when annotation is explicitly disabled.
     const cx = customCropBox.x + customCropBox.width / 2;
     const cy = customCropBox.y + customCropBox.height / 2;
     const ew = Math.min(1, customCropBox.width * expandFactor);
@@ -2034,7 +2049,8 @@ export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBo
     sw = Math.max(1, Math.round(ew * vw));
     sh = Math.max(1, Math.round(eh * vh));
   }
-  // For multi-player (doubles) videos, sx/sy/sw/sh stay at full frame.
+  // For annotated frames and multi-player full frames, sx/sy/sw/sh stay at
+  // full video dimensions.
 
   const scale = Math.min(1, maxDim / Math.max(sw, sh));
   const outW = Math.max(1, Math.round(sw * scale));
@@ -2044,6 +2060,22 @@ export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBo
   canvas.width = outW;
   canvas.height = outH;
   const ctx = canvas.getContext("2d");
+
+  // Pre-compute box draw rect in output-canvas coordinates (only used when
+  // useAnnotate). Scale from normalized video coords to output canvas coords.
+  let boxRect = null;
+  if (useAnnotate) {
+    const bx = Math.max(0, Math.min(1, customCropBox.x));
+    const by = Math.max(0, Math.min(1, customCropBox.y));
+    const bw = Math.max(0.02, Math.min(1 - bx, customCropBox.width));
+    const bh = Math.max(0.02, Math.min(1 - by, customCropBox.height));
+    boxRect = {
+      x: Math.round(bx * outW),
+      y: Math.round(by * outH),
+      w: Math.round(bw * outW),
+      h: Math.round(bh * outH),
+    };
+  }
 
   const useOffsets = framesPerShot === 3 ? offsets : Array.from({ length: framesPerShot }, (_, i) =>
     -0.4 + (0.8 * i) / Math.max(1, framesPerShot - 1)
@@ -2057,6 +2089,27 @@ export async function extractKeyframesPerShot(videoFile, peakTimes, customCropBo
       try {
         await _seekTo(video, t, 3000);
         ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+        if (boxRect) {
+          // Bright red box + small TARGET label so the VLM has an
+          // unambiguous anchor for "which player is this analysis about".
+          const lineW = Math.max(3, Math.round(outW / 220));
+          ctx.lineWidth = lineW;
+          ctx.strokeStyle = "rgb(255, 40, 40)";
+          ctx.strokeRect(boxRect.x, boxRect.y, boxRect.w, boxRect.h);
+          // Label background
+          const fontPx = Math.max(11, Math.round(outW / 65));
+          ctx.font = `bold ${fontPx}px sans-serif`;
+          const label = "TARGET";
+          const padX = 4, padY = 2;
+          const textW = ctx.measureText(label).width;
+          const labelX = boxRect.x;
+          const labelY = Math.max(fontPx + padY * 2, boxRect.y) - (fontPx + padY);
+          ctx.fillStyle = "rgb(255, 40, 40)";
+          ctx.fillRect(labelX, labelY, textW + padX * 2, fontPx + padY * 2);
+          ctx.fillStyle = "rgb(255, 255, 255)";
+          ctx.textBaseline = "top";
+          ctx.fillText(label, labelX + padX, labelY + padY);
+        }
         const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
         shotFrames.push(dataUrl);
       } catch {

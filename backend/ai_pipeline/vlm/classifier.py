@@ -57,6 +57,7 @@ class VLMShotClassifier:
         start_sec: float | None = None,
         end_sec: float | None = None,
         target_player: str = "auto",
+        target_box: dict | None = None,
     ) -> dict:
         # 1. cache lookup
         if self.use_cache:
@@ -74,7 +75,7 @@ class VLMShotClassifier:
             video_path,
             start_sec=start_sec, end_sec=end_sec,
             n_frames=self.n_frames, target_player=target_player,
-            max_dim=self.max_dim,
+            max_dim=self.max_dim, target_box=target_box,
         )
         if len(frames) < 2:
             return {
@@ -91,7 +92,7 @@ class VLMShotClassifier:
 
         # 3. build prompts + call backend
         sys_prompt = system_prompt(self.sport).replace("{n_frames}", str(len(jpegs)))
-        usr_msg = user_message(self.sport, len(jpegs), target_player)
+        usr_msg = user_message(self.sport, len(jpegs), target_player, target_box=target_box)
 
         try:
             raw = self._backend.call(sys_prompt, usr_msg, jpegs)
@@ -138,6 +139,7 @@ class VLMShotClassifier:
         video_path: str | Path,
         windows: list[tuple[float | None, float | None]],
         target_player: str = "auto",
+        target_box: dict | None = None,
     ) -> list[dict]:
         """Classify N shot moments in ONE API call. Returns list of N dicts
         in the same order as windows. Cache hits are served from disk; only
@@ -176,7 +178,7 @@ class VLMShotClassifier:
             frames = extract_keyframes(
                 video_path, start_sec=s, end_sec=e,
                 n_frames=self.n_frames, target_player=target_player,
-                max_dim=self.max_dim,
+                max_dim=self.max_dim, target_box=target_box,
             )
             if len(frames) < 2:
                 # Mark as insufficient — handled below
@@ -202,7 +204,7 @@ class VLMShotClassifier:
         # Build batch prompts (counting only shots with frames)
         nonzero_per_shot = [n for n in frames_per_shot if n > 0]
         sys_prompt = system_prompt_batch(self.sport).replace("{n_shots}", str(len(nonzero_per_shot)))
-        usr_msg = user_message_batch(self.sport, nonzero_per_shot, target_player)
+        usr_msg = user_message_batch(self.sport, nonzero_per_shot, target_player, target_box=target_box)
 
         try:
             raw = self._backend.call(sys_prompt, usr_msg, all_jpegs)

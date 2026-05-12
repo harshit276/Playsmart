@@ -127,14 +127,16 @@ For power_level, judge the racket-head speed and force at contact: soft (gentle 
 If you cannot determine the shot from the frames (no player visible, blurry, etc.), set shot_type to "unknown" and confidence to 0.0."""
 
 
-def user_message(sport: str, n_frames: int, target_player: str = "auto") -> str:
+def user_message(sport: str, n_frames: int, target_player: str = "auto",
+                 target_box: dict | None = None) -> str:
     """Per-call user message. Short — the system prompt has the heavy lifting."""
-    where = ""
-    if target_player == "near":
-        where = " (focus on the bottom-half player closest to camera)"
-    elif target_player == "far":
-        where = " (focus on the top-half player far from camera)"
-    return f"""Analyze the following {n_frames} keyframes of a single {sport} shot{where}. Output ONLY the JSON described in the system prompt."""
+    where = _box_focus_hint(target_box, target_player) if target_box else ""
+    if not where:
+        if target_player == "near":
+            where = " (focus on the bottom-half player closest to camera; use the full frame for shuttle/ball trajectory)"
+        elif target_player == "far":
+            where = " (focus on the top-half player far from camera; use the full frame for shuttle/ball trajectory)"
+    return f"""Analyze the following {n_frames} keyframes of a single {sport} shot.{where} Output ONLY the JSON described in the system prompt."""
 
 
 def system_prompt_batch(sport: str) -> str:
@@ -180,10 +182,11 @@ For power_level: soft=gentle touch/no swing, medium=controlled stroke, hard=comm
 
 
 def _box_focus_hint(target_box: dict | None, target_player: str = "auto") -> str:
-    """Translate a normalized {x,y,width,height} bbox into a natural-language
-    spatial hint Gemini can use to focus on the right player in a crowded
-    (doubles/multi-player) frame. Falls back to the simpler quadrant string
-    when no box is provided."""
+    """Tell the model to anchor on the RED BOX drawn on each frame around the
+    target player. The frontend annotates frames with a bright red rectangle
+    + "TARGET" label whenever a target box is known (singles or doubles),
+    which gives Gemini an unambiguous visual anchor while preserving full
+    shuttle/ball trajectory and court context."""
     if isinstance(target_box, dict):
         try:
             cx = float(target_box.get("x", 0)) + float(target_box.get("width", 0)) / 2
@@ -192,27 +195,38 @@ def _box_focus_hint(target_box: dict | None, target_player: str = "auto") -> str
             h_zone = "left" if cx < 0.4 else "right" if cx > 0.6 else "center"
             corner = f"{v_zone}-{h_zone}".replace("middle-center", "center")
             return (
-                f"\n\nIMPORTANT — TARGET PLAYER ISOLATION:\n"
-                f"Multiple players are visible. Track ONLY the player whose initial "
-                f"position is at the {corner} area of the frame (normalized coords "
-                f"~{cx:.2f}, {cy:.2f}). Identify this player by their court side, "
-                f"clothing color, and body type, and track them through the entire video.\n\n"
+                f"\n\nIMPORTANT — TARGET PLAYER:\n"
+                f"Each frame has a bright RED BOX with a 'TARGET' label drawn "
+                f"around the player you must analyze. They start in the {corner} "
+                f"area (normalized ~{cx:.2f}, {cy:.2f}). Use the red box as your "
+                f"primary anchor for identity; use clothing color and court "
+                f"position as backup when the box is between frames or the "
+                f"player moves.\n\n"
+                f"USE THE FULL FRAME for shot context:\n"
+                f"- Shuttle/ball trajectory, landing zone, and net clearance "
+                f"determine whether a shot is a smash, drop, clear, drive, "
+                f"lift, net shot, etc.\n"
+                f"- Opponent position and reaction inform shot intent.\n"
+                f"- The red box tells you WHO; the rest of the frame tells you WHAT.\n\n"
                 f"STRICT RULES:\n"
-                f"1. If a shot is hit by ANYONE who is NOT the target player, "
-                f"DO NOT include it. Skip it entirely — do not add it with shot_type='unknown'.\n"
-                f"2. In your reasoning, ALWAYS reference the target player explicitly "
-                f"(e.g., 'the target player in the bottom-left makes contact with...'). "
-                f"If you can't confirm it's the target player, skip the shot.\n"
-                f"3. When in doubt, fewer shots is better than wrong shots. Quality over quantity.\n"
-                f"4. If the target player moves out of frame, just don't include shots "
-                f"from that period — pick them back up when the target returns to view."
+                f"1. ONLY include shots hit by the player inside the red box. "
+                f"Skip every shot hit by any other player — do not even add "
+                f"them with shot_type='unknown'.\n"
+                f"2. In your reasoning, explicitly reference the boxed target "
+                f"player (e.g., 'the target player in the red box swings...'). "
+                f"If you can't confirm a shot belongs to the boxed player, skip it.\n"
+                f"3. Use shuttle/ball trajectory and landing zone from the "
+                f"FULL frame — never ignore them, they're how you distinguish "
+                f"smash vs clear vs drop.\n"
+                f"4. Quality over quantity: fewer correct shots beats many "
+                f"misattributed ones."
             )
         except Exception:
             pass
     if target_player == "near":
-        return " (focus on the bottom-half player closest to camera)"
+        return " (focus on the bottom-half player closest to camera; use the full frame for shuttle/ball trajectory context)"
     if target_player == "far":
-        return " (focus on the top-half player far from camera)"
+        return " (focus on the top-half player far from camera; use the full frame for shuttle/ball trajectory context)"
     return ""
 
 
