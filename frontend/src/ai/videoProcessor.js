@@ -1764,6 +1764,133 @@ function buildPlayerProfile(detectedShots, dominantHand) {
  *
  * Returns: Array<base64-jpeg-string|null>  (one per peakTime)
  */
+/**
+ * Re-encode a video file at a lower resolution + bitrate so it fits Vercel's
+ * 4.5 MB request body limit. Uses HTML5 canvas + MediaRecorder to draw each
+ * frame at the target size and capture into a Blob.
+ *
+ * Returns the smaller Blob (or the original file if compression isn't
+ * supported or actually grows the file).
+ *
+ * Options:
+ *   maxDim: longest output side (default 480)
+ *   bitrate: video bits/sec (default 800_000 = ~0.8 Mbps)
+ *   maxDurationSec: hard trim cap (default 30s)
+ *   onProgress: (pct) => void
+ */
+export async function compressVideoForUpload(videoFile, options = {}) {
+  const {
+    maxDim = 480,
+    bitrate = 800_000,
+    maxDurationSec = 30,
+    onProgress,
+  } = options;
+
+  // Quick exit: if file is already small, skip the work.
+  if (videoFile.size <= 3 * 1024 * 1024) return videoFile;
+
+  // Feature detect — MediaRecorder + captureStream are needed
+  if (typeof window === "undefined" || !window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+    console.warn("[compress] MediaRecorder/captureStream not supported — sending original");
+    return videoFile;
+  }
+
+  // Pick the smallest MIME the browser can encode. Mp4 preferred for Gemini.
+  let mimeType = "";
+  for (const t of [
+    "video/mp4;codecs=avc1.42E01E",
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm",
+  ]) {
+    if (window.MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
+  }
+  if (!mimeType) {
+    console.warn("[compress] no supported MIME for MediaRecorder — sending original");
+    return videoFile;
+  }
+
+  const video = document.createElement("video");
+  const objectUrl = URL.createObjectURL(videoFile);
+  video.src = objectUrl;
+  video.muted = true;
+  video.playsInline = true;
+  video.crossOrigin = "anonymous";
+  video.load();
+  try {
+    await _waitForEvent(video, "loadedmetadata", 8000);
+  } catch {
+    URL.revokeObjectURL(objectUrl);
+    return videoFile;
+  }
+
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const duration = Math.min(video.duration || 0, maxDurationSec);
+  if (!duration || !vw || !vh) {
+    URL.revokeObjectURL(objectUrl);
+    return videoFile;
+  }
+
+  const scale = Math.min(1, maxDim / Math.max(vw, vh));
+  const outW = Math.max(2, Math.round(vw * scale / 2) * 2);  // even
+  const outH = Math.max(2, Math.round(vh * scale / 2) * 2);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outW;
+  canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+
+  // captureStream gives us a MediaStream of canvas redraws
+  const stream = canvas.captureStream(0);  // 0 = manual frame requests
+  const track = stream.getVideoTracks()[0];
+  // Some browsers require requestFrame() to push frames manually
+  const requestFrame = (track && typeof track.requestFrame === "function")
+    ? track.requestFrame.bind(track)
+    : null;
+
+  const recorder = new window.MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: bitrate,
+  });
+  const chunks = [];
+  recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
+  const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
+  recorder.start(200);
+
+  // Walk through the video and draw frames at ~20 fps to the canvas.
+  const fps = 20;
+  const step = 1 / fps;
+  for (let t = 0; t < duration; t += step) {
+    try {
+      video.currentTime = t;
+      await _waitForEvent(video, "seeked", 1500);
+      ctx.drawImage(video, 0, 0, outW, outH);
+      if (requestFrame) requestFrame();
+      if (onProgress) onProgress(Math.round((t / duration) * 100));
+    } catch {
+      // skip frames we can't decode
+    }
+  }
+
+  recorder.stop();
+  await stopped;
+  try { track && track.stop(); } catch {}
+  URL.revokeObjectURL(objectUrl);
+
+  const outBlob = new Blob(chunks, { type: mimeType });
+  if (outBlob.size === 0 || outBlob.size >= videoFile.size) {
+    console.warn(`[compress] no win (${outBlob.size} >= ${videoFile.size}) — sending original`);
+    return videoFile;
+  }
+  console.info(`[compress] ${(videoFile.size / 1024).toFixed(0)} KB -> ${(outBlob.size / 1024).toFixed(0)} KB (${outW}x${outH} @ ${bitrate / 1000} kbps)`);
+  // Give the blob a filename + content type that looks like a file
+  const ext = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
+  return new File([outBlob], `compressed.${ext}`, { type: mimeType });
+}
+
+
 export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox, options = {}) {
   if (!peakTimes || peakTimes.length === 0 || !customCropBox) return peakTimes.map(() => null);
   const { maxDim = 180, jpegQuality = 0.7, expandFactor = 1.5 } = options;

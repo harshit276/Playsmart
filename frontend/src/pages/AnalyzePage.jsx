@@ -765,16 +765,25 @@ export default function AnalyzePage() {
       const videoDirectPromise = (accuracyMode === "video")
         ? (async () => {
             try {
-              setLoadingText("Sending video to AI Coach for full analysis...");
+              setLoadingText("Preparing video for AI Coach...");
               const t0 = Date.now();
-              // Convert video file to base64 (Vercel limit ~4.5 MB body).
-              // We send the original bytes — browser-side compression would
-              // be a follow-up if file sizes get too big.
-              if (file.size > 4 * 1024 * 1024) {
-                videoDirectError = `video too large (${(file.size / 1024 / 1024).toFixed(1)} MB > 4 MB)`;
+              // Compress in-browser to fit Vercel's 4.5 MB body limit.
+              // Re-encodes at 480p / ~0.8 Mbps — Gemini still sees plenty
+              // of detail for shot classification. Skipped automatically
+              // when the file is already small.
+              const mod = await import("@/ai/videoProcessor");
+              const uploadFile = await mod.compressVideoForUpload(file, {
+                maxDim: 480,
+                bitrate: 800_000,
+                maxDurationSec: 30,
+                onProgress: (pct) => setLoadingText(`Preparing video... ${pct}%`),
+              });
+              if (uploadFile.size > 4 * 1024 * 1024) {
+                videoDirectError = `compressed video still too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB > 4 MB) — try a shorter clip`;
                 return;
               }
-              const buf = await file.arrayBuffer();
+              setLoadingText("Sending video to AI Coach for full analysis...");
+              const buf = await uploadFile.arrayBuffer();
               const bytes = new Uint8Array(buf);
               let bin = "";
               for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
@@ -784,7 +793,7 @@ export default function AnalyzePage() {
                 sport: sportToAnalyze,
                 target_player: targetPlayer,
                 target_box: customCropBox || null,
-                mime_type: file.type || "video/mp4",
+                mime_type: uploadFile.type || file.type || "video/mp4",
                 video_b64: b64,
               }, { timeout: 90000 });
               const ms = Date.now() - t0;
