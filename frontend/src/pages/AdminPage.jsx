@@ -205,16 +205,42 @@ function UsersTab({ headers }) {
   return (
     <div>
       <Header title={`${rows.length} users`} onRefresh={refresh} />
-      <Table cols={["Email", "Name", "Tokens", "Created"]}>
-        {rows.map(u => (
-          <tr key={u.id} className="border-b border-zinc-800">
-            <td className="py-2 px-3 text-zinc-300">{u.email || "—"}</td>
-            <td className="py-2 px-3 text-zinc-400">{u.name || "—"}</td>
-            <td className="py-2 px-3 text-purple-300 font-mono text-right">{u.tokens ?? 0}</td>
-            <td className="py-2 px-3 text-zinc-500 text-xs">{fmtDate(u.created_at)}</td>
-          </tr>
-        ))}
-      </Table>
+      {rows.length === 0 ? (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
+          <Users className="w-10 h-10 text-zinc-700 mx-auto mb-3" strokeWidth={1.5} />
+          <p className="text-zinc-300 text-sm font-medium mb-1">No users yet</p>
+          <p className="text-zinc-500 text-xs">
+            Sign up via the main site to see records here. Or check{" "}
+            <a href="/api/health" target="_blank" rel="noreferrer" className="text-amber-400 underline">
+              /api/health
+            </a>{" "}
+            to confirm Mongo is reachable.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(u => (
+            <div key={u.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 sm:p-4 flex items-center gap-3 flex-wrap">
+              <div className="w-10 h-10 rounded-full bg-lime-400/15 flex items-center justify-center font-bold text-lime-400 text-lg shrink-0">
+                {(u.name || u.email || "?").charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white truncate">{u.name || "—"}</p>
+                <p className="text-xs text-zinc-400 truncate font-mono">{u.email || u.phone || "—"}</p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-[10px] text-zinc-500 font-mono">id: {(u.id || "").slice(0, 12)}…</span>
+                  <span className="text-[10px] text-zinc-500">· {fmtDate(u.created_at)}</span>
+                  {u.demo_account && <Badge className="bg-purple-400/15 text-purple-300 border-purple-400/30 text-[9px]">demo</Badge>}
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-mono font-bold text-purple-300">🪙 {(u.tokens ?? 0).toLocaleString("en-IN")}</p>
+                <p className="text-[10px] text-zinc-500">tokens</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

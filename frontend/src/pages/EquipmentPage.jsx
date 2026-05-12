@@ -18,6 +18,7 @@ import api from "@/lib/api";
 import { swrGet } from "@/lib/cachedFetch";
 import EnquireLocalShop from "@/components/EnquireLocalShop";
 import { withAffiliate } from "@/lib/affiliateLinks";
+import { productImageFor } from "@/lib/productImage";
 import { getSportEmoji, getSportLabel, SPORT_LABEL } from "@/lib/sportConfig";
 import SEO from "@/components/SEO";
 
@@ -205,16 +206,24 @@ function PlaceholderImage({ category, name, size = 80 }) {
   );
 }
 
-function ProductImage({ src, alt, category, name, size = 80 }) {
+function ProductImage({ src, alt, category, name, size = 80, item }) {
+  // If a full equipment item is provided, route through productImageFor
+  // which prefers Amazon-CDN URLs and falls back to AI-generated images.
+  // Old call sites passing only `src` still work via the legacy path.
+  const resolved = item
+    ? productImageFor({ ...item, image: src ?? item.image }, { width: size * 2, height: size * 2 })
+    : null;
+  const url = resolved?.url || src;
   const [failed, setFailed] = useState(false);
-  if (!src || failed) {
+  if (!url || failed) {
     return <PlaceholderImage category={category} name={name} size={size} />;
   }
   return (
     <img
-      src={src}
+      src={url}
       alt={alt}
       className="w-full h-full object-cover"
+      loading="lazy"
       onError={() => setFailed(true)}
     />
   );
@@ -259,6 +268,7 @@ function RecCard({ rec, i, showShoeSpecs, budgetRange, detailsTab, setDetailsTab
               category={eq.category}
               name={eq.brand || eq.name || eq.model}
               size={80}
+              item={eq}
             />
           </div>
         </div>
