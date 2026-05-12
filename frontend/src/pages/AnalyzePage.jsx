@@ -719,7 +719,7 @@ export default function AnalyzePage() {
    * Run the on-device analysis pipeline. Optionally scoped to a custom crop
    * box chosen by the user from the player selection modal.
    */
-  const runClientAnalysis = async (sportToAnalyze, customCropBox) => {
+  const runClientAnalysis = async (sportToAnalyze, customCropBox, options = {}) => {
     setAnalyzing(true);
     setResult(null);
     setError(null);
@@ -907,7 +907,23 @@ export default function AnalyzePage() {
         setProgress(92);
         setLoadingText("Getting coaching feedback...");
         try {
-          const { data } = await api.post("/analyze-client-results", {
+          // Inline retry: /analyze-client-results occasionally 502/504s on
+          // cold lambdas (VLM coaching + Mongo writes all squeezed into 60s).
+          // Retry once before bailing — much better than throwing the user
+          // to the error screen for a transient hiccup.
+          const _postWithRetry = async (path, body, cfg) => {
+            try {
+              return await api.post(path, body, cfg);
+            } catch (e) {
+              const status = e?.response?.status;
+              const retryable = !status || [502, 503, 504, 408].includes(status) || /timeout|network|aborted/i.test(e.message || "");
+              if (!retryable) throw e;
+              console.warn(`[${path}] failed (${status || e.message}) — retrying once...`);
+              await new Promise((r) => setTimeout(r, 1500));
+              return await api.post(path, body, cfg);
+            }
+          };
+          const { data } = await _postWithRetry("/analyze-client-results", {
             sport: sportToAnalyze,
             shot_type: clientResult.shot_type || clientResult.shot_analysis?.shot_type || "unknown",
             confidence: clientResult.confidence || clientResult.shot_analysis?.confidence || 0,
@@ -1016,6 +1032,18 @@ export default function AnalyzePage() {
     } catch (err) {
       clearInterval(interval);
       const msg = err.response?.data?.detail || err.message || "Analysis failed";
+      // Auto-retry once on transient failures — most analysis errors come
+      // from Vercel cold-start timeouts, Gemini quota-hiccups, or Mongo
+      // connection drops. A second attempt usually succeeds (the user has
+      // told us they manually retry and it works).
+      const isRetryable = /timeout|network|fetch|502|503|504|ECONN|aborted/i.test(msg);
+      if (isRetryable && !options?._isRetry) {
+        console.warn(`[analyze] failed (${msg}) — retrying once after 2s...`);
+        toast.info("Hiccup — retrying automatically...");
+        await new Promise((r) => setTimeout(r, 2000));
+        setAnalyzing(false);
+        return runClientAnalysis(sportToAnalyze, customCropBox, { ...options, _isRetry: true });
+      }
       setError(msg);
       toast.error(msg);
     }
@@ -2151,13 +2179,16 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* Match Insights — multi-shot analysis with skill score + coaching narrative */}
-        {file && !viewingHistorical && (
+        {/* Match Insights — renders for live AND historical analyses.
+            When viewingHistorical, we have no video file but the saved
+            shots[] is enough to surface AI Coach feedback + tiles. */}
+        {(file || viewingHistorical) && result?.shots?.length > 0 && (
           <MatchInsights
-            videoFile={file}
+            videoFile={viewingHistorical ? null : file}
             shots={result.shots}
             sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
             playerPosition={targetPlayer || "auto"}
+            fallbackSkillLevel={aiSkillLevel}
           />
         )}
 
@@ -3135,14 +3166,13 @@ export default function AnalyzePage() {
                 {a.quick_summary && (
                   <p className="text-xs text-zinc-500 mt-2 ml-13 line-clamp-2">{a.quick_summary}</p>
                 )}
-                {/* Reanalyze CTA — appears for analyses ≥7 days old. Lets the
-                    player upload a fresh video and get a VLM-driven progress
-                    comparison vs this old session. */}
+                {/* Reanalyze CTA — on every history card (was 7-day-gated).
+                    Lets the user pick any past analysis as the baseline and
+                    upload a new clip to get a Gemini progress comparison. */}
                 {(() => {
-                  const ageDays = a.date ? (Date.now() - new Date(a.date).getTime()) / 86_400_000 : 0;
-                  if (ageDays < 7) return null;
+                  const ageDays = a.date ? Math.floor((Date.now() - new Date(a.date).getTime()) / 86_400_000) : 0;
                   return (
-                    <div className="mt-3 ml-13 flex items-center gap-2">
+                    <div className="mt-3 ml-13 flex items-center gap-2 flex-wrap">
                       <Button
                         size="sm"
                         variant="outline"
@@ -3153,9 +3183,11 @@ export default function AnalyzePage() {
                         }}
                       >
                         <BarChart3 className="w-3 h-3 mr-1" />
-                        Reanalyze · see your progress
+                        Reanalyze
                       </Button>
-                      <span className="text-[10px] text-zinc-600">{Math.floor(ageDays)} days ago</span>
+                      {ageDays > 0 && (
+                        <span className="text-[10px] text-zinc-600">{ageDays} day{ageDays === 1 ? "" : "s"} ago</span>
+                      )}
                     </div>
                   );
                 })()}

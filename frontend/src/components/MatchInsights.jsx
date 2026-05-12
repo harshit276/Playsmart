@@ -40,7 +40,11 @@ const SHOT_COLORS = [
   "bg-pink-400/80 text-black",
 ];
 
-export default function MatchInsights({ videoFile, shots: shotsProp, sport = "badminton", playerPosition = "auto" }) {
+export default function MatchInsights({
+  videoFile, shots: shotsProp, sport = "badminton", playerPosition = "auto",
+  fallbackSkillLevel = null,  // top-level skill from AnalyzePage, used when
+                              // per-shot vlmSkill is empty across all shots
+}) {
   const [phase, setPhase] = useState("idle"); // idle | extracting | narrating | done | error
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
@@ -52,15 +56,42 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
   const ranKeyRef = useRef(null);
 
   const shotsAvailable = Array.isArray(shotsProp) && shotsProp.length > 0;
+  // When opened from history, we don't have the video file — render the
+  // saved shot data directly instead of re-running pose extraction.
+  const isHistorical = !videoFile && shotsAvailable;
 
   useEffect(() => {
-    if (!videoFile || !shotsAvailable) return;
+    if (!videoFile || !shotsAvailable) {
+      // Historical mode: skip the pose-extraction loop, just populate
+      // perShot directly from the saved shotsProp so the UI renders.
+      if (isHistorical) {
+        const merged = shotsProp.map((s) => ({
+          label: s.type || s.shot_type || "unknown",
+          name: s.name || s.shot_name || s.type || "unknown",
+          pose: null,  // no live pose for historical
+          reasoning: s.reasoning || null,
+          formFeedback: s.formFeedback || s.form_feedback || null,
+          confidence: s.confidence ?? null,
+          speed: s.speed ?? (s.speed_kmh != null ? s.speed_kmh : null),
+          speedSource: s.speedSource || s.speed_source || null,
+          powerLevel: s.powerLevel || s.power_level || null,
+          vlmSkill: s.vlmSkill || s.vlm_skill || s.estimated_skill || null,
+          vlmMeta: s.vlmMeta || s._meta || null,
+          thumbnail: s.thumbnail || null,
+          timestamp: typeof s.timestamp === "number" ? s.timestamp : null,
+        }));
+        setPerShot(merged);
+        setPhase("done");
+        setProgress(100);
+      }
+      return;
+    }
     const key = `${videoFile.name}-${videoFile.size}-${videoFile.lastModified}-${shotsProp.length}`;
     if (ranKeyRef.current === key) return;
     ranKeyRef.current = key;
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoFile, shotsAvailable]);
+  }, [videoFile, shotsAvailable, isHistorical]);
 
   const perTypeQuality = useMemo(() => buildPerTypeQuality(perShot), [perShot]);
   const populatedTypes = useMemo(
@@ -342,9 +373,13 @@ export default function MatchInsights({ videoFile, shots: shotsProp, sport = "ba
               available, with sane fallbacks. */}
           {perShot.length >= 1 ? (
             (() => {
-              const levels = perShot.map((s) => s.vlmSkill).filter(Boolean);
+              const levels = perShot.map((s) => s.vlmSkill).filter((s) => s && s !== "Unknown" && s !== "unknown");
               const counts = levels.reduce((a, l) => { a[l] = (a[l] || 0) + 1; return a; }, {});
-              const topLevel = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+              // Per-shot most-common, with fallback to AnalyzePage's aggregated
+              // top-level skill (covers cases where shots[] has no vlmSkill
+              // but the backend still set a skill_level on the analysis).
+              const topLevel = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]
+                || (fallbackSkillLevel && fallbackSkillLevel !== "Unknown" ? fallbackSkillLevel : null);
               const speeds = perShot.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
               const avgSpeed = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : null;
               const peakSpeed = speeds.length ? Math.max(...speeds) : null;
