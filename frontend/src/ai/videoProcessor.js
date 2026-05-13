@@ -154,6 +154,10 @@ async function extractFrames(videoFile, targetFrameCount = 30, targetPlayer = "a
     const imageData = ctx.getImageData(0, 0, canvasSize, canvasSize);
     frames.push(imageData);
     timestamps.push(time);
+    // Yield periodically so the spinner / progress bar can repaint.
+    if (i % 15 === 0) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
   }
 
   URL.revokeObjectURL(objectUrl);
@@ -2179,6 +2183,11 @@ export async function scanVideoForPlayers(videoFile, onProgress) {
 
     ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
 
+    // Yield before the multi-pose call so the report text actually
+    // paints; without this the user sees the previous label until the
+    // detection finishes (~300-600 ms each).
+    await new Promise((r) => setTimeout(r, 0));
+
     let people = [];
     try {
       people = await detectMultiplePeople(canvas);
@@ -2288,6 +2297,13 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
         poseCount++;
         const subPercent = 35 + Math.round((poseCount / totalActive) * 20);
         progress("pose", subPercent, `Detecting poses... (${poseCount}/${totalActive})`);
+        // Yield to the event loop every ~10 frames so React can flush
+        // progress updates and the browser can repaint the spinner. TF.js
+        // pose detection holds the main thread otherwise, making the UI
+        // look frozen even though work is happening.
+        if (poseCount % 10 === 0) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
       } else {
         allKeypoints.push(emptyPose);
       }

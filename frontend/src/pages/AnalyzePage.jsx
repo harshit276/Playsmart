@@ -1584,13 +1584,16 @@ export default function AnalyzePage() {
         return (
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
             className="mb-6 bg-zinc-900/80 border border-lime-400/30 rounded-2xl p-5 shadow-lg shadow-lime-400/10 overflow-hidden">
-            {/* Header row: spinner + title + elapsed */}
+            {/* Header row: spinner + title + elapsed.
+                Use a pure CSS animation (Tailwind animate-spin) instead of
+                framer-motion: CSS runs on the compositor thread so the
+                spinner keeps moving even when the main thread is busy with
+                pose detection / keyframe extraction. */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-7 h-7 border-2 border-lime-400 border-t-transparent rounded-full flex-shrink-0"
+                <div
+                  className="w-7 h-7 border-2 border-lime-400 border-t-transparent rounded-full flex-shrink-0 animate-spin"
+                  style={{ animationDuration: "0.9s" }}
                 />
                 <div className="text-left">
                   <p className="font-heading font-semibold text-white uppercase tracking-tight text-sm leading-tight">
@@ -1986,6 +1989,15 @@ export default function AnalyzePage() {
     const vlmCoachingActive = !!(vlmCoaching.priority_drills?.length
       || vlmCoaching.equipment_recommendations?.length
       || vlmCoaching.seven_day_plan?.length);
+    // The static DRILL_LIBRARY / training-plan / pro-tip templates were
+    // hand-curated for badminton & tennis. For other sports they render
+    // nonsense like "Net Rally Challenge" on a cricket bowling clip. Gate
+    // those static cards by sport so they only show where they're useful;
+    // VLM coaching is fully sport-aware and always wins when present.
+    const staticTemplatesSupported = ["badminton", "tennis"].includes(
+      (result.sport || selectedSport || profile?.active_sport || "").toLowerCase()
+    );
+    const showStaticTemplates = !vlmCoachingActive && staticTemplatesSupported;
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
@@ -2719,10 +2731,14 @@ export default function AnalyzePage() {
         )}
 
         {/* ── Pro Tips + Player Match ── */}
-        {(pro.pro_tips?.length > 0 || pro.player_match?.player) && gate(
+        {/* Pro Tips uses the static template content — gated by sport so we
+            don't show badminton-flavored tips on cricket/TT/pickleball.
+            Player Match is sport-agnostic, so we still render the card if
+            we have one even when Pro Tips is hidden. */}
+        {((pro.pro_tips?.length > 0 && showStaticTemplates) || pro.player_match?.player) && gate(
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5" data-testid="pro-comparison-card">
-            {pro.pro_tips?.length > 0 && (
+            {pro.pro_tips?.length > 0 && showStaticTemplates && (
               <>
                 <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
                   <Star className="w-3 h-3 text-amber-400" /> Pro Tips
@@ -2751,8 +2767,9 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── (e) 7-Day Training Plan (dynamic) — hidden when VLM coach plan present ── */}
-        {!vlmCoachingActive && gate(
+        {/* ── (e) 7-Day Training Plan (dynamic) — hidden when VLM coach plan
+            present, and hidden for sports without curated drill content ── */}
+        {showStaticTemplates && gate(
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
           className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
           <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -2876,7 +2893,7 @@ export default function AnalyzePage() {
         )}
 
         {/* ── Personalized Drills (derived from this video) — hidden when VLM coach drills present ── */}
-        {!vlmCoachingActive && contextualDrills.length > 0 && gate(
+        {showStaticTemplates && contextualDrills.length > 0 && gate(
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
