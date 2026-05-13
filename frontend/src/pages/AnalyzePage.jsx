@@ -351,6 +351,11 @@ export default function AnalyzePage() {
   const dropRef = useRef(null);
 
   const [improvementData, setImprovementData] = useState(null);
+  // History sport filter — null/"all" shows everything; a specific sport
+  // scopes the improvement card + history list so we never compare a
+  // bowling clip's speed to a smash, which is what made the global
+  // "+X% speed increase" card baseless across sports.
+  const [historySportFilter, setHistorySportFilter] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareData, setShareData] = useState(null);
   const [newBadge, setNewBadge] = useState(null);
@@ -3139,7 +3144,25 @@ export default function AnalyzePage() {
     );
   };
 
-  const renderHistory = () => (
+  const renderHistory = () => {
+    const SPORT_ICONS = { badminton: "🏸", tennis: "🎾", table_tennis: "🏓", pickleball: "⚡", cricket: "🏏", football: "⚽", swimming: "🏊" };
+    const SPORT_LABELS = { badminton: "Badminton", tennis: "Tennis", table_tennis: "Table Tennis", pickleball: "Pickleball", cricket: "Cricket", football: "Football", swimming: "Swimming" };
+    const availableSports = Array.from(new Set(history.map((a) => a.sport).filter(Boolean)));
+    const selectedSport = historySportFilter || (availableSports.includes(profile?.active_sport) ? profile.active_sport : availableSports[0]) || null;
+    const filteredHistory = selectedSport ? history.filter((a) => a.sport === selectedSport) : history;
+    // Per-sport simple improvement stats (computed client-side from
+    // filteredHistory). This replaces the cross-sport aggregate from the
+    // backend which was the source of the baseless "speed increase" card.
+    const scoredHistory = filteredHistory
+      .filter((a) => a.shot_analysis?.score != null)
+      .slice()
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+    const firstScore = scoredHistory[0]?.shot_analysis?.score;
+    const lastScore = scoredHistory[scoredHistory.length - 1]?.shot_analysis?.score;
+    const scoreDelta = (firstScore != null && lastScore != null) ? (lastScore - firstScore) : null;
+    const bestScore = scoredHistory.length > 0 ? Math.max(...scoredHistory.map((a) => a.shot_analysis?.score || 0)) : null;
+
+    return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       {history.length === 0 ? (
         <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-8 text-center">
@@ -3149,8 +3172,100 @@ export default function AnalyzePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Coach Improvement Message */}
-          {improvementData?.coach_message && (
+
+          {/* Sport selector chips — keeps cross-sport progress from
+              mixing, so a cricket bowling speed isn't compared against a
+              badminton smash. */}
+          {availableSports.length > 0 && (
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3">
+              <p className="text-[10px] uppercase tracking-wide text-zinc-500 font-medium mb-2 ml-1">View progress for</p>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {availableSports.map((s) => {
+                  const count = history.filter((a) => a.sport === s).length;
+                  const active = selectedSport === s;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setHistorySportFilter(s)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                        active
+                          ? "bg-lime-400 text-black border-lime-400"
+                          : "bg-zinc-800/50 text-zinc-300 border-zinc-700 hover:border-zinc-600"
+                      }`}
+                    >
+                      <span>{SPORT_ICONS[s] || "🎯"}</span>
+                      <span>{SPORT_LABELS[s] || s}</span>
+                      <span className={`text-[10px] ${active ? "text-black/70" : "text-zinc-500"}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Honest reanalysis guidance — explains the mechanism + the
+              critical caveat about using your own videos. */}
+          <div className="bg-sky-400/5 border border-sky-400/20 rounded-2xl p-4">
+            <p className="text-xs text-sky-300 font-semibold mb-1 flex items-center gap-1">
+              <Lightbulb className="w-3 h-3" /> How reanalysis works
+            </p>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Pick any past analysis, then upload a new clip of <span className="text-sky-300">yourself doing the same shot</span>.
+              We remember the technique metrics from the previous video and the AI Coach compares the two — telling you exactly
+              what improved, what regressed, and whether your drills paid off.
+            </p>
+            <p className="text-[10px] text-amber-400/80 mt-1.5">
+              ⚠ For honest progress tracking, only reanalyze against your own videos. Comparing against someone else's clip won't reflect <em>your</em> growth.
+            </p>
+          </div>
+
+          {/* If the selected sport has no records, show an explicit empty
+              state instead of awkwardly hiding the list. */}
+          {selectedSport && filteredHistory.length === 0 && (
+            <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-8 text-center">
+              <span className="text-3xl block mb-2">{SPORT_ICONS[selectedSport] || "🎯"}</span>
+              <p className="text-zinc-400 text-sm font-medium">No analyzed videos yet for {SPORT_LABELS[selectedSport] || selectedSport}.</p>
+              <p className="text-zinc-600 text-xs mt-1">Upload a {SPORT_LABELS[selectedSport] || selectedSport} clip to start tracking progress in this sport.</p>
+            </div>
+          )}
+
+          {/* Per-sport quick-stat card. Computed client-side from
+              filteredHistory so the numbers are always honest. */}
+          {filteredHistory.length > 0 && bestScore != null && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="bg-zinc-900/80 border border-lime-400/20 rounded-2xl p-5">
+              <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
+                <TrendingUp className="w-3 h-3 text-lime-400" /> {SPORT_LABELS[selectedSport] || "Your"} Progress
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-[10px] uppercase text-zinc-500 tracking-wide">Sessions</p>
+                  <p className="text-2xl font-heading font-bold text-white">{filteredHistory.length}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-zinc-500 tracking-wide">Best score</p>
+                  <p className="text-2xl font-heading font-bold text-lime-400">{bestScore}<span className="text-xs text-zinc-500">/100</span></p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-zinc-500 tracking-wide">Trend</p>
+                  {scoreDelta != null && scoredHistory.length >= 2 ? (
+                    <p className={`text-2xl font-heading font-bold ${scoreDelta > 0 ? "text-lime-400" : scoreDelta < 0 ? "text-red-400" : "text-zinc-400"}`}>
+                      {scoreDelta > 0 ? "+" : ""}{scoreDelta}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-zinc-500 mt-1">Need 2+ clips</p>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* The backend-aggregated improvement cards below mix data
+              across all sports. They're only meaningful when the user has
+              played a single sport — otherwise the "+X% speed" numbers
+              compare apples to oranges. Hide them when the user has
+              multiple sports in history. */}
+          {availableSports.length <= 1 && filteredHistory.length >= 2 && improvementData?.coach_message && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="bg-zinc-900/80 border border-lime-400/20 rounded-2xl p-5 mb-4">
               <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2 flex items-center gap-1">
@@ -3177,8 +3292,9 @@ export default function AnalyzePage() {
             </motion.div>
           )}
 
-          {/* Per-Metric Improvements */}
-          {improvementData?.metric_improvements?.length > 0 && (
+          {/* Per-Metric Improvements — cross-sport aggregate, hidden when
+              user has multiple sports (would mix bowling speed vs smash). */}
+          {availableSports.length <= 1 && improvementData?.metric_improvements?.length > 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 mb-4">
               <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -3213,8 +3329,8 @@ export default function AnalyzePage() {
             </motion.div>
           )}
 
-          {/* Dimension Improvements */}
-          {improvementData?.dimension_improvements?.length > 0 && (
+          {/* Dimension Improvements — cross-sport aggregate, gated. */}
+          {availableSports.length <= 1 && improvementData?.dimension_improvements?.length > 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="bg-zinc-900/80 border border-sky-400/20 rounded-2xl p-5 mb-4">
               <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -3260,8 +3376,8 @@ export default function AnalyzePage() {
             </motion.div>
           )}
 
-          {/* Improvement Trend Chart */}
-          {history.length >= 2 && (
+          {/* Improvement Trend Chart — scoped to the selected sport. */}
+          {filteredHistory.length >= 2 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3271,7 +3387,7 @@ export default function AnalyzePage() {
                 <BarChart3 className="w-3 h-3 text-lime-400" /> Score Trend
               </p>
               <div className="flex items-center gap-4">
-                {history.slice(-5).reverse().map((a, i, arr) => (
+                {filteredHistory.slice(-5).reverse().map((a, i, arr) => (
                   <div key={a.id || i} className="flex-1 text-center">
                     <div className={`w-full h-16 rounded-xl flex items-end justify-center pb-1 ${
                       i === arr.length - 1 ? "bg-lime-400/10" : "bg-zinc-800/50"
@@ -3299,8 +3415,8 @@ export default function AnalyzePage() {
             </motion.div>
           )}
 
-          {/* History List */}
-          {history.map((a, i) => {
+          {/* History List — scoped to selected sport */}
+          {filteredHistory.map((a, i) => {
             const shot = a.shot_analysis || {};
             const comparison = a.improvement_vs_previous;
             return (
@@ -3400,7 +3516,8 @@ export default function AnalyzePage() {
         </div>
       )}
     </motion.div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="analyze-page">
