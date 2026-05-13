@@ -312,6 +312,14 @@ export default function AnalyzePage() {
   // Set page title
   useEffect(() => { document.title = "Analyze | AthlyticAI"; }, []);
 
+  // Lambda pre-warm: fire-and-forget a ping when the page mounts so the
+  // serverless container is hot by the time the user finishes picking a
+  // file and clicks Analyze. Saves ~3-5s of cold-start latency on the
+  // first analysis of a session.
+  useEffect(() => {
+    api.get("/warm", { timeout: 8000 }).catch(() => { /* silent */ });
+  }, []);
+
   // Check for a pending reminder from a prior session
   useEffect(() => {
     try {
@@ -951,10 +959,13 @@ export default function AnalyzePage() {
           try {
             const vp = await import("@/ai/videoProcessor");
             const peakTimes = videoDirectShots.map((s) => s.timestamp_sec || 0);
-            const snippets = customCropBox
-              ? await vp.extractPlayerSnippets(file, peakTimes, customCropBox,
-                  { maxDim: 180, jpegQuality: 0.7, expandFactor: 1.5 })
-              : peakTimes.map(() => null);
+            // Always extract a snippet per shot — falls back to a
+            // center-square crop when no player bbox is available so the
+            // history card / shot list always renders a thumbnail.
+            const snippets = await vp.extractPlayerSnippets(
+              file, peakTimes, customCropBox,
+              { maxDim: 180, jpegQuality: 0.7, expandFactor: 1.5 },
+            );
             clientResult.shots = videoDirectShots.map((s, i) => ({
               type: s.shot_type,
               name: (s.shot_type || "shot").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),

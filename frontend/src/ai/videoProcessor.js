@@ -1896,7 +1896,7 @@ export async function compressVideoForUpload(videoFile, options = {}) {
 
 
 export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox, options = {}) {
-  if (!peakTimes || peakTimes.length === 0 || !customCropBox) return peakTimes.map(() => null);
+  if (!peakTimes || peakTimes.length === 0) return [];
   const { maxDim = 180, jpegQuality = 0.7, expandFactor = 1.5 } = options;
 
   const video = document.createElement("video");
@@ -1908,16 +1908,28 @@ export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox,
   const vw = video.videoWidth, vh = video.videoHeight;
   if (!duration || !vw || !vh) { URL.revokeObjectURL(url); return peakTimes.map(() => null); }
 
-  // Expand the crop box ~1.5x so the player stays in the snippet even when
-  // they shift position during the rally.
-  const cx = customCropBox.x + customCropBox.width / 2;
-  const cy = customCropBox.y + customCropBox.height / 2;
-  const ew = Math.min(1, customCropBox.width * expandFactor);
-  const eh = Math.min(1, customCropBox.height * expandFactor);
-  const ex = Math.max(0, Math.min(1 - ew, cx - ew / 2));
-  const ey = Math.max(0, Math.min(1 - eh, cy - eh / 2));
-  const sx = Math.round(ex * vw), sy = Math.round(ey * vh);
-  const sw = Math.max(1, Math.round(ew * vw)), sh = Math.max(1, Math.round(eh * vh));
+  // Determine source rect: prefer the explicit player bbox (expanded 1.5x);
+  // when no bbox is available (target=auto, doubles auto-select, etc.) fall
+  // back to a center-square crop of the full frame so every shot still gets
+  // a thumbnail. This ensures the UI always has a visual reference per shot.
+  let sx, sy, sw, sh;
+  if (customCropBox) {
+    const cx = customCropBox.x + customCropBox.width / 2;
+    const cy = customCropBox.y + customCropBox.height / 2;
+    const ew = Math.min(1, customCropBox.width * expandFactor);
+    const eh = Math.min(1, customCropBox.height * expandFactor);
+    const ex = Math.max(0, Math.min(1 - ew, cx - ew / 2));
+    const ey = Math.max(0, Math.min(1 - eh, cy - eh / 2));
+    sx = Math.round(ex * vw); sy = Math.round(ey * vh);
+    sw = Math.max(1, Math.round(ew * vw)); sh = Math.max(1, Math.round(eh * vh));
+  } else {
+    // Center-square crop on the shorter edge so the thumbnail isn't a thin
+    // strip on landscape videos.
+    const side = Math.min(vw, vh);
+    sx = Math.round((vw - side) / 2);
+    sy = Math.round((vh - side) / 2);
+    sw = side; sh = side;
+  }
 
   // Output sized to maxDim on the longest side
   const scale = Math.min(1, maxDim / Math.max(sw, sh));
@@ -2439,15 +2451,14 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
             offsets: [-0.5, -0.2, 0, 0.2, 0.5],
             isMultiPlayer, expandFactor: 1.6 },
         );
-        // Per-shot SNIPPET — small cropped image of the selected player at
-        // the shot moment (~5-15 KB each, ~150px max dim). When customCropBox
-        // is set we crop to that region so the user sees the player they
-        // picked rather than the whole court. Falls back to null when no
-        // box was selected — UI just omits the snippet in that case.
-        const thumbnails = customCropBox
-          ? await extractPlayerSnippets(videoFile, peakTimes, customCropBox,
-              { maxDim: 180, jpegQuality: 0.7, expandFactor: 1.5 })
-          : keyframes.map(() => null);
+        // Per-shot SNIPPET — small image of the shot moment (~5-15 KB each,
+        // ~150px max dim). With a bbox: tight crop around the picked player.
+        // Without a bbox: center-square crop of the full frame so EVERY shot
+        // card has a visual thumbnail regardless of player selection state.
+        const thumbnails = await extractPlayerSnippets(
+          videoFile, peakTimes, customCropBox,
+          { maxDim: 180, jpegQuality: 0.7, expandFactor: 1.5 },
+        );
         // Keyframes used in-flight only — sent to the VLM for classification
         // and then dropped. Not persisted on the result (no video/image storage).
         const vlmShots = await options.vlmClassify({

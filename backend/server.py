@@ -126,6 +126,17 @@ app.add_middleware(
 
 api_router = APIRouter(prefix="/api")
 
+
+@api_router.get("/warm")
+async def warm_lambda():
+    """Lightweight lambda pre-warm endpoint. The frontend hits this when the
+    Analyze page mounts so the serverless container is already running by
+    the time the user uploads — saves the ~3-5s cold start. Touches no DB,
+    no VLM, no model — just returns 200 to confirm the lambda is live."""
+    import os
+    return {"ok": True, "vlm_configured": bool(os.environ.get("GEMINI_API_KEY"))}
+
+
 logging.basicConfig(
     level=logging.WARNING if IS_PRODUCTION else logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
