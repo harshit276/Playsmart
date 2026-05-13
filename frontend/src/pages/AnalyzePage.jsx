@@ -422,13 +422,19 @@ export default function AnalyzePage() {
     }
     const id = setInterval(() => {
       setDisplayProgress((prev) => {
-        // Interpolate ~25% of the gap each tick; cap below the real value to
-        // avoid overshoot. Never let the bar exceed `progress`.
-        const target = progress;
-        if (prev >= target) return target;
-        const gap = target - prev;
-        const step = Math.max(0.4, gap * 0.18);
-        return Math.min(target, prev + step);
+        // Two-mode smoothing so the bar never appears frozen:
+        // 1. Real progress jumped > displayProgress  → fast catch-up.
+        // 2. Real progress is plateaued              → slow creep toward
+        //    the END of the current phase (cap 1% below boundary). This
+        //    gives visible motion during long stages like pose extraction
+        //    or VLM calls where the real progress callback is silent.
+        const phaseEnd = progress < 25 ? 24 : progress < 70 ? 69 : progress < 92 ? 91 : 99;
+        const creepTarget = Math.min(phaseEnd, progress + 8);
+        if (prev >= creepTarget) return prev;
+        const gap = creepTarget - prev;
+        // Large gaps (real jump) move quickly; small creeps inch forward.
+        const step = gap > 5 ? Math.max(0.5, gap * 0.18) : 0.18;
+        return Math.min(creepTarget, prev + step);
       });
     }, 120);
     return () => clearInterval(id);
@@ -2451,7 +2457,7 @@ export default function AnalyzePage() {
                     <h3 className="font-heading font-bold text-xl text-white uppercase tracking-tight">{shot.shot_name || shot.shot_type}</h3>
                   )}
                   <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-xs px-2 py-0.5 font-bold uppercase">
-                    {result.skill_level || "Unknown"}
+                    {aiSkillLevel || result.skill_level || "Unknown"}
                   </Badge>
                   {result.target_player && (
                     <Badge className="text-[10px] px-2 py-0.5 bg-violet-400/10 text-violet-400 border-violet-400/20">
