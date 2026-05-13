@@ -2589,7 +2589,7 @@ async def get_training_recommendation(
         if recent:
             try:
                 from ai_pipeline.vlm import personalized_coaching
-                from research_loader import get_all_equipment_categories
+                from research_loader import get_all_equipment_categories, get_all_videos
                 equipment_catalog: list = []
                 try:
                     cats = get_all_equipment_categories(active_sport) or {}
@@ -2598,6 +2598,12 @@ async def get_training_recommendation(
                             equipment_catalog.extend(items)
                 except Exception:
                     equipment_catalog = []
+                # RAG drill catalog (videos.json for this sport) so the VLM
+                # picks real curated entries instead of inventing names.
+                try:
+                    drill_catalog = get_all_videos(active_sport) or []
+                except Exception:
+                    drill_catalog = []
                 ai_for_vlm = {
                     "sport": active_sport, "skill_level": skill,
                     "shot_analysis": recent.get("shot_analysis"),
@@ -2608,7 +2614,9 @@ async def get_training_recommendation(
                 loop = asyncio.get_event_loop()
                 ai_coach = await asyncio.wait_for(
                     loop.run_in_executor(None, lambda: personalized_coaching(
-                        ai_for_vlm, equipment_catalog=equipment_catalog or None,
+                        ai_for_vlm,
+                        equipment_catalog=equipment_catalog or None,
+                        drill_catalog=drill_catalog or None,
                     )),
                     timeout=25.0,
                 )
@@ -4101,6 +4109,17 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
             except Exception:
                 equipment_catalog = []
 
+            # RAG-style drill catalog so the VLM picks real curated YouTube
+            # entries from research/{sport}/videos.json instead of inventing
+            # generic drill names. Critical for cricket/TT/pickleball where
+            # the legacy DRILL_LIBRARY produced badminton-flavored junk.
+            drill_catalog: list = []
+            try:
+                from research_loader import get_all_videos
+                drill_catalog = get_all_videos(sport) or []
+            except Exception:
+                drill_catalog = []
+
             ai_for_vlm = {
                 "sport": sport, "skill_level": detected_skill_level,
                 "shot_analysis": ai_result.get("shot_analysis"),
@@ -4110,7 +4129,11 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
             }
 
             def _coach_run() -> dict:
-                return personalized_coaching(ai_for_vlm, equipment_catalog=equipment_catalog or None)
+                return personalized_coaching(
+                    ai_for_vlm,
+                    equipment_catalog=equipment_catalog or None,
+                    drill_catalog=drill_catalog or None,
+                )
 
             loop = asyncio.get_event_loop()
             vlm_coaching = await asyncio.wait_for(

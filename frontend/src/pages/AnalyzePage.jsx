@@ -2234,6 +2234,14 @@ export default function AnalyzePage() {
                       {d.equipment_needed?.length > 0 && (
                         <p className="text-[10px] text-zinc-500 mt-1">Need: {d.equipment_needed.join(", ")}</p>
                       )}
+                      {d.video_url && (
+                        <a href={d.video_url} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-lime-400 hover:text-lime-300 font-medium mt-2">
+                          <Play className="w-3 h-3 fill-current" /> Watch drill
+                          {d.video_channel && <span className="text-zinc-500"> · {d.video_channel}</span>}
+                          <ArrowRight className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>

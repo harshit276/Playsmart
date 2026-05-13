@@ -592,6 +592,7 @@ def detect_sport(frames_jpeg: list[bytes], backend: str = "auto") -> dict:
 
 def personalized_coaching(
     analysis: dict, equipment_catalog: list[dict] | None = None,
+    drill_catalog: list[dict] | None = None,
     backend: str = "auto",
 ) -> dict:
     """Generate VLM-tailored drills + equipment + weekly plan based on the
@@ -599,10 +600,21 @@ def personalized_coaching(
     suggestions with specific, evidence-grounded coaching.
 
     equipment_catalog: optional list of {id, name, category, level, price_inr,
-                                          good_for: [tags]} so the VLM can recommend
-                                          actual SKUs instead of inventing them.
+                                          good_for: [tags]} so the VLM picks
+                                          real SKUs instead of inventing them.
+    drill_catalog: optional list of {id, title, channel, url, level,
+                                       skill_areas, description} from the
+                                       per-sport research videos. When
+                                       present the VLM MUST pick drill IDs
+                                       from this list (RAG-style grounding)
+                                       so users always get real, curated
+                                       video links — never hallucinated ones.
+
     Returns: {priority_drills, equipment_recommendations, seven_day_plan,
               key_focus_areas, motivational_message, _meta}.
+    Each priority_drill carries: name, why, duration_min, instructions,
+    equipment_needed, AND video_url/channel/level when sourced from
+    drill_catalog.
     """
     summary = _summarize_analysis(analysis)
     sport = summary.get("sport") or "badminton"
@@ -616,15 +628,52 @@ def personalized_coaching(
              if k in ("id", "name", "category", "level", "price_inr", "good_for")}
             for item in equipment_catalog[:60]
         ]
-        catalog_block = (
+        catalog_block += (
             "\n\nAVAILABLE EQUIPMENT (recommend by id from this list — "
             "do NOT invent products):\n" + json.dumps(slim, indent=2)
         )
 
+    # Build a slim drill catalog the VLM can index. Map id -> full record so
+    # we can hydrate the picks back into URLs/channels post-call.
+    drill_lookup: dict[str, dict] = {}
+    if drill_catalog:
+        slim_drills = []
+        for d in drill_catalog[:80]:
+            if not isinstance(d, dict) or not d.get("id"):
+                continue
+            drill_lookup[d["id"]] = d
+            slim_drills.append({
+                "id": d["id"],
+                "title": d.get("title") or d.get("name") or "",
+                "level": d.get("level", ""),
+                "skill_areas": d.get("skill_areas", []),
+                "description": (d.get("description") or "")[:240],
+            })
+        if slim_drills:
+            catalog_block += (
+                "\n\nAVAILABLE DRILL VIDEOS (pick drill_video_ids from this "
+                "curated list — these are the ONLY drills you may recommend; "
+                "do NOT invent generic drill names):\n"
+                + json.dumps(slim_drills, indent=2)
+            )
+
+    drill_schema_field = (
+        '      "drill_video_id": "<id from AVAILABLE DRILL VIDEOS list>",\n'
+        if drill_lookup else ""
+    )
+    drill_rule = (
+        "Each priority_drill MUST include a drill_video_id picked from the "
+        "AVAILABLE DRILL VIDEOS list above — do NOT make up drill names that "
+        "are not in the list. Pick the entries whose skill_areas / "
+        "description best match the player's weaknesses. "
+        if drill_lookup else
+        "Name drills the player can do today, not generic advice. "
+    )
+
     sys_prompt = (
         f"You are an expert {sport} coach building a personalized practice plan. "
         f"Use ONLY the player's actual weaknesses and per-shot reasoning below. "
-        f"Be specific — name drills the player can do today, not generic advice. "
+        f"{drill_rule}"
         f"Prioritize drills that directly address the named weaknesses.\n\n"
         f"Respond with valid JSON ONLY:\n"
         '{\n'
@@ -632,6 +681,7 @@ def personalized_coaching(
         '  "priority_drills": [\n'
         '    {\n'
         '      "name": "<drill name>",\n'
+        + drill_schema_field +
         '      "why": "<why this drill, citing the weakness it fixes>",\n'
         '      "duration_min": <int 5-30>,\n'
         '      "instructions": "<2-3 sentences how to do it>",\n'
@@ -662,14 +712,30 @@ def personalized_coaching(
     raw = backend_obj.call(sys_prompt, user_msg, [])
     data = _parse_json_safe(raw)
 
+    # Hydrate drill picks with real video URLs/channels from the catalog.
+    raw_drills = [d for d in (data.get("priority_drills") or []) if isinstance(d, dict)][:6]
+    hydrated_drills = []
+    for d in raw_drills:
+        dv_id = d.get("drill_video_id") or d.get("video_id")
+        if dv_id and dv_id in drill_lookup:
+            ref = drill_lookup[dv_id]
+            d["video_id"] = ref["id"]
+            d["video_url"] = ref.get("url")
+            d["video_channel"] = ref.get("channel")
+            d["video_level"] = ref.get("level")
+            if not d.get("name"):
+                d["name"] = ref.get("title") or ref.get("name")
+        hydrated_drills.append(d)
+
     return {
         "key_focus_areas": [str(x) for x in (data.get("key_focus_areas") or [])][:5],
-        "priority_drills": [d for d in (data.get("priority_drills") or []) if isinstance(d, dict)][:6],
+        "priority_drills": hydrated_drills,
         "equipment_recommendations": [e for e in (data.get("equipment_recommendations") or []) if isinstance(e, dict)][:5],
         "seven_day_plan": [d for d in (data.get("seven_day_plan") or []) if isinstance(d, dict)][:7],
         "motivational_message": str(data.get("motivational_message", "")),
         "_meta": {
             "backend": backend_obj.name,
             "model": backend_obj.model_name,
+            "drill_catalog_size": len(drill_lookup),
         },
     }
