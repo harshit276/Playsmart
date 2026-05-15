@@ -2042,8 +2042,47 @@ export default function AnalyzePage() {
     // FRESH analyses where no VLM coaching is available.
     const showStaticTemplates = !vlmCoachingActive && staticTemplatesSupported && !viewingHistorical;
 
+    // A historical record from before VLM coaching / shots[] /
+    // training_plan_7day were persisted. With the static templates now
+    // gated off for historical views, these legacy records have almost
+    // nothing to render. Surface that explicitly so the user sees a
+    // helpful message + Re-analyze CTA instead of a near-empty page.
+    const hasMeaningfulContent = !!(
+      vlmCoachingActive
+      || (result.shots && result.shots.length > 0)
+      || (Array.isArray(plan7day) && plan7day.length > 0)
+      || (Array.isArray(result.recommended_drills) && result.recommended_drills.length > 0)
+    );
+    const isLegacyHistorical = viewingHistorical && !hasMeaningfulContent;
+
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+
+        {/* Older analyses (before we persisted VLM coaching + saved
+            drills / plan to history) come back from Mongo with only the
+            hero shot data. Tell the user honestly and point them at
+            Re-analyze for the full coaching surface. */}
+        {isLegacyHistorical && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-amber-400/5 border border-amber-400/30 rounded-2xl p-5">
+            <p className="text-xs uppercase tracking-wider text-amber-300 font-bold mb-2">Older analysis</p>
+            <h3 className="font-heading font-bold text-white text-lg leading-tight mb-2">
+              Personalized coaching isn't available for this analysis
+            </h3>
+            <p className="text-xs text-zinc-400 leading-relaxed mb-3">
+              This is an older record from before we started saving the full AI Coach output
+              (priority drills, 7-day plan, per-shot feedback). The basic shot info is preserved
+              below. Run Re-analyze with a fresh clip to get the complete coaching surface.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => setActiveTab("upload")}
+              className="bg-amber-400 hover:bg-amber-500 text-black font-bold text-xs h-8"
+            >
+              <BarChart3 className="w-3 h-3 mr-1" /> Upload a fresh clip to re-analyze
+            </Button>
+          </motion.div>
+        )}
 
         {/* Progress comparison — rich multi-section card surfaced after a
             Reanalyze flow. Sections: hero deltas, AI-coach visual verdict,
