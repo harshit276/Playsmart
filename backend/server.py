@@ -4163,6 +4163,13 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
         "highlights": None,
         "segments_summary": ai_result.get("segments"),
         "vlm_coaching": vlm_coaching,
+        # Persist the drill/training-plan content too so historical views
+        # surface the SAME recommendations the user saw at the moment of
+        # analysis — instead of silently regenerating from a static
+        # template at view time (which produced wrong-sport "Focus/Drill/
+        # Rest" placeholder cards for older records).
+        "recommended_drills": recommended_drills,
+        "training_plan_7day": training_plan_7day,
         # Per-shot list with VLM reasoning/form_feedback text — this is the
         # metadata the AI Coach uses later when comparing two sessions.
         "shots": body.get("shots") or [],

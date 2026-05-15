@@ -2035,7 +2035,12 @@ export default function AnalyzePage() {
     const staticTemplatesSupported = ["badminton", "tennis"].includes(
       (result.sport || selectedSport || profile?.active_sport || "").toLowerCase()
     );
-    const showStaticTemplates = !vlmCoachingActive && staticTemplatesSupported;
+    // Historical analyses must be a FAITHFUL snapshot — never regenerate
+    // drill / training-plan content from a static template at view time,
+    // since that produces "Focus/Drill/Rest" placeholders that didn't
+    // exist at the moment of analysis. Only render static templates for
+    // FRESH analyses where no VLM coaching is available.
+    const showStaticTemplates = !vlmCoachingActive && staticTemplatesSupported && !viewingHistorical;
 
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
