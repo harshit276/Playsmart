@@ -448,7 +448,17 @@ def analyze_video_full(
         f"Do NOT invent shot types. If a moment isn't clearly a shot (player "
         f"is walking, recovering, or just preparing), DON'T list it. Only "
         f"include moments where the player makes contact with the "
-        f"ball/shuttle. Order shots by timestamp.{box_hint}\n\n"
+        f"ball/shuttle. Order shots by timestamp.\n\n"
+        f"CRITICAL — ONE SWING = ONE SHOT:\n"
+        f"A single physical shot has a windup, contact, and follow-through "
+        f"that span 0.5-2 seconds. Report each physical swing AS ONE SHOT, "
+        f"using the timestamp of the CONTACT moment. Do NOT emit multiple "
+        f"entries for the same swing (e.g. one for windup, one for contact, "
+        f"one for follow-through). If two consecutive timestamps are within "
+        f"~1.5 seconds AND the same shot_type, they are almost certainly the "
+        f"same physical shot — merge them into one entry at the contact "
+        f"moment. Count carefully: if the player physically swung the racket "
+        f"3 times, the array must have 3 entries, not 9.{box_hint}\n\n"
         f"Respond with valid JSON ONLY (no markdown):\n"
         '{\n'
         '  "shots": [\n'

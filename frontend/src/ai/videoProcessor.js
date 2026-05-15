@@ -2506,9 +2506,40 @@ export async function analyzeVideo(videoFile, sport, options = {}) {
 
     // Drop unknowns and clearly-junk shots from downstream stats.
     // (They pollute the distribution, score average, and profile.)
-    const cleanShots = detectedShots.filter(
+    let cleanShots = detectedShots.filter(
       (s) => s.type && s.type !== "unknown" && (s.confidence ?? 0) >= 0.15,
     );
+    // De-duplicate: a single physical shot's windup, contact, and
+    // follow-through can each produce a wrist-speed peak. If two
+    // consecutive shots have the SAME type within ~1.5s of each other,
+    // they're almost certainly phases of the same swing — collapse
+    // them into one shot at the higher-confidence moment so we don't
+    // report "5 backhands" for a single backhand swing.
+    {
+      const MERGE_WINDOW = 1.5;
+      const sorted = [...cleanShots].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      const merged = [];
+      for (const s of sorted) {
+        const prev = merged[merged.length - 1];
+        if (
+          prev &&
+          prev.type === s.type &&
+          (s.timestamp || 0) - (prev.timestamp || 0) <= MERGE_WINDOW
+        ) {
+          // Keep higher-confidence record + longer reasoning
+          if ((s.confidence ?? 0) > (prev.confidence ?? 0)) {
+            const longerReason = (s.reasoning?.length || 0) > (prev.reasoning?.length || 0) ? s.reasoning : prev.reasoning;
+            Object.assign(prev, s, { reasoning: longerReason });
+          }
+        } else {
+          merged.push({ ...s });
+        }
+      }
+      if (merged.length < cleanShots.length) {
+        console.info(`[shots] merged ${cleanShots.length} → ${merged.length} (de-duplicated phases of same swing)`);
+      }
+      cleanShots = merged;
+    }
 
     // ── Step 8: Analyze segments ─────────────────────────────────────────
     progress("segments", 72, "Analyzing segments...");

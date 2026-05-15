@@ -985,7 +985,37 @@ export default function AnalyzePage() {
           // Map video-direct shots to the shape the rest of the pipeline expects
           try {
             const vp = await import("@/ai/videoProcessor");
-            const peakTimes = videoDirectShots.map((s) => s.timestamp_sec || 0);
+            // De-duplicate: a single physical shot's windup + contact +
+            // follow-through can come back as multiple timestamps of the
+            // SAME shot type within ~1-2 seconds. Collapse those into one
+            // shot so the count and per-shot list reflect reality (this
+            // was producing "5 backhands" from a single backhand swing).
+            const sortedByTime = [...videoDirectShots].sort(
+              (a, b) => (a.timestamp_sec || 0) - (b.timestamp_sec || 0)
+            );
+            const MERGE_WINDOW_SEC = 1.5;
+            const dedupedShots = [];
+            for (const s of sortedByTime) {
+              const prev = dedupedShots[dedupedShots.length - 1];
+              if (
+                prev &&
+                prev.shot_type === s.shot_type &&
+                (s.timestamp_sec || 0) - (prev.timestamp_sec || 0) <= MERGE_WINDOW_SEC
+              ) {
+                // Same physical shot, different phase. Keep the higher-
+                // confidence entry; prefer the longer reasoning.
+                if ((s.confidence || 0) > (prev.confidence || 0)) {
+                  const longerReason = (s.reasoning?.length || 0) > (prev.reasoning?.length || 0) ? s.reasoning : prev.reasoning;
+                  Object.assign(prev, s, { reasoning: longerReason });
+                }
+              } else {
+                dedupedShots.push({ ...s });
+              }
+            }
+            if (dedupedShots.length < videoDirectShots.length) {
+              console.info(`[video-direct] merged ${videoDirectShots.length} → ${dedupedShots.length} shots (de-duplicated phases of same swing)`);
+            }
+            const peakTimes = dedupedShots.map((s) => s.timestamp_sec || 0);
             // Always extract a snippet per shot — falls back to a
             // center-square crop when no player bbox is available so the
             // history card / shot list always renders a thumbnail.
@@ -993,7 +1023,7 @@ export default function AnalyzePage() {
               file, peakTimes, customCropBox,
               { maxDim: 180, jpegQuality: 0.7, expandFactor: 1.5 },
             );
-            clientResult.shots = videoDirectShots.map((s, i) => ({
+            clientResult.shots = dedupedShots.map((s, i) => ({
               type: s.shot_type,
               name: (s.shot_type || "shot").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
               confidence: s.confidence,
@@ -1010,6 +1040,18 @@ export default function AnalyzePage() {
             }));
             clientResult.total_shots_detected = clientResult.shots.length;
             clientResult.multi_shot = clientResult.shots.length > 1;
+            // Rebuild shot_distribution from the new shots so the Match
+            // Summary card agrees with the per-shot list. Otherwise the
+            // pre-VLM heuristic distribution stays visible (Forehand 1×
+            // / 8%) while the per-shot section shows the real Gemini
+            // tally (5 forehands etc.) — visibly inconsistent.
+            const dist = {};
+            for (const s of clientResult.shots) {
+              if (s.type && s.type !== "unknown") {
+                dist[s.type] = (dist[s.type] || 0) + 1;
+              }
+            }
+            clientResult.shot_distribution = dist;
             clientResult._accuracy_mode = "video";
             console.info(`[video-direct] replaced ${clientResult.shots.length} shots from whole-video analysis`);
           } catch (mergeErr) {
@@ -2042,47 +2084,8 @@ export default function AnalyzePage() {
     // FRESH analyses where no VLM coaching is available.
     const showStaticTemplates = !vlmCoachingActive && staticTemplatesSupported && !viewingHistorical;
 
-    // A historical record from before VLM coaching / shots[] /
-    // training_plan_7day were persisted. With the static templates now
-    // gated off for historical views, these legacy records have almost
-    // nothing to render. Surface that explicitly so the user sees a
-    // helpful message + Re-analyze CTA instead of a near-empty page.
-    const hasMeaningfulContent = !!(
-      vlmCoachingActive
-      || (result.shots && result.shots.length > 0)
-      || (Array.isArray(plan7day) && plan7day.length > 0)
-      || (Array.isArray(result.recommended_drills) && result.recommended_drills.length > 0)
-    );
-    const isLegacyHistorical = viewingHistorical && !hasMeaningfulContent;
-
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-
-        {/* Older analyses (before we persisted VLM coaching + saved
-            drills / plan to history) come back from Mongo with only the
-            hero shot data. Tell the user honestly and point them at
-            Re-analyze for the full coaching surface. */}
-        {isLegacyHistorical && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-amber-400/5 border border-amber-400/30 rounded-2xl p-5">
-            <p className="text-xs uppercase tracking-wider text-amber-300 font-bold mb-2">Older analysis</p>
-            <h3 className="font-heading font-bold text-white text-lg leading-tight mb-2">
-              Personalized coaching isn't available for this analysis
-            </h3>
-            <p className="text-xs text-zinc-400 leading-relaxed mb-3">
-              This is an older record from before we started saving the full AI Coach output
-              (priority drills, 7-day plan, per-shot feedback). The basic shot info is preserved
-              below. Run Re-analyze with a fresh clip to get the complete coaching surface.
-            </p>
-            <Button
-              size="sm"
-              onClick={() => setActiveTab("upload")}
-              className="bg-amber-400 hover:bg-amber-500 text-black font-bold text-xs h-8"
-            >
-              <BarChart3 className="w-3 h-3 mr-1" /> Upload a fresh clip to re-analyze
-            </Button>
-          </motion.div>
-        )}
 
         {/* Progress comparison — rich multi-section card surfaced after a
             Reanalyze flow. Sections: hero deltas, AI-coach visual verdict,
