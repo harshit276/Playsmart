@@ -363,6 +363,11 @@ export default function AnalyzePage() {
   // Reanalyze flow: when set, the next analysis run will auto-trigger a
   // VLM comparison vs this stored analysis after the new one saves.
   const [reanalyzeContext, setReanalyzeContext] = useState(null);
+  // Set when the user picked a baseline analysis in sport X but uploaded
+  // a clip detected as sport Y. The modal at the bottom of the page
+  // surfaces the conflict so the user can either continue without
+  // comparison or cancel and upload a matching-sport clip.
+  const [reanalyzeMismatch, setReanalyzeMismatch] = useState(null);
   const [comparisonResult, setComparisonResult] = useState(null);
   // Sport detected from the uploaded video (always set when VLM is up).
   // Surfaced in the player selection modal so the user can override.
@@ -767,6 +772,23 @@ export default function AnalyzePage() {
         // the user can correct if they really meant the picked sport.
         sportToAnalyze = detected.sport;
       }
+    }
+
+    // Reanalyze sport-mismatch guard. If the user picked a Badminton card
+    // as the baseline and is now uploading a Table Tennis clip, the
+    // comparison is meaningless (shuttle vs ball speed live on different
+    // scales, smash vs loop are different shots, etc.). Ask the user
+    // explicitly: continue without comparison, or cancel.
+    if (reanalyzeContext?.sport && sportToAnalyze && reanalyzeContext.sport !== sportToAnalyze) {
+      setAnalyzing(false);
+      setReanalyzeMismatch({
+        oldSport: reanalyzeContext.sport,
+        oldShot: reanalyzeContext.shot_analysis?.shot_name,
+        oldDate: reanalyzeContext.date,
+        newSport: sportToAnalyze,
+        confidence: detected?.confidence ?? null,
+      });
+      return; // halts analysis until user resolves via the modal
     }
 
     // ─── Pre-scan the video for players (used by BOTH client + server modes) ───
@@ -3527,6 +3549,77 @@ export default function AnalyzePage() {
         balance={insufficientBalance}
         required={100}
       />
+      {/* Reanalyze sport-mismatch guard. The user picked a baseline from
+          one sport but uploaded a clip detected as a different sport;
+          the cross-sport comparison would be meaningless so we ask
+          before doing anything destructive. */}
+      {reanalyzeMismatch && (() => {
+        const SPORT_ICONS = { badminton: "🏸", tennis: "🎾", table_tennis: "🏓", pickleball: "⚡", cricket: "🏏", football: "⚽", swimming: "🏊" };
+        const SPORT_LABELS = { badminton: "Badminton", tennis: "Tennis", table_tennis: "Table Tennis", pickleball: "Pickleball", cricket: "Cricket", football: "Football", swimming: "Swimming" };
+        const m = reanalyzeMismatch;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            onClick={() => setReanalyzeMismatch(null)}>
+            <div onClick={(e) => e.stopPropagation()}
+              className="bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-950 border border-amber-400/40 rounded-3xl p-6 sm:p-7 max-w-md w-full relative">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-2">Sport mismatch</p>
+              <h2 className="font-heading font-black text-xl sm:text-2xl text-white tracking-tight mb-3">
+                Can't compare across sports
+              </h2>
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 mb-3 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-400">Baseline:</span>
+                  <span className="text-white font-medium">
+                    {SPORT_ICONS[m.oldSport] || "🎯"} {SPORT_LABELS[m.oldSport] || m.oldSport}
+                    {m.oldShot && <span className="text-zinc-500"> · {m.oldShot}</span>}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-zinc-400">New clip:</span>
+                  <span className="text-white font-medium">
+                    {SPORT_ICONS[m.newSport] || "🎯"} {SPORT_LABELS[m.newSport] || m.newSport}
+                    {m.confidence != null && (
+                      <span className="text-zinc-500 text-xs"> · {Math.round(m.confidence * 100)}% confident</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                Shuttle speed vs ball speed, smash vs forehand loop — these don't compare honestly.
+                Your options:
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={() => {
+                    // Continue as a fresh analysis (no comparison narrative).
+                    setReanalyzeContext(null);
+                    const mm = reanalyzeMismatch;
+                    setReanalyzeMismatch(null);
+                    toast.info(`Running as a fresh ${SPORT_LABELS[mm.newSport] || mm.newSport} analysis — no comparison.`);
+                    setTimeout(() => analyze(), 100);
+                  }}
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white text-sm h-10"
+                >
+                  Continue without comparison (fresh {SPORT_LABELS[m.newSport] || m.newSport} analysis)
+                </Button>
+                <Button
+                  onClick={() => {
+                    // Cancel: keep the baseline, drop the file so the user
+                    // can upload a matching-sport clip.
+                    setFile(null);
+                    setReanalyzeMismatch(null);
+                    toast.info(`Upload a ${SPORT_LABELS[m.oldSport] || m.oldSport} clip to compare against your baseline.`);
+                  }}
+                  className="w-full bg-lime-400 hover:bg-lime-500 text-black font-bold text-sm h-10"
+                >
+                  Cancel — upload a {SPORT_LABELS[m.oldSport] || m.oldSport} clip instead
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Guest upgrade prompt — shown after the free analysis completes
           and on the second guest analyze attempt. */}
       {showGuestUpgrade && (
