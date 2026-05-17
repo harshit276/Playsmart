@@ -3,6 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
     "@hookform/resolvers": "^5.0.1",
@@ -69,7 +75,11 @@
     "start": "craco start",
     "build": "CI=false craco build",
     "build:snap": "CI=false craco build && react-snap",
-    "test": "craco test"
+    "test": "craco test",
+    "cap:sync": "CI=false craco build && cap sync android",
+    "cap:open": "cap open android",
+    "cap:build": "CI=false craco build && cap sync android && cd android && gradlew assembleRelease",
+    "cap:build:debug": "CI=false craco build && cap sync android && cd android && gradlew assembleDebug"
   },
   "_reactSnapNote": "react-snap was evaluated 2026-04-17 but is incompatible with our modern JS bundle (React 19 + deps emit optional chaining/nullish coalescing that the puppeteer@1.x Chromium bundled with react-snap cannot parse — every prerender threw `SyntaxError: Unexpected token '.'` and produced identical empty shells). Falling back to react-helmet-async meta tags + Googlebot rendering. Run `npm run build:snap` only after react-snap (or our toolchain) supports a modern Chromium, or migrate to Vite SSG / Next.js for true prerender.",
   "reactSnap": {
@@ -110,6 +120,7 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "@capacitor/assets": "^3.0.5",
     "@craco/craco": "^7.1.0",
     "@eslint/js": "9.23.0",
     "autoprefixer": "^10.4.20",

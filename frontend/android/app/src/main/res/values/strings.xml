@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AthlyticAI</string>
+    <string name="title_activity_main">AthlyticAI</string>
+    <string name="package_name">com.athlyticai.app</string>
+    <string name="custom_url_scheme">com.athlyticai.app</string>
+</resources>

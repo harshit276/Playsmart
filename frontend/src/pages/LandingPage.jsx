@@ -195,6 +195,20 @@ export default function LandingPage() {
               <Play className="w-5 h-5 mr-1.5" /> Watch 60-sec demo
             </Button>
           </motion.div>
+
+          <motion.div initial="hidden" animate="visible" custom={0.6} variants={fadeUp}
+            className="mt-6 flex flex-col items-center">
+            <Link
+              to="/download"
+              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900/70 border border-zinc-800 hover:border-lime-400/40 text-zinc-300 hover:text-white text-sm transition-all"
+              data-testid="hero-get-app"
+            >
+              <Sparkles className="w-4 h-4 text-lime-400" />
+              <span>Get the app — works on iPhone, Android & Desktop</span>
+              <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+            </Link>
+            <p className="text-[11px] text-zinc-600 mt-2">Free • No app store needed • Installs in 10 seconds</p>
+          </motion.div>
         </div>
 
         {/* Scroll indicator */}

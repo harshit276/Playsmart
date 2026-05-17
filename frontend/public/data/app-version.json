@@ -1,0 +1,13 @@
+{
+  "android": {
+    "latest_version": null,
+    "latest_version_code": 0,
+    "apk_url": null,
+    "min_supported_version_code": 0,
+    "release_notes": "Coming soon: Native Android app build."
+  },
+  "ios": {
+    "status": "use_pwa",
+    "message": "iOS users — install via Add to Home Screen from Safari. Native App Store build coming soon."
+  }
+}

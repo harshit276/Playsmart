@@ -5,7 +5,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Badge } from "@/components/ui/badge";
 import {
   Zap, LogOut, BarChart3, Dumbbell, Target, CreditCard,
-  Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords, ShoppingCart
+  Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords, ShoppingCart,
+  Download
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getSportEmoji, getSportLabel } from "@/lib/sportConfig";
@@ -38,6 +39,8 @@ const MOBILE_NAV_MORE = [
   { path: "/progress", label: "Progress", icon: BarChart3 },
   { path: "/card", label: "My Card", icon: CreditCard },
   { path: "/blog", label: "Blog", icon: BookOpen },
+  { path: "/download", label: "Get App", icon: Download },
+  { path: "/help", label: "Help", icon: BookOpen },
 ];
 
 const SPORT_ACCENT = {
@@ -200,6 +203,12 @@ export default function Navbar() {
                     <BarChart3 className="w-4 h-4 mr-2" /> Progress
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-zinc-800" />
+                  <DropdownMenuItem
+                    className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
+                    onClick={() => navigate("/download")}
+                  >
+                    <Download className="w-4 h-4 mr-2" /> Get the App
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
                     onClick={() => navigate("/help")}

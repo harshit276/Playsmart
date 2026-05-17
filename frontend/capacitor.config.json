@@ -1,0 +1,44 @@
+{
+  "appId": "com.athlyticai.app",
+  "appName": "AthlyticAI",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "athlyticai.com",
+    "iosScheme": "https",
+    "allowNavigation": [
+      "athlyticai.com",
+      "*.athlyticai.com",
+      "*.firebaseapp.com",
+      "*.googleapis.com",
+      "*.gstatic.com",
+      "accounts.google.com",
+      "*.cashfree.com",
+      "*.amazonaws.com"
+    ]
+  },
+  "android": {
+    "buildOptions": {
+      "releaseType": "APK"
+    },
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "launchAutoHide": true,
+      "backgroundColor": "#0a0a0a",
+      "androidSplashResourceName": "splash",
+      "showSpinner": true,
+      "androidSpinnerStyle": "small",
+      "spinnerColor": "#bef264",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a0a0a"
+    }
+  }
+}
