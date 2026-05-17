@@ -2482,38 +2482,112 @@ export default function AnalyzePage() {
               </div>
             )}
 
-            {vlmCoaching.equipment_recommendations?.length > 0 && (
-              <div className="mb-4">
-                <p className="text-[11px] uppercase tracking-wide text-sky-300 font-semibold mb-2">Equipment that helps</p>
-                <div className="space-y-2">
-                  {vlmCoaching.equipment_recommendations.map((eq, i) => (
-                    <div key={`eq-${i}`} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
-                      <p className="text-sm font-semibold text-white">{eq.name}</p>
-                      {eq.why && <p className="text-xs text-sky-300/80 mt-0.5">{eq.why}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {vlmCoaching.seven_day_plan?.length > 0 && (
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-amber-300 font-semibold mb-2">7-day plan</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {vlmCoaching.seven_day_plan.map((d, i) => (
-                    <div key={`day-${i}`} className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-2">
-                      <p className="text-xs font-semibold text-white">Day {d.day} · {d.minutes ? `${d.minutes} min` : ""}</p>
-                      {d.focus && <p className="text-xs text-amber-300/80">{d.focus}</p>}
-                      {Array.isArray(d.drills) && d.drills.length > 0 && (
-                        <p className="text-[10px] text-zinc-500 mt-0.5">{d.drills.join(" · ")}</p>
-                      )}
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  {vlmCoaching.seven_day_plan.map((d, i) => {
+                    const isRest = (d.label || "").toLowerCase() === "rest"
+                      || /^active recovery|^rest/i.test(d.focus || "");
+                    const tone = isRest
+                      ? "border-zinc-700 bg-zinc-800/30"
+                      : "border-amber-400/20 bg-amber-400/5";
+                    const drillsDetailed = d.drills_detailed || (Array.isArray(d.drills) ? d.drills.map((n) => ({ name: n })) : []);
+                    return (
+                      <div key={`day-${i}`} className={`border ${tone} rounded-lg p-3`}>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] uppercase font-bold text-zinc-500">Day {d.day}</span>
+                            {d.label && (
+                              <Badge className={`text-[9px] uppercase font-bold ${
+                                isRest ? "bg-zinc-700 text-zinc-300 border-zinc-600"
+                                  : (d.label || "").toLowerCase() === "review" ? "bg-purple-400/15 text-purple-300 border-purple-400/30"
+                                  : "bg-amber-400/15 text-amber-300 border-amber-400/30"
+                              }`}>{d.label}</Badge>
+                            )}
+                            {d.minutes ? <span className="text-[10px] text-zinc-500">{d.minutes} min</span> : null}
+                          </div>
+                        </div>
+                        {d.title && <p className="text-sm font-semibold text-white">{d.title}</p>}
+                        {d.focus && !isRest && (
+                          <p className="text-[11px] text-amber-300/90 mt-0.5">→ Fixes: {d.focus}</p>
+                        )}
+                        {d.description && <p className="text-[11px] text-zinc-400 mt-1">{d.description}</p>}
+                        {drillsDetailed.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {drillsDetailed.map((dr, j) => (
+                              dr.url ? (
+                                <a key={`pd-${j}`} href={dr.url} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[11px] text-lime-400 hover:text-lime-300 mr-3">
+                                  <Play className="w-2.5 h-2.5 fill-current" /> {dr.name}
+                                </a>
+                              ) : (
+                                <span key={`pd-${j}`} className="inline-block text-[11px] text-zinc-400 mr-3">• {dr.name}</span>
+                              )
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
           </motion.div>
         )}
+
+        {/* Equipment Recommendations — promoted to its own prominent
+            card (was buried inside Coaching Insights). Each rec links to
+            our marketplace / equipment catalog so users have a one-tap
+            path from "this is what's holding me back" to "here's gear
+            that helps". */}
+        {vlmCoaching.equipment_recommendations?.length > 0 && (() => {
+          const sportSlug = result.sport ? `?sport=${result.sport}` : "";
+          return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+              className="bg-zinc-900/80 border border-sky-400/30 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium flex items-center gap-1">
+                  <Target className="w-3 h-3 text-sky-400" /> Gear that fixes your weaknesses
+                </p>
+                <Badge className="bg-sky-400/10 text-sky-300 border-sky-400/30 text-[10px]">Personalized</Badge>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                {vlmCoaching.equipment_recommendations.map((eq, i) => {
+                  const href = eq.item_id
+                    ? `/marketplace?item=${encodeURIComponent(eq.item_id)}`
+                    : `/equipment${sportSlug}`;
+                  return (
+                    <Link key={`eq-${i}`} to={href}
+                      className="block bg-zinc-800/40 border border-zinc-800 hover:border-sky-400/40 rounded-xl p-3 transition-colors group">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p className="text-sm font-semibold text-white leading-tight">{eq.name}</p>
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-sky-400 transition-colors shrink-0 mt-0.5" />
+                      </div>
+                      {eq.addresses_weakness && (
+                        <div className="bg-sky-400/5 border border-sky-400/20 rounded px-2 py-1 mb-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-sky-400 font-bold mb-0.5">Helps with</p>
+                          <p className="text-[11px] text-sky-200/90">{eq.addresses_weakness}</p>
+                        </div>
+                      )}
+                      {eq.why && <p className="text-[11px] text-zinc-400 leading-relaxed">{eq.why}</p>}
+                    </Link>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-zinc-800/50">
+                <Link to={`/equipment${sportSlug}`}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300">
+                  Browse all {result.sport || ""} equipment <ArrowRight className="w-3 h-3" />
+                </Link>
+                <Link to="/marketplace"
+                  className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300">
+                  Visit marketplace <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </motion.div>
+          );
+        })()}
 
         {/* ── Honest "we couldn't read this video" banner: when AI Coach
             failed for ALL shots (every shot is unknown OR confidence near 0),

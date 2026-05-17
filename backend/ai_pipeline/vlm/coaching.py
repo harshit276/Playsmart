@@ -926,7 +926,18 @@ def personalized_coaching(
         '    }\n'
         '  ],\n'
         '  "seven_day_plan": [\n'
-        '    {"day": 1, "focus": "<which weakness>", "drills": ["<drill name>"], "minutes": <int>}\n'
+        '    {\n'
+        '      "day": 1,\n'
+        '      "label": "<one-word type: Focus / Drill / Rest / Review>",\n'
+        '      "focus": "<the exact weakness this day targets, or '
+        '\'Active recovery\' for rest days>",\n'
+        '      "title": "<short title for the day, e.g. \'Wrist snap '
+        'drill block\'>",\n'
+        '      "description": "<2-sentence what + why>",\n'
+        '      "drill_video_ids": ["<id(s) from AVAILABLE DRILL VIDEOS '
+        'if this is a drill day, else []>"],\n'
+        '      "minutes": <int 0-60, 0 for rest>\n'
+        '    }\n'
         '  ],\n'
         '  "motivational_message": "<2 sentences in coach voice>"\n'
         '}\n\n'
@@ -945,15 +956,49 @@ def personalized_coaching(
     data = _parse_json_safe(raw)
 
     # Hydrate drill picks with real video URLs/channels from the catalog.
-    # Drop drills with no addresses_weakness so the user never sees a
-    # generic-looking drill card without a clear "this fixes X" reason.
+    # Drop drills whose addresses_weakness is missing, too generic, or
+    # doesn't actually match one of the weaknesses_observed.
     weaknesses_observed = [str(x).strip() for x in (data.get("weaknesses_observed") or []) if str(x).strip()][:6]
+    weaknesses_normalized = [w.lower() for w in weaknesses_observed]
+
+    # Generic / lazy phrases that look like a real match but mean nothing.
+    GENERIC_BAD = {
+        "technique", "better technique", "form", "better form",
+        "improvement", "general improvement", "skill", "skills",
+        "everything", "all", "general", "various", "overall",
+        "consistency", "practice", "training",
+    }
+
+    def _valid_weakness_link(addr: str) -> bool:
+        addr = addr.strip()
+        if len(addr) < 12:
+            return False
+        if addr.lower() in GENERIC_BAD:
+            return False
+        # Must overlap with at least one observed weakness phrase.
+        # We require a 4+ char substring match in either direction so
+        # "shoulder rotation" matches "limited shoulder rotation" but
+        # "form" doesn't match anything.
+        addr_l = addr.lower()
+        for w in weaknesses_normalized:
+            # Either the addr is contained in the weakness or vice-versa,
+            # OR they share a meaningful keyword phrase (>=6 chars).
+            if addr_l in w or w in addr_l:
+                return True
+            # Token-overlap fallback for paraphrased weaknesses
+            tokens_a = {t for t in addr_l.split() if len(t) >= 5}
+            tokens_w = {t for t in w.split() if len(t) >= 5}
+            if tokens_a & tokens_w:
+                return True
+        return False
+
     raw_drills = [d for d in (data.get("priority_drills") or []) if isinstance(d, dict)][:6]
     hydrated_drills = []
+    drills_dropped_reasons = []
     for d in raw_drills:
         addr = str(d.get("addresses_weakness") or "").strip()
-        if not addr:
-            # No explicit weakness link → skip rather than show a vague drill
+        if not _valid_weakness_link(addr):
+            drills_dropped_reasons.append(f"weak-link:{addr[:40]!r}")
             continue
         dv_id = d.get("drill_video_id") or d.get("video_id")
         if dv_id and dv_id in drill_lookup:
@@ -967,23 +1012,45 @@ def personalized_coaching(
         elif drill_lookup:
             # Catalog was provided but Gemini didn't pick from it → drop,
             # don't ship a generic drill without a real curated video.
+            drills_dropped_reasons.append(f"no-catalog-id:{(d.get('name') or '')[:40]!r}")
             continue
         hydrated_drills.append(d)
     hydrated_drills = hydrated_drills[:4]  # Cap at 4 for quality-over-quantity
 
-    # Same gate for equipment: require an addresses_weakness link.
+    # Same gate for equipment: must reference a real observed weakness.
     raw_equip = [e for e in (data.get("equipment_recommendations") or []) if isinstance(e, dict)][:5]
     filtered_equip = [
         e for e in raw_equip
-        if str(e.get("addresses_weakness") or "").strip()
+        if _valid_weakness_link(str(e.get("addresses_weakness") or ""))
     ][:3]
+
+    # Hydrate per-day drill IDs into {id,name,url,channel} entries so the
+    # frontend renders concrete clickable drills inside each day card.
+    raw_plan = [d for d in (data.get("seven_day_plan") or []) if isinstance(d, dict)][:7]
+    hydrated_plan = []
+    for day in raw_plan:
+        day_drills = []
+        for vid_id in (day.get("drill_video_ids") or []):
+            if vid_id and vid_id in drill_lookup:
+                ref = drill_lookup[vid_id]
+                day_drills.append({
+                    "id": ref["id"],
+                    "name": ref.get("title") or ref.get("name") or vid_id,
+                    "url": ref.get("url"),
+                    "channel": ref.get("channel"),
+                })
+        # Keep the original `drills` list (names only) as a fallback.
+        if day.get("drills") and not day_drills:
+            day_drills = [{"name": str(n)} for n in (day.get("drills") or []) if n]
+        day["drills_detailed"] = day_drills
+        hydrated_plan.append(day)
 
     return {
         "weaknesses_observed": weaknesses_observed,
         "key_focus_areas": [str(x) for x in (data.get("key_focus_areas") or [])][:5],
         "priority_drills": hydrated_drills,
         "equipment_recommendations": filtered_equip,
-        "seven_day_plan": [d for d in (data.get("seven_day_plan") or []) if isinstance(d, dict)][:7],
+        "seven_day_plan": hydrated_plan,
         "motivational_message": str(data.get("motivational_message", "")),
         "_meta": {
             "backend": backend_obj.name,
@@ -991,5 +1058,6 @@ def personalized_coaching(
             "drill_catalog_size": len(drill_lookup),
             "drills_picked": len(hydrated_drills),
             "drills_dropped": len(raw_drills) - len(hydrated_drills),
+            "drills_drop_reasons": drills_dropped_reasons[:8],
         },
     }
