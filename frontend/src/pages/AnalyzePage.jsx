@@ -791,6 +791,14 @@ export default function AnalyzePage() {
       return; // halts analysis until user resolves via the modal
     }
 
+    // Universal mode skips the MoveNet pre-scan entirely — Gemini
+    // identifies the sport AND the players itself. Go straight to the
+    // analysis call without showing a player picker modal.
+    if (accuracyMode === "universal") {
+      await runClientAnalysis(sportToAnalyze, null);
+      return;
+    }
+
     // ─── Pre-scan the video for players (used by BOTH client + server modes) ───
     setLoadingText("Scanning video for players...");
     setProgress(5);
@@ -842,6 +850,85 @@ export default function AnalyzePage() {
     setResult(null);
     setError(null);
     setProgress(0);
+
+    // ─── Universal mode short-circuit ────────────────────────────────
+    // Bypass the entire pose-extraction pipeline. Compress video, send to
+    // /analyze-video-universal, render whatever Gemini returns. Works for
+    // ANY sport (swimming/snooker/golf etc.) since there's no per-sport
+    // vocabulary or metric schema.
+    if (accuracyMode === "universal") {
+      try {
+        setLoadingText("Preparing video for Universal AI Coach...");
+        setProgress(15);
+        const vp = await import("@/ai/videoProcessor");
+        const uploadFile = await vp.compressVideoForUpload(file, {
+          maxDim: 480, bitrate: 800_000, maxDurationSec: 30,
+          onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.25)); },
+        });
+        if (uploadFile.size > 4 * 1024 * 1024) {
+          throw new Error(`compressed video too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB)`);
+        }
+        setLoadingText("AI Coach is watching the whole video...");
+        setProgress(50);
+        const buf = await uploadFile.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        const b64 = btoa(bin);
+        const { data } = await api.post("/analyze-video-universal", {
+          mime_type: uploadFile.type || file.type || "video/mp4",
+          video_b64: b64,
+        }, { timeout: 90000 });
+        setProgress(95);
+        setLoadingText("Building results...");
+        // Build a minimal result object the existing UI can render.
+        const events = data?.events || [];
+        const universalResult = {
+          success: true,
+          _universal: true,
+          sport: data?.sport_detected || "unknown",
+          skill_level: data?.overall_skill_level || "Intermediate",
+          quick_summary: data?.summary || "",
+          coach_feedback: { summary: data?.summary || "", encouragement: "" },
+          shots: events.map((e, i) => ({
+            type: (e.event_type || "event").toLowerCase().replace(/\s+/g, "_"),
+            name: e.event_type || "Event",
+            confidence: e.confidence ?? 0.7,
+            timestamp: Math.round((e.timestamp_sec || 0) * 10) / 10,
+            grade: (e.confidence ?? 0.7) >= 0.7 ? "A" : (e.confidence ?? 0) >= 0.5 ? "B" : "C",
+            score: Math.round((e.confidence ?? 0.7) * 100),
+            reasoning: e.description || "",
+            formFeedback: { strengths: e.strengths || [], weaknesses: e.weaknesses || [], tip: e.tip || "" },
+            vlmSkill: e.skill_level || "Intermediate",
+            powerLevel: null,
+            speed: null,
+            thumbnail: null,
+          })),
+          total_shots_detected: events.length,
+          multi_shot: events.length > 1,
+          shot_distribution: events.reduce((d, e) => {
+            const k = (e.event_type || "event").toLowerCase().replace(/\s+/g, "_");
+            d[k] = (d[k] || 0) + 1;
+            return d;
+          }, {}),
+          _accuracy_mode: "universal",
+          _meta: data?._meta || {},
+        };
+        setResult(universalResult);
+        setProgress(100);
+        setLoadingText("Complete!");
+        toast.success(`Detected: ${universalResult.sport} — ${events.length} events analyzed`);
+        setActiveTab("results");
+      } catch (err) {
+        const msg = err?.response?.data?.detail || err.message || "Universal analysis failed";
+        console.error("[universal]", msg);
+        setError(msg);
+        toast.error(`Universal mode failed: ${msg.slice(0, 80)}`);
+      } finally {
+        setAnalyzing(false);
+      }
+      return;
+    }
+
     setLoadingText("Loading AI model...");
     const steps = CLIENT_LOADING_STEPS;
     let stepIdx = 0;
@@ -1774,7 +1861,7 @@ export default function AnalyzePage() {
       {/* Accuracy mode toggle — opt-in whole-video Gemini analysis */}
       <div className="mb-4">
         <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2">Accuracy Mode</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => { setAccuracyMode("keyframes"); try { localStorage.setItem("playsmart_accuracy_mode", "keyframes"); } catch {} }}
@@ -1787,7 +1874,7 @@ export default function AnalyzePage() {
               <span className="text-sm font-semibold text-white">Standard</span>
               <span className="text-[10px] text-zinc-500">~6s · ~$0.001</span>
             </div>
-            <p className="text-[11px] text-zinc-400">Browser finds shots, sends keyframes to AI Coach. Fast, low cost.</p>
+            <p className="text-[11px] text-zinc-400">Browser finds shots + measures angles. Fast, low cost.</p>
           </button>
           <button
             type="button"
@@ -1801,7 +1888,21 @@ export default function AnalyzePage() {
               <span className="text-sm font-semibold text-white">High accuracy 🎥</span>
               <span className="text-[10px] text-zinc-500">~12s · ~$0.01</span>
             </div>
-            <p className="text-[11px] text-zinc-400">Whole video to AI Coach — catches every shot, including serves. &lt;4 MB.</p>
+            <p className="text-[11px] text-zinc-400">Whole video to AI Coach + measured metrics. Best for racquet sports.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAccuracyMode("universal"); try { localStorage.setItem("playsmart_accuracy_mode", "universal"); } catch {} }}
+            className={`text-left rounded-xl border p-3 transition-all ${
+              accuracyMode === "universal"
+                ? "border-purple-400/50 bg-purple-400/5"
+                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+            }`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">Universal 🧪</span>
+              <span className="text-[10px] text-zinc-500">~10s · ~$0.01</span>
+            </div>
+            <p className="text-[11px] text-zinc-400">Any sport. AI-only — no pose math. Try for swimming, snooker, golf, etc.</p>
           </button>
         </div>
       </div>
@@ -2303,6 +2404,15 @@ export default function AnalyzePage() {
                           <span className="text-[10px] text-zinc-500">{d.duration_min} min</span>
                         )}
                       </div>
+                      {/* Explicit weakness link — surfaces WHY this drill
+                          was picked from the catalog. Hidden when missing
+                          so we don't show a generic-looking card. */}
+                      {d.addresses_weakness && (
+                        <div className="bg-amber-400/5 border border-amber-400/20 rounded px-2 py-1 mb-2">
+                          <p className="text-[10px] uppercase tracking-wide text-amber-400 font-bold mb-0.5">Fixes</p>
+                          <p className="text-xs text-amber-200/90">{d.addresses_weakness}</p>
+                        </div>
+                      )}
                       {d.why && <p className="text-xs text-lime-300/80 mb-1">→ {d.why}</p>}
                       {d.instructions && <p className="text-xs text-zinc-300">{d.instructions}</p>}
                       {d.equipment_needed?.length > 0 && (

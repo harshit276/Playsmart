@@ -560,6 +560,212 @@ def analyze_video_full(
     }
 
 
+def analyze_video_universal(
+    video_bytes: bytes, mime_type: str,
+    target_player_description: str | None = None,
+    backend: str = "auto",
+) -> dict:
+    """Sport-agnostic whole-video analysis. Sends the video to Gemini with
+    an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
+    schema) so it works for swimming, snooker, golf, weightlifting, etc.
+    in addition to the racquet sports we have curated content for.
+
+    Output schema is intentionally generic — `events[]` instead of
+    `shots[]` and each event has free-form `event_type` text. The
+    frontend renders these as a simple timestamped event list.
+
+    Returns: {sport_detected, events: [{timestamp_sec, event_type,
+                description, technique_observations, strength, weakness,
+                tip, skill_level}], summary, _meta}.
+    """
+    box_hint = ""
+    if target_player_description:
+        box_hint = (
+            f"\n\nTARGET PERSON: focus on '{target_player_description}'. "
+            f"Only include events performed by that person. Skip events "
+            f"by anyone else in the frame."
+        )
+
+    sys_prompt = (
+        "You are an expert sports coach. The video may be from ANY sport — "
+        "racquet, ball, swimming, combat, weightlifting, snooker, golf, "
+        "running, gymnastics, etc. Do NOT assume it's a racquet sport.\n\n"
+        "Step 1: identify the sport.\n"
+        "Step 2: identify every meaningful EVENT in the video where the "
+        "athlete performs a discrete technique (one shot, one stroke "
+        "cycle, one rep, one pot, etc.) — NOT idle motion or recovery.\n"
+        "Step 3: for each event, give a brief coach-quality analysis.\n\n"
+        "CRITICAL — ONE TECHNIQUE = ONE EVENT:\n"
+        "A single physical motion (windup/contact/follow-through, or one "
+        "full stroke cycle in swimming) is ONE event at the moment of "
+        "execution. Do NOT emit multiple entries for phases of the same "
+        "motion. If the athlete performed 3 reps/shots/strokes, the "
+        "events array must have 3 entries, not 9."
+        f"{box_hint}\n\n"
+        "Respond with valid JSON ONLY (no markdown):\n"
+        '{\n'
+        '  "sport_detected": "<sport name in your own words>",\n'
+        '  "summary": "<2-3 sentence overall coach take on the session>",\n'
+        '  "overall_skill_level": "<Beginner|Intermediate|Advanced|Pro>",\n'
+        '  "events": [\n'
+        '    {\n'
+        '      "timestamp_sec": <float, when the action happens>,\n'
+        '      "event_type": "<your label e.g. forehand, freestyle stroke, '
+        'long pot, deadlift rep, golf swing>",\n'
+        '      "description": "<one sentence what happened>",\n'
+        '      "strengths": ["<bullet>", "..."],\n'
+        '      "weaknesses": ["<bullet>", "..."],\n'
+        '      "tip": "<one actionable improvement>",\n'
+        '      "confidence": <0-1 — how sure are you about this event>,\n'
+        '      "skill_level": "<Beginner|Intermediate|Advanced|Pro>"\n'
+        '    }\n'
+        '  ]\n'
+        '}\n\n'
+        "Keep events array under 20 entries. Use whichever event_type "
+        "wording naturally fits the sport — no fixed vocabulary."
+    )
+    user_msg = (
+        "Watch the whole video and analyze the athlete's performance "
+        "using the schema above. Be honest — if the video is unclear or "
+        "the action is hard to read, say so in 'summary' and emit fewer "
+        "events rather than guessing."
+    )
+
+    backend_obj = pick_backend(backend)
+    try:
+        import google.generativeai as genai  # type: ignore
+        model = backend_obj._get() if hasattr(backend_obj, "_get") else None
+        if model is None:
+            import os as _os
+            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+            model = genai.GenerativeModel(backend_obj.model_name)
+        parts: list = [
+            {"text": sys_prompt}, {"text": user_msg},
+            {"mime_type": mime_type or "video/mp4", "data": video_bytes},
+        ]
+        resp = model.generate_content(
+            parts,
+            generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+        )
+        raw = resp.text
+    except Exception as exc:
+        return {
+            "sport_detected": "unknown", "summary": "",
+            "events": [], "_meta": {"error": str(exc)[:300], "backend": backend_obj.name},
+        }
+
+    data = _parse_json_safe(raw)
+    events_out = []
+    for e in (data.get("events") or [])[:20]:
+        if not isinstance(e, dict):
+            continue
+        try:
+            ts = float(e.get("timestamp_sec") or 0.0)
+        except Exception:
+            ts = 0.0
+        conf = max(0.0, min(1.0, float(e.get("confidence", 0.7) or 0.7)))
+        skill = str(e.get("skill_level", "Intermediate")).strip().title()
+        if skill not in ("Beginner", "Intermediate", "Advanced", "Pro"):
+            skill = "Intermediate"
+        events_out.append({
+            "timestamp_sec": ts,
+            "event_type": str(e.get("event_type", "event"))[:80],
+            "description": str(e.get("description", ""))[:400],
+            "strengths": [str(x)[:200] for x in (e.get("strengths") or [])[:5]],
+            "weaknesses": [str(x)[:200] for x in (e.get("weaknesses") or [])[:5]],
+            "tip": str(e.get("tip", ""))[:300],
+            "confidence": conf,
+            "skill_level": skill,
+        })
+    return {
+        "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
+        "summary": str(data.get("summary", ""))[:600],
+        "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
+        "events": events_out,
+        "_meta": {
+            "backend": backend_obj.name, "model": backend_obj.model_name,
+            "video_bytes": len(video_bytes), "mime_type": mime_type,
+            "mode": "universal",
+        },
+    }
+
+
+def describe_players_in_video(
+    video_bytes: bytes, mime_type: str,
+    backend: str = "auto",
+) -> dict:
+    """List the people in a video with descriptions the user can choose
+    between. The user picks one, then we pass that description as the
+    target_player_description into subsequent analysis calls so Gemini
+    anchors on the right person instead of guessing from a bbox.
+
+    Returns: {players: [{id, description, court_position, clothing,
+                          is_likely_athlete}], _meta}.
+    """
+    sys_prompt = (
+        "List every visible PERSON in this video. For each, give a short, "
+        "specific description the viewer can use to identify them. Focus on "
+        "stable visual features (clothing color, court position, body type, "
+        "side of the court) — not transient pose.\n\n"
+        "Order players by visual prominence (most likely the main subject "
+        "first). Skip referees, ball boys, audience, coaches on the "
+        "sideline — only list ATHLETES who are actively playing or "
+        "performing the activity.\n\n"
+        "Respond with valid JSON ONLY:\n"
+        '{\n'
+        '  "players": [\n'
+        '    {\n'
+        '      "id": "p1",\n'
+        '      "description": "<concise — e.g. \'tall player, red shirt, '
+        'near court, right side\'>",\n'
+        '      "clothing": "<top + bottom colors>",\n'
+        '      "court_position": "<near/far + left/center/right>",\n'
+        '      "is_likely_athlete": <true|false>\n'
+        '    }\n'
+        '  ]\n'
+        '}\n\n'
+        "Limit to 6 players max. If only one person is visible, return one entry."
+    )
+    user_msg = "Identify and describe the athletes in this video."
+
+    backend_obj = pick_backend(backend)
+    try:
+        import google.generativeai as genai  # type: ignore
+        model = backend_obj._get() if hasattr(backend_obj, "_get") else None
+        if model is None:
+            import os as _os
+            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+            model = genai.GenerativeModel(backend_obj.model_name)
+        parts: list = [
+            {"text": sys_prompt}, {"text": user_msg},
+            {"mime_type": mime_type or "video/mp4", "data": video_bytes},
+        ]
+        resp = model.generate_content(
+            parts,
+            generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+        )
+        raw = resp.text
+    except Exception as exc:
+        return {"players": [], "_meta": {"error": str(exc)[:300], "backend": backend_obj.name}}
+
+    data = _parse_json_safe(raw)
+    out = []
+    for i, p in enumerate((data.get("players") or [])[:6]):
+        if not isinstance(p, dict):
+            continue
+        out.append({
+            "id": str(p.get("id") or f"p{i+1}"),
+            "description": str(p.get("description", ""))[:200],
+            "clothing": str(p.get("clothing", ""))[:80],
+            "court_position": str(p.get("court_position", ""))[:80],
+            "is_likely_athlete": bool(p.get("is_likely_athlete", True)),
+        })
+    return {
+        "players": out,
+        "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name},
+    }
+
+
 def detect_sport(frames_jpeg: list[bytes], backend: str = "auto") -> dict:
     """Quick VLM call: which of our 5 sports is this video?
 
@@ -668,31 +874,44 @@ def personalized_coaching(
             )
 
     drill_schema_field = (
-        '      "drill_video_id": "<id from AVAILABLE DRILL VIDEOS list>",\n'
-        if drill_lookup else ""
+        '      "drill_video_id": "<id from AVAILABLE DRILL VIDEOS list — REQUIRED>",\n'
+        '      "addresses_weakness": "<exact weakness phrase this drill fixes, quoted from weaknesses_observed above>",\n'
+        if drill_lookup else
+        '      "addresses_weakness": "<exact weakness phrase this drill fixes, quoted from weaknesses_observed above>",\n'
     )
     drill_rule = (
-        "Each priority_drill MUST include a drill_video_id picked from the "
-        "AVAILABLE DRILL VIDEOS list above — do NOT make up drill names that "
-        "are not in the list. Pick the entries whose skill_areas / "
-        "description best match the player's weaknesses. "
-        if drill_lookup else
-        "Name drills the player can do today, not generic advice. "
+        "DRILL SELECTION RULES (read carefully — most failures here):\n"
+        "1. First, list the player's TOP weaknesses in `weaknesses_observed` "
+        "(verbatim from the analysis — e.g. 'inconsistent contact point', "
+        "'limited shoulder rotation'). Do NOT invent weaknesses.\n"
+        "2. For EACH priority_drill, you MUST set `addresses_weakness` to "
+        "ONE of those exact weakness phrases. If you can't tie a drill to "
+        "a specific listed weakness, DROP it — fewer high-relevance drills "
+        "beats more loosely-matched ones.\n"
+        + ("3. Pick drill_video_id ONLY from AVAILABLE DRILL VIDEOS — "
+           "match by skill_areas + description text. If none of the "
+           "catalog entries is a good match for a given weakness, OMIT "
+           "that drill rather than picking a marginal one.\n"
+           if drill_lookup else "")
+        + "4. Return 2-4 drills max. Quality > quantity. An empty priority_drills "
+        "list is acceptable if nothing in the catalog matches the weaknesses.\n\n"
     )
 
     sys_prompt = (
         f"You are an expert {sport} coach building a personalized practice plan. "
         f"Use ONLY the player's actual weaknesses and per-shot reasoning below. "
+        f"Never recommend generic advice — every recommendation must trace "
+        f"back to a specific observed weakness.\n\n"
         f"{drill_rule}"
-        f"Prioritize drills that directly address the named weaknesses.\n\n"
         f"Respond with valid JSON ONLY:\n"
         '{\n'
+        '  "weaknesses_observed": ["<verbatim weakness from analysis>", "<...>"],\n'
         '  "key_focus_areas": ["<short tag>", "<short tag>", "<short tag>"],\n'
         '  "priority_drills": [\n'
         '    {\n'
         '      "name": "<drill name>",\n'
         + drill_schema_field +
-        '      "why": "<why this drill, citing the weakness it fixes>",\n'
+        '      "why": "<one sentence: why THIS drill fixes THAT weakness>",\n'
         '      "duration_min": <int 5-30>,\n'
         '      "instructions": "<2-3 sentences how to do it>",\n'
         '      "equipment_needed": ["<simple item>", "..."]\n'
@@ -702,15 +921,18 @@ def personalized_coaching(
         '    {\n'
         '      "item_id": "<id from catalog OR null if catalog empty>",\n'
         '      "name": "<product or category>",\n'
-        '      "why": "<why this helps THIS player\'s weakness>"\n'
+        '      "addresses_weakness": "<exact phrase from weaknesses_observed>",\n'
+        '      "why": "<why this helps THAT specific weakness>"\n'
         '    }\n'
         '  ],\n'
         '  "seven_day_plan": [\n'
-        '    {"day": 1, "focus": "<...>", "drills": ["<drill name>"], "minutes": <int>}\n'
+        '    {"day": 1, "focus": "<which weakness>", "drills": ["<drill name>"], "minutes": <int>}\n'
         '  ],\n'
         '  "motivational_message": "<2 sentences in coach voice>"\n'
         '}\n\n'
-        "Return 3-5 drills, 1-3 equipment recs, exactly 7 days in the plan."
+        "Return 2-4 drills, 0-3 equipment recs, exactly 7 days in the plan. "
+        "If the player's weaknesses can't be addressed by the catalog, return "
+        "an EMPTY priority_drills list — do NOT fabricate."
         f"{catalog_block}"
     )
     user_msg = (
@@ -723,9 +945,16 @@ def personalized_coaching(
     data = _parse_json_safe(raw)
 
     # Hydrate drill picks with real video URLs/channels from the catalog.
+    # Drop drills with no addresses_weakness so the user never sees a
+    # generic-looking drill card without a clear "this fixes X" reason.
+    weaknesses_observed = [str(x).strip() for x in (data.get("weaknesses_observed") or []) if str(x).strip()][:6]
     raw_drills = [d for d in (data.get("priority_drills") or []) if isinstance(d, dict)][:6]
     hydrated_drills = []
     for d in raw_drills:
+        addr = str(d.get("addresses_weakness") or "").strip()
+        if not addr:
+            # No explicit weakness link → skip rather than show a vague drill
+            continue
         dv_id = d.get("drill_video_id") or d.get("video_id")
         if dv_id and dv_id in drill_lookup:
             ref = drill_lookup[dv_id]
@@ -735,17 +964,32 @@ def personalized_coaching(
             d["video_level"] = ref.get("level")
             if not d.get("name"):
                 d["name"] = ref.get("title") or ref.get("name")
+        elif drill_lookup:
+            # Catalog was provided but Gemini didn't pick from it → drop,
+            # don't ship a generic drill without a real curated video.
+            continue
         hydrated_drills.append(d)
+    hydrated_drills = hydrated_drills[:4]  # Cap at 4 for quality-over-quantity
+
+    # Same gate for equipment: require an addresses_weakness link.
+    raw_equip = [e for e in (data.get("equipment_recommendations") or []) if isinstance(e, dict)][:5]
+    filtered_equip = [
+        e for e in raw_equip
+        if str(e.get("addresses_weakness") or "").strip()
+    ][:3]
 
     return {
+        "weaknesses_observed": weaknesses_observed,
         "key_focus_areas": [str(x) for x in (data.get("key_focus_areas") or [])][:5],
         "priority_drills": hydrated_drills,
-        "equipment_recommendations": [e for e in (data.get("equipment_recommendations") or []) if isinstance(e, dict)][:5],
+        "equipment_recommendations": filtered_equip,
         "seven_day_plan": [d for d in (data.get("seven_day_plan") or []) if isinstance(d, dict)][:7],
         "motivational_message": str(data.get("motivational_message", "")),
         "_meta": {
             "backend": backend_obj.name,
             "model": backend_obj.model_name,
             "drill_catalog_size": len(drill_lookup),
+            "drills_picked": len(hydrated_drills),
+            "drills_dropped": len(raw_drills) - len(hydrated_drills),
         },
     }

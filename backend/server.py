@@ -2958,6 +2958,131 @@ async def analyze_video_direct_endpoint(
 
 
 # ──────────────────────────────────────────────────────────────────────
+# Universal whole-video analysis. Sport-agnostic — works for swimming,
+# snooker, golf, weightlifting, etc. in addition to the racquet sports
+# we have curated vocab for. Returns a generic event list.
+# ──────────────────────────────────────────────────────────────────────
+class AnalyzeVideoUniversalRequest(BaseModel):
+    target_player_description: str | None = None
+    backend: str = "auto"
+    mime_type: str = "video/mp4"
+    video_b64: str
+
+
+@api_router.post("/analyze-video-universal")
+async def analyze_video_universal_endpoint(
+    req: AnalyzeVideoUniversalRequest, authorization: str = Header(None),
+):
+    """Sport-agnostic Gemini analysis. No per-sport vocabulary, no
+    hardcoded metric schema — returns whatever events Gemini identifies
+    plus a coach-style assessment. Use for sports we don't have curated
+    content for, or as an A/B comparison against the standard flow."""
+    await get_current_user(authorization)
+    if not req.video_b64:
+        raise HTTPException(status_code=400, detail="No video provided")
+
+    import base64
+    try:
+        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+        video_bytes = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+    if len(video_bytes) < 1000:
+        raise HTTPException(status_code=400, detail="Video too small")
+    if len(video_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
+
+    try:
+        from ai_pipeline.vlm import analyze_video_universal
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: analyze_video_universal(
+                video_bytes, req.mime_type,
+                target_player_description=req.target_player_description,
+                backend=req.backend,
+            )),
+            timeout=55.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Universal analysis timed out (>55s)")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Universal analysis failed: {exc}")
+
+    return {
+        "success": True,
+        "sport_detected": result.get("sport_detected", "unknown"),
+        "summary": result.get("summary", ""),
+        "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
+        "events": result.get("events") or [],
+        "_meta": result.get("_meta") or {},
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Gemini-based player picker: describe everyone in the video so the
+# user can pick the target player by description (clothing + court
+# position) instead of guessing from a bbox. Used in both singles and
+# doubles flows.
+# ──────────────────────────────────────────────────────────────────────
+class DescribePlayersRequest(BaseModel):
+    backend: str = "auto"
+    mime_type: str = "video/mp4"
+    video_b64: str
+
+
+@api_router.post("/describe-players")
+async def describe_players_endpoint(
+    req: DescribePlayersRequest, authorization: str = Header(None),
+):
+    """Returns a list of {id, description, clothing, court_position} for
+    every visible athlete. Frontend renders these as picker options so
+    the user explicitly chooses which player Gemini should focus on in
+    the subsequent analysis call."""
+    await get_current_user(authorization)
+    if not req.video_b64:
+        raise HTTPException(status_code=400, detail="No video provided")
+
+    import base64
+    try:
+        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+        video_bytes = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+    if len(video_bytes) < 1000:
+        raise HTTPException(status_code=400, detail="Video too small")
+    if len(video_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video too large (>25 MB)")
+
+    try:
+        from ai_pipeline.vlm import describe_players_in_video
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: describe_players_in_video(
+                video_bytes, req.mime_type, backend=req.backend,
+            )),
+            timeout=35.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Player description timed out")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Player description failed: {exc}")
+
+    return {
+        "success": True,
+        "players": result.get("players") or [],
+        "_meta": result.get("_meta") or {},
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Sport auto-detection: 1-2 keyframes -> which of our 5 sports is this?
 # ~$0.0005 per call. Lets users upload without pre-selecting a sport.
 # ──────────────────────────────────────────────────────────────────────
