@@ -383,6 +383,33 @@ export default function MatchInsights({
               const speeds = perShot.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
               const avgSpeed = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : null;
               const peakSpeed = speeds.length ? Math.max(...speeds) : null;
+              // Tempo fallback: when speed is unavailable (universal mode,
+              // most cricket / table-tennis clips) compute events-per-minute
+              // from consecutive timestamps. Surfaces a real benchmark
+              // number instead of a blank "— km/h" tile.
+              const sortedTimestamps = perShot
+                .map((s) => typeof s.timestamp === "number" ? s.timestamp : null)
+                .filter((t) => t != null)
+                .sort((a, b) => a - b);
+              let tempoPerMin = null, tempoLabel = "";
+              if (sortedTimestamps.length >= 2) {
+                const gaps = [];
+                for (let i = 1; i < sortedTimestamps.length; i++) {
+                  const g = sortedTimestamps[i] - sortedTimestamps[i - 1];
+                  if (g > 0.1 && g < 60) gaps.push(g);  // sanity filter
+                }
+                if (gaps.length > 0) {
+                  const meanGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+                  if (meanGap > 0) {
+                    tempoPerMin = Math.round(60 / meanGap);
+                    // Pick label by dominant event type
+                    const allLabels = perShot.map((s) => (s.label || "").toLowerCase());
+                    const isSwim = allLabels.some((l) => /stroke|swim/.test(l));
+                    const isRep = allLabels.some((l) => /rep|squat|deadlift|press/.test(l));
+                    tempoLabel = isSwim ? "strokes/min" : isRep ? "reps/min" : "events/min";
+                  }
+                }
+              }
               const types = new Set(perShot.map((s) => s.label).filter(Boolean));
               const levelTone = topLevel === "Pro" ? "text-amber-300"
                 : topLevel === "Advanced" ? "text-lime-300"
@@ -410,9 +437,25 @@ export default function MatchInsights({
                     )}
                   </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Speed</p>
-                    <p className="text-xl font-bold text-white mt-0.5">{avgSpeed != null ? `${avgSpeed}` : "—"}<span className="text-xs text-zinc-500 font-normal ml-1">km/h</span></p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">{peakSpeed != null ? `Peak ${peakSpeed}` : ""}</p>
+                    {avgSpeed != null ? (
+                      <>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Speed</p>
+                        <p className="text-xl font-bold text-white mt-0.5">{avgSpeed}<span className="text-xs text-zinc-500 font-normal ml-1">km/h</span></p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">{peakSpeed != null ? `Peak ${peakSpeed}` : ""}</p>
+                      </>
+                    ) : tempoPerMin != null ? (
+                      <>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Tempo</p>
+                        <p className="text-xl font-bold text-white mt-0.5">{tempoPerMin}<span className="text-xs text-zinc-500 font-normal ml-1">/min</span></p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">{tempoLabel}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Speed</p>
+                        <p className="text-xl font-bold text-zinc-500 mt-0.5">—</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">Need clearer video</p>
+                      </>
+                    )}
                   </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Consistency</p>
@@ -580,11 +623,41 @@ async function extractOneShotPose(videoEl, ctx, canvas, detector, cropBox, start
 // by shot type (e.g. "5 Smashes" expandable to 5 individual cards).
 const SHOT_GROUP_THRESHOLD = 5;
 
+// Track the auto-pause timer so consecutive jumps cancel the previous
+// scheduled pause (otherwise clicking shot 2 mid-replay of shot 1 will
+// pause shot 2 early).
+let _seekPauseTimer = null;
+
 function _seekToShot(timestamp) {
   if (typeof timestamp !== "number") return;
   window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: timestamp } }));
   const v = document.querySelector("video[data-playsmart-clip]");
-  if (v) { try { v.currentTime = Math.max(0, timestamp); v.play?.(); } catch {} }
+  if (!v) return;
+  // Replay the shot from ~1s before contact to ~1.5s after so the
+  // user actually sees the windup → contact → follow-through, not
+  // just a frozen frame at the contact moment.
+  try {
+    const start = Math.max(0, timestamp - 1.0);
+    v.currentTime = start;
+    v.muted = true;  // browsers block unmuted autoplay
+    const playPromise = v.play?.();
+    // Scroll the video into view so the user sees the replay.
+    v.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (_seekPauseTimer) { clearTimeout(_seekPauseTimer); _seekPauseTimer = null; }
+    _seekPauseTimer = setTimeout(() => {
+      try { v.pause?.(); } catch {}
+      _seekPauseTimer = null;
+    }, 2500);  // ~1s lead-in + 1.5s after contact
+    // If autoplay was blocked, surface a hint via a custom event the
+    // page can toast (browsers sometimes block even muted autoplay).
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        window.dispatchEvent(new CustomEvent("playsmart:seek-blocked", {
+          detail: { time: timestamp },
+        }));
+      });
+    }
+  } catch {}
 }
 
 function IndividualShotCard({ shot, label }) {
@@ -594,9 +667,9 @@ function IndividualShotCard({ shot, label }) {
   const onSeek = ts != null ? () => _seekToShot(ts) : null;
   return (
     <div
-      className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${onSeek ? "cursor-pointer hover:border-lime-400/40 transition-colors" : ""}`}
+      className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${onSeek ? "cursor-pointer hover:border-lime-400/40 hover:bg-zinc-900 transition-colors" : ""}`}
       onClick={onSeek || undefined}
-      title={onSeek ? `Jump to ${ts.toFixed(1)}s in the video` : undefined}
+      title={onSeek ? `Click to replay this moment (${ts.toFixed(1)}s) on the video` : undefined}
     >
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
         <div className="flex items-center gap-2 min-w-0">
@@ -608,7 +681,16 @@ function IndividualShotCard({ shot, label }) {
               loading="lazy"
             />
           )}
-          <p className="text-sm font-semibold text-white truncate">{label}</p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            {/* Inline play badge — makes it obvious the card is
+                clickable AND tied to a real moment on the video. */}
+            {onSeek && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wider text-lime-400 bg-lime-400/10 border border-lime-400/30 rounded px-1.5 py-0.5 shrink-0">
+                <span className="text-[8px]">▶</span> Replay
+              </span>
+            )}
+            <p className="text-sm font-semibold text-white truncate">{label}</p>
+          </div>
         </div>
         <div className="flex items-center gap-1.5">
           {conf != null && (
