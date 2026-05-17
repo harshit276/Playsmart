@@ -896,23 +896,27 @@ export default function AnalyzePage() {
               video_b64: b64,
             }, { timeout: 45000 });
             let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
-            // Crop a per-player thumbnail from a mid-video frame using
-            // the bbox Gemini returned. Falls back to a center-square
-            // crop when bbox is missing or invalid.
+            // Also extract a single mid-frame keyframe of the whole
+            // video — used as the BACKGROUND of the player picker so
+            // bboxes can be overlaid on it (the old MoveNet-style UI
+            // worked great, just swap detection source to Gemini).
+            let midFrame = null;
             if (players.length > 0) {
               try {
                 const vp2 = await import("@/ai/videoProcessor");
-                const mid = Math.max(0.5, (uploadFile.duration || 5) / 2);
+                midFrame = await vp2.extractMidFrameKeyframe(file, { maxDim: 720, jpegQuality: 0.8 });
+                // Per-player crops are still useful as a tiny avatar in
+                // the result banner — keep generating them but smaller.
                 const bboxes = players.map((p) => p.bbox || null);
-                const thumbs = await vp2.extractPlayerThumbnails(file, mid, bboxes, { maxDim: 160, jpegQuality: 0.75 });
+                const thumbs = await vp2.extractPlayerThumbnails(file, (uploadFile.duration || 5) / 2, bboxes, { maxDim: 96, jpegQuality: 0.75 });
                 players = players.map((p, idx) => ({ ...p, thumbnail: thumbs[idx] || null }));
               } catch (thumbErr) {
-                console.warn("[universal] player thumb extraction failed:", thumbErr?.message);
+                console.warn("[universal] keyframe extraction failed:", thumbErr?.message);
               }
             }
             if (players.length >= 2) {
               // Multiple athletes visible → show picker and pause.
-              setUniversalUploadData({ uploadFile, b64 });
+              setUniversalUploadData({ uploadFile, b64, midFrame });
               setUniversalPlayers(players);
               setAnalyzing(false);
               setProgress(0);
@@ -3957,65 +3961,123 @@ export default function AnalyzePage() {
           analyze. Description goes into the next /analyze-video-universal
           call as target_player_description so Gemini anchors on the right
           person. */}
-      {universalPlayers && universalPlayers.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-          onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); }}>
-          <div onClick={(e) => e.stopPropagation()}
-            className="bg-zinc-900 border border-purple-400/30 rounded-3xl p-5 max-w-md w-full max-h-[85vh] overflow-y-auto">
-            <h2 className="font-heading font-black text-xl text-white tracking-tight mb-1">
-              Pick the player to analyze
-            </h2>
-            <p className="text-xs text-zinc-400 mb-4">
-              {universalPlayers.length} {universalPlayers.length === 1 ? "person" : "people"} found in the video. Only their actions will be coached.
-            </p>
-            <div className="space-y-2 mb-4">
-              {universalPlayers.map((p, idx) => (
-                <button
-                  key={p.id || idx}
-                  onClick={() => {
-                    const picked = p;
-                    setUniversalPlayers(null);
-                    setAnalyzing(true);
-                    setProgress(50);
-                    runClientAnalysis(
-                      result?.sport || selectedSport || "unknown",
-                      null,
-                      { universalPick: picked },
-                    );
-                  }}
-                  className="w-full text-left bg-zinc-800/60 hover:bg-zinc-800 hover:border-purple-400/40 border border-zinc-700 rounded-xl p-2.5 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    {p.thumbnail ? (
-                      <img src={p.thumbnail} alt={`Player ${idx + 1}`}
-                        className="w-14 h-14 rounded-lg object-cover border border-zinc-700 shrink-0" />
-                    ) : (
-                      <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-purple-300 font-bold text-lg shrink-0">
-                        {idx + 1}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white font-medium leading-snug line-clamp-2">{p.description}</p>
-                      {(p.clothing || p.court_position) && (
-                        <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
-                          {[p.clothing, p.court_position].filter(Boolean).join(" · ")}
-                        </p>
-                      )}
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0" />
+      {universalPlayers && universalPlayers.length > 0 && (() => {
+        const onPick = (picked) => {
+          setUniversalPlayers(null);
+          setAnalyzing(true);
+          setProgress(50);
+          runClientAnalysis(
+            result?.sport || selectedSport || "unknown",
+            null,
+            { universalPick: picked },
+          );
+        };
+        const BOX_COLORS = [
+          { border: "border-lime-400", bg: "bg-lime-400/15", label: "bg-lime-400 text-black" },
+          { border: "border-sky-400", bg: "bg-sky-400/15", label: "bg-sky-400 text-black" },
+          { border: "border-purple-400", bg: "bg-purple-400/15", label: "bg-purple-400 text-black" },
+          { border: "border-amber-400", bg: "bg-amber-400/15", label: "bg-amber-400 text-black" },
+          { border: "border-pink-400", bg: "bg-pink-400/15", label: "bg-pink-400 text-black" },
+          { border: "border-emerald-400", bg: "bg-emerald-400/15", label: "bg-emerald-400 text-black" },
+        ];
+        const midFrame = universalUploadData?.midFrame;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); }}>
+            <div onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 max-w-2xl w-full max-h-[90vh] overflow-auto">
+              <div className="flex items-center gap-2 mb-1">
+                <Users className="w-5 h-5 text-lime-400" />
+                <h3 className="font-heading font-bold text-lg text-white">
+                  {universalPlayers.length} {universalPlayers.length === 1 ? "Player Detected" : "Players Detected"}
+                </h3>
+              </div>
+              <p className="text-sm text-zinc-400 mb-4">
+                Tap the player you want to analyze. We'll focus the AI Coach on them.
+              </p>
+
+              {/* Full-frame keyframe with Gemini bboxes overlaid as
+                  clickable buttons — same pattern as the old MoveNet
+                  PlayerSelectionModal, just sourced from Gemini. */}
+              {midFrame?.dataUrl ? (
+                <div className="relative w-full bg-black rounded-xl overflow-hidden mb-4">
+                  <img src={midFrame.dataUrl} alt="Video frame" className="w-full h-auto block" />
+                  <div className="absolute inset-0">
+                    {universalPlayers.map((p, idx) => {
+                      const c = BOX_COLORS[idx % BOX_COLORS.length];
+                      const b = p.bbox;
+                      if (!b || !b.width || !b.height) return null;
+                      return (
+                        <button
+                          key={p.id || idx}
+                          onClick={() => onPick(p)}
+                          className={`absolute border-2 rounded transition-all hover:scale-[1.02] ${c.border} ${c.bg} hover:shadow-lg`}
+                          style={{
+                            left: `${b.x * 100}%`,
+                            top: `${b.y * 100}%`,
+                            width: `${b.width * 100}%`,
+                            height: `${b.height * 100}%`,
+                          }}
+                          aria-label={`Select ${p.description}`}
+                          title={p.description}
+                        >
+                          <div className={`absolute -top-6 left-0 ${c.label} text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap`}>
+                            Player {idx + 1}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
+                </div>
+              ) : null}
+
+              {/* Player rows — clickable description list, mirrors the
+                  bbox colors so user can match box → description. Works
+                  even when bbox extraction failed for one or more players. */}
+              <div className="space-y-2 mb-4">
+                {universalPlayers.map((p, idx) => {
+                  const c = BOX_COLORS[idx % BOX_COLORS.length];
+                  return (
+                    <button
+                      key={p.id || idx}
+                      onClick={() => onPick(p)}
+                      className={`w-full text-left bg-zinc-800/40 hover:bg-zinc-800 border border-zinc-800 hover:${c.border} rounded-xl p-3 transition-colors`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`${c.label} text-sm font-bold px-2.5 py-1 rounded shrink-0`}>{idx + 1}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium leading-snug">{p.description}</p>
+                          {(p.clothing || p.court_position) && (
+                            <p className="text-[11px] text-zinc-500 mt-0.5 truncate">
+                              {[p.clothing, p.court_position].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); setAnalyzing(false); setProgress(0); }}
+                  className="text-xs text-zinc-500 hover:text-zinc-300 py-1.5"
+                >
+                  Cancel
                 </button>
-              ))}
+                <button
+                  onClick={() => onPick({ description: null })}
+                  className="text-xs text-zinc-400 hover:text-white py-1.5"
+                >
+                  Skip — analyze whole video
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); setAnalyzing(false); setProgress(0); }}
-              className="w-full text-xs text-zinc-500 hover:text-zinc-300 py-1.5"
-            >
-              Cancel
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {reanalyzeMismatch && (() => {
         const SPORT_ICONS = { badminton: "🏸", tennis: "🎾", table_tennis: "🏓", pickleball: "⚡", cricket: "🏏", football: "⚽", swimming: "🏊" };

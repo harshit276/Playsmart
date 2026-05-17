@@ -1956,6 +1956,40 @@ export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox,
 
 
 /**
+ * Extract a single full-frame keyframe from the middle of the video
+ * for use as a backdrop in the player picker (so we can overlay Gemini
+ * bboxes on it). Returns { dataUrl, width, height }.
+ */
+export async function extractMidFrameKeyframe(videoFile, options = {}) {
+  const { maxDim = 720, jpegQuality = 0.78, atFraction = 0.5 } = options;
+  const video = document.createElement("video");
+  const url = URL.createObjectURL(videoFile);
+  video.src = url; video.muted = true; video.playsInline = true; video.crossOrigin = "anonymous";
+  video.load();
+  await _waitForEvent(video, "loadedmetadata", 6000);
+  const duration = video.duration;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!duration || !vw || !vh) { URL.revokeObjectURL(url); return null; }
+  await _seekTo(video, Math.max(0.01, Math.min(duration - 0.01, duration * atFraction)), 3000);
+  const scale = Math.min(1, maxDim / Math.max(vw, vh));
+  const outW = Math.max(1, Math.round(vw * scale));
+  const outH = Math.max(1, Math.round(vh * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = outW; canvas.height = outH;
+  const ctx = canvas.getContext("2d");
+  try {
+    ctx.drawImage(video, 0, 0, vw, vh, 0, 0, outW, outH);
+    const dataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
+    URL.revokeObjectURL(url);
+    return { dataUrl, width: outW, height: outH, originalWidth: vw, originalHeight: vh };
+  } catch {
+    URL.revokeObjectURL(url);
+    return null;
+  }
+}
+
+
+/**
  * Extract one mini-thumbnail per player from a single mid-video frame
  * using their bbox in normalized [0..1] coordinates. Falls back to a
  * center-square crop when bbox is null/invalid. Returns Array<dataUrl>.
