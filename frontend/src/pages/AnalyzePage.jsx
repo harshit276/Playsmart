@@ -369,6 +369,12 @@ export default function AnalyzePage() {
   // comparison or cancel and upload a matching-sport clip.
   const [reanalyzeMismatch, setReanalyzeMismatch] = useState(null);
   const [comparisonResult, setComparisonResult] = useState(null);
+  // Universal mode player picker — Gemini describes everyone visible,
+  // we surface those descriptions in a modal so the user explicitly
+  // chooses which athlete to analyze. Stored alongside the compressed
+  // video so we don't have to re-compress on selection.
+  const [universalPlayers, setUniversalPlayers] = useState(null);
+  const [universalUploadData, setUniversalUploadData] = useState(null);
   // Sport detected from the uploaded video (always set when VLM is up).
   // Surfaced in the player selection modal so the user can override.
   const [detectedSport, setDetectedSport] = useState(null);
@@ -852,31 +858,71 @@ export default function AnalyzePage() {
     setProgress(0);
 
     // ─── Universal mode short-circuit ────────────────────────────────
-    // Bypass the entire pose-extraction pipeline. Compress video, send to
-    // /analyze-video-universal, render whatever Gemini returns. Works for
-    // ANY sport (swimming/snooker/golf etc.) since there's no per-sport
-    // vocabulary or metric schema.
+    // 2-pass flow: (a) compress video, (b) ask Gemini to describe every
+    // visible person so the user can pick which one to analyze,
+    // (c) re-call with the picked person's description. Bypasses pose
+    // extraction entirely — works for ANY sport.
     if (accuracyMode === "universal") {
       try {
-        setLoadingText("Preparing video for Universal AI Coach...");
-        setProgress(15);
-        const vp = await import("@/ai/videoProcessor");
-        const uploadFile = await vp.compressVideoForUpload(file, {
-          maxDim: 480, bitrate: 800_000, maxDurationSec: 30,
-          onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.25)); },
-        });
-        if (uploadFile.size > 4 * 1024 * 1024) {
-          throw new Error(`compressed video too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB)`);
+        // If the picker already returned a selection (options.universalPick),
+        // skip straight to the analysis call with the stored compressed
+        // video. Otherwise: compress + describe players + show picker.
+        let uploadFile, b64;
+        if (options.universalPick && universalUploadData) {
+          uploadFile = universalUploadData.uploadFile;
+          b64 = universalUploadData.b64;
+        } else {
+          setLoadingText("Preparing video for Universal AI Coach...");
+          setProgress(15);
+          const vp = await import("@/ai/videoProcessor");
+          uploadFile = await vp.compressVideoForUpload(file, {
+            maxDim: 480, bitrate: 800_000, maxDurationSec: 30,
+            onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
+          });
+          if (uploadFile.size > 4 * 1024 * 1024) {
+            throw new Error(`compressed video too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB)`);
+          }
+          const buf = await uploadFile.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+          b64 = btoa(bin);
+
+          // Pass 1 — let Gemini identify the visible players.
+          setLoadingText("AI Coach is identifying players in the video...");
+          setProgress(35);
+          try {
+            const { data: descData } = await api.post("/describe-players", {
+              mime_type: uploadFile.type || file.type || "video/mp4",
+              video_b64: b64,
+            }, { timeout: 45000 });
+            const players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
+            if (players.length >= 2) {
+              // Multiple athletes visible → show picker and pause.
+              setUniversalUploadData({ uploadFile, b64 });
+              setUniversalPlayers(players);
+              setAnalyzing(false);
+              setProgress(0);
+              return;
+            }
+            if (players.length === 1) {
+              // Single athlete → auto-select, skip the picker.
+              options = { ...options, universalPick: players[0] };
+            }
+          } catch (descErr) {
+            // Description failed — proceed without target_player_description.
+            console.warn("[universal] player description failed:", descErr?.response?.data?.detail || descErr.message);
+          }
         }
+
         setLoadingText("AI Coach is watching the whole video...");
-        setProgress(50);
-        const buf = await uploadFile.arrayBuffer();
-        const bytes = new Uint8Array(buf);
-        let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        const b64 = btoa(bin);
+        setProgress(55);
+        const targetDesc = options.universalPick
+          ? `${options.universalPick.description} (${options.universalPick.clothing}, ${options.universalPick.court_position})`.replace(/\(\s*,\s*\)/g, "").trim()
+          : null;
         const { data } = await api.post("/analyze-video-universal", {
           mime_type: uploadFile.type || file.type || "video/mp4",
           video_b64: b64,
+          target_player_description: targetDesc,
         }, { timeout: 90000 });
         setProgress(95);
         setLoadingText("Building results...");
@@ -885,6 +931,7 @@ export default function AnalyzePage() {
         const universalResult = {
           success: true,
           _universal: true,
+          _target_player_description: targetDesc,
           sport: data?.sport_detected || "unknown",
           skill_level: data?.overall_skill_level || "Intermediate",
           quick_summary: data?.summary || "",
@@ -918,6 +965,9 @@ export default function AnalyzePage() {
         setLoadingText("Complete!");
         toast.success(`Detected: ${universalResult.sport} — ${events.length} events analyzed`);
         setActiveTab("results");
+        // Clear cached upload data so a follow-up run starts fresh.
+        setUniversalPlayers(null);
+        setUniversalUploadData(null);
       } catch (err) {
         const msg = err?.response?.data?.detail || err.message || "Universal analysis failed";
         console.error("[universal]", msg);
@@ -2498,6 +2548,30 @@ export default function AnalyzePage() {
           );
         })()}
 
+        {/* Universal-mode banner: shows the AI-detected sport + which
+            specific athlete Gemini was told to focus on. Removes the
+            "which player are these shots about?" ambiguity from the
+            generic event list. */}
+        {result._universal && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-purple-400/5 border border-purple-400/30 rounded-2xl p-4">
+            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-1.5">Universal AI Coach 🧪</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className="bg-purple-400/15 text-purple-200 border-purple-400/30 text-[11px] font-bold">
+                Sport: {result.sport || "unknown"}
+              </Badge>
+              {result._target_player_description && (
+                <Badge className="bg-sky-400/15 text-sky-200 border-sky-400/30 text-[11px]">
+                  <Target className="w-2.5 h-2.5 mr-1 inline" /> Analyzing: {result._target_player_description}
+                </Badge>
+              )}
+            </div>
+            {!result._target_player_description && (
+              <p className="text-[10px] text-zinc-500 mt-2">No specific athlete was picked — AI Coach analyzed the most prominent person in frame.</p>
+            )}
+          </motion.div>
+        )}
+
         {/* ── Match summary — moved here from below for at-a-glance read.
             Skill level + style + speed badges + shot distribution upfront.
             ONLY shown when at least one shot was confidently classified. */}
@@ -2506,7 +2580,7 @@ export default function AnalyzePage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-              <Film className="w-3 h-3 text-sky-400" /> Match Summary — {result.total_shots_detected} shots detected
+              <Film className="w-3 h-3 text-sky-400" /> {result._universal ? "Events" : "Match Summary"} — {result.total_shots_detected} {result._universal ? "events detected" : "shots detected"}
             </p>
             <div className="flex items-center gap-2 flex-wrap mb-4">
               {aiSkillLevel && (
@@ -3710,6 +3784,70 @@ export default function AnalyzePage() {
           one sport but uploaded a clip detected as a different sport;
           the cross-sport comparison would be meaningless so we ask
           before doing anything destructive. */}
+      {/* Universal mode player picker — Gemini lists every visible
+          athlete with a short description; user picks which one to
+          analyze. Description goes into the next /analyze-video-universal
+          call as target_player_description so Gemini anchors on the right
+          person. */}
+      {universalPlayers && universalPlayers.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); }}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="bg-zinc-900 border border-purple-400/30 rounded-3xl p-6 max-w-md w-full max-h-[85vh] overflow-y-auto">
+            <p className="text-[10px] uppercase tracking-wider text-purple-400 font-bold mb-2">Universal mode 🧪</p>
+            <h2 className="font-heading font-black text-xl text-white tracking-tight mb-1">
+              Which athlete should I analyze?
+            </h2>
+            <p className="text-xs text-zinc-400 mb-4">
+              AI Coach found {universalPlayers.length} {universalPlayers.length === 1 ? "person" : "people"} in the video. Pick one — only their events will be analyzed.
+            </p>
+            <div className="space-y-2 mb-4">
+              {universalPlayers.map((p, idx) => (
+                <button
+                  key={p.id || idx}
+                  onClick={() => {
+                    const picked = p;
+                    setUniversalPlayers(null);
+                    setAnalyzing(true);
+                    setProgress(50);
+                    // Continue the universal flow with the cached upload.
+                    runClientAnalysis(
+                      result?.sport || selectedSport || "unknown",
+                      null,
+                      { universalPick: picked },
+                    );
+                  }}
+                  className="w-full text-left bg-zinc-800/60 hover:bg-zinc-800 hover:border-purple-400/40 border border-zinc-700 rounded-xl p-3 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-400/20 border border-purple-400/40 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium leading-tight">{p.description}</p>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {p.clothing && (
+                          <span className="text-[10px] text-zinc-500 bg-zinc-900/80 rounded px-1.5 py-0.5">👕 {p.clothing}</span>
+                        )}
+                        {p.court_position && (
+                          <span className="text-[10px] text-zinc-500 bg-zinc-900/80 rounded px-1.5 py-0.5">📍 {p.court_position}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); setAnalyzing(false); setProgress(0); }}
+              className="w-full text-xs text-zinc-500 hover:text-zinc-300 py-2"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {reanalyzeMismatch && (() => {
         const SPORT_ICONS = { badminton: "🏸", tennis: "🎾", table_tennis: "🏓", pickleball: "⚡", cricket: "🏏", football: "⚽", swimming: "🏊" };
         const SPORT_LABELS = { badminton: "Badminton", tennis: "Tennis", table_tennis: "Table Tennis", pickleball: "Pickleball", cricket: "Cricket", football: "Football", swimming: "Swimming" };
