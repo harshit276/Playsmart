@@ -1956,6 +1956,61 @@ export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox,
 
 
 /**
+ * Extract one mini-thumbnail per player from a single mid-video frame
+ * using their bbox in normalized [0..1] coordinates. Falls back to a
+ * center-square crop when bbox is null/invalid. Returns Array<dataUrl>.
+ */
+export async function extractPlayerThumbnails(videoFile, seekSec, bboxes, options = {}) {
+  const { maxDim = 160, jpegQuality = 0.75, padFactor = 1.25 } = options;
+  if (!bboxes || bboxes.length === 0) return [];
+
+  const video = document.createElement("video");
+  const url = URL.createObjectURL(videoFile);
+  video.src = url; video.muted = true; video.playsInline = true; video.crossOrigin = "anonymous";
+  video.load();
+  await _waitForEvent(video, "loadedmetadata", 6000);
+  const duration = video.duration;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!duration || !vw || !vh) { URL.revokeObjectURL(url); return bboxes.map(() => null); }
+  await _seekTo(video, Math.max(0.01, Math.min(duration - 0.01, seekSec)), 3000);
+
+  const out = [];
+  for (const bb of bboxes) {
+    let sx, sy, sw, sh;
+    if (bb && typeof bb === "object" && bb.width > 0 && bb.height > 0) {
+      const cx = bb.x + bb.width / 2;
+      const cy = bb.y + bb.height / 2;
+      const ew = Math.min(1, bb.width * padFactor);
+      const eh = Math.min(1, bb.height * padFactor);
+      const ex = Math.max(0, Math.min(1 - ew, cx - ew / 2));
+      const ey = Math.max(0, Math.min(1 - eh, cy - eh / 2));
+      sx = Math.round(ex * vw); sy = Math.round(ey * vh);
+      sw = Math.max(1, Math.round(ew * vw)); sh = Math.max(1, Math.round(eh * vh));
+    } else {
+      const side = Math.min(vw, vh);
+      sx = Math.round((vw - side) / 2);
+      sy = Math.round((vh - side) / 2);
+      sw = side; sh = side;
+    }
+    const scale = Math.min(1, maxDim / Math.max(sw, sh));
+    const outW = Math.max(1, Math.round(sw * scale));
+    const outH = Math.max(1, Math.round(sh * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = outW; canvas.height = outH;
+    const ctx = canvas.getContext("2d");
+    try {
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH);
+      out.push(canvas.toDataURL("image/jpeg", jpegQuality));
+    } catch {
+      out.push(null);
+    }
+  }
+  URL.revokeObjectURL(url);
+  return out;
+}
+
+
+/**
  * Extract 1-2 keyframes from the middle of the video for sport auto-detect.
  * Returns Array<base64-jpeg>.
  */

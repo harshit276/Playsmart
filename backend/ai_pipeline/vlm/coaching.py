@@ -711,6 +711,10 @@ def describe_players_in_video(
         "first). Skip referees, ball boys, audience, coaches on the "
         "sideline — only list ATHLETES who are actively playing or "
         "performing the activity.\n\n"
+        "For each player also estimate a BOUNDING BOX in normalized "
+        "[0..1] coordinates anchored on a representative frame near the "
+        "middle of the video (where you can see them clearly). The box "
+        "should tightly enclose the full body (head-to-feet).\n\n"
         "Respond with valid JSON ONLY:\n"
         '{\n'
         '  "players": [\n'
@@ -720,11 +724,13 @@ def describe_players_in_video(
         'near court, right side\'>",\n'
         '      "clothing": "<top + bottom colors>",\n'
         '      "court_position": "<near/far + left/center/right>",\n'
+        '      "bbox": {"x": <0-1>, "y": <0-1>, "width": <0-1>, "height": <0-1>},\n'
         '      "is_likely_athlete": <true|false>\n'
         '    }\n'
         '  ]\n'
         '}\n\n'
-        "Limit to 6 players max. If only one person is visible, return one entry."
+        "Limit to 6 players max. If only one person is visible, return one entry. "
+        "bbox is optional — omit only if you genuinely can't estimate it."
     )
     user_msg = "Identify and describe the athletes in this video."
 
@@ -753,13 +759,27 @@ def describe_players_in_video(
     for i, p in enumerate((data.get("players") or [])[:6]):
         if not isinstance(p, dict):
             continue
-        out.append({
+        entry = {
             "id": str(p.get("id") or f"p{i+1}"),
             "description": str(p.get("description", ""))[:200],
             "clothing": str(p.get("clothing", ""))[:80],
             "court_position": str(p.get("court_position", ""))[:80],
             "is_likely_athlete": bool(p.get("is_likely_athlete", True)),
-        })
+        }
+        # Pass bbox through (sanitized) so the frontend can crop a
+        # per-player thumbnail from the video.
+        bb = p.get("bbox") or p.get("bounding_box")
+        if isinstance(bb, dict):
+            try:
+                entry["bbox"] = {
+                    "x": max(0.0, min(1.0, float(bb.get("x", 0)))),
+                    "y": max(0.0, min(1.0, float(bb.get("y", 0)))),
+                    "width": max(0.05, min(1.0, float(bb.get("width", 0)))),
+                    "height": max(0.05, min(1.0, float(bb.get("height", 0)))),
+                }
+            except (TypeError, ValueError):
+                pass
+        out.append(entry)
     return {
         "players": out,
         "_meta": {"backend": backend_obj.name, "model": backend_obj.model_name},
@@ -962,32 +982,33 @@ def personalized_coaching(
     weaknesses_normalized = [w.lower() for w in weaknesses_observed]
 
     # Generic / lazy phrases that look like a real match but mean nothing.
+    # Note: "consistency" and "training" are kept OFF this list since they
+    # CAN be real weaknesses ("inconsistent contact point", "match-day
+    # training fatigue"). Token-overlap still rejects bare "consistency".
     GENERIC_BAD = {
         "technique", "better technique", "form", "better form",
         "improvement", "general improvement", "skill", "skills",
         "everything", "all", "general", "various", "overall",
-        "consistency", "practice", "training",
+        "practice", "play", "game",
     }
 
     def _valid_weakness_link(addr: str) -> bool:
         addr = addr.strip()
-        if len(addr) < 12:
+        if len(addr) < 8:
             return False
         if addr.lower() in GENERIC_BAD:
             return False
         # Must overlap with at least one observed weakness phrase.
-        # We require a 4+ char substring match in either direction so
-        # "shoulder rotation" matches "limited shoulder rotation" but
-        # "form" doesn't match anything.
+        # Substring match in either direction OR shared 4+-char token.
+        # Was 5 chars → made some valid drills (e.g. "wrist snap" matching
+        # "limited wrist") drop unnecessarily. 4 char tokens are still
+        # specific enough to reject generic words.
         addr_l = addr.lower()
         for w in weaknesses_normalized:
-            # Either the addr is contained in the weakness or vice-versa,
-            # OR they share a meaningful keyword phrase (>=6 chars).
             if addr_l in w or w in addr_l:
                 return True
-            # Token-overlap fallback for paraphrased weaknesses
-            tokens_a = {t for t in addr_l.split() if len(t) >= 5}
-            tokens_w = {t for t in w.split() if len(t) >= 5}
+            tokens_a = {t for t in addr_l.split() if len(t) >= 4 and t not in GENERIC_BAD}
+            tokens_w = {t for t in w.split() if len(t) >= 4 and t not in GENERIC_BAD}
             if tokens_a & tokens_w:
                 return True
         return False

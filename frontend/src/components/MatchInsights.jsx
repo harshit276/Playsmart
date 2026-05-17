@@ -637,7 +637,13 @@ function _seekToShot(timestamp) {
   // user actually sees the windup → contact → follow-through, not
   // just a frozen frame at the contact moment.
   try {
-    const start = Math.max(0, timestamp - 1.0);
+    // Lead-in shortened from 1.0s → 0.5s. Gemini's timestamp_sec is
+    // often slightly EARLY of the actual contact moment (it points at
+    // when the swing becomes recognisable, not the strike frame). With
+    // 1s of lead-in the user was missing contact entirely. 0.5s lead +
+    // 2s of follow gives a 2.5s window where contact lands in the
+    // middle ~80% of the time.
+    const start = Math.max(0, timestamp - 0.5);
     v.currentTime = start;
     v.muted = true;  // browsers block unmuted autoplay
     const playPromise = v.play?.();
@@ -647,7 +653,7 @@ function _seekToShot(timestamp) {
     _seekPauseTimer = setTimeout(() => {
       try { v.pause?.(); } catch {}
       _seekPauseTimer = null;
-    }, 2500);  // ~1s lead-in + 1.5s after contact
+    }, 2500);
     // If autoplay was blocked, surface a hint via a custom event the
     // page can toast (browsers sometimes block even muted autoplay).
     if (playPromise && typeof playPromise.catch === "function") {

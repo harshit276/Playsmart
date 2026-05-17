@@ -895,7 +895,21 @@ export default function AnalyzePage() {
               mime_type: uploadFile.type || file.type || "video/mp4",
               video_b64: b64,
             }, { timeout: 45000 });
-            const players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
+            let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
+            // Crop a per-player thumbnail from a mid-video frame using
+            // the bbox Gemini returned. Falls back to a center-square
+            // crop when bbox is missing or invalid.
+            if (players.length > 0) {
+              try {
+                const vp2 = await import("@/ai/videoProcessor");
+                const mid = Math.max(0.5, (uploadFile.duration || 5) / 2);
+                const bboxes = players.map((p) => p.bbox || null);
+                const thumbs = await vp2.extractPlayerThumbnails(file, mid, bboxes, { maxDim: 160, jpegQuality: 0.75 });
+                players = players.map((p, idx) => ({ ...p, thumbnail: thumbs[idx] || null }));
+              } catch (thumbErr) {
+                console.warn("[universal] player thumb extraction failed:", thumbErr?.message);
+              }
+            }
             if (players.length >= 2) {
               // Multiple athletes visible → show picker and pause.
               setUniversalUploadData({ uploadFile, b64 });
@@ -932,6 +946,7 @@ export default function AnalyzePage() {
           success: true,
           _universal: true,
           _target_player_description: targetDesc,
+          _target_player_thumbnail: options.universalPick?.thumbnail || null,
           sport: data?.sport_detected || "unknown",
           skill_level: data?.overall_skill_level || "Intermediate",
           quick_summary: data?.summary || "",
@@ -1787,6 +1802,54 @@ export default function AnalyzePage() {
         )}
       </div>
 
+      {/* Reanalysis baseline banner — pinned above the loading panel
+          when a reanalysis is in flight. Shows the previous analysis
+          we're comparing against so the user understands the
+          before/after relationship before any results come back. */}
+      {analyzing && reanalyzeContext && (() => {
+        const old = reanalyzeContext;
+        const oldShot = old.shot_analysis || {};
+        const oldScore = oldShot.score ?? old.pro_comparison?.overall_score ?? null;
+        const oldSpeed = old.speed_analysis?.estimated_speed_kmh;
+        const oldLevel = old.skill_level;
+        const dateLabel = old.date
+          ? new Date(old.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : "previous";
+        return (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+            className="mb-4 bg-sky-400/5 border border-sky-400/30 rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <p className="text-[10px] uppercase tracking-wider text-sky-300 font-bold">
+                Reanalysis in progress — comparing against {dateLabel}
+              </p>
+              <button
+                onClick={() => { setReanalyzeContext(null); toast.info("Reanalysis dropped — running as fresh analysis"); }}
+                className="text-[10px] text-zinc-500 hover:text-zinc-300"
+              >
+                Cancel comparison
+              </button>
+            </div>
+            <p className="text-xs text-zinc-400 mb-2">
+              {(oldShot.shot_name || old.sport || "Previous")} baseline:
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-zinc-900/60 rounded-lg p-2.5">
+                <p className="text-[10px] uppercase text-zinc-500">Score</p>
+                <p className="text-base font-bold text-white">{oldScore != null ? `${oldScore}/100` : "—"}</p>
+              </div>
+              <div className="bg-zinc-900/60 rounded-lg p-2.5">
+                <p className="text-[10px] uppercase text-zinc-500">Level</p>
+                <p className="text-base font-bold text-white">{oldLevel || "—"}</p>
+              </div>
+              <div className="bg-zinc-900/60 rounded-lg p-2.5">
+                <p className="text-[10px] uppercase text-zinc-500">Speed</p>
+                <p className="text-base font-bold text-white">{oldSpeed ? `${Math.round(oldSpeed)} km/h` : "—"}</p>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })()}
+
       {/* Loading state pinned to top so user sees progress immediately */}
       {analyzing && (() => {
         const STAGES = [
@@ -1949,7 +2012,7 @@ export default function AnalyzePage() {
                 : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
             }`}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-white">Universal 🧪</span>
+              <span className="text-sm font-semibold text-white">Universal</span>
               <span className="text-[10px] text-zinc-500">~10s · ~$0.01</span>
             </div>
             <p className="text-[11px] text-zinc-400">Any sport. AI-only — no pose math. Try for swimming, snooker, golf, etc.</p>
@@ -2482,7 +2545,10 @@ export default function AnalyzePage() {
               </div>
             )}
 
-            {vlmCoaching.seven_day_plan?.length > 0 && (
+            {/* 7-day plan moved to /training — keeps the analysis page
+                focused on what happened in THIS clip. The training page
+                has the full plan + checkbox tracking. */}
+            {false && vlmCoaching.seven_day_plan?.length > 0 && (
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-amber-300 font-semibold mb-2">7-day plan</p>
                 <div className="space-y-2">
@@ -2622,27 +2688,36 @@ export default function AnalyzePage() {
           );
         })()}
 
-        {/* Universal-mode banner: shows the AI-detected sport + which
-            specific athlete Gemini was told to focus on. Removes the
-            "which player are these shots about?" ambiguity from the
-            generic event list. */}
+        {/* Universal-mode banner — shows the detected sport + picked
+            athlete (with thumbnail when available) so the user knows
+            exactly who was analyzed. */}
         {result._universal && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-purple-400/5 border border-purple-400/30 rounded-2xl p-4">
-            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-1.5">Universal AI Coach 🧪</p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="bg-purple-400/15 text-purple-200 border-purple-400/30 text-[11px] font-bold">
-                Sport: {result.sport || "unknown"}
-              </Badge>
-              {result._target_player_description && (
-                <Badge className="bg-sky-400/15 text-sky-200 border-sky-400/30 text-[11px]">
-                  <Target className="w-2.5 h-2.5 mr-1 inline" /> Analyzing: {result._target_player_description}
-                </Badge>
+            className="bg-zinc-900/80 border border-purple-400/30 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              {result._target_player_thumbnail && (
+                <img
+                  src={result._target_player_thumbnail}
+                  alt="Analyzed player"
+                  className="w-14 h-14 rounded-xl object-cover border border-purple-400/30 shrink-0"
+                />
               )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">Universal mode</span>
+                  <Badge className="bg-purple-400/10 text-purple-200 border-purple-400/30 text-[10px] capitalize">
+                    {result.sport || "unknown sport"}
+                  </Badge>
+                </div>
+                {result._target_player_description ? (
+                  <p className="text-sm text-white leading-snug">
+                    <span className="text-zinc-500">Analyzing:</span> {result._target_player_description}
+                  </p>
+                ) : (
+                  <p className="text-xs text-zinc-500">Analyzed the most prominent person in frame.</p>
+                )}
+              </div>
             </div>
-            {!result._target_player_description && (
-              <p className="text-[10px] text-zinc-500 mt-2">No specific athlete was picked — AI Coach analyzed the most prominent person in frame.</p>
-            )}
           </motion.div>
         )}
 
@@ -3118,9 +3193,10 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── (e) 7-Day Training Plan (dynamic) — hidden when VLM coach plan
-            present, and hidden for sports without curated drill content ── */}
-        {showStaticTemplates && gate(
+        {/* ── (e) 7-Day Training Plan — fully disabled on the analysis
+            page. Users found it noise; the dedicated /training page has
+            the same content + checkbox tracking. ── */}
+        {false && showStaticTemplates && gate(
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
           className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
           <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
@@ -3774,7 +3850,11 @@ export default function AnalyzePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {comparison && (
+                    {/* Comparison badge only when there's an actual signed
+                        movement. "0%" was rendering on cards where the
+                        previous analysis didn't move the score either way,
+                        which made every history card look broken. */}
+                    {comparison && comparison.percentage != null && Math.abs(comparison.percentage) >= 1 && (
                       <Badge className={`text-[10px] px-1.5 ${
                         comparison.direction === "improved"
                           ? "bg-lime-400/10 text-lime-400 border-lime-400/20"
@@ -3794,21 +3874,35 @@ export default function AnalyzePage() {
                     <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-lime-400 transition-colors shrink-0" />
                   </div>
                 </div>
-                {/* Show resolved/new issues */}
-                {a.comparison && (a.comparison.resolved_issues?.length > 0 || a.comparison.new_issues?.length > 0) && (
-                  <div className="mt-2 ml-13 flex flex-wrap gap-1">
-                    {a.comparison.resolved_issues?.map((issue, j) => (
-                      <Badge key={`r-${j}`} className="bg-lime-400/5 text-lime-400/80 border-lime-400/10 text-[9px]">
-                        <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> Fixed: {issue}
-                      </Badge>
-                    ))}
-                    {a.comparison.new_issues?.map((issue, j) => (
-                      <Badge key={`n-${j}`} className="bg-amber-400/5 text-amber-400/80 border-amber-400/10 text-[9px]">
-                        New: {issue}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                {/* Resolved / new issue badges. Filter out:
+                    (a) phrases that appear on BOTH sides of the diff
+                        (Gemini contradicting itself — "Fixed X" + "New X"
+                        produces a nonsensical pair on the same card),
+                    (b) empty / trivially short phrases. */}
+                {a.comparison && (a.comparison.resolved_issues?.length > 0 || a.comparison.new_issues?.length > 0) && (() => {
+                  const norm = (s) => String(s || "").trim().toLowerCase();
+                  const resolved = (a.comparison.resolved_issues || []).filter((x) => norm(x).length >= 6);
+                  const emerged = (a.comparison.new_issues || []).filter((x) => norm(x).length >= 6);
+                  const emergedSet = new Set(emerged.map(norm));
+                  const resolvedSet = new Set(resolved.map(norm));
+                  const cleanResolved = resolved.filter((x) => !emergedSet.has(norm(x)));
+                  const cleanEmerged = emerged.filter((x) => !resolvedSet.has(norm(x)));
+                  if (cleanResolved.length === 0 && cleanEmerged.length === 0) return null;
+                  return (
+                    <div className="mt-2 ml-13 flex flex-wrap gap-1">
+                      {cleanResolved.map((issue, j) => (
+                        <Badge key={`r-${j}`} className="bg-lime-400/5 text-lime-400/80 border-lime-400/10 text-[9px]">
+                          <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> Fixed: {issue}
+                        </Badge>
+                      ))}
+                      {cleanEmerged.map((issue, j) => (
+                        <Badge key={`n-${j}`} className="bg-amber-400/5 text-amber-400/80 border-amber-400/10 text-[9px]">
+                          New: {issue}
+                        </Badge>
+                      ))}
+                    </div>
+                  );
+                })()}
                 {a.quick_summary && (
                   <p className="text-xs text-zinc-500 mt-2 ml-13 line-clamp-2">{a.quick_summary}</p>
                 )}
@@ -3867,13 +3961,12 @@ export default function AnalyzePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); }}>
           <div onClick={(e) => e.stopPropagation()}
-            className="bg-zinc-900 border border-purple-400/30 rounded-3xl p-6 max-w-md w-full max-h-[85vh] overflow-y-auto">
-            <p className="text-[10px] uppercase tracking-wider text-purple-400 font-bold mb-2">Universal mode 🧪</p>
+            className="bg-zinc-900 border border-purple-400/30 rounded-3xl p-5 max-w-md w-full max-h-[85vh] overflow-y-auto">
             <h2 className="font-heading font-black text-xl text-white tracking-tight mb-1">
-              Which athlete should I analyze?
+              Pick the player to analyze
             </h2>
             <p className="text-xs text-zinc-400 mb-4">
-              AI Coach found {universalPlayers.length} {universalPlayers.length === 1 ? "person" : "people"} in the video. Pick one — only their events will be analyzed.
+              {universalPlayers.length} {universalPlayers.length === 1 ? "person" : "people"} found in the video. Only their actions will be coached.
             </p>
             <div className="space-y-2 mb-4">
               {universalPlayers.map((p, idx) => (
@@ -3884,37 +3977,39 @@ export default function AnalyzePage() {
                     setUniversalPlayers(null);
                     setAnalyzing(true);
                     setProgress(50);
-                    // Continue the universal flow with the cached upload.
                     runClientAnalysis(
                       result?.sport || selectedSport || "unknown",
                       null,
                       { universalPick: picked },
                     );
                   }}
-                  className="w-full text-left bg-zinc-800/60 hover:bg-zinc-800 hover:border-purple-400/40 border border-zinc-700 rounded-xl p-3 transition-colors"
+                  className="w-full text-left bg-zinc-800/60 hover:bg-zinc-800 hover:border-purple-400/40 border border-zinc-700 rounded-xl p-2.5 transition-colors"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-400/20 border border-purple-400/40 flex items-center justify-center text-purple-300 font-bold text-sm shrink-0">
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white font-medium leading-tight">{p.description}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        {p.clothing && (
-                          <span className="text-[10px] text-zinc-500 bg-zinc-900/80 rounded px-1.5 py-0.5">👕 {p.clothing}</span>
-                        )}
-                        {p.court_position && (
-                          <span className="text-[10px] text-zinc-500 bg-zinc-900/80 rounded px-1.5 py-0.5">📍 {p.court_position}</span>
-                        )}
+                  <div className="flex items-center gap-3">
+                    {p.thumbnail ? (
+                      <img src={p.thumbnail} alt={`Player ${idx + 1}`}
+                        className="w-14 h-14 rounded-lg object-cover border border-zinc-700 shrink-0" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-purple-300 font-bold text-lg shrink-0">
+                        {idx + 1}
                       </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium leading-snug line-clamp-2">{p.description}</p>
+                      {(p.clothing || p.court_position) && (
+                        <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
+                          {[p.clothing, p.court_position].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
                     </div>
+                    <ArrowRight className="w-4 h-4 text-zinc-600 shrink-0" />
                   </div>
                 </button>
               ))}
             </div>
             <button
               onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); setAnalyzing(false); setProgress(0); }}
-              className="w-full text-xs text-zinc-500 hover:text-zinc-300 py-2"
+              className="w-full text-xs text-zinc-500 hover:text-zinc-300 py-1.5"
             >
               Cancel
             </button>
