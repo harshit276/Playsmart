@@ -40,39 +40,88 @@ const DownloadPage = lazy(() => import("@/pages/DownloadPage"));
 const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
+// localStorage keys for the cached auth snapshot. Reading these on initial
+// state means pages render in their authenticated layout instantly on
+// refresh, instead of flashing the "guest" UI while /auth/me hits the
+// serverless cold-start.
+const AUTH_USER_CACHE = "playsmart_user";
+const AUTH_PROFILE_CACHE = "playsmart_profile";
+const AUTH_TOKENS_CACHE = "playsmart_tokens";
+
+function readCache(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key, value) {
+  try {
+    if (value === null || value === undefined) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
 function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [tokens, setTokens] = useState(null); // null = unknown, number = balance
+  // Hydrate from localStorage on first render so the UI is "logged in"
+  // immediately if a token + cached user are present. /auth/me runs in
+  // the background and refreshes the cache (or clears it on 401).
+  const hasToken = !!(typeof window !== "undefined" && localStorage.getItem("playsmart_token"));
+  const [user, setUser] = useState(() => hasToken ? readCache(AUTH_USER_CACHE) : null);
+  const [profile, setProfile] = useState(() => hasToken ? readCache(AUTH_PROFILE_CACHE) : null);
+  const [tokens, setTokens] = useState(() => hasToken ? readCache(AUTH_TOKENS_CACHE) : null);
   const [referralCode, setReferralCode] = useState(null);
+
+  // Wrap setters so the cache stays in sync with React state
+  const setUserCached = useCallback((u) => {
+    setUser(u);
+    writeCache(AUTH_USER_CACHE, u);
+  }, []);
+  const setProfileCached = useCallback((p) => {
+    setProfile(p);
+    writeCache(AUTH_PROFILE_CACHE, p);
+  }, []);
+  const setTokensCached = useCallback((t) => {
+    setTokens(t);
+    writeCache(AUTH_TOKENS_CACHE, t);
+  }, []);
 
   const fetchTokens = useCallback(async () => {
     if (!localStorage.getItem("playsmart_token")) return;
     try {
       const { data } = await api.get("/tokens/balance", { timeout: 5000 });
-      setTokens(data.balance);
+      setTokensCached(data.balance);
       setReferralCode(data.referral_code);
     } catch {
       // Best-effort — silently keep current value if fetch fails
     }
-  }, []);
+  }, [setTokensCached]);
 
   const fetchMe = useCallback(async () => {
     const token = localStorage.getItem("playsmart_token");
     if (!token) return;
     try {
-      const { data } = await api.get("/auth/me", { timeout: 6000 });
-      setUser(data.user);
-      setProfile(data.profile);
+      const { data } = await api.get("/auth/me", { timeout: 8000 });
+      setUserCached(data.user);
+      setProfileCached(data.profile);
       // Pull the token balance once auth is established
       fetchTokens();
     } catch (err) {
-      // Only drop the token on 401/403 — keep it on network/timeout errors
+      // Only drop the token on 401/403 — keep it (and the cached user) on
+      // network/timeout errors so a flaky cold-start doesn't log you out.
       if (err.response?.status === 401 || err.response?.status === 403) {
         localStorage.removeItem("playsmart_token");
+        writeCache(AUTH_USER_CACHE, null);
+        writeCache(AUTH_PROFILE_CACHE, null);
+        writeCache(AUTH_TOKENS_CACHE, null);
+        setUser(null);
+        setProfile(null);
+        setTokens(null);
       }
     }
-  }, [fetchTokens]);
+  }, [fetchTokens, setUserCached, setProfileCached]);
 
   // Hydrate auth in the background — never block initial render
   useEffect(() => { fetchMe(); }, [fetchMe]);
@@ -80,17 +129,18 @@ function AuthProvider({ children }) {
   const login = (token, userData, hasProfile, initialTokens) => {
     localStorage.setItem("playsmart_token", token);
     localStorage.removeItem("guest_mode");
-    setUser(userData);
-    // Prime balance immediately if /auth/firebase returned it (avoids the
-    // 0-then-300 flicker that used to happen when the credit was async).
-    if (typeof initialTokens === "number") setTokens(initialTokens);
+    setUserCached(userData);
+    if (typeof initialTokens === "number") setTokensCached(initialTokens);
     if (hasProfile) fetchMe();
-    else fetchTokens(); // still fetch tokens so the navbar chip lights up
+    else fetchTokens();
   };
 
   const logout = () => {
     localStorage.removeItem("playsmart_token");
     localStorage.removeItem("guest_mode");
+    writeCache(AUTH_USER_CACHE, null);
+    writeCache(AUTH_PROFILE_CACHE, null);
+    writeCache(AUTH_TOKENS_CACHE, null);
     setUser(null);
     setProfile(null);
     setTokens(null);
@@ -100,8 +150,8 @@ function AuthProvider({ children }) {
   const refreshProfile = async () => {
     try {
       const { data } = await api.get("/auth/me", { timeout: 6000 });
-      setProfile(data.profile);
-      setUser(data.user);
+      setProfileCached(data.profile);
+      setUserCached(data.user);
     } catch {}
   };
 
@@ -112,8 +162,8 @@ function AuthProvider({ children }) {
   // of fetchTokens(). Pass null/undefined to ignore (caller doesn't have to
   // null-check).
   const updateTokens = useCallback((newBalance) => {
-    if (typeof newBalance === "number") setTokens(newBalance);
-  }, []);
+    if (typeof newBalance === "number") setTokensCached(newBalance);
+  }, [setTokensCached]);
 
   return (
     <AuthContext.Provider value={{

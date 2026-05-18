@@ -5,6 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,6 +17,111 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import SEO from "@/components/SEO";
+
+const SPORT_OPTIONS = [
+  { k: "badminton", l: "Badminton", e: "🏸" },
+  { k: "tennis", l: "Tennis", e: "🎾" },
+  { k: "table_tennis", l: "Table Tennis", e: "🏓" },
+  { k: "pickleball", l: "Pickleball", e: "⚡" },
+  { k: "cricket", l: "Cricket", e: "🏏" },
+];
+const LEVEL_OPTIONS = ["Beginner", "Intermediate", "Advanced", "Pro"];
+const LEVEL_DESC = {
+  Beginner: "Learning the basics",
+  Intermediate: "Comfortable with rallies",
+  Advanced: "Club / tournament level",
+  Pro: "Pro-level technique",
+};
+
+/**
+ * Sticky-top filter bar — two polished dropdowns for sport and skill level.
+ * Used by both the guest/no-plan view and the main plan view.
+ */
+function TrainingFiltersBar({ sport, level, profileLevel, sportFilter, levelFilter, onSport, onLevel, onReset }) {
+  const sel = sport;
+  const lvl = level;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+      className="sticky top-14 sm:top-16 z-30 -mx-4 px-4 pt-3 pb-3 mb-5 bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900"
+    >
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Filter className="w-4 h-4 text-zinc-500 shrink-0 hidden sm:block" />
+
+        {/* Sport dropdown */}
+        <div className="flex-1 min-w-0">
+          <Select value={sel} onValueChange={onSport}>
+            <SelectTrigger className="w-full h-11 bg-zinc-900 border-zinc-800 hover:border-lime-400/40 focus:border-lime-400/60 text-white rounded-xl">
+              <SelectValue>
+                {(() => {
+                  const opt = SPORT_OPTIONS.find(s => s.k === sel) || SPORT_OPTIONS[0];
+                  return (
+                    <span className="flex items-center gap-2">
+                      <span className="text-lg leading-none">{opt.e}</span>
+                      <span className="font-semibold">{opt.l}</span>
+                    </span>
+                  );
+                })()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              {SPORT_OPTIONS.map(s => (
+                <SelectItem key={s.k} value={s.k} className="text-white focus:bg-zinc-800 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <span className="text-lg leading-none">{s.e}</span>
+                    <span>{s.l}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Level dropdown */}
+        <div className="flex-1 min-w-0">
+          <Select value={lvl} onValueChange={onLevel}>
+            <SelectTrigger className="w-full h-11 bg-zinc-900 border-zinc-800 hover:border-sky-400/40 focus:border-sky-400/60 text-white rounded-xl">
+              <SelectValue>
+                <span className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-sky-400" />
+                  <span className="font-semibold">{lvl}</span>
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-800">
+              {LEVEL_OPTIONS.map(l => (
+                <SelectItem key={l} value={l} className="text-white focus:bg-zinc-800 cursor-pointer">
+                  <div className="flex flex-col">
+                    <span className="font-semibold">{l}</span>
+                    <span className="text-[11px] text-zinc-500">{LEVEL_DESC[l]}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(sportFilter || levelFilter) && (
+          <button
+            onClick={onReset}
+            className="hidden sm:inline-flex items-center gap-1 text-[11px] text-zinc-500 hover:text-lime-400 px-2 py-1 rounded-md whitespace-nowrap"
+            title="Reset to your profile defaults"
+          >
+            <X className="w-3 h-3" /> Reset
+          </button>
+        )}
+      </div>
+      {(sportFilter || levelFilter) && (
+        <button
+          onClick={onReset}
+          className="sm:hidden mt-2 text-[11px] text-zinc-500 hover:text-lime-400 flex items-center gap-1"
+        >
+          <X className="w-3 h-3" /> Reset to my profile
+        </button>
+      )}
+    </motion.div>
+  );
+}
 
 /* ─── Sport icons ─── */
 const SPORT_EMOJI = {
@@ -320,45 +428,16 @@ export default function TrainingPage() {
 
         {/* Sport + level filters — same as the main view so guests / users
             without a plan can still browse drills for any sport. */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.08 }} className="mb-4">
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Sport</span>
-            {[
-              { k: "badminton", l: "🏸 Badminton" },
-              { k: "tennis", l: "🎾 Tennis" },
-              { k: "table_tennis", l: "🏓 Table Tennis" },
-              { k: "pickleball", l: "⚡ Pickleball" },
-              { k: "cricket", l: "🏏 Cricket" },
-            ].map((s) => (
-              <button
-                key={s.k}
-                onClick={() => setSportFilter(s.k)}
-                className={`rounded-full text-xs px-3 py-1 transition-all ${
-                  sport === s.k
-                    ? "bg-lime-400 text-black font-semibold"
-                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
-                }`}
-              >{s.l}</button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Skill level</span>
-            {["Beginner", "Intermediate", "Advanced", "Pro"].map((lv) => {
-              const active = (levelFilter || profileLevel) === lv;
-              return (
-                <button
-                  key={lv}
-                  onClick={() => setLevelFilter(lv)}
-                  className={`rounded-full text-xs px-3 py-1 transition-all ${
-                    active
-                      ? "bg-sky-400 text-black font-semibold"
-                      : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
-                  }`}
-                >{lv}</button>
-              );
-            })}
-          </div>
-        </motion.div>
+        <TrainingFiltersBar
+          sport={sport}
+          level={levelFilter || profileLevel}
+          profileLevel={profileLevel}
+          sportFilter={sportFilter}
+          levelFilter={levelFilter}
+          onSport={setSportFilter}
+          onLevel={setLevelFilter}
+          onReset={() => { setSportFilter(null); setLevelFilter(null); }}
+        />
 
         {/* AI Coach card. Prefer analysis-grounded drills; fall back to
             sport+level-generic drills when there's no analysis for this sport. */}
@@ -673,55 +752,17 @@ export default function TrainingPage() {
           </motion.div>
         )}
 
-        {/* ═══ SPORT + LEVEL filters (always visible) ═══ */}
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ delay: 0.08 }} className="mb-4"
-        >
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Sport</span>
-            {[
-              { k: "badminton", l: "🏸 Badminton" },
-              { k: "tennis", l: "🎾 Tennis" },
-              { k: "table_tennis", l: "🏓 Table Tennis" },
-              { k: "pickleball", l: "⚡ Pickleball" },
-              { k: "cricket", l: "🏏 Cricket" },
-            ].map((s) => (
-              <button
-                key={s.k}
-                onClick={() => setSportFilter(s.k)}
-                className={`rounded-full text-xs px-3 py-1 transition-all ${
-                  sport === s.k
-                    ? "bg-lime-400 text-black font-semibold"
-                    : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
-                }`}
-              >{s.l}</button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] uppercase text-zinc-500 font-semibold mr-1">Skill level</span>
-            {["Beginner", "Intermediate", "Advanced", "Pro"].map((lv) => {
-              const active = (levelFilter || profileLevel) === lv;
-              return (
-                <button
-                  key={lv}
-                  onClick={() => setLevelFilter(lv)}
-                  className={`rounded-full text-xs px-3 py-1 transition-all ${
-                    active
-                      ? "bg-sky-400 text-black font-semibold"
-                      : "bg-zinc-900 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
-                  }`}
-                >{lv}</button>
-              );
-            })}
-            {(sportFilter || levelFilter) && (
-              <button
-                onClick={() => { setSportFilter(null); setLevelFilter(null); }}
-                className="text-xs text-zinc-600 hover:text-lime-400 flex items-center gap-0.5 ml-1"
-              ><X className="w-3 h-3" /> Reset to my profile</button>
-            )}
-          </div>
-        </motion.div>
+        {/* ═══ SPORT + LEVEL filters (always visible, sticky) ═══ */}
+        <TrainingFiltersBar
+          sport={sport}
+          level={levelFilter || profileLevel}
+          profileLevel={profileLevel}
+          sportFilter={sportFilter}
+          levelFilter={levelFilter}
+          onSport={setSportFilter}
+          onLevel={setLevelFilter}
+          onReset={() => { setSportFilter(null); setLevelFilter(null); }}
+        />
 
         {/* ═══ AI Coach personalized drills (based on most recent analysis for this sport) ═══ */}
         {(() => {

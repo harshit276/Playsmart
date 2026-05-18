@@ -13,10 +13,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, UserPlus, UserCheck, Calendar, MapPin, Clock, Trophy,
   Search, Plus, ChevronRight, Swords, X, Check, Bell, Share2, Zap,
-  Sparkles,
+  Sparkles, Target,
 } from "lucide-react";
 import api from "@/lib/api";
 import { swrGet, invalidateMatching } from "@/lib/cachedFetch";
+import VenueAutocomplete from "@/components/VenueAutocomplete";
 
 const SPORT_LABELS = {
   badminton: "Badminton", table_tennis: "Table Tennis", tennis: "Tennis", pickleball: "Pickleball",
@@ -625,97 +626,270 @@ function GameCard({ game, userId, onJoin, onLeave, delay = 0 }) {
   );
 }
 
+// Quick date chips: tomorrow / this weekend
+function quickDates() {
+  const today = new Date();
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  // Next Saturday
+  const dow = today.getDay(); // 0=Sun
+  const daysToSat = (6 - dow + 7) % 7 || 7;
+  return [
+    { label: "Today", date: fmt(today) },
+    { label: "Tomorrow", date: fmt(addDays(today, 1)) },
+    { label: "This Sat", date: fmt(addDays(today, daysToSat)) },
+  ];
+}
+
+const QUICK_TIMES = ["06:00", "07:00", "17:00", "18:00", "19:00", "20:00"];
+const SKILL_OPTIONS = [
+  { value: "All Levels", label: "All", desc: "Open to everyone" },
+  { value: "Beginner", label: "Beginner", desc: "Learning the basics" },
+  { value: "Intermediate", label: "Intermediate", desc: "Comfortable rallies" },
+  { value: "Advanced", label: "Advanced", desc: "Club-level play" },
+];
+
 function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, children }) {
+  const sport = gameForm.sport;
+  const accent = SPORT_COLORS[sport] || SPORT_COLORS.badminton;
+  const dateChips = quickDates();
+
+  const update = (patch) => setGameForm(f => ({ ...f, ...patch }));
+
+  const valid = gameForm.title && gameForm.venue && gameForm.city && gameForm.date && gameForm.time;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-white flex items-center gap-2">
-            <Plus className="w-5 h-5 text-lime-400" /> Host a Game
-          </DialogTitle>
-          <DialogDescription className="text-zinc-400 text-sm">
-            Post your match — players nearby can request to join. Share the link on WhatsApp once it's up.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="bg-zinc-950 border-zinc-800 sm:max-w-xl max-h-[92vh] overflow-y-auto p-0">
+        {/* Header strip with sport gradient */}
+        <div className={`bg-gradient-to-br ${SPORT_GRADIENTS[sport] || SPORT_GRADIENTS.badminton} px-6 py-5 border-b border-zinc-800`}>
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2 text-lg">
+              <Swords className="w-5 h-5 text-lime-400" /> Host a Game
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 text-sm mt-1">
+              Post your match — nearby players can request to join. Share the link on WhatsApp once it's up.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-3 mt-2">
+        <div className="px-6 py-5 space-y-5">
+          {/* Sport pills */}
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">Sport</label>
+            <div className="grid grid-cols-4 gap-2">
+              {Object.entries(SPORT_LABELS).map(([k, v]) => {
+                const active = k === sport;
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => update({ sport: k })}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all ${
+                      active
+                        ? "bg-lime-400/10 border-lime-400/40 text-lime-300 scale-[1.02]"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                    }`}
+                  >
+                    <span className="text-xl">{SPORT_EMOJI[k]}</span>
+                    <span className="text-[11px] font-semibold leading-tight">{v}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">
+              Title <span className="text-rose-400">*</span>
+            </label>
+            <input
+              placeholder="e.g. Friday evening doubles — 1 spot left"
+              value={gameForm.title}
+              onChange={e => update({ title: e.target.value })}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-lime-400 focus:outline-none"
+            />
+          </div>
+
+          {/* Venue (Google-style autocomplete via OSM) */}
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">
+              Venue <span className="text-rose-400">*</span>
+            </label>
+            <VenueAutocomplete
+              value={gameForm.venue}
+              onChange={(v) => update({ venue: v })}
+              onSelect={(place) => update({
+                venue: place.name,
+                city: place.city || gameForm.city,
+                venue_lat: place.lat,
+                venue_lng: place.lng,
+              })}
+              placeholder="Search sports arena, court, club..."
+            />
+            <p className="text-[11px] text-zinc-600 mt-1.5 pl-1">
+              💡 Tip: search the venue name — we'll auto-fill the city + map pin.
+            </p>
+          </div>
+
+          {/* City */}
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">
+              City <span className="text-rose-400">*</span>
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+              <input
+                placeholder="e.g. Bangalore"
+                value={gameForm.city}
+                onChange={e => update({ city: e.target.value })}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-lime-400 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Date + time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Sport</label>
-              <select value={gameForm.sport} onChange={e => setGameForm(f => ({ ...f, sport: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white">
-                {Object.entries(SPORT_LABELS).map(([k, v]) => <option key={k} value={k}>{SPORT_EMOJI[k]} {v}</option>)}
-              </select>
+              <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">
+                Date <span className="text-rose-400">*</span>
+              </label>
+              <div className="flex gap-1.5 mb-2">
+                {dateChips.map(c => (
+                  <button
+                    key={c.date}
+                    type="button"
+                    onClick={() => update({ date: c.date })}
+                    className={`flex-1 px-2 py-1 text-[11px] rounded-md border transition-colors ${
+                      gameForm.date === c.date
+                        ? "bg-lime-400/15 border-lime-400/40 text-lime-300"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                <input
+                  type="date"
+                  value={gameForm.date}
+                  onChange={e => update({ date: e.target.value })}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:border-lime-400 focus:outline-none"
+                />
+              </div>
             </div>
+
             <div>
-              <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Skill Level</label>
-              <select value={gameForm.skill_level} onChange={e => setGameForm(f => ({ ...f, skill_level: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white">
-                {["All Levels", "Beginner", "Intermediate", "Advanced"].map(l => <option key={l} value={l}>{l}</option>)}
-              </select>
+              <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">
+                Time <span className="text-rose-400">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 mb-2">
+                {QUICK_TIMES.map(t => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => update({ time: t })}
+                    className={`px-2 py-1 text-[11px] rounded-md border transition-colors ${
+                      gameForm.time === t
+                        ? "bg-lime-400/15 border-lime-400/40 text-lime-300"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                <input
+                  type="time"
+                  value={gameForm.time}
+                  onChange={e => update({ time: e.target.value })}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:border-lime-400 focus:outline-none"
+                />
+              </div>
             </div>
           </div>
 
+          {/* Players + skill */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">Players needed</label>
+              <div className="flex flex-wrap gap-1.5">
+                {[2, 3, 4, 6, 8].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => update({ max_players: n })}
+                    className={`min-w-[44px] px-3 py-2 text-sm font-semibold rounded-lg border transition-colors ${
+                      gameForm.max_players === n
+                        ? "bg-lime-400/15 border-lime-400/40 text-lime-300"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">Skill level</label>
+              <div className="flex flex-wrap gap-1.5">
+                {SKILL_OPTIONS.map(s => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => update({ skill_level: s.value })}
+                    title={s.desc}
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg border transition-colors ${
+                      gameForm.skill_level === s.value
+                        ? "bg-lime-400/15 border-lime-400/40 text-lime-300"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
           <div>
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Title *</label>
-            <input placeholder="e.g. Friday evening doubles" value={gameForm.title}
-              onChange={e => setGameForm(f => ({ ...f, title: e.target.value }))}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none" />
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">
+              Notes <span className="text-zinc-600 normal-case font-normal">(optional)</span>
+            </label>
+            <textarea
+              rows={2}
+              placeholder="Bring your own racket. Court fee ₹100 split."
+              value={gameForm.notes}
+              onChange={e => update({ notes: e.target.value })}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-lime-400 focus:outline-none resize-none"
+            />
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Venue *</label>
-              <input placeholder="e.g. Smashers Arena" value={gameForm.venue}
-                onChange={e => setGameForm(f => ({ ...f, venue: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">City *</label>
-              <input placeholder="e.g. Bangalore" value={gameForm.city}
-                onChange={e => setGameForm(f => ({ ...f, city: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Date *</label>
-              <input type="date" value={gameForm.date}
-                onChange={e => setGameForm(f => ({ ...f, date: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white focus:border-lime-400 focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Time *</label>
-              <input type="time" value={gameForm.time}
-                onChange={e => setGameForm(f => ({ ...f, time: e.target.value }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white focus:border-lime-400 focus:outline-none" />
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Players</label>
-              <select value={gameForm.max_players} onChange={e => setGameForm(f => ({ ...f, max_players: parseInt(e.target.value) }))}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white">
-                {[2, 3, 4, 5, 6, 8, 10].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500 block mb-1">Notes</label>
-            <textarea rows={2} placeholder="Bring your own racket. Court fee ₹100 split." value={gameForm.notes}
-              onChange={e => setGameForm(f => ({ ...f, notes: e.target.value }))}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none resize-none" />
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <Button onClick={onCreate} className="flex-1 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full">
-              <Plus className="w-4 h-4 mr-1.5" /> Post Game
-            </Button>
-            <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-zinc-400 hover:text-white rounded-full">
-              Cancel
-            </Button>
-          </div>
+        {/* Sticky footer with primary CTA */}
+        <div className="sticky bottom-0 bg-zinc-950/95 backdrop-blur-sm border-t border-zinc-800 px-6 py-4 flex gap-2">
+          <Button
+            onClick={onCreate}
+            disabled={!valid}
+            className="flex-1 h-11 bg-lime-400 text-black hover:bg-lime-500 disabled:bg-zinc-800 disabled:text-zinc-600 font-bold rounded-xl shadow-[0_0_20px_rgba(190,242,100,0.18)] disabled:shadow-none"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> Post Game
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            className="text-zinc-400 hover:text-white rounded-xl px-5"
+          >
+            Cancel
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
