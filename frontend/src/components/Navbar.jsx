@@ -78,11 +78,37 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [navPulse, setNavPulse] = useState(false);
 
   // Close more menu on navigation
   useEffect(() => {
     setMoreOpen(false);
   }, [location.pathname]);
+
+  // One-time bottom-nav intro: pulse the bar + auto-open the More sheet so
+  // first-time visitors discover what's behind it. Mobile only.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth >= 768) return; // desktop has top nav, skip hint
+    try {
+      if (localStorage.getItem("bottom_nav_intro_seen")) return;
+    } catch { return; }
+    // Don't fire on landing/auth/privacy — Navbar already returns null there
+    if (["/", "/auth", "/privacy"].includes(location.pathname)) return;
+    const pulseTimer = setTimeout(() => setNavPulse(true), 800);
+    const openTimer = setTimeout(() => setMoreOpen(true), 1400);
+    const closeTimer = setTimeout(() => {
+      setMoreOpen(false);
+      setNavPulse(false);
+      try { localStorage.setItem("bottom_nav_intro_seen", "1"); } catch {}
+    }, 4400);
+    return () => {
+      clearTimeout(pulseTimer);
+      clearTimeout(openTimer);
+      clearTimeout(closeTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isGuest = !isAuthenticated;
   const showNav = true; // Always show navbar on app pages
@@ -237,25 +263,28 @@ export default function Navbar() {
 
       {/* ── Mobile Bottom Navigation Bar ── */}
       {showNav && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-bottom-nav" data-testid="mobile-bottom-nav">
-          <div className="flex items-center justify-around h-16 px-1">
+        <div
+          className={`md:hidden fixed bottom-0 left-0 right-0 z-50 mobile-bottom-nav ${navPulse ? "nav-pulse" : ""}`}
+          data-testid="mobile-bottom-nav"
+        >
+          <div className="flex items-center justify-around h-[68px] px-1 relative">
             {MOBILE_NAV_PRIMARY.map(({ path, label, icon: Icon }) => {
               const isActive = location.pathname === path;
               return (
                 <Link
                   key={path}
                   to={path}
-                  className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 rounded-xl transition-colors min-h-[44px] ${
-                    isActive ? accent.active : "text-zinc-500"
+                  className={`relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 rounded-xl transition-colors min-h-[52px] ${
+                    isActive ? accent.active : "text-zinc-300 active:bg-zinc-800/60"
                   }`}
                   data-testid={`mobile-nav-${label.toLowerCase()}`}
                 >
-                  <Icon className="w-5 h-5" strokeWidth={isActive ? 2 : 1.5} />
-                  <span className={`text-[10px] font-medium ${isActive ? "" : "text-zinc-500"}`}>{label}</span>
+                  <Icon className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.8} />
+                  <span className={`text-[11px] font-semibold ${isActive ? "" : "text-zinc-400"}`}>{label}</span>
                   {isActive && (
                     <motion.div
                       layoutId="mobile-nav-indicator"
-                      className={`absolute bottom-1 w-5 h-0.5 rounded-full ${accent.dot}`}
+                      className={`absolute bottom-0.5 w-6 h-1 rounded-full ${accent.dot}`}
                       transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     />
                   )}
@@ -266,13 +295,13 @@ export default function Navbar() {
             {/* More button */}
             <button
               onClick={() => setMoreOpen(!moreOpen)}
-              className={`flex flex-col items-center justify-center gap-0.5 flex-1 py-2 rounded-xl transition-colors min-h-[44px] ${
-                isMoreActive || moreOpen ? accent.active : "text-zinc-500"
+              className={`relative flex flex-col items-center justify-center gap-1 flex-1 py-1.5 rounded-xl transition-colors min-h-[52px] ${
+                isMoreActive || moreOpen ? accent.active : "text-zinc-300 active:bg-zinc-800/60"
               }`}
               data-testid="mobile-nav-more"
             >
-              <MoreHorizontal className="w-5 h-5" strokeWidth={(isMoreActive || moreOpen) ? 2 : 1.5} />
-              <span className={`text-[10px] font-medium ${(isMoreActive || moreOpen) ? "" : "text-zinc-500"}`}>More</span>
+              <MoreHorizontal className="w-6 h-6" strokeWidth={(isMoreActive || moreOpen) ? 2.2 : 1.8} />
+              <span className={`text-[11px] font-semibold ${(isMoreActive || moreOpen) ? "" : "text-zinc-400"}`}>More</span>
             </button>
           </div>
         </div>
@@ -299,13 +328,20 @@ export default function Navbar() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="fixed bottom-16 left-0 right-0 md:hidden" style={{ zIndex: 45 }}
             >
-              <div className="bg-zinc-900 border-t border-zinc-800 rounded-t-2xl overflow-hidden shadow-2xl">
+              <div className="bg-zinc-900 border-t border-lime-400/20 rounded-t-2xl overflow-hidden shadow-2xl">
                 {/* Handle bar */}
                 <div className="flex justify-center py-2">
                   <div className="w-10 h-1 bg-zinc-700 rounded-full" />
                 </div>
 
                 <div className="px-4 pb-4 pt-1">
+                  {/* First-visit hint banner */}
+                  {navPulse && (
+                    <div className="mb-3 -mt-1 px-3 py-2 rounded-lg bg-lime-400/10 border border-lime-400/20 text-[11px] text-lime-300 flex items-center gap-2">
+                      <span>💡</span>
+                      <span><span className="font-semibold text-lime-200">Tip:</span> more pages live behind the <span className="font-semibold">More</span> button below.</span>
+                    </div>
+                  )}
                   {/* Active sport indicator */}
                   {profile && (
                     <div className="flex items-center gap-2 mb-3 px-1">

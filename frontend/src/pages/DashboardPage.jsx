@@ -217,28 +217,31 @@ export default function DashboardPage() {
           <>
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
               <div className="relative overflow-hidden bg-gradient-to-br from-lime-400/15 via-zinc-900 to-emerald-900/10 border border-lime-400/30 rounded-3xl p-6 sm:p-10">
-                <div className="absolute -right-8 -bottom-8 text-[180px] opacity-10 select-none">🏸</div>
+                <div className="absolute -right-8 -bottom-8 text-[180px] opacity-10 select-none">🎯</div>
                 <div className="relative max-w-xl">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime-400/15 border border-lime-400/30 text-[10px] uppercase tracking-wider text-lime-300 font-bold mb-3">
-                    <Sparkles className="w-3 h-3" /> Get started
+                    <Sparkles className="w-3 h-3" /> AI video analysis · Free
                   </div>
                   <h2 className="font-heading font-bold text-2xl sm:text-3xl md:text-4xl text-white uppercase tracking-tight mb-2 leading-tight">
-                    Two steps to a personalized coach
+                    Upload a clip — get pro-level feedback in 30 seconds
                   </h2>
                   <p className="text-zinc-300 text-sm sm:text-base mb-5">
-                    Take a 30-second quiz, sign in to claim 300 free tokens (3 video analyses on us),
-                    and get a personalized dashboard.
+                    Our AI breaks down your technique frame-by-frame: shot type, speed, form, and
+                    drill recommendations. <span className="text-lime-300 font-semibold">First analysis is on us — no signup needed.</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Link to="/assessment"
-                      className="inline-flex items-center gap-1.5 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-5 py-2.5 text-sm transition-colors">
-                      <Sparkles className="w-4 h-4" /> Take the Quiz
+                    <Link to="/analyze"
+                      className="inline-flex items-center gap-1.5 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-5 py-2.5 text-sm shadow-[0_0_20px_rgba(190,242,100,0.25)] transition-colors">
+                      <Video className="w-4 h-4" /> Analyze My First Video
                     </Link>
                     <Link to="/auth"
                       className="inline-flex items-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold rounded-full px-5 py-2.5 text-sm border border-zinc-700 transition-colors">
-                      Sign Up — get 300 🪙
+                      Sign Up — 300 🪙 free
                     </Link>
                   </div>
+                  <p className="text-[11px] text-zinc-500 mt-3">
+                    Or <Link to="/assessment" className="underline hover:text-zinc-300">take a 30-second quiz</Link> first to personalize recommendations.
+                  </p>
                 </div>
               </div>
             </motion.div>
@@ -262,33 +265,49 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* Skip the rest of the dashboard for guests — sign-in / quiz first. */}
+        {/* Skip the rest of the dashboard for guests — drive them into the analyzer. */}
         {isGuestMode && (
           <div className="text-center py-8 text-zinc-500 text-xs">
-            <p>Sign in or take the quiz to unlock your personalized dashboard.</p>
+            <p>
+              <Link to="/analyze" className="text-lime-400 hover:text-lime-300 underline font-medium">
+                Try the analyzer
+              </Link>{" "}
+              or{" "}
+              <Link to="/auth" className="text-zinc-300 hover:text-white underline">
+                sign in
+              </Link>{" "}
+              to unlock your personalized dashboard.
+            </p>
           </div>
         )}
 
-        {/* Quiz prompt — logged-in user with no sport profile yet */}
+        {/* Analyze prompt — logged-in user with no sport profile yet */}
         {!isGuestMode && (!profile?.selected_sports?.length || !profile?.active_sport) && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
             <div className="relative overflow-hidden bg-gradient-to-br from-lime-400/15 to-emerald-900/10 border border-lime-400/30 rounded-2xl p-5 sm:p-6">
-              <div className="absolute -right-6 -bottom-6 text-[120px] opacity-10 select-none">🏸</div>
+              <div className="absolute -right-6 -bottom-6 text-[120px] opacity-10 select-none">🎯</div>
               <div className="relative flex items-start gap-4 flex-wrap">
                 <div className="w-12 h-12 rounded-xl bg-lime-400/20 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-6 h-6 text-lime-400" />
+                  <Video className="w-6 h-6 text-lime-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-heading font-bold text-lg sm:text-xl text-white uppercase tracking-tight mb-1">
-                    Personalize your dashboard
+                    Run your first analysis
                   </h3>
                   <p className="text-zinc-300 text-sm mb-4">
-                    Take our 30-second quiz so we can recommend the right training plan, equipment, and matches for your level.
+                    Upload a 5–30s clip and we'll auto-detect your sport, skill level and shot type —
+                    no setup forms first. You can refine your profile right after the analysis.
                   </p>
-                  <Link to="/assessment"
-                    className="inline-flex items-center gap-1.5 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-5 py-2.5 text-sm">
-                    <Zap className="w-4 h-4" /> Take the Quiz
-                  </Link>
+                  <div className="flex flex-wrap gap-2">
+                    <Link to="/analyze"
+                      className="inline-flex items-center gap-1.5 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-5 py-2.5 text-sm shadow-[0_0_20px_rgba(190,242,100,0.25)]">
+                      <Video className="w-4 h-4" /> Analyze a Video
+                    </Link>
+                    <Link to="/assessment"
+                      className="inline-flex items-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold rounded-full px-5 py-2.5 text-sm border border-zinc-700">
+                      Prefer a quick quiz?
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
