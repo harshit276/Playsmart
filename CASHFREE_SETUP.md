@@ -13,10 +13,10 @@ Add these **4 required + 1 recommended** vars to **all 3 environments** (Product
 | Variable | Value | Notes |
 |---|---|---|
 | `CASHFREE_APP_ID` | (your App ID) | From merchant.cashfree.com → Developers → API Keys |
-| `CASHFREE_SECRET_KEY` | (your Secret Key) | Same screen. Treat like a password. |
-| `CASHFREE_WEBHOOK_SECRET` | (your Webhook Signing Key) | Recommended — without it, webhook signatures aren't checked |
+| `CASHFREE_SECRET_KEY` | (your Secret Key) | Same screen. Treat like a password. Also used to verify webhooks (Cashfree's 2023-08-01 API). |
 | `CASHFREE_ENV` | `SANDBOX` for testing, `PRODUCTION` after KYC | Default is `SANDBOX` |
 | `DEMO_PAYMENTS` | `false` | Force real flow even if keys are present. Skip this var to auto-detect. |
+| `CASHFREE_WEBHOOK_SECRET` | (not needed) | Cashfree's current dashboard doesn't issue a separate webhook key — they sign webhooks with the same `CASHFREE_SECRET_KEY`. Only set this if your old dashboard still exposes a distinct webhook signing key. |
 
 **Important:** Cashfree gives separate keys for Sandbox vs Production. Use sandbox keys with `CASHFREE_ENV=SANDBOX` and production keys with `CASHFREE_ENV=PRODUCTION`. Don't mix.
 
@@ -34,7 +34,9 @@ Cashfree dashboard → **Developers** → **Webhooks** → **Add webhook**.
 | Events | ✅ `PAYMENT_SUCCESS_WEBHOOK` (required). Others optional. |
 | API version | `2023-08-01` |
 
-Save. Cashfree will show a **Webhook signing key** — copy it into `CASHFREE_WEBHOOK_SECRET` (if you haven't already).
+Save. **No separate webhook signing key needed** in the current Cashfree dashboard — they sign webhooks using your `CASHFREE_SECRET_KEY` (HMAC-SHA256 of `timestamp + raw_body`, base64-encoded). The backend handles that automatically.
+
+If your dashboard shows a "Webhook Secret" field (some legacy accounts still do), copy it into `CASHFREE_WEBHOOK_SECRET` on Vercel — the backend will prefer it over `CASHFREE_SECRET_KEY` for verification.
 
 Why the webhook matters: if a customer's browser crashes between paying and the success callback, the webhook is the backstop that credits their tokens. Without it, you'd have to manually reconcile dropped payments.
 

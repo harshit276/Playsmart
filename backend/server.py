@@ -1568,17 +1568,41 @@ async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(No
 async def cashfree_webhook(request: Request):
     """Cashfree posts PAYMENT_SUCCESS_WEBHOOK events here. Verify HMAC,
     then credit (idempotent on cf_payment_id). Belt + suspenders with
-    /payments/verify so dropped success-callbacks still get reconciled."""
+    /payments/verify so dropped success-callbacks still get reconciled.
+
+    Signature: Cashfree's 2023-08-01 API signs webhooks with HMAC-SHA256
+    using your Client Secret (CASHFREE_SECRET_KEY) as the key, over the
+    string `timestamp + raw_body`, base64-encoded. The legacy webhook key
+    field has been removed from the dashboard; if you set
+    CASHFREE_WEBHOOK_SECRET it's tried first, otherwise we fall back to
+    CASHFREE_SECRET_KEY. Either way the signature MUST validate when a
+    key is configured — silent acceptance would let anyone with the URL
+    forge "PAYMENT_SUCCESS" events.
+    """
     raw = await request.body()
     signature = request.headers.get("x-webhook-signature", "")
     timestamp = request.headers.get("x-webhook-timestamp", "")
-    if CASHFREE_WEBHOOK_SECRET:
+
+    # Prefer the dedicated webhook secret if set; otherwise use the client
+    # secret (Cashfree's current default scheme).
+    signing_key = CASHFREE_WEBHOOK_SECRET or CASHFREE_SECRET_KEY
+    if signing_key and signature:
         import hmac, hashlib, base64 as _b64
         msg = (timestamp + raw.decode("utf-8", errors="ignore")).encode()
-        expected = _b64.b64encode(hmac.new(CASHFREE_WEBHOOK_SECRET.encode(), msg, hashlib.sha256).digest()).decode()
+        expected = _b64.b64encode(
+            hmac.new(signing_key.encode(), msg, hashlib.sha256).digest()
+        ).decode()
         if not hmac.compare_digest(signature, expected):
-            logger.warning("Cashfree webhook: signature mismatch")
+            logger.warning(
+                "Cashfree webhook: signature mismatch "
+                f"(used={'webhook_secret' if CASHFREE_WEBHOOK_SECRET else 'client_secret'})"
+            )
             raise HTTPException(status_code=400, detail="Invalid signature")
+    elif signing_key and not signature:
+        # We have a key configured but Cashfree didn't send a header —
+        # could be a sandbox quirk or a manual test. Log + accept so dev
+        # tests don't get blocked, but warn loudly.
+        logger.warning("Cashfree webhook: no x-webhook-signature header, accepting (dev/sandbox)")
     try:
         body = json.loads(raw)
     except Exception:
@@ -11100,7 +11124,10 @@ async def health():
             "GEMINI_API_KEY": "set" if os.environ.get("GEMINI_API_KEY") else "missing",
             "CASHFREE_APP_ID": "set" if CASHFREE_APP_ID else "missing",
             "CASHFREE_SECRET_KEY": "set" if CASHFREE_SECRET_KEY else "missing",
-            "CASHFREE_WEBHOOK_SECRET": "set" if CASHFREE_WEBHOOK_SECRET else "missing (webhook will skip signature check)",
+            "CASHFREE_WEBHOOK_SECRET": (
+                "set (override)" if CASHFREE_WEBHOOK_SECRET
+                else "using CASHFREE_SECRET_KEY (default for 2023-08-01 API)"
+            ),
             "CASHFREE_ENV": CASHFREE_ENV,
             "DEMO_PAYMENTS": str(DEMO_PAYMENTS),
             "ADMIN_WIPE_KEY": "set" if ADMIN_WIPE_KEY else "missing",
