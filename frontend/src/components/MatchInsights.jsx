@@ -626,8 +626,9 @@ export default function MatchInsights({
               expandable list of individual shots. */}
           {/* Auto Pro Reference — picks the user's most-frequent shot
               type and inlines a Compare-to-Pro panel. No click needed.
-              Hides itself if no reference is curated for that shot. */}
-          <AutoProReferencePanel perShot={perShot} sport={sport} />
+              Plays user's video looped on the shot window (no
+              video-generation cost) next to YouTube embed of the pro. */}
+          <AutoProReferencePanel perShot={perShot} sport={sport} videoFile={videoFile} />
 
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
             <PerShotCoachSection perShot={perShot} sport={sport} />
@@ -1063,17 +1064,33 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   );
 }
 
-function AutoProReferencePanel({ perShot, sport }) {
-  // Pick the user's "headline" shot: most-frequent type with highest
-  // average confidence. We render a pro reference inline (not behind a
-  // click) so the user sees "here's what good looks like" automatically.
+function AutoProReferencePanel({ perShot, sport, videoFile }) {
+  // Pick the user's "headline" shot: most-frequent type, prefer a
+  // representative with both high confidence AND a thumbnail (so the
+  // YOU panel always has a visual). We render a pro reference inline
+  // (not behind a click) so users see "here's what good looks like"
+  // automatically after analysis.
   const [proRef, setProRef] = useState(null);
   const [headlineShot, setHeadlineShot] = useState(null);
+  const userVideoRef = useRef(null);
+  const userVideoUrlRef = useRef(null);
+
+  // Build an object URL for the user's video file once — we use it as
+  // the src of a <video> element and seek to the shot's window for
+  // side-by-side replay against the YouTube pro reference.
+  useEffect(() => {
+    if (!videoFile) {
+      userVideoUrlRef.current = null;
+      return;
+    }
+    const url = URL.createObjectURL(videoFile);
+    userVideoUrlRef.current = url;
+    return () => { try { URL.revokeObjectURL(url); } catch {} };
+  }, [videoFile]);
 
   useEffect(() => {
     let cancelled = false;
     if (!sport || !perShot.length) return;
-    // Group by type, pick the type with highest (count × avg_confidence).
     const groups = new Map();
     for (const s of perShot) {
       const k = s.type || s.label;
@@ -1088,7 +1105,11 @@ function AutoProReferencePanel({ perShot, sport }) {
       .sort((a, b) => b.score - a.score);
     if (!ranked.length) return;
     const top = ranked[0];
-    const repShot = top.shots.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    // Prefer shots that have a thumbnail (or a timestamp so we can replay
+    // from the user's video). Only fall back to "any highest-confidence
+    // shot" when nothing has visual data.
+    const sorted = top.shots.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+    const repShot = sorted.find((s) => s.thumbnail || typeof s.timestamp === "number") || sorted[0];
     setHeadlineShot({ ...repShot, _name: repShot.name?.replace(/_/g, " ") || top.type });
     fetchProReference(sport, top.type).then((ref) => {
       if (!cancelled) setProRef(ref);
@@ -1096,31 +1117,76 @@ function AutoProReferencePanel({ perShot, sport }) {
     return () => { cancelled = true; };
   }, [sport, perShot]);
 
+  // Seek the user-video to the shot's contact window (-1s .. +1.5s)
+  // and auto-loop. Mirrors the YouTube iframe's behavior on the pro
+  // side. No re-encoding / video generation needed — just controlled
+  // playback of the original file.
+  useEffect(() => {
+    const v = userVideoRef.current;
+    if (!v || !headlineShot || typeof headlineShot.timestamp !== "number") return;
+    const SHOT_LEAD = 1.0;   // start 1s before contact
+    const SHOT_TAIL = 1.5;   // 1.5s after = ~2.5s total window
+    const ts = headlineShot.timestamp;
+    let active = true;
+    const setLoop = () => {
+      if (!active) return;
+      try { v.currentTime = Math.max(0, ts - SHOT_LEAD); v.muted = true; v.play?.(); } catch {}
+    };
+    const onTimeUpdate = () => {
+      if (!active) return;
+      if (v.currentTime >= ts + SHOT_TAIL) setLoop();
+    };
+    v.addEventListener("timeupdate", onTimeUpdate);
+    v.addEventListener("loadeddata", setLoop, { once: true });
+    if (v.readyState >= 2) setLoop();
+    return () => {
+      active = false;
+      v.removeEventListener("timeupdate", onTimeUpdate);
+      try { v.pause?.(); } catch {}
+    };
+  }, [headlineShot, userVideoUrlRef.current]);
+
   if (!proRef || !headlineShot) return null;
   const ytSrc = `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}?start=${proRef.start_sec || 0}&end=${proRef.end_sec || (proRef.start_sec || 0) + 6}&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}&controls=1&modestbranding=1&rel=0`;
+  const canShowVideo = !!userVideoUrlRef.current && typeof headlineShot.timestamp === "number";
   return (
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 bg-amber-400/5 border-b border-amber-400/20 flex items-center justify-between flex-wrap gap-2">
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
-            <Trophy className="w-3 h-3" /> Pro reference for your top shot
-          </p>
-          <p className="text-sm font-semibold text-white mt-0.5 capitalize">
-            Your {headlineShot._name} vs {proRef.player}
-          </p>
-        </div>
+      <div className="px-4 py-3 bg-amber-400/5 border-b border-amber-400/20">
+        <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
+          <Trophy className="w-3 h-3" /> Pro reference for your top shot
+        </p>
+        <p className="text-sm font-semibold text-white mt-0.5 capitalize">
+          Your {headlineShot._name} vs {proRef.player}
+        </p>
+        <p className="text-[10px] text-zinc-500 mt-0.5">
+          {canShowVideo
+            ? "Both clips loop side-by-side — watch contact + follow-through in each."
+            : "Pro clip loops below; your thumbnail shows the contact frame."}
+        </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+        {/* USER side — controlled <video> looping the shot window */}
         <div className="bg-black aspect-video flex items-center justify-center relative">
-          {headlineShot.thumbnail ? (
+          {canShowVideo ? (
+            <video
+              ref={userVideoRef}
+              src={userVideoUrlRef.current}
+              muted
+              playsInline
+              preload="auto"
+              className="w-full h-full object-cover"
+              data-playsmart-clip
+            />
+          ) : headlineShot.thumbnail ? (
             <img src={headlineShot.thumbnail} alt="Your shot" className="w-full h-full object-cover" />
           ) : (
-            <p className="text-zinc-500 text-xs">No preview frame</p>
+            <p className="text-zinc-500 text-xs">No preview available</p>
           )}
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
             <p className="text-[10px] uppercase tracking-wider text-white font-bold">You</p>
           </div>
         </div>
+        {/* PRO side — YouTube embed restricted to the curated segment */}
         <div className="bg-black aspect-video">
           <iframe
             src={ytSrc}
