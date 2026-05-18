@@ -482,48 +482,33 @@ export default function MatchInsights({
               // but the backend still set a skill_level on the analysis).
               const topLevel = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0]
                 || (fallbackSkillLevel && fallbackSkillLevel !== "Unknown" ? fallbackSkillLevel : null);
+              // Aggregate strengths + weaknesses across all shots so we
+              // can surface the single most-repeated one as a meaningful
+              // tile (replaces "10 shots / 240 events-per-min" which
+              // weren't actionable).
+              const tally = (extractor) => {
+                const counts = new Map();
+                for (const s of perShot) {
+                  const ff = s.formFeedback || {};
+                  for (const item of (extractor(ff) || [])) {
+                    const key = String(item).trim();
+                    if (key.length < 8) continue;
+                    counts.set(key, (counts.get(key) || 0) + 1);
+                  }
+                }
+                return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+              };
+              const topStrength = tally((ff) => ff.strengths);
+              const topWeakness = tally((ff) => ff.weaknesses);
               const speeds = perShot.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
               const avgSpeed = speeds.length ? Math.round(speeds.reduce((a, b) => a + b, 0) / speeds.length) : null;
               const peakSpeed = speeds.length ? Math.max(...speeds) : null;
-              // Tempo fallback: when speed is unavailable (universal mode,
-              // most cricket / table-tennis clips) compute events-per-minute
-              // from consecutive timestamps. Surfaces a real benchmark
-              // number instead of a blank "— km/h" tile.
-              const sortedTimestamps = perShot
-                .map((s) => typeof s.timestamp === "number" ? s.timestamp : null)
-                .filter((t) => t != null)
-                .sort((a, b) => a - b);
-              let tempoPerMin = null, tempoLabel = "";
-              if (sortedTimestamps.length >= 2) {
-                const gaps = [];
-                for (let i = 1; i < sortedTimestamps.length; i++) {
-                  const g = sortedTimestamps[i] - sortedTimestamps[i - 1];
-                  if (g > 0.1 && g < 60) gaps.push(g);  // sanity filter
-                }
-                if (gaps.length > 0) {
-                  const meanGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-                  if (meanGap > 0) {
-                    tempoPerMin = Math.round(60 / meanGap);
-                    // Pick label by dominant event type
-                    const allLabels = perShot.map((s) => (s.label || "").toLowerCase());
-                    const isSwim = allLabels.some((l) => /stroke|swim/.test(l));
-                    const isRep = allLabels.some((l) => /rep|squat|deadlift|press/.test(l));
-                    tempoLabel = isSwim ? "strokes/min" : isRep ? "reps/min" : "events/min";
-                  }
-                }
-              }
-              const types = new Set(perShot.map((s) => s.label).filter(Boolean));
               const levelTone = topLevel === "Pro" ? "text-amber-300"
                 : topLevel === "Advanced" ? "text-lime-300"
                 : topLevel === "Intermediate" ? "text-sky-300"
                 : "text-zinc-300";
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div className="bg-zinc-800/50 rounded-xl p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">Shots</p>
-                    <p className="text-xl font-bold text-white mt-0.5">{perShot.length}</p>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">{types.size} {types.size === 1 ? "type" : "types"}</p>
-                  </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500">Level</p>
                     {topLevel ? (
@@ -539,24 +524,19 @@ export default function MatchInsights({
                     )}
                   </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
-                    {avgSpeed != null ? (
-                      <>
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Speed</p>
-                        <p className="text-xl font-bold text-white mt-0.5">{avgSpeed}<span className="text-xs text-zinc-500 font-normal ml-1">km/h</span></p>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">{peakSpeed != null ? `Peak ${peakSpeed}` : ""}</p>
-                      </>
-                    ) : tempoPerMin != null ? (
-                      <>
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Tempo</p>
-                        <p className="text-xl font-bold text-white mt-0.5">{tempoPerMin}<span className="text-xs text-zinc-500 font-normal ml-1">/min</span></p>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">{tempoLabel}</p>
-                      </>
+                    <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">What's working</p>
+                    {topStrength ? (
+                      <p className="text-xs text-white leading-snug mt-1 line-clamp-3">{topStrength}</p>
                     ) : (
-                      <>
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Avg Speed</p>
-                        <p className="text-xl font-bold text-zinc-500 mt-0.5">—</p>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">Need clearer video</p>
-                      </>
+                      <p className="text-xs text-zinc-500 mt-1">No clear pattern yet</p>
+                    )}
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-xl p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Top fix</p>
+                    {topWeakness ? (
+                      <p className="text-xs text-white leading-snug mt-1 line-clamp-3">{topWeakness}</p>
+                    ) : (
+                      <p className="text-xs text-zinc-500 mt-1">Looking clean so far</p>
                     )}
                   </div>
                   <div className="bg-zinc-800/50 rounded-xl p-3">
@@ -644,6 +624,11 @@ export default function MatchInsights({
               5+ we group by shot type so a 12-shot rally doesn't drown the
               user in 12 cards — show one aggregated card per type with an
               expandable list of individual shots. */}
+          {/* Auto Pro Reference — picks the user's most-frequent shot
+              type and inlines a Compare-to-Pro panel. No click needed.
+              Hides itself if no reference is curated for that shot. */}
+          <AutoProReferencePanel perShot={perShot} sport={sport} />
+
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
             <PerShotCoachSection perShot={perShot} sport={sport} />
           )}
@@ -934,51 +919,88 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     return () => { cancelled = true; };
   }, [sport, sample.type]);
 
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const headlineFix = tips[0] || weaknesses[0] || null;
+  const scorePct = Math.round(avgConf * 100);
+  const scoreTone = scorePct >= 80 ? "text-lime-400"
+    : scorePct >= 60 ? "text-sky-300"
+    : scorePct >= 40 ? "text-amber-300"
+    : "text-red-400";
+
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg overflow-hidden">
-      {heroShot?.thumbnail && (
-        <div className="bg-black/40 p-2 flex justify-center">
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl overflow-hidden">
+      {/* Compact header: thumbnail + shot name + quality bar */}
+      <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
+        {heroShot?.thumbnail && (
           <img src={heroShot.thumbnail} alt={name}
-               className="h-24 w-auto rounded object-cover" loading="lazy" />
-        </div>
-      )}
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
-          <p className="text-sm font-semibold text-white capitalize">{name}</p>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-lime-400/15 text-lime-300">
-              avg {Math.round(avgConf * 100)}%
-            </span>
+               className="w-20 h-20 rounded-lg object-cover bg-black shrink-0" loading="lazy" />
+        )}
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-base font-semibold text-white capitalize leading-tight">{name}</p>
             {peakSpeed > 0 && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
                 peak {Math.round(peakSpeed)} km/h
               </span>
             )}
           </div>
+          {/* Quality bar — readable at-a-glance instead of "avg 90%" buried */}
+          <div className="space-y-1">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Shot quality</span>
+              <span className={`text-base font-bold ${scoreTone}`}>{scorePct}</span>
+            </div>
+            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  scorePct >= 80 ? "bg-lime-400"
+                  : scorePct >= 60 ? "bg-sky-400"
+                  : scorePct >= 40 ? "bg-amber-400"
+                  : "bg-red-400"
+                }`}
+                style={{ width: `${Math.min(100, Math.max(2, scorePct))}%` }}
+              />
+            </div>
+          </div>
         </div>
-        {reasoning && (
-          <p className="text-xs text-zinc-300 mb-2">
-            <span className="text-lime-400/80">Coach:</span> {reasoning}
-          </p>
-        )}
-        {tips.length > 0 && tips.map((t, i) => (
-          <p key={`t-${i}`} className="text-xs text-amber-300 mb-1">💡 {t}</p>
-        ))}
-        {strengths.length > 0 && (
-          <ul className="space-y-0.5 mt-2 mb-1">
-            {strengths.map((x, j) => (
-              <li key={`s-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-lime-400">✓</span><span>{x}</span></li>
+      </div>
+
+      {/* TOP FIX — promoted to a highlighted callout so it actually
+          gets read instead of being a bullet point in a long list. */}
+      {headlineFix && (
+        <div className="px-3 py-2.5 bg-amber-400/8 border-b border-amber-400/20">
+          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">🎯 Top fix</p>
+          <p className="text-sm text-white leading-snug">{headlineFix}</p>
+        </div>
+      )}
+
+      <div className="p-3 space-y-2.5">
+        {/* Strengths + weaknesses as compact chips, NOT bullet lists */}
+        {(strengths.length > 0 || weaknesses.length > 0) && (
+          <div className="flex flex-wrap gap-1.5">
+            {strengths.slice(0, 3).map((x, j) => (
+              <span key={`s-${j}`}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-lime-300 bg-lime-400/10 border border-lime-400/20 rounded-full px-2 py-1 max-w-full">
+                <span className="text-lime-400">✓</span>
+                <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
+              </span>
             ))}
-          </ul>
+            {weaknesses.slice(0, 3).map((x, j) => {
+              const isHeadline = x === headlineFix;
+              if (isHeadline) return null;  // already shown in Top fix above
+              return (
+                <span key={`w-${j}`}
+                  className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-1 max-w-full">
+                  <span className="text-amber-400">⚠</span>
+                  <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
+                </span>
+              );
+            })}
+          </div>
         )}
-        {weaknesses.length > 0 && (
-          <ul className="space-y-0.5">
-            {weaknesses.map((x, j) => (
-              <li key={`w-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-amber-400">⚠</span><span>{x}</span></li>
-            ))}
-          </ul>
-        )}
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           {heroShot?.thumbnail && (
             <button
               onClick={() => setPoseOpen(true)}
@@ -995,7 +1017,32 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
               <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
             </button>
           )}
+          {(reasoning || tips.length > 1) && (
+            <button
+              onClick={() => setDetailsOpen((v) => !v)}
+              className="text-[11px] text-zinc-400 hover:text-white ml-auto"
+            >
+              {detailsOpen ? "Hide details ▲" : "Coach details ▼"}
+            </button>
+          )}
         </div>
+
+        {/* Expandable coach details — long reasoning + extra tips live
+            here so they don't dominate the card on first read. */}
+        {detailsOpen && (
+          <div className="space-y-1.5 pt-2 border-t border-zinc-800/60">
+            {reasoning && (
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                <span className="text-lime-400/80 font-semibold">Coach: </span>{reasoning}
+              </p>
+            )}
+            {tips.slice(1).map((t, i) => (
+              <p key={`extra-tip-${i}`} className="text-xs text-amber-300 leading-relaxed">
+                💡 {t}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
       <ProComparisonModal
         open={compareOpen}
@@ -1012,6 +1059,84 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         shotType={sample.type}
         shotName={name}
       />
+    </div>
+  );
+}
+
+function AutoProReferencePanel({ perShot, sport }) {
+  // Pick the user's "headline" shot: most-frequent type with highest
+  // average confidence. We render a pro reference inline (not behind a
+  // click) so the user sees "here's what good looks like" automatically.
+  const [proRef, setProRef] = useState(null);
+  const [headlineShot, setHeadlineShot] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!sport || !perShot.length) return;
+    // Group by type, pick the type with highest (count × avg_confidence).
+    const groups = new Map();
+    for (const s of perShot) {
+      const k = s.type || s.label;
+      if (!k) continue;
+      const g = groups.get(k) || { type: k, shots: [], sumConf: 0 };
+      g.shots.push(s);
+      g.sumConf += (s.confidence || 0);
+      groups.set(k, g);
+    }
+    const ranked = [...groups.values()]
+      .map((g) => ({ ...g, score: g.shots.length * (g.sumConf / g.shots.length) }))
+      .sort((a, b) => b.score - a.score);
+    if (!ranked.length) return;
+    const top = ranked[0];
+    const repShot = top.shots.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
+    setHeadlineShot({ ...repShot, _name: repShot.name?.replace(/_/g, " ") || top.type });
+    fetchProReference(sport, top.type).then((ref) => {
+      if (!cancelled) setProRef(ref);
+    });
+    return () => { cancelled = true; };
+  }, [sport, perShot]);
+
+  if (!proRef || !headlineShot) return null;
+  const ytSrc = `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}?start=${proRef.start_sec || 0}&end=${proRef.end_sec || (proRef.start_sec || 0) + 6}&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}&controls=1&modestbranding=1&rel=0`;
+  return (
+    <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl overflow-hidden">
+      <div className="px-4 py-3 bg-amber-400/5 border-b border-amber-400/20 flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
+            <Trophy className="w-3 h-3" /> Pro reference for your top shot
+          </p>
+          <p className="text-sm font-semibold text-white mt-0.5 capitalize">
+            Your {headlineShot._name} vs {proRef.player}
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+        <div className="bg-black aspect-video flex items-center justify-center relative">
+          {headlineShot.thumbnail ? (
+            <img src={headlineShot.thumbnail} alt="Your shot" className="w-full h-full object-cover" />
+          ) : (
+            <p className="text-zinc-500 text-xs">No preview frame</p>
+          )}
+          <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
+            <p className="text-[10px] uppercase tracking-wider text-white font-bold">You</p>
+          </div>
+        </div>
+        <div className="bg-black aspect-video">
+          <iframe
+            src={ytSrc}
+            title={`${proRef.player} ${proRef.shot_type}`}
+            allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+      </div>
+      {proRef.description && (
+        <div className="px-4 py-2 bg-zinc-800/30 border-t border-zinc-800">
+          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">What to watch</p>
+          <p className="text-xs text-zinc-300 leading-relaxed">{proRef.description}</p>
+        </div>
+      )}
     </div>
   );
 }

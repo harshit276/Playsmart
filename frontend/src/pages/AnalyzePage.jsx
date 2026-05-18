@@ -2771,7 +2771,7 @@ export default function AnalyzePage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
             <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 flex items-center gap-1">
-              <Film className="w-3 h-3 text-sky-400" /> {result._universal ? "Events" : "Match Summary"} — {result.total_shots_detected} {result._universal ? "events detected" : "shots detected"}
+              <Film className="w-3 h-3 text-sky-400" /> Shot mix
             </p>
             <div className="flex items-center gap-2 flex-wrap mb-4">
               {aiSkillLevel && (
@@ -2808,7 +2808,6 @@ export default function AnalyzePage() {
                       <div key={shotType}>
                         <div className="flex items-center justify-between mb-0.5">
                           <span className="text-xs font-medium text-zinc-300">{shotLabel}</span>
-                          <span className="text-xs text-zinc-500">{count}× ({pct}%)</span>
                         </div>
                         <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                           <motion.div
