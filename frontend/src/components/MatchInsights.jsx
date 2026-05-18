@@ -16,9 +16,110 @@
  * narrative. No duplicated counts.
  */
 import { useState, useMemo, useEffect, useRef } from "react";
-import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap } from "lucide-react";
+import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
+
+
+// In-flight cache so we don't refetch the same reference video for
+// every shot of the same type in one analysis.
+const _refCache = new Map();
+async function fetchProReference(sport, shotType) {
+  const key = `${(sport || "").toLowerCase()}::${(shotType || "").toLowerCase()}`;
+  if (_refCache.has(key)) return _refCache.get(key);
+  const promise = (async () => {
+    try {
+      const { data } = await api.get(`/reference/${encodeURIComponent(sport)}/${encodeURIComponent(shotType)}`, { timeout: 8000 });
+      return data?.reference || null;
+    } catch { return null; }
+  })();
+  _refCache.set(key, promise);
+  return promise;
+}
+
+
+function ProComparisonModal({ open, onClose, userShot, reference, sport }) {
+  if (!open || !reference) return null;
+  const ytSrc = `https://www.youtube-nocookie.com/embed/${reference.youtube_id}?start=${reference.start_sec || 0}&end=${reference.end_sec || (reference.start_sec || 0) + 6}&autoplay=1&mute=1&loop=1&playlist=${reference.youtube_id}&controls=1&modestbranding=1&rel=0`;
+  const ts = typeof userShot?.timestamp === "number" ? userShot.timestamp : null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-sm"
+      onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()}
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 max-w-4xl w-full max-h-[92vh] overflow-auto">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Side-by-side comparison</p>
+            <h3 className="font-heading font-bold text-lg text-white capitalize">
+              Your {userShot?.name || userShot?.label || "shot"} vs {reference.player}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-zinc-500 hover:text-white" aria-label="Close">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          {/* User's clip — thumbnail + click-to-replay on the page's
+              <video data-playsmart-clip> element */}
+          <div className="bg-black rounded-xl overflow-hidden">
+            <div className="aspect-video bg-zinc-900 flex items-center justify-center relative">
+              {userShot?.thumbnail ? (
+                <img src={userShot.thumbnail} alt="Your shot" className="w-full h-full object-cover" />
+              ) : (
+                <p className="text-zinc-500 text-xs">No preview frame</p>
+              )}
+              {ts != null && (
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: ts } }));
+                    const v = document.querySelector("video[data-playsmart-clip]");
+                    if (v) { try { v.currentTime = Math.max(0, ts - 0.5); v.muted = true; v.play?.(); } catch {} }
+                    onClose();
+                  }}
+                  className="absolute inset-0 bg-black/50 hover:bg-black/40 flex items-center justify-center text-white text-sm font-bold uppercase tracking-wider transition-colors"
+                >
+                  ▶ Replay on page
+                </button>
+              )}
+            </div>
+            <div className="px-3 py-2 bg-zinc-800/50">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">You</p>
+              <p className="text-xs text-zinc-300">
+                {userShot?.name || userShot?.label || "Shot"}
+                {ts != null && <span className="text-zinc-500"> · {ts.toFixed(1)}s</span>}
+              </p>
+            </div>
+          </div>
+          {/* Pro reference — YouTube embed restricted to the targeted segment */}
+          <div className="bg-black rounded-xl overflow-hidden">
+            <div className="aspect-video">
+              <iframe
+                src={ytSrc}
+                title={`${reference.player} ${reference.shot_type}`}
+                allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full"
+              />
+            </div>
+            <div className="px-3 py-2 bg-amber-400/5 border-t border-amber-400/20">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Pro reference</p>
+              <p className="text-xs text-zinc-300">{reference.player}</p>
+            </div>
+          </div>
+        </div>
+        {reference.description && (
+          <div className="bg-zinc-800/40 border border-zinc-800 rounded-lg p-3">
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">What to watch</p>
+            <p className="text-xs text-zinc-300 leading-relaxed">{reference.description}</p>
+          </div>
+        )}
+        <p className="text-[10px] text-zinc-600 mt-3 text-center">
+          Curated reference clip from a top {sport || "sport"} player. Compare your form to theirs.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const MAX_SHOTS = 10;
 const FRAMES_PER_SHOT = 4;
@@ -543,7 +644,7 @@ export default function MatchInsights({
               user in 12 cards — show one aggregated card per type with an
               expandable list of individual shots. */}
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
-            <PerShotCoachSection perShot={perShot} />
+            <PerShotCoachSection perShot={perShot} sport={sport} />
           )}
 
           {/* Narrative */}
@@ -666,11 +767,23 @@ function _seekToShot(timestamp) {
   } catch {}
 }
 
-function IndividualShotCard({ shot, label }) {
+function IndividualShotCard({ shot, label, sport }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
   const ts = typeof shot.timestamp === "number" ? shot.timestamp : null;
   const onSeek = ts != null ? () => _seekToShot(ts) : null;
+  // Lazy-fetch pro reference when the card mounts; render the
+  // "Compare to Pro" CTA only if we have a curated entry.
+  const [proRef, setProRef] = useState(null);
+  const [compareOpen, setCompareOpen] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (!sport || !shot.type) return;
+    fetchProReference(sport, shot.type).then((ref) => {
+      if (!cancelled && ref) setProRef(ref);
+    });
+    return () => { cancelled = true; };
+  }, [sport, shot.type]);
   return (
     <div
       className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${onSeek ? "cursor-pointer hover:border-lime-400/40 hover:bg-zinc-900 transition-colors" : ""}`}
@@ -737,11 +850,29 @@ function IndividualShotCard({ shot, label }) {
           ))}
         </ul>
       )}
+      {/* Compare to pro — appears only when we have a curated reference
+          for this shot type. Stops the click bubbling so the card
+          replay handler doesn't fire. */}
+      {proRef && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
+          className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+        >
+          <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+        </button>
+      )}
+      <ProComparisonModal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        userShot={shot}
+        reference={proRef}
+        sport={sport}
+      />
     </div>
   );
 }
 
-function ShotGroupCard({ groupKey, shots: groupShots }) {
+function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   const [expanded, setExpanded] = useState(false);
   const sample = groupShots[0];
   const name = sample.name?.replace(/_/g, " ") || groupKey;
@@ -846,7 +977,7 @@ function ShotGroupCard({ groupKey, shots: groupShots }) {
         <div className="px-3 pb-3 space-y-2 border-t border-zinc-800/50">
           {groupShots.map((s, i) => (
             <IndividualShotCard
-              key={i} shot={s}
+              key={i} shot={s} sport={sport}
               label={`Shot at ${typeof s.timestamp === "number" ? s.timestamp.toFixed(1) + "s" : `#${i + 1}`}`}
             />
           ))}
@@ -856,7 +987,7 @@ function ShotGroupCard({ groupKey, shots: groupShots }) {
   );
 }
 
-function PerShotCoachSection({ perShot }) {
+function PerShotCoachSection({ perShot, sport }) {
   // Filter to shots with VLM data
   const usable = perShot.filter((s) => s.reasoning || s.formFeedback);
   if (usable.length === 0) return null;
@@ -884,11 +1015,11 @@ function PerShotCoachSection({ perShot }) {
       <div className="space-y-2">
         {shouldGroup
           ? groupedEntries.map(([key, group]) => (
-              <ShotGroupCard key={key} groupKey={key} shots={group} />
+              <ShotGroupCard key={key} groupKey={key} shots={group} sport={sport} />
             ))
           : usable.map((s, i) => (
               <IndividualShotCard
-                key={i} shot={s}
+                key={i} shot={s} sport={sport}
                 label={`Shot ${i + 1} · ${s.name?.replace(/_/g, " ") || "Unknown"}`}
               />
             ))}

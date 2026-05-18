@@ -127,6 +127,21 @@ app.add_middleware(
 api_router = APIRouter(prefix="/api")
 
 
+@api_router.get("/reference/{sport}/{shot_type}")
+async def get_pro_reference(sport: str, shot_type: str):
+    """Pro reference clip for side-by-side comparison. Returns {} when
+    we don't have a curated entry — frontend hides the CTA in that case."""
+    try:
+        from reference_videos import get_reference, available_references
+    except ImportError:
+        return {"reference": None, "available_shots": []}
+    ref = get_reference(sport, shot_type)
+    return {
+        "reference": ref,
+        "available_shots": available_references(sport),
+    }
+
+
 @api_router.get("/plans")
 async def list_plans():
     """Token packs + (optionally) subscription tiers. v1 launch only
