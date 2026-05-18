@@ -16,9 +16,10 @@
  * narrative. No duplicated counts.
  */
 import { useState, useMemo, useEffect, useRef } from "react";
-import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X } from "lucide-react";
+import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
+import PoseOverlayModal from "@/components/PoseOverlayModal";
 
 
 // In-flight cache so we don't refetch the same reference video for
@@ -775,6 +776,7 @@ function IndividualShotCard({ shot, label, sport }) {
   // showed the wrong instant. The shot type + thumbnail are enough.
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [poseOpen, setPoseOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     if (!sport || !shot.type) return;
@@ -839,23 +841,38 @@ function IndividualShotCard({ shot, label, sport }) {
           ))}
         </ul>
       )}
-      {/* Compare to pro — appears only when we have a curated reference
-          for this shot type. Stops the click bubbling so the card
-          replay handler doesn't fire. */}
-      {proRef && (
-        <button
-          onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
-          className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-        >
-          <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-        </button>
-      )}
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
+        {shot.thumbnail && (
+          <button
+            onClick={() => setPoseOpen(true)}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+          >
+            <Activity className="w-3 h-3" /> See your form
+          </button>
+        )}
+        {proRef && (
+          <button
+            onClick={() => setCompareOpen(true)}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+          >
+            <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+          </button>
+        )}
+      </div>
       <ProComparisonModal
         open={compareOpen}
         onClose={() => setCompareOpen(false)}
         userShot={shot}
         reference={proRef}
         sport={sport}
+      />
+      <PoseOverlayModal
+        open={poseOpen}
+        onClose={() => setPoseOpen(false)}
+        thumbnail={shot.thumbnail}
+        sport={sport}
+        shotType={shot.type}
+        shotName={cleanLabel}
       />
     </div>
   );
@@ -907,6 +924,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   // Compare-to-Pro reference for this shot type (sport-aware).
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [poseOpen, setPoseOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     if (!sport || !sample.type) return;
@@ -960,14 +978,24 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
             ))}
           </ul>
         )}
-        {proRef && (
-          <button
-            onClick={() => setCompareOpen(true)}
-            className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-          >
-            <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-          </button>
-        )}
+        <div className="flex items-center gap-2 mt-2 flex-wrap">
+          {heroShot?.thumbnail && (
+            <button
+              onClick={() => setPoseOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Activity className="w-3 h-3" /> See your form
+            </button>
+          )}
+          {proRef && (
+            <button
+              onClick={() => setCompareOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+            </button>
+          )}
+        </div>
       </div>
       <ProComparisonModal
         open={compareOpen}
@@ -975,6 +1003,14 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         userShot={{ ...sample, thumbnail: heroShot?.thumbnail }}
         reference={proRef}
         sport={sport}
+      />
+      <PoseOverlayModal
+        open={poseOpen}
+        onClose={() => setPoseOpen(false)}
+        thumbnail={heroShot?.thumbnail}
+        sport={sport}
+        shotType={sample.type}
+        shotName={name}
       />
     </div>
   );
