@@ -122,8 +122,11 @@ export default function LandingPage() {
   }, []);
 
   const handleCTA = () => {
+    // Skip the heavy intake quiz — drop users straight into the value
+    // (the analyze page). Profile capture happens AFTER the first analysis
+    // when we can offer an auto-filled, evidence-based profile.
     if (isAuthenticated && profile) navigate("/dashboard");
-    else navigate("/assessment");
+    else navigate("/analyze");
   };
 
   return (

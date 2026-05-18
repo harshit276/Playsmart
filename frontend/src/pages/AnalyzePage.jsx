@@ -23,6 +23,7 @@ import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import { NewBadgeOverlay } from "@/components/BadgeDisplay";
 import MatchInsights from "@/components/MatchInsights";
 import SEO from "@/components/SEO";
+import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -289,10 +290,11 @@ const DRILL_DIFFICULTY_STYLE = {
 };
 
 export default function AnalyzePage() {
-  const { user, profile, refreshProfile, login, tokens, refreshTokens } = useAuth();
+  const { user, profile, refreshProfile, login, tokens, refreshTokens, updateTokens } = useAuth();
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [insufficientBalance, setInsufficientBalance] = useState(0);
   const [showGuestUpgrade, setShowGuestUpgrade] = useState(false);
+  const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isGuest = !user?.id;
@@ -555,7 +557,8 @@ export default function AnalyzePage() {
         // the user can navigate to it from history later.
         if (data?.analysis_id) setResult((prev) => ({ ...(prev || r), analysis_id: data.analysis_id }));
         loadHistory();
-        refreshTokens?.();
+        // Instant chip update from server's post-debit balance (no round-trip)
+        updateTokens?.(data?.token_balance);
         toast.success("Analysis saved to your history.");
       } catch (e) {
         // 402 means they're somehow already short — don't spam the user
@@ -1309,9 +1312,20 @@ export default function AnalyzePage() {
             } else {
               refreshProfile();
               loadHistory();
-              toast.success("Analysis complete!");
+              // Instant wallet update from server's post-debit balance
+              updateTokens?.(data.token_balance);
+              const spent = data.tokens_spent;
+              toast.success(spent
+                ? `Analysis complete! 🪙 -${spent} tokens (balance: ${data.token_balance ?? "?"})`
+                : "Analysis complete!"
+              );
               if (data.new_badges?.length > 0) {
                 setTimeout(() => setNewBadge(data.new_badges[0]), 1500);
+              }
+              // First-analysis-by-a-new-user nudge: offer auto-profile
+              // or short quiz so the dashboard gets personalized.
+              if (!profile && user) {
+                setTimeout(() => setShowProfilePrompt(true), 1800);
               }
               // Reanalyze flow: kick off the comparison call now that both
               // analyses exist on the server.
@@ -1978,6 +1992,68 @@ export default function AnalyzePage() {
       {/* Player Selection for Doubles */}
       {renderPlayerSelector()}
 
+      {/* Upload area — moved to top per user feedback so the primary
+          action is the first thing visible after the loading panel. */}
+      <div
+        ref={dropRef}
+        onClick={() => fileRef.current?.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className="border-2 border-dashed border-zinc-700 rounded-2xl p-6 sm:p-8 text-center cursor-pointer hover:border-lime-400/50 hover:bg-lime-400/5 transition-all mb-4"
+        data-testid="video-drop-zone"
+      >
+        <motion.div animate={{ y: [0, -5, 0] }} transition={{ duration: 2, repeat: Infinity }}>
+          <Upload className="w-10 h-10 text-lime-400 mx-auto mb-3" strokeWidth={1.5} />
+        </motion.div>
+        <p className="font-heading font-semibold text-base text-white uppercase tracking-tight mb-1">
+          Drag & Drop Your Video
+        </p>
+        <p className="text-zinc-500 text-sm">or click to browse</p>
+        <p className="text-zinc-600 text-xs mt-2">
+          MP4, AVI, MOV &middot; up to a few minutes
+        </p>
+        <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelect} />
+      </div>
+
+      {/* File size warning */}
+      {file && file.size > 100 * 1024 * 1024 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="mb-3 bg-amber-400/5 border border-amber-400/20 rounded-xl p-3 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <p className="text-xs text-amber-400">Large file ({(file.size / (1024 * 1024)).toFixed(0)} MB). Upload may take longer.</p>
+        </motion.div>
+      )}
+
+      {/* Selected file + analyze button */}
+      {file && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center shrink-0">
+              <Video className="w-5 h-5 text-lime-400" strokeWidth={1.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white truncate">{file.name}</p>
+              <p className="text-xs text-zinc-500">{(file.size / (1024 * 1024)).toFixed(1)} MB</p>
+            </div>
+            <Button size="sm" variant="ghost" onClick={clearFile}
+              className="text-zinc-500 hover:text-red-400 text-xs shrink-0">Remove</Button>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button size="sm" onClick={analyze} disabled={analyzing || !analysisMode}
+              className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-5 w-full sm:w-auto"
+              data-testid="analyze-btn">
+              {analyzing ? (
+                <><div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin mr-1" /> Analyzing...</>
+              ) : (
+                <><Zap className="w-3 h-3 mr-1" /> Analyze</>
+              )}
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Accuracy mode toggle — opt-in whole-video Gemini analysis */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
@@ -2061,69 +2137,8 @@ export default function AnalyzePage() {
         </ul>
       </div>
 
-      {/* Upload area */}
-      <div
-        ref={dropRef}
-        onClick={() => fileRef.current?.click()}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className="border-2 border-dashed border-zinc-700 rounded-2xl p-8 sm:p-12 text-center cursor-pointer hover:border-lime-400/50 hover:bg-lime-400/5 transition-all"
-        data-testid="video-drop-zone"
-      >
-        <motion.div
-          animate={{ y: [0, -5, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <Upload className="w-12 h-12 text-lime-400 mx-auto mb-4" strokeWidth={1.5} />
-        </motion.div>
-        <p className="font-heading font-semibold text-lg text-white uppercase tracking-tight mb-1">
-          Drag & Drop Your Video
-        </p>
-        <p className="text-zinc-500 text-sm">or click to browse</p>
-        <p className="text-zinc-600 text-xs mt-3">
-          MP4, AVI, MOV &middot; Up to a few minutes (longer = slower)
-        </p>
-        <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelect} />
-      </div>
-
-      {/* File size warning */}
-      {file && file.size > 100 * 1024 * 1024 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="mt-3 bg-amber-400/5 border border-amber-400/20 rounded-xl p-3 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <p className="text-xs text-amber-400">Large file detected ({(file.size / (1024 * 1024)).toFixed(0)} MB). Upload may take longer.</p>
-        </motion.div>
-      )}
-
-      {/* Selected file */}
-      {file && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          className="mt-4 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center shrink-0">
-              <Video className="w-5 h-5 text-lime-400" strokeWidth={1.5} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white truncate">{file.name}</p>
-              <p className="text-xs text-zinc-500">{(file.size / (1024 * 1024)).toFixed(1)} MB</p>
-            </div>
-            <Button size="sm" variant="ghost" onClick={clearFile}
-              className="text-zinc-500 hover:text-red-400 text-xs shrink-0">Remove</Button>
-          </div>
-          <div className="mt-3 flex justify-end sm:mt-3">
-            <Button size="sm" onClick={analyze} disabled={analyzing || !analysisMode}
-              className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-5 w-full sm:w-auto"
-              data-testid="analyze-btn">
-              {analyzing ? (
-                <><div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin mr-1" /> Analyzing...</>
-              ) : (
-                <><Zap className="w-3 h-3 mr-1" /> Analyze</>
-              )}
-            </Button>
-          </div>
-        </motion.div>
-      )}
+      {/* (Upload area + selected file moved to top of page, just below
+          the loading state, so the primary action is reachable first.) */}
 
       {/* Mobile sticky analyze button */}
       {file && !analyzing && !result && !error && (
@@ -4348,6 +4363,19 @@ export default function AnalyzePage() {
           onClose={() => setNewBadge(null)}
         />
       )}
+
+      {/* First-analysis profile prompt — fires when a logged-in user with no
+          saved profile finishes their first analysis. */}
+      <PostAnalysisProfilePrompt
+        open={showProfilePrompt}
+        onClose={() => setShowProfilePrompt(false)}
+        analysisResult={result}
+        onProfileSaved={() => {
+          refreshProfile();
+          toast.success("Profile saved — your dashboard is ready!");
+        }}
+        onTakeQuiz={() => navigate("/assessment")}
+      />
     </div>
   );
 }

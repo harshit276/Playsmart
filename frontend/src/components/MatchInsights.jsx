@@ -770,10 +770,9 @@ function _seekToShot(timestamp) {
 function IndividualShotCard({ shot, label, sport }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
-  const ts = typeof shot.timestamp === "number" ? shot.timestamp : null;
-  const onSeek = ts != null ? () => _seekToShot(ts) : null;
-  // Lazy-fetch pro reference when the card mounts; render the
-  // "Compare to Pro" CTA only if we have a curated entry.
+  // Per-shot timestamps + the replay button were removed: Gemini's
+  // timestamps frequently miss the actual contact moment so the replay
+  // showed the wrong instant. The shot type + thumbnail are enough.
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   useEffect(() => {
@@ -784,32 +783,22 @@ function IndividualShotCard({ shot, label, sport }) {
     });
     return () => { cancelled = true; };
   }, [sport, shot.type]);
+  // Show ONLY the shot type, not "Shot at X.Xs" — strip the timestamp
+  // suffix off the label if the caller passed one.
+  const cleanLabel = String(label || "").replace(/\bShot at [\d.]+s\b/g, "").replace(/^\s*[·•]\s*/, "").trim() || "Shot";
   return (
-    <div
-      className={`bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 ${onSeek ? "cursor-pointer hover:border-lime-400/40 hover:bg-zinc-900 transition-colors" : ""}`}
-      onClick={onSeek || undefined}
-      title={onSeek ? `Click to replay this moment (${ts.toFixed(1)}s) on the video` : undefined}
-    >
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
       <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
         <div className="flex items-center gap-2 min-w-0">
           {shot.thumbnail && (
             <img
               src={shot.thumbnail}
-              alt={`Player at ${ts != null ? ts.toFixed(1) + 's' : 'shot moment'}`}
+              alt={cleanLabel}
               className="shrink-0 rounded-md w-12 h-12 object-cover bg-black border border-zinc-800"
               loading="lazy"
             />
           )}
-          <div className="flex items-center gap-1.5 min-w-0">
-            {/* Inline play badge — makes it obvious the card is
-                clickable AND tied to a real moment on the video. */}
-            {onSeek && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wider text-lime-400 bg-lime-400/10 border border-lime-400/30 rounded px-1.5 py-0.5 shrink-0">
-                <span className="text-[8px]">▶</span> Replay
-              </span>
-            )}
-            <p className="text-sm font-semibold text-white truncate">{label}</p>
-          </div>
+          <p className="text-sm font-semibold text-white truncate">{cleanLabel}</p>
         </div>
         <div className="flex items-center gap-1.5">
           {conf != null && (
@@ -873,14 +862,19 @@ function IndividualShotCard({ shot, label, sport }) {
 }
 
 function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
-  const [expanded, setExpanded] = useState(false);
+  // Per-shot timestamps + counts were removed: Gemini's shot count was
+  // often wrong (over-segmenting one swing into multiple events) and the
+  // individual timestamps didn't accurately land on the contact moment,
+  // so the "Replay this shot" button replayed the wrong instant. We now
+  // show ONLY the shot type + aggregated coaching content.
   const sample = groupShots[0];
   const name = sample.name?.replace(/_/g, " ") || groupKey;
-  const count = groupShots.length;
 
-  // Aggregate stats
+  // Aggregate stats (still useful — kept the avg confidence + peak speed
+  // because they describe the group, not the count)
   const speeds = groupShots.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
   const peakSpeed = speeds.length ? Math.max(...speeds) : 0;
+  const count = groupShots.length;
   const avgConf = groupShots.reduce((a, s) => a + (s.confidence || 0), 0) / count;
 
   // Dedup strengths / weaknesses across the group, pick top 3 of each
@@ -903,36 +897,36 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     .filter(Boolean)
     .sort((a, b) => b.length - a.length)[0] || "";
 
-  // Strip of thumbnails — visual proof of the shots in this group. Click any
-  // thumbnail to seek to that moment.
-  const thumbedShots = groupShots.filter((s) => s.thumbnail).slice(0, 6);
+  // One representative thumbnail per group — picks the highest-confidence
+  // shot's frame as the "best example" of this shot type.
+  const heroShot = groupShots
+    .slice()
+    .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+    .find((s) => s.thumbnail);
+
+  // Compare-to-Pro reference for this shot type (sport-aware).
+  const [proRef, setProRef] = useState(null);
+  const [compareOpen, setCompareOpen] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (!sport || !sample.type) return;
+    fetchProReference(sport, sample.type).then((ref) => {
+      if (!cancelled && ref) setProRef(ref);
+    });
+    return () => { cancelled = true; };
+  }, [sport, sample.type]);
 
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg overflow-hidden">
-      {thumbedShots.length > 0 && (
-        <div className="flex gap-1 p-2 bg-black/40 overflow-x-auto">
-          {thumbedShots.map((s, i) => {
-            const ts = typeof s.timestamp === "number" ? s.timestamp : null;
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={ts != null ? (e) => { e.stopPropagation(); _seekToShot(ts); } : undefined}
-                className="shrink-0 rounded overflow-hidden border border-zinc-800 hover:border-lime-400/40 transition-colors"
-                title={ts != null ? `Jump to ${ts.toFixed(1)}s` : ""}
-              >
-                <img src={s.thumbnail} alt={`${name} ${i + 1}`}
-                     className="h-16 w-24 object-cover" loading="lazy" />
-              </button>
-            );
-          })}
+      {heroShot?.thumbnail && (
+        <div className="bg-black/40 p-2 flex justify-center">
+          <img src={heroShot.thumbnail} alt={name}
+               className="h-24 w-auto rounded object-cover" loading="lazy" />
         </div>
       )}
       <div className="p-3">
         <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
-          <p className="text-sm font-semibold text-white capitalize">
-            {count} {name}{count === 1 ? "" : "s"}
-          </p>
+          <p className="text-sm font-semibold text-white capitalize">{name}</p>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-lime-400/15 text-lime-300">
               avg {Math.round(avgConf * 100)}%
@@ -946,7 +940,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         </div>
         {reasoning && (
           <p className="text-xs text-zinc-300 mb-2">
-            <span className="text-lime-400/80">Coach (across {count} {name}{count === 1 ? "" : "s"}):</span> {reasoning}
+            <span className="text-lime-400/80">Coach:</span> {reasoning}
           </p>
         )}
         {tips.length > 0 && tips.map((t, i) => (
@@ -966,23 +960,22 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
             ))}
           </ul>
         )}
-        <button
-          className="text-[11px] text-sky-400 hover:text-sky-300 mt-2"
-          onClick={() => setExpanded((v) => !v)}
-        >
-          {expanded ? "Hide" : `View all ${count}`} individual {name}{count === 1 ? "" : "s"} {expanded ? "▲" : "▼"}
-        </button>
+        {proRef && (
+          <button
+            onClick={() => setCompareOpen(true)}
+            className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+          >
+            <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+          </button>
+        )}
       </div>
-      {expanded && (
-        <div className="px-3 pb-3 space-y-2 border-t border-zinc-800/50">
-          {groupShots.map((s, i) => (
-            <IndividualShotCard
-              key={i} shot={s} sport={sport}
-              label={`Shot at ${typeof s.timestamp === "number" ? s.timestamp.toFixed(1) + "s" : `#${i + 1}`}`}
-            />
-          ))}
-        </div>
-      )}
+      <ProComparisonModal
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        userShot={{ ...sample, thumbnail: heroShot?.thumbnail }}
+        reference={proRef}
+        sport={sport}
+      />
     </div>
   );
 }

@@ -67,7 +67,10 @@ export default function AuthPage() {
     } else {
       toast.success(`Welcome${name ? ", " + name : ""}!`);
     }
-    navigate(data.has_profile ? "/dashboard" : "/assessment");
+    // No profile yet → drop straight into the analyzer instead of forcing
+    // the long intake quiz. Profile is captured post-analysis via the
+    // PostAnalysisProfilePrompt modal.
+    navigate(data.has_profile ? "/dashboard" : "/analyze");
   };
 
   // ─── Phone OTP via Firebase (free up to 10K/month) ───
@@ -128,7 +131,7 @@ export default function AuthPage() {
       const { data } = await api.post("/auth/demo-login", {});
       login(data.token, data.user, data.has_profile, data.tokens);
       toast.success(`Logged in as Demo Player · 🪙 ${data.tokens} tokens`);
-      navigate(data.has_profile ? "/dashboard" : "/assessment");
+      navigate(data.has_profile ? "/dashboard" : "/analyze");
     } catch (err) {
       toast.error("Demo login failed: " + (err?.response?.data?.detail || err.message || "unknown"));
     }

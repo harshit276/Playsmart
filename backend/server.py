@@ -296,24 +296,32 @@ class FirebaseAuthRequest(BaseModel):
 
 @api_router.post("/auth/firebase")
 async def firebase_auth(req: FirebaseAuthRequest):
-    """Authenticate via Firebase (Google Login). Creates user if new."""
+    """Authenticate via Firebase (Google Login). Creates user if new.
+
+    Token-grant truth source: the `token_transactions` collection. If a
+    `signup_grant` row exists for this user_id → already credited (don't
+    re-credit, regardless of what the user doc shows). If it doesn't →
+    credit now. This makes the grant idempotent and resilient to:
+      - Mongo timeouts losing the user-doc fetch (avoids treating returning
+        users as new)
+      - Stale user docs from prior wipes
+      - $inc retries that might double-credit
+    """
     email = req.email.strip().lower()
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
 
-    # Generate user ID deterministically from email (no DB needed)
+    # Deterministic user_id from email (same across logins, no DB needed)
     user_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{email}"))
     token = create_token(user_id, email)
 
-    # Run the user-doc fetch + profile-fetch IN PARALLEL with tight timeouts.
-    # This is the hot path on every login — keeping it under ~1.5s wall time
-    # is the difference between "login feels instant" and "Google sign-in is
-    # painfully slow". Returning users skip the signup grant entirely.
+    # Parallel hot-path fetches with generous timeouts. The grant-check is
+    # the source of truth, so we always look at the transactions log too.
     async def _fetch_user():
         try:
             return await asyncio.wait_for(
                 db.users.find_one({"id": user_id}, {"_id": 0, "tokens": 1, "id": 1}),
-                timeout=1.5,
+                timeout=3.0,
             )
         except Exception:
             return None
@@ -322,75 +330,91 @@ async def firebase_auth(req: FirebaseAuthRequest):
         try:
             return await asyncio.wait_for(
                 db.player_profiles.find_one({"user_id": user_id}, {"_id": 0, "user_id": 1}),
-                timeout=1.5,
+                timeout=3.0,
             )
         except Exception:
             return None
 
-    existing_user, existing_profile = await asyncio.gather(_fetch_user(), _fetch_profile())
+    async def _has_signup_grant():
+        # Direct call (not via _has_transaction) so we can bump timeout
+        try:
+            row = await asyncio.wait_for(
+                db.token_transactions.find_one(
+                    {"user_id": user_id, "kind": "signup_grant"},
+                    {"_id": 0, "id": 1},
+                ),
+                timeout=3.0,
+            )
+            return row is not None
+        except Exception:
+            # Fail-CLOSED: if we can't confirm, don't credit. Better to miss
+            # a credit (recoverable) than to double-credit (irreversible).
+            return None  # unknown
+
+    existing_user, existing_profile, grant_status = await asyncio.gather(
+        _fetch_user(), _fetch_profile(), _has_signup_grant()
+    )
     has_profile = existing_profile is not None
+    is_new_user = (existing_user is None) and (grant_status is False)
 
-    # Returning user — fast path. Update name/photo in background; return
-    # the cached balance immediately. No grant attempt, no second DB hit.
-    if existing_user is not None:
-        asyncio.create_task(_save_user_background(user_id, email, req.name, req.photo))
-        balance = int(existing_user.get("tokens", 0) or 0)
-        # Recovery: user doc exists but balance is 0 → previous signup
-        # created the user doc but the credit failed (Mongo timeout). Try
-        # again now if the signup_grant transaction never actually landed.
-        if balance == 0:
-            try:
-                if not await _has_transaction(user_id, "signup_grant"):
-                    new_balance = await _credit_tokens(
-                        user_id, "signup_grant", TOKEN_RULES["signup_grant"],
-                        {"email": email, "source": "firebase_auth_recovery"},
-                    )
-                    if new_balance is not None:
-                        balance = new_balance
-            except Exception as e:
-                logger.warning(f"firebase_auth recovery grant failed for {user_id[:8]}: {e}")
-        return {
-            "token": token,
-            "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
-            "has_profile": has_profile,
-            "tokens": balance,
-        }
-
-    # NEW user — synchronous flow: upsert + credit + return real balance.
-    # Slower (~3-5s) but only happens once in a user's lifetime.
+    # Ensure the user doc exists with current name/photo (idempotent upsert).
+    # Done inline (not background) so subsequent reads see consistent state.
     try:
         await asyncio.wait_for(db.users.update_one(
             {"id": user_id},
-            {"$setOnInsert": {"id": user_id, "email": email,
+            {"$setOnInsert": {"id": user_id,
                               "created_at": datetime.now(timezone.utc).isoformat(),
                               "tokens": 0},
              "$set": {"name": req.name, "photo": req.photo, "email": email}},
             upsert=True,
-        ), timeout=3.0)
+        ), timeout=5.0)
     except Exception as e:
         logger.warning(f"firebase_auth: user upsert failed for {user_id[:8]}: {e}")
 
-    tokens_balance = 0
-    try:
-        new_balance = await _credit_tokens(
-            user_id, "signup_grant", TOKEN_RULES["signup_grant"],
-            {"email": email, "source": "firebase_auth"},
-        )
-        tokens_balance = new_balance if new_balance is not None else 0
-    except Exception as e:
-        logger.warning(f"signup_grant failed for {user_id[:8]}: {e}")
+    # Decide whether to credit. ONLY skip if we have a confirmed grant row.
+    # `None` (unknown due to Mongo error) → don't credit on this request,
+    # but the next login's recovery path will pick it up.
+    if grant_status is False:
+        try:
+            new_balance = await _credit_tokens(
+                user_id, "signup_grant", TOKEN_RULES["signup_grant"],
+                {"email": email, "source": "firebase_auth"},
+            )
+            if new_balance is not None:
+                balance = new_balance
+            else:
+                balance = int((existing_user or {}).get("tokens", 0) or 0)
+        except Exception as e:
+            logger.warning(f"signup_grant failed for {user_id[:8]}: {e}")
+            balance = int((existing_user or {}).get("tokens", 0) or 0)
+    else:
+        # Returning user (or unknown) — trust the user-doc balance
+        balance = int((existing_user or {}).get("tokens", 0) or 0)
+        # If the doc says 0 BUT no grant row exists yet (race: grant log
+        # write failed last time) → recovery credit
+        if balance == 0 and grant_status is False:
+            try:
+                new_balance = await _credit_tokens(
+                    user_id, "signup_grant", TOKEN_RULES["signup_grant"],
+                    {"email": email, "source": "firebase_auth_recovery"},
+                )
+                if new_balance is not None:
+                    balance = new_balance
+            except Exception as e:
+                logger.warning(f"firebase_auth recovery grant failed for {user_id[:8]}: {e}")
 
-    # New-signup admin notification — fire-and-forget so we don't slow auth
-    asyncio.create_task(_notify_admin(
-        "🎉 New user signup",
-        f"Name: {req.name or '—'}\nEmail: {email}\nTokens credited: {tokens_balance}",
-    ))
+    # Fire admin notification only for genuinely new signups
+    if is_new_user:
+        asyncio.create_task(_notify_admin(
+            "🎉 New user signup",
+            f"Name: {req.name or '—'}\nEmail: {email}\nTokens credited: {balance}",
+        ))
 
     return {
         "token": token,
         "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
         "has_profile": has_profile,
-        "tokens": tokens_balance,
+        "tokens": balance,
     }
 
 
@@ -4393,9 +4417,12 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
     # Charge tokens NOW — only after the analysis fully succeeded. If any
     # of the work above raised, we never reach this point and the user
     # isn't charged. Cleaner than spend-then-refund-on-error.
+    # Capture the post-debit balance so the frontend can update the wallet
+    # chip without a separate /tokens/balance round-trip.
+    new_balance = None
     if not is_guest:
         try:
-            await _credit_tokens(user["id"], "analysis_spend", -analysis_cost,
+            new_balance = await _credit_tokens(user["id"], "analysis_spend", -analysis_cost,
                                   {"source": "analyze_client_results", "analysis_id": file_id})
         except Exception as e:
             logger.warning(f"analysis_spend debit failed for {user['id'][:8]} (work succeeded — user got it free): {e}")
@@ -4423,6 +4450,10 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
         # Tells the frontend to surface the "sign up for 300 tokens" CTA
         # at the top of the result view.
         "guest_mode": is_guest,
+        # Post-debit token balance — let the wallet chip update instantly
+        # without a separate /tokens/balance call.
+        "token_balance": new_balance,
+        "tokens_spent": analysis_cost if not is_guest else 0,
         # Whether the analysis was successfully persisted to history.
         # When false, the frontend can warn the user "this didn't save —
         # it won't appear in History or be available for reanalysis".
