@@ -35,6 +35,43 @@ def _parse_json_safe(raw: str) -> dict:
     return {}
 
 
+def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes: bytes,
+                       mime_type: str, fps: float = 3.0) -> list:
+    """Build the parts list for a Gemini whole-video call with explicit
+    FPS sampling. Tries the SDK's proto types first (where the
+    video_metadata.fps field is supported), falls back to plain dict
+    parts if the SDK / API version doesn't support fps override.
+    Higher FPS catches short shot contact moments that default 1 fps
+    sampling misses — critical for sports analysis."""
+    try:
+        import google.generativeai as genai  # type: ignore
+        # SDK proto-based path (preferred — explicit VideoMetadata)
+        try:
+            video_meta = genai.protos.VideoMetadata(fps=fps)  # type: ignore[attr-defined]
+            video_part = genai.protos.Part(
+                inline_data=genai.protos.Blob(mime_type=mime_type, data=video_bytes),
+                video_metadata=video_meta,
+            )
+            return [{"text": sys_prompt}, {"text": user_msg}, video_part]
+        except (AttributeError, TypeError):
+            pass
+        # Dict-shape fallback — some SDK versions accept video_metadata
+        # as a sibling key on the part dict.
+        return [
+            {"text": sys_prompt}, {"text": user_msg},
+            {
+                "inline_data": {"mime_type": mime_type, "data": video_bytes},
+                "video_metadata": {"fps": fps},
+            },
+        ]
+    except Exception:
+        # Last resort: default sampling, no fps control.
+        return [
+            {"text": sys_prompt}, {"text": user_msg},
+            {"mime_type": mime_type, "data": video_bytes},
+        ]
+
+
 def _summarize_analysis(a: dict) -> dict:
     """Boil down a stored analysis to the fields a coach actually cares about.
 
@@ -485,19 +522,23 @@ def analyze_video_full(
     )
 
     backend_obj = pick_backend(backend)
-    # Pass video as an inline_data part. The Gemini backend.call() accepts
-    # arbitrary parts via frames_jpeg — but we need to bypass that and send
-    # a video MIME type. Direct SDK use:
     try:
         import google.generativeai as genai  # type: ignore
         model = backend_obj._get() if hasattr(backend_obj, "_get") else None
         if model is None:
-            # Fall back: build a model on the fly
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        parts: list = [{"text": sys_prompt}, {"text": user_msg},
-                       {"mime_type": mime_type or "video/mp4", "data": video_bytes}]
+        # IMPORTANT: Gemini samples video at 1 fps by default, which means
+        # short shots (badminton smashes ~0.3-0.5s) often fall ENTIRELY
+        # between sampled frames → the model literally never sees the
+        # contact moment, so it can only describe windup/follow-through
+        # and counts fewer shots than actually happened. Boost to 3 fps
+        # so every shot's contact frame is captured. Cost goes from
+        # ~258 tokens/sec to ~774 tokens/sec — still cheap (~$0.005-0.02
+        # per analysis on Flash). Falls back to default sampling if the
+        # SDK version doesn't expose VideoMetadata.
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=3.0)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -639,10 +680,9 @@ def analyze_video_universal(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        parts: list = [
-            {"text": sys_prompt}, {"text": user_msg},
-            {"mime_type": mime_type or "video/mp4", "data": video_bytes},
-        ]
+        # 3 fps sampling so short shots / strokes / reps don't fall
+        # between sampled frames. See _build_video_parts for context.
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=3.0)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -742,10 +782,9 @@ def describe_players_in_video(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        parts: list = [
-            {"text": sys_prompt}, {"text": user_msg},
-            {"mime_type": mime_type or "video/mp4", "data": video_bytes},
-        ]
+        # Lower 1.5 fps is plenty for describing static visual features
+        # (clothing/position) — players don't change appearance shot-to-shot.
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=1.5)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},

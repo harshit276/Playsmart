@@ -875,8 +875,12 @@ export default function AnalyzePage() {
           setLoadingText("Preparing video for Universal AI Coach...");
           setProgress(15);
           const vp = await import("@/ai/videoProcessor");
+          // Compression preset: 540p / 1.0 Mbps keeps shuttle/ball visible
+          // for shot identification while staying under Vercel's 4.5 MB
+          // body cap for a 30s clip. Was 480p / 0.8 Mbps which lost too
+          // much detail on personal phone-recorded clips.
           uploadFile = await vp.compressVideoForUpload(file, {
-            maxDim: 480, bitrate: 800_000, maxDurationSec: 30,
+            maxDim: 540, bitrate: 1_000_000, maxDurationSec: 30,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
           if (uploadFile.size > 4 * 1024 * 1024) {
@@ -1041,14 +1045,13 @@ export default function AnalyzePage() {
             try {
               setLoadingText("Preparing video for AI Coach...");
               const t0 = Date.now();
-              // Compress in-browser to fit Vercel's 4.5 MB body limit.
-              // Re-encodes at 480p / ~0.8 Mbps — Gemini still sees plenty
-              // of detail for shot classification. Skipped automatically
-              // when the file is already small.
+              // 540p / 1.0 Mbps — preserves shuttle/ball detail for shot
+              // identification on personal phone clips. Still fits Vercel's
+              // 4.5 MB body limit for ~30s clips.
               const mod = await import("@/ai/videoProcessor");
               const uploadFile = await mod.compressVideoForUpload(file, {
-                maxDim: 480,
-                bitrate: 800_000,
+                maxDim: 540,
+                bitrate: 1_000_000,
                 maxDurationSec: 30,
                 onProgress: (pct) => setLoadingText(`Preparing video... ${pct}%`),
               });
