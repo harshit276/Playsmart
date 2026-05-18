@@ -747,24 +747,36 @@ def describe_players_in_video(
     """
     sys_prompt = (
         "List every visible PERSON in this video. For each, give a short, "
-        "specific description the viewer can use to identify them. Focus on "
-        "stable visual features (clothing color, court position, body type, "
-        "side of the court) — not transient pose.\n\n"
+        "specific description the viewer can use to identify them.\n\n"
+        "CRITICAL — RESPECTFUL DESCRIPTORS ONLY:\n"
+        "Use ONLY these attribute categories to describe each person:\n"
+        "  - clothing colors and styles (top + bottom)\n"
+        "  - court / playing area position (near / far + left / right / center)\n"
+        "  - jersey or shirt number when visible\n"
+        "  - equipment they're holding (racket type, paddle, bat)\n"
+        "  - relative height / build using neutral terms ONLY if helpful "
+        "(e.g. 'taller player', 'shorter player') and only when needed to "
+        "disambiguate two players in similar clothing\n\n"
+        "DO NOT use skin tone, race, hair color/style, facial features, "
+        "age, gender, ethnicity, or any descriptors based on physical "
+        "appearance beyond the neutral height/build above. These are "
+        "irrelevant to identifying who to analyze in a sports clip, and "
+        "users have flagged them as inappropriate.\n\n"
         "Order players by visual prominence (most likely the main subject "
         "first). Skip referees, ball boys, audience, coaches on the "
-        "sideline — only list ATHLETES who are actively playing or "
-        "performing the activity.\n\n"
+        "sideline — only list ATHLETES who are actively playing.\n\n"
         "For each player also estimate a BOUNDING BOX in normalized "
         "[0..1] coordinates anchored on a representative frame near the "
-        "middle of the video (where you can see them clearly). The box "
-        "should tightly enclose the full body (head-to-feet).\n\n"
+        "middle of the video. The box should tightly enclose the full "
+        "body (head-to-feet).\n\n"
         "Respond with valid JSON ONLY:\n"
         '{\n'
         '  "players": [\n'
         '    {\n'
         '      "id": "p1",\n'
-        '      "description": "<concise — e.g. \'tall player, red shirt, '
-        'near court, right side\'>",\n'
+        '      "description": "<concise, equipment + clothing + position '
+        'only — e.g. \'Player in red shirt and black shorts, near court, '
+        'right side\' or \'Player with number 7 jersey, far court, left\'>",\n'
         '      "clothing": "<top + bottom colors>",\n'
         '      "court_position": "<near/far + left/center/right>",\n'
         '      "bbox": {"x": <0-1>, "y": <0-1>, "width": <0-1>, "height": <0-1>},\n'
@@ -796,6 +808,52 @@ def describe_players_in_video(
     except Exception as exc:
         return {"players": [], "_meta": {"error": str(exc)[:300], "backend": backend_obj.name}}
 
+    # Safety net: even with the prompt rules above, Gemini occasionally
+    # slips skin-tone / racial / hair / age / gender descriptors into the
+    # `description`. Strip those phrases server-side before they reach the
+    # UI so users never see them, regardless of the model's behavior.
+    import re as _re
+    # Phrases to DELETE entirely (with their connecting glue words like
+    # "with" or "and"). Order matters — match longer phrases first.
+    _SCRUB_RX = [
+        # "Player with dark skin and long dark hair" → "Player"
+        _re.compile(r"\b(?:player|person|man|woman|athlete)\s+with\s+"
+                    r"(?:[a-z\-\s]+?\s+(?:skin|skinned|complexion|complexioned|hair|hair\s+style)|"
+                    r"[a-z\-]+\s+beard(?:ed)?)\s*"
+                    r"(?:,?\s*and\s+[a-z\-\s]+?(?:skin|hair|beard|complexion))*", _re.IGNORECASE),
+        # ", with dark skin," / ", with long brown hair," embedded mid-sentence
+        _re.compile(r"[,\s]+with\s+(?:[a-z\-\s]+?(?:skin|skinned|complexion|complexioned|hair)"
+                    r"(?:[,\s]+and\s+[a-z\-\s]+?(?:skin|hair|complexion|beard))*)", _re.IGNORECASE),
+        # "African / Asian / Indian / etc player|man|woman" — race + person
+        _re.compile(r"\b(?:African|Caucasian|Asian|South[-\s]?Asian|Indian|Hispanic|Latin[oa]?|"
+                    r"European|Middle[-\s]?Eastern|Black|White)\s+(?=(?:player|man|woman|person|boy|girl|male|female|athlete)\b)", _re.IGNORECASE),
+        # Standalone skin/hair/beard phrases ("dark-skinned", "long hair", etc.)
+        _re.compile(r"\b(?:dark|light|fair|tan|tanned|pale|olive|brown|black|white)[-\s]?(?:skin|skinned|complexion|complexioned|toned)\b[,]?", _re.IGNORECASE),
+        _re.compile(r"\b(?:long|short|curly|straight|wavy|dark|light|blonde|brown|red|grey|gray|black)\s+(?:dark\s+)?hair\b[,]?", _re.IGNORECASE),
+        _re.compile(r"\b(?:bald|balding|shaved\s+head|bearded|beard|moustache|mustache|clean[-\s]?shaven|stubble|goatee)\b[,]?", _re.IGNORECASE),
+        # Age / gender adjectives in front of "player|man|...":
+        _re.compile(r"\b(?:young|old|elder|teen|teenage|adult|middle[-\s]?aged|senior)\s+(?=(?:player|man|woman|person|boy|girl|male|female|athlete)\b)", _re.IGNORECASE),
+        _re.compile(r"\b(?:male|female)\s+(?=(?:player|athlete|person)\b)", _re.IGNORECASE),
+    ]
+
+    def _scrub(s: str) -> str:
+        if not s:
+            return s
+        out_s = s
+        for rx in _SCRUB_RX:
+            out_s = rx.sub("Player" if "player|person|man|woman|athlete" in rx.pattern else "", out_s)
+        # Tidy up the connective tissue left behind.
+        out_s = _re.sub(r"\s*,\s*,+", ",", out_s)          # ", ," → ","
+        out_s = _re.sub(r"\s+and\s+,", ",", out_s)         # "and ," → ","
+        out_s = _re.sub(r",\s+and\s+(wearing|in|with)\b", r" \1", out_s)  # ", and wearing" → " wearing"
+        out_s = _re.sub(r"^\s*,\s*", "", out_s)            # leading comma
+        out_s = _re.sub(r"\s+,", ",", out_s)               # space-before-comma
+        out_s = _re.sub(r"\s{2,}", " ", out_s).strip(" ,.")
+        # If we destroyed too much, fall back rather than ship a stub.
+        if len(out_s) < 8 or out_s.lower() in {"player", "player ."}:
+            return "Player on court"
+        return out_s
+
     data = _parse_json_safe(raw)
     out = []
     for i, p in enumerate((data.get("players") or [])[:6]):
@@ -803,8 +861,8 @@ def describe_players_in_video(
             continue
         entry = {
             "id": str(p.get("id") or f"p{i+1}"),
-            "description": str(p.get("description", ""))[:200],
-            "clothing": str(p.get("clothing", ""))[:80],
+            "description": _scrub(str(p.get("description", "")))[:200],
+            "clothing": _scrub(str(p.get("clothing", "")))[:80],
             "court_position": str(p.get("court_position", ""))[:80],
             "is_likely_athlete": bool(p.get("is_likely_athlete", True)),
         }
