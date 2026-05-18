@@ -129,22 +129,32 @@ SUBSCRIPTION_PLANS = [
 
 
 # ─── One-off token packs ─────────────────────────────────────────────
-# Already defined in server.py (TOKEN_PACKS); re-exported here so the
-# pricing page can render packs + subscriptions in one /api/plans call.
+# v1 launch keeps things simple: token packs only, no subscriptions
+# (SUBSCRIPTION_PLANS above is kept for future re-enable but the /pricing
+# page only renders these packs for now).
+#
+# Baseline: 100 tokens = ₹30 = 1 Standard analysis.
+# Bulk discount kicks in at 500+ tokens.
 ONE_OFF_PACKS = [
-    {"key": "pack_500",   "tokens":   500, "price_inr":   99,
-     "label": "Starter Pack", "per_token_inr": 0.198,
+    {"key": "pack_100",   "tokens":   100, "price_inr":   30,
+     "label": "Trial",       "per_token_inr": 0.30,
+     "analyses_flash": 1, "analyses_premium": 0},
+    {"key": "pack_500",   "tokens":   500, "price_inr":  130,
+     "label": "Starter",     "per_token_inr": 0.26,
      "analyses_flash": 5, "analyses_premium": 2},
-    {"key": "pack_1500",  "tokens":  1500, "price_inr":  249,
-     "label": "Best Value", "highlight": True, "per_token_inr": 0.166,
+    {"key": "pack_1500",  "tokens":  1500, "price_inr":  350,
+     "label": "Best Value", "highlight": True, "per_token_inr": 0.233,
      "analyses_flash": 15, "analyses_premium": 6},
-    {"key": "pack_5000",  "tokens":  5000, "price_inr":  699,
-     "label": "Power Pack", "per_token_inr": 0.140,
+    {"key": "pack_5000",  "tokens":  5000, "price_inr": 1000,
+     "label": "Power Pack",  "per_token_inr": 0.20,
      "analyses_flash": 50, "analyses_premium": 20},
-    {"key": "pack_15000", "tokens": 15000, "price_inr": 1499,
-     "label": "Mega Pack", "per_token_inr": 0.100,
-     "analyses_flash": 150, "analyses_premium": 60},
 ]
+
+
+# Subscription plans are DISABLED in the v1 /pricing render. To bring
+# them back, flip SHOW_SUBSCRIPTIONS=True and the page will render them
+# above the token packs.
+SHOW_SUBSCRIPTIONS = False
 
 
 def get_plan(plan_key: str) -> dict | None:

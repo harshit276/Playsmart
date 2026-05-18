@@ -129,20 +129,23 @@ api_router = APIRouter(prefix="/api")
 
 @api_router.get("/plans")
 async def list_plans():
-    """Subscription tiers + one-off token packs in one call. Frontend
-    /pricing page renders both as side-by-side options so users can
-    choose monthly OR pay-per-use."""
+    """Token packs + (optionally) subscription tiers. v1 launch only
+    exposes packs; subscriptions live behind a flag so we can re-enable
+    them later without a code change."""
     try:
         from pricing_config import (
             SUBSCRIPTION_PLANS, ONE_OFF_PACKS, ANALYSIS_TOKEN_COST,
+            SHOW_SUBSCRIPTIONS,
         )
     except ImportError:
-        return {"plans": [], "packs": [], "costs": {}, "currency": "INR"}
+        return {"plans": [], "packs": [], "costs": {}, "currency": "INR",
+                "show_subscriptions": False}
     return {
-        "plans": SUBSCRIPTION_PLANS,
+        "plans": SUBSCRIPTION_PLANS if SHOW_SUBSCRIPTIONS else [],
         "packs": ONE_OFF_PACKS,
         "costs": ANALYSIS_TOKEN_COST,
         "currency": "INR",
+        "show_subscriptions": SHOW_SUBSCRIPTIONS,
     }
 
 
@@ -881,10 +884,12 @@ import secrets as _secrets
 import string as _string
 
 TOKEN_PACKS = [
-    {"key": "pack_500",  "tokens":   500, "price_inr":   99, "label": "Starter"},
-    {"key": "pack_1500", "tokens":  1500, "price_inr":  249, "label": "Best Value", "highlight": True},
-    {"key": "pack_5000", "tokens":  5000, "price_inr":  699, "label": "Pro"},
-    {"key": "pack_15000","tokens": 15000, "price_inr": 1499, "label": "Power User"},
+    # Baseline: 100 tokens = ₹30 = 1 Standard analysis (or 0.4 Premium).
+    # Bulk packs give progressive discount to reward repeat users.
+    {"key": "pack_100",  "tokens":   100, "price_inr":   30, "label": "Trial"},
+    {"key": "pack_500",  "tokens":   500, "price_inr":  130, "label": "Starter"},
+    {"key": "pack_1500", "tokens":  1500, "price_inr":  350, "label": "Best Value", "highlight": True},
+    {"key": "pack_5000", "tokens":  5000, "price_inr": 1000, "label": "Power"},
 ]
 
 # Earn / spend amounts — change here, log everywhere (kind matches the
