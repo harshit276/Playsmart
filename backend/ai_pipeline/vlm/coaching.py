@@ -605,6 +605,7 @@ def analyze_video_universal(
     video_bytes: bytes, mime_type: str,
     target_player_description: str | None = None,
     backend: str = "auto",
+    tier: str = "standard",
 ) -> dict:
     """Sport-agnostic whole-video analysis. Sends the video to Gemini with
     an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
@@ -672,7 +673,11 @@ def analyze_video_universal(
         "events rather than guessing."
     )
 
-    backend_obj = pick_backend(backend)
+    # Premium tier swaps Gemini 2.5 Flash → Gemini 2.5 Pro for sharper
+    # detection on noisy / fast-action / multi-shot clips. Costs ~5× more
+    # in tokens but typically catches every shot vs Flash sometimes missing.
+    model_override = "gemini-2.5-pro" if (tier or "").lower() == "premium" else None
+    backend_obj = pick_backend(backend, model=model_override) if model_override else pick_backend(backend)
     try:
         import google.generativeai as genai  # type: ignore
         model = backend_obj._get() if hasattr(backend_obj, "_get") else None
@@ -680,8 +685,6 @@ def analyze_video_universal(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        # 3 fps sampling so short shots / strokes / reps don't fall
-        # between sampled frames. See _build_video_parts for context.
         parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=3.0)
         resp = model.generate_content(
             parts,
@@ -725,7 +728,7 @@ def analyze_video_universal(
         "_meta": {
             "backend": backend_obj.name, "model": backend_obj.model_name,
             "video_bytes": len(video_bytes), "mime_type": mime_type,
-            "mode": "universal",
+            "mode": "universal", "tier": tier,
         },
     }
 

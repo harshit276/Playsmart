@@ -127,6 +127,25 @@ app.add_middleware(
 api_router = APIRouter(prefix="/api")
 
 
+@api_router.get("/plans")
+async def list_plans():
+    """Subscription tiers + one-off token packs in one call. Frontend
+    /pricing page renders both as side-by-side options so users can
+    choose monthly OR pay-per-use."""
+    try:
+        from pricing_config import (
+            SUBSCRIPTION_PLANS, ONE_OFF_PACKS, ANALYSIS_TOKEN_COST,
+        )
+    except ImportError:
+        return {"plans": [], "packs": [], "costs": {}, "currency": "INR"}
+    return {
+        "plans": SUBSCRIPTION_PLANS,
+        "packs": ONE_OFF_PACKS,
+        "costs": ANALYSIS_TOKEN_COST,
+        "currency": "INR",
+    }
+
+
 @api_router.get("/warm")
 async def warm_lambda():
     """Lightweight lambda pre-warm endpoint. The frontend hits this when the
@@ -2967,6 +2986,10 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     backend: str = "auto"
     mime_type: str = "video/mp4"
     video_b64: str
+    # "standard" (Gemini Flash, 100 tokens) | "premium" (Gemini Pro, 250
+    # tokens). Premium catches more shots on noisy clips but costs ~5×
+    # more per analysis — quota check happens in the endpoint body.
+    tier: str = "standard"
 
 
 @api_router.post("/analyze-video-universal")
@@ -3004,6 +3027,7 @@ async def analyze_video_universal_endpoint(
                 video_bytes, req.mime_type,
                 target_player_description=req.target_player_description,
                 backend=req.backend,
+                tier=req.tier,
             )),
             timeout=55.0,
         )

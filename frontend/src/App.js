@@ -29,6 +29,7 @@ const PickleballPage = lazy(() => import("@/pages/PickleballPage"));
 const LabelPage = lazy(() => import("@/pages/LabelPage"));
 const TestModelPage = lazy(() => import("@/pages/TestModelPage"));
 const WalletPage = lazy(() => import("@/pages/WalletPage"));
+const PricingPage = lazy(() => import("@/pages/PricingPage"));
 const ReferralPage = lazy(() => import("@/pages/ReferralPage"));
 const MarketplacePage = lazy(() => import("@/pages/MarketplacePage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
@@ -144,6 +145,8 @@ function AppRoutes() {
       <Route path="/assessment" element={<AssessmentPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/wallet" element={<WalletPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/plans" element={<Navigate to="/pricing" replace />} />
       <Route path="/referral" element={<ReferralPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />
       <Route path="/profile" element={<ProfilePage />} />

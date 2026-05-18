@@ -797,10 +797,9 @@ export default function AnalyzePage() {
       return; // halts analysis until user resolves via the modal
     }
 
-    // Universal mode skips the MoveNet pre-scan entirely — Gemini
-    // identifies the sport AND the players itself. Go straight to the
-    // analysis call without showing a player picker modal.
-    if (accuracyMode === "universal") {
+    // Universal AND Premium modes skip the MoveNet pre-scan — Gemini
+    // identifies the sport AND the players itself in a single request.
+    if (accuracyMode === "universal" || accuracyMode === "premium") {
       await runClientAnalysis(sportToAnalyze, null);
       return;
     }
@@ -857,12 +856,12 @@ export default function AnalyzePage() {
     setError(null);
     setProgress(0);
 
-    // ─── Universal mode short-circuit ────────────────────────────────
-    // 2-pass flow: (a) compress video, (b) ask Gemini to describe every
-    // visible person so the user can pick which one to analyze,
-    // (c) re-call with the picked person's description. Bypasses pose
-    // extraction entirely — works for ANY sport.
-    if (accuracyMode === "universal") {
+    // ─── Universal & Premium mode short-circuit ─────────────────────
+    // Both modes use the same 2-pass flow (describe → pick → analyze);
+    // Premium swaps Gemini Flash → Gemini 2.5 Pro for the analysis pass
+    // by sending tier: "premium" to the endpoint. Costs 250 tokens vs
+    // 100 for Standard/Universal.
+    if (accuracyMode === "universal" || accuracyMode === "premium") {
       try {
         // If the picker already returned a selection (options.universalPick),
         // skip straight to the analysis call with the stored compressed
@@ -945,7 +944,8 @@ export default function AnalyzePage() {
           mime_type: uploadFile.type || file.type || "video/mp4",
           video_b64: b64,
           target_player_description: targetDesc,
-        }, { timeout: 90000 });
+          tier: accuracyMode === "premium" ? "premium" : "standard",
+        }, { timeout: accuracyMode === "premium" ? 120000 : 90000 });
         setProgress(95);
         setLoadingText("Building results...");
         // Build a minimal result object the existing UI can render.
@@ -1980,8 +1980,13 @@ export default function AnalyzePage() {
 
       {/* Accuracy mode toggle — opt-in whole-video Gemini analysis */}
       <div className="mb-4">
-        <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2">Accuracy Mode</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium">Accuracy Mode</p>
+          <Link to="/pricing" className="text-[10px] text-lime-400 hover:text-lime-300 font-medium">
+            View plans →
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <button
             type="button"
             onClick={() => { setAccuracyMode("keyframes"); try { localStorage.setItem("playsmart_accuracy_mode", "keyframes"); } catch {} }}
@@ -2020,9 +2025,24 @@ export default function AnalyzePage() {
             }`}>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-semibold text-white">Universal</span>
-              <span className="text-[10px] text-zinc-500">~10s · ~$0.01</span>
+              <span className="text-[10px] text-zinc-500">~10s · 100 tok</span>
             </div>
-            <p className="text-[11px] text-zinc-400">Any sport. AI-only — no pose math. Try for swimming, snooker, golf, etc.</p>
+            <p className="text-[11px] text-zinc-400">Any sport — swimming, snooker, golf. AI-only, no pose math.</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setAccuracyMode("premium"); try { localStorage.setItem("playsmart_accuracy_mode", "premium"); } catch {} }}
+            className={`text-left rounded-xl border p-3 transition-all relative ${
+              accuracyMode === "premium"
+                ? "border-amber-400/50 bg-amber-400/5"
+                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
+            }`}>
+            <div className="absolute -top-2 right-2 bg-amber-400 text-black text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">Pro</div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-white">Premium</span>
+              <span className="text-[10px] text-zinc-500">~15s · 250 tok</span>
+            </div>
+            <p className="text-[11px] text-zinc-400">Gemini 2.5 Pro — catches every shot on tough phone-recorded clips.</p>
           </button>
         </div>
       </div>

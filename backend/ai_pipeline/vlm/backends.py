@@ -225,13 +225,18 @@ def available_backends() -> list[dict]:
     return out
 
 
-def pick_backend(name: str = "auto") -> VLMBackend:
-    """Resolve backend name to an instance. 'auto' returns the first available."""
+def pick_backend(name: str = "auto", model: str | None = None) -> VLMBackend:
+    """Resolve backend name to an instance. 'auto' returns the first available.
+
+    `model` (optional): explicit model name override. Useful for upgrading
+    the default Gemini Flash to Gemini 2.5 Pro for premium-tier analyses,
+    without changing GEMINI_MODEL globally.
+    """
     if name and name != "auto":
         cls = _BACKENDS.get(name)
         if cls is None:
             raise ValueError(f"unknown VLM backend: {name}")
-        b = cls()
+        b = cls(model=model) if model else cls()
         ok, reason = b.is_available()
         if not ok:
             raise RuntimeError(f"VLM backend '{name}' not available: {reason}")
