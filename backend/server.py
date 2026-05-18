@@ -862,6 +862,67 @@ async def admin_support_tickets(x_admin_key: str = Header(None, alias="X-Admin-K
     return {"tickets": rows, "count": len(rows)}
 
 
+@api_router.get("/admin/cashfree-ping")
+async def admin_cashfree_ping(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """Hit Cashfree with the configured creds + a dummy order request.
+    Use this after setting CASHFREE_APP_ID / CASHFREE_SECRET_KEY to confirm
+    your keys are valid for the selected env (sandbox vs production).
+    Does NOT create a real order — uses an invalid amount on purpose so
+    Cashfree's response confirms auth without persisting anything."""
+    _require_admin(x_admin_key)
+    if not (CASHFREE_APP_ID and CASHFREE_SECRET_KEY):
+        return {
+            "ok": False,
+            "configured": False,
+            "env": CASHFREE_ENV,
+            "demo_mode": DEMO_PAYMENTS,
+            "error": "CASHFREE_APP_ID and/or CASHFREE_SECRET_KEY missing",
+        }
+    # Use an amount of 0.01 which Cashfree rejects → tells us the keys
+    # auth'd correctly (authoritative response from their server) without
+    # creating a billable order.
+    test_order_id = f"PING_{int(_time.time() * 1000)}"
+    payload = {
+        "order_id": test_order_id,
+        "order_amount": 0.01,
+        "order_currency": "INR",
+        "customer_details": {
+            "customer_id": "pingtest",
+            "customer_email": "ping@athlyticai.com",
+            "customer_phone": "9999999999",
+        },
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(f"{CASHFREE_BASE_URL}/orders",
+                                  headers=_cashfree_headers(), json=payload)
+        body = r.text[:400]
+        try:
+            body_json = r.json()
+        except Exception:
+            body_json = {"raw": body}
+        # 401/403 → bad keys. 400 → keys ok but request rejected (expected for
+        # amount=0.01). 200 → keys + amount both ok (unlikely with 0.01).
+        keys_ok = r.status_code not in (401, 403)
+        return {
+            "ok": keys_ok,
+            "configured": True,
+            "env": CASHFREE_ENV,
+            "demo_mode": DEMO_PAYMENTS,
+            "base_url": CASHFREE_BASE_URL,
+            "app_id_prefix": (CASHFREE_APP_ID or "")[:6] + "…",
+            "status": r.status_code,
+            "response": body_json,
+        }
+    except Exception as e:
+        return {
+            "ok": False,
+            "configured": True,
+            "env": CASHFREE_ENV,
+            "error": f"{type(e).__name__}: {str(e)[:200]}",
+        }
+
+
 @api_router.post("/admin/test-notify")
 async def admin_test_notify(x_admin_key: str = Header(None, alias="X-Admin-Key")):
     """Fire a test notification to all configured channels. Use this to
@@ -1175,6 +1236,28 @@ def _cashfree_headers() -> dict:
     }
 
 
+def _normalize_phone_for_cashfree(phone: str) -> str:
+    """Cashfree's 2023-08-01 API rejects invalid customer_phone strings
+    with a 400 (e.g. 'customer_phone is not a valid phone number').
+    Accept what's there and coerce to a 10-digit Indian number or a clean
+    E.164 string. If we can't make it valid, use a safe stub.
+    """
+    if not phone:
+        return "9999999999"
+    digits = "".join(ch for ch in str(phone) if ch.isdigit())
+    if not digits:
+        return "9999999999"
+    # +91XXXXXXXXXX → keep last 10 digits
+    if len(digits) > 10 and digits.startswith("91"):
+        digits = digits[-10:]
+    elif len(digits) > 10:
+        digits = digits[-10:]
+    # Indian numbers start with 6-9
+    if len(digits) == 10 and digits[0] in "6789":
+        return digits
+    return "9999999999"
+
+
 def _get_pack(pack_key: str) -> Optional[dict]:
     return next((p for p in TOKEN_PACKS if p["key"] == pack_key), None)
 
@@ -1234,14 +1317,19 @@ async def create_payment_order(req: CreateOrderRequest, authorization: str = Hea
         raise HTTPException(status_code=503, detail="Payments not configured. Set CASHFREE_APP_ID + CASHFREE_SECRET_KEY.")
 
     order_id = f"ATH_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:8]}"
+    # Cashfree REJECTS the order if customer_id contains "-" so strip the
+    # UUID dashes. customer_id must match ^[a-zA-Z0-9_\-\.@]+$ per their docs
+    # but in practice "-" trips their validator in sandbox.
+    cust_id = user["id"].replace("-", "")[:48]
+    cust_phone = _normalize_phone_for_cashfree(user.get("phone"))
     payload = {
         "order_id": order_id,
         "order_amount": float(pack["price_inr"]),
         "order_currency": "INR",
         "customer_details": {
-            "customer_id": user["id"],
+            "customer_id": cust_id,
             "customer_email": (user.get("email") or "noemail@athlyticai.com")[:80],
-            "customer_phone": (user.get("phone") or "9999999999")[:14],
+            "customer_phone": cust_phone,
         },
         "order_meta": {
             "return_url": f"https://athlyticai.com/wallet?order_id={{order_id}}",
@@ -1254,8 +1342,16 @@ async def create_payment_order(req: CreateOrderRequest, authorization: str = Hea
             r = await client.post(f"{CASHFREE_BASE_URL}/orders",
                                   headers=_cashfree_headers(), json=payload)
             if r.status_code >= 400:
-                logger.error(f"Cashfree create-order failed {r.status_code}: {r.text[:300]}")
-                raise HTTPException(status_code=502, detail="Payment provider error")
+                # Surface Cashfree's actual error message back to the caller
+                # so the UI/admin can see "Invalid x-client-id" etc. instead
+                # of a generic 502.
+                cf_err = r.text[:400]
+                logger.error(f"Cashfree create-order failed {r.status_code}: {cf_err}")
+                try:
+                    cf_msg = (r.json() or {}).get("message") or cf_err
+                except Exception:
+                    cf_msg = cf_err
+                raise HTTPException(status_code=502, detail=f"Cashfree: {cf_msg}")
             data = r.json()
     except HTTPException:
         raise
@@ -11002,9 +11098,12 @@ async def health():
             "JWT_SECRET": "set" if (JWT_SECRET and JWT_SECRET != "playsmart_default_secret") else "DEFAULT (insecure)",
             "GROQ_API_KEY": "set" if os.environ.get("GROQ_API_KEY") else "missing",
             "GEMINI_API_KEY": "set" if os.environ.get("GEMINI_API_KEY") else "missing",
-            "CASHFREE_APP_ID": "set" if CASHFREE_APP_ID else "missing (demo mode active)",
-            "ADMIN_WIPE_KEY": "set" if ADMIN_WIPE_KEY else "missing",
+            "CASHFREE_APP_ID": "set" if CASHFREE_APP_ID else "missing",
+            "CASHFREE_SECRET_KEY": "set" if CASHFREE_SECRET_KEY else "missing",
+            "CASHFREE_WEBHOOK_SECRET": "set" if CASHFREE_WEBHOOK_SECRET else "missing (webhook will skip signature check)",
+            "CASHFREE_ENV": CASHFREE_ENV,
             "DEMO_PAYMENTS": str(DEMO_PAYMENTS),
+            "ADMIN_WIPE_KEY": "set" if ADMIN_WIPE_KEY else "missing",
         },
         "mongo": {
             "configured": bool(mongo_url),

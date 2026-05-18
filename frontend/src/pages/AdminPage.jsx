@@ -131,6 +131,8 @@ export default function AdminPage() {
 function StatsTab({ headers }) {
   const { data, loading, refresh } = useFetch("/admin/stats", headers);
   const [testing, setTesting] = useState(false);
+  const [pingingCF, setPingingCF] = useState(false);
+  const [cfResult, setCfResult] = useState(null);
   const sendTestNotification = async () => {
     setTesting(true);
     try {
@@ -143,6 +145,19 @@ function StatsTab({ headers }) {
       toast.error(e?.response?.data?.detail || "Test failed");
     }
     setTesting(false);
+  };
+  const pingCashfree = async () => {
+    setPingingCF(true);
+    setCfResult(null);
+    try {
+      const r = await api.get("/admin/cashfree-ping", { headers, timeout: 12000 });
+      setCfResult(r.data);
+      if (r.data?.ok) toast.success(`Cashfree ${r.data.env}: keys OK`);
+      else toast.error(`Cashfree: ${r.data?.error || "auth failed"}`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Cashfree ping failed");
+    }
+    setPingingCF(false);
   };
   if (loading) return <Spinner />;
   if (!data) return null;
@@ -165,11 +180,28 @@ function StatsTab({ headers }) {
             className="border-amber-400/30 text-amber-300 hover:bg-amber-400/10 text-xs h-7">
             {testing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔔"} Test notify
           </Button>
+          <Button onClick={pingCashfree} disabled={pingingCF} size="sm" variant="outline"
+            className="border-lime-400/30 text-lime-300 hover:bg-lime-400/10 text-xs h-7">
+            {pingingCF ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "💳"} Ping Cashfree
+          </Button>
           <Button onClick={refresh} size="sm" variant="ghost" className="text-zinc-400 text-xs">
             <RefreshCw className="w-3 h-3 mr-1" /> Refresh
           </Button>
         </div>
       </div>
+      {cfResult && (
+        <div className={`rounded-xl border p-3 text-xs ${
+          cfResult.ok ? "bg-lime-400/5 border-lime-400/30 text-lime-200" : "bg-rose-400/5 border-rose-400/30 text-rose-200"
+        }`}>
+          <p className="font-semibold mb-1">
+            {cfResult.ok ? "✅" : "❌"} Cashfree {cfResult.env} {cfResult.configured ? `· ${cfResult.app_id_prefix || ""}` : "(not configured)"}
+            {cfResult.demo_mode ? " · demo mode ON" : ""}
+          </p>
+          <pre className="text-[10px] text-zinc-400 overflow-x-auto whitespace-pre-wrap break-all">
+            {JSON.stringify(cfResult.response || cfResult.error || {}, null, 2).slice(0, 400)}
+          </pre>
+        </div>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {tiles.map(t => (
           <div key={t.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
