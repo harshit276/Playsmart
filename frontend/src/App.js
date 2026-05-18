@@ -107,10 +107,19 @@ function AuthProvider({ children }) {
 
   const isGuest = !user && localStorage.getItem("guest_mode") === "true";
 
+  // Optimistic token updates — call this from any spend/credit response
+  // that includes the new balance. Avoids the network round-trip flicker
+  // of fetchTokens(). Pass null/undefined to ignore (caller doesn't have to
+  // null-check).
+  const updateTokens = useCallback((newBalance) => {
+    if (typeof newBalance === "number") setTokens(newBalance);
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user, profile, login, logout, refreshProfile,
       tokens, referralCode, refreshTokens: fetchTokens,
+      updateTokens,
       isAuthenticated: !!user, isGuest,
     }}>
       {children}
