@@ -130,12 +130,22 @@ api_router = APIRouter(prefix="/api")
 @api_router.get("/reference/{sport}/{shot_type}")
 async def get_pro_reference(sport: str, shot_type: str):
     """Pro reference clip for side-by-side comparison. Returns {} when
-    we don't have a curated entry — frontend hides the CTA in that case."""
+    we don't have a curated entry — frontend hides the CTA in that case.
+    get_reference now does a blocking YouTube oEmbed check to make sure
+    the curated video still exists + is embeddable, so we run it in an
+    executor to avoid blocking the asyncio loop."""
     try:
         from reference_videos import get_reference, available_references
     except ImportError:
         return {"reference": None, "available_shots": []}
-    ref = get_reference(sport, shot_type)
+    loop = asyncio.get_event_loop()
+    try:
+        ref = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: get_reference(sport, shot_type)),
+            timeout=6.0,
+        )
+    except (Exception, asyncio.TimeoutError):
+        ref = None
     return {
         "reference": ref,
         "available_shots": available_references(sport),

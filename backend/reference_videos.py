@@ -26,6 +26,39 @@ To add a new entry:
 """
 from __future__ import annotations
 
+# Per-process cache of YouTube embeddability checks. {youtube_id: (ok, expires_at)}.
+# We hit YouTube's oEmbed endpoint to confirm the video exists, isn't
+# region-blocked at the host's location, and the owner hasn't disabled
+# embedding. Cached 6 hours to avoid rate-limiting on busy days.
+import time
+_YT_CHECK_CACHE: dict[str, tuple[bool, float]] = {}
+_YT_CHECK_TTL_SEC = 6 * 60 * 60
+
+
+def _is_youtube_embeddable(youtube_id: str) -> bool:
+    """Best-effort check: True if YouTube's oEmbed endpoint returns a
+    valid record for this ID. False otherwise (404, embed-disabled, etc.)
+    Cached to avoid hammering YouTube on every analysis."""
+    if not youtube_id or len(youtube_id) < 6:
+        return False
+    cached = _YT_CHECK_CACHE.get(youtube_id)
+    now = time.time()
+    if cached and cached[1] > now:
+        return cached[0]
+    ok = False
+    try:
+        import urllib.request as _u
+        url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={youtube_id}&format=json"
+        req = _u.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; PlaysmartBot/1.0)"})
+        with _u.urlopen(req, timeout=4.0) as resp:
+            ok = resp.status == 200
+    except Exception:
+        # Treat any failure (404, timeout, network) as "not available"
+        # so we surface the fallback UI instead of a broken embed.
+        ok = False
+    _YT_CHECK_CACHE[youtube_id] = (ok, now + _YT_CHECK_TTL_SEC)
+    return ok
+
 # ---------------------------------------------------------------------------
 # _CURATION_STATUS  (last refreshed: 2026-05-17)
 # ---------------------------------------------------------------------------
@@ -595,46 +628,71 @@ def _normalize_sport(s: str) -> str:
     return base.replace(" ", "_")
 
 
+def _wrap(entry: dict, sport_l: str, shot_l: str) -> dict | None:
+    """Attach sport + shot_type metadata to an entry, after confirming
+    the YouTube ID is still embeddable. Returns None when the video is
+    gone / region-blocked / embed-disabled so callers can try a
+    fallback or hide the UI gracefully."""
+    if not entry:
+        return None
+    yid = entry.get("youtube_id", "")
+    if not _is_youtube_embeddable(yid):
+        return None
+    return {**entry, "sport": sport_l, "shot_type": shot_l}
+
+
 def get_reference(sport: str, shot_type: str) -> dict | None:
     """Look up the pro reference for a shot. Returns None when there's
-    no curated entry yet (frontend hides the Compare-to-Pro button)."""
+    no curated entry yet (frontend hides the Compare-to-Pro button).
+
+    Now also returns None when the curated YouTube clip has been
+    removed / region-blocked / had embedding disabled — so users never
+    see a broken "This video is unavailable" iframe. Falls back to any
+    other curated shot in the same sport when the direct match is dead."""
     sport_l = _normalize_sport(sport)
     shot_l = (shot_type or "").lower().strip().replace(" ", "_")
     s = REFERENCE_VIDEOS.get(sport_l)
     if not s:
         return None
-    # Direct hit
-    entry = s.get(shot_l)
-    if entry:
-        return {**entry, "sport": sport_l, "shot_type": shot_l}
-    # Substring fallback: "smash" matches "smash_overhead" and vice-versa
-    for known in s:
-        if known in shot_l or shot_l in known:
-            return {**s[known], "sport": sport_l, "shot_type": known}
-    # Token-overlap fallback: "back_court_smash" matches "smash" via the
-    # shared "smash" token. Generic words like "shot"/"play"/"hit" are
-    # stopworded so unrelated shots don't all collapse to "net_shot" just
-    # because they share the word "shot".
+    # Order of attempts: direct hit → substring fallback → token-overlap
+    # fallback → ANY OTHER entry in the sport (last-resort). Each is
+    # filtered through _wrap() which drops dead YouTube IDs, so we
+    # advance to the next attempt instead of returning a broken embed.
     GENERIC_TOKENS = {
         "shot", "shots", "play", "hit", "stroke", "action",
-        "ball", "court", "side", "front", "back", "side", "type",
+        "ball", "court", "side", "front", "back", "type",
     }
+
+    # 1) Direct hit
+    if shot_l in s:
+        out = _wrap(s[shot_l], sport_l, shot_l)
+        if out:
+            return out
+
+    # 2) Substring fallback
+    for known in s:
+        if known in shot_l or shot_l in known:
+            out = _wrap(s[known], sport_l, known)
+            if out:
+                return out
+
+    # 3) Token-overlap fallback (with stopwords)
     shot_tokens = {t for t in shot_l.split("_")
                    if len(t) >= 4 and t not in GENERIC_TOKENS}
-    if not shot_tokens:
-        return None
-    best = None
-    best_overlap = 0
-    for known, entry in s.items():
-        known_tokens = {t for t in known.split("_")
-                        if len(t) >= 4 and t not in GENERIC_TOKENS}
-        overlap = len(shot_tokens & known_tokens)
-        if overlap > best_overlap:
-            best_overlap = overlap
-            best = (known, entry)
-    if best:
-        known, entry = best
-        return {**entry, "sport": sport_l, "shot_type": known}
+    if shot_tokens:
+        ranked = []
+        for known, entry in s.items():
+            known_tokens = {t for t in known.split("_")
+                            if len(t) >= 4 and t not in GENERIC_TOKENS}
+            overlap = len(shot_tokens & known_tokens)
+            if overlap > 0:
+                ranked.append((overlap, known, entry))
+        ranked.sort(reverse=True)
+        for _, known, entry in ranked:
+            out = _wrap(entry, sport_l, known)
+            if out:
+                return out
+
     return None
 
 

@@ -103,9 +103,20 @@ function ProComparisonModal({ open, onClose, userShot, reference, sport }) {
                 className="w-full h-full"
               />
             </div>
-            <div className="px-3 py-2 bg-amber-400/5 border-t border-amber-400/20">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Pro reference</p>
-              <p className="text-xs text-zinc-300">{reference.player}</p>
+            <div className="px-3 py-2 bg-amber-400/5 border-t border-amber-400/20 flex items-center justify-between gap-2 flex-wrap">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold">Pro reference</p>
+                <p className="text-xs text-zinc-300">{reference.player}</p>
+              </div>
+              <a
+                href={`https://www.youtube.com/watch?v=${reference.youtube_id}&t=${Math.max(0, reference.start_sec || 0)}s`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap"
+                title="Open on YouTube if the embed above shows 'unavailable'"
+              >
+                Open on YouTube ↗
+              </a>
             </div>
           </div>
         </div>
@@ -1288,8 +1299,14 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             </button>
           )}
         </div>
-        {/* PRO side — YouTube embed restricted to the curated segment */}
-        <div className="bg-black aspect-video">
+        {/* PRO side — YouTube embed restricted to the curated segment.
+            Even though the backend pre-validates the YouTube ID via
+            oEmbed, an embed CAN still fail (region-block, owner
+            disabling embed without removing the video, network glitch).
+            We always render the iframe + a small "Open on YouTube"
+            fallback link below the panel so users have an escape hatch
+            when "This video is unavailable" pops up inside the iframe. */}
+        <div className="bg-black aspect-video relative">
           <iframe
             src={ytSrc}
             title={`${proRef.player} ${proRef.shot_type}`}
@@ -1300,9 +1317,20 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
         </div>
       </div>
       {proRef.description && (
-        <div className="px-4 py-2 bg-zinc-800/30 border-t border-zinc-800">
-          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">What to watch</p>
-          <p className="text-xs text-zinc-300 leading-relaxed">{proRef.description}</p>
+        <div className="px-4 py-2 bg-zinc-800/30 border-t border-zinc-800 flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">What to watch</p>
+            <p className="text-xs text-zinc-300 leading-relaxed">{proRef.description}</p>
+          </div>
+          <a
+            href={`https://www.youtube.com/watch?v=${proRef.youtube_id}&t=${Math.max(0, proRef.start_sec || 0)}s`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap shrink-0 mt-0.5"
+            title="Open the pro reference clip directly on YouTube — useful if the embed above shows 'unavailable'"
+          >
+            Open on YouTube ↗
+          </a>
         </div>
       )}
     </div>
