@@ -3213,13 +3213,18 @@ async def analyze_video_universal_endpoint(
 ):
     """Sport-agnostic Gemini analysis. No per-sport vocabulary, no
     hardcoded metric schema — returns whatever events Gemini identifies
-    plus a coach-style assessment. Use for sports we don't have curated
-    content for, or as an A/B comparison against the standard flow."""
+    plus a coach-style assessment.
+
+    Result caching: video-bytes hash + tier + target_player_description
+    is used as a cache key. Re-analyzing the same file with the same
+    target returns the saved result instead of re-running Gemini, so
+    users no longer get "Overhead Smash" one run and "Back Court Smash"
+    the next on the same input. 7-day TTL."""
     await get_current_user(authorization)
     if not req.video_b64:
         raise HTTPException(status_code=400, detail="No video provided")
 
-    import base64
+    import base64, hashlib
     try:
         b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
         video_bytes = base64.b64decode(b64)
@@ -3229,6 +3234,21 @@ async def analyze_video_universal_endpoint(
         raise HTTPException(status_code=400, detail="Video too small")
     if len(video_bytes) > 25 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
+
+    # ─── Cache lookup ────────────────────────────────────────────────
+    video_hash = hashlib.sha256(video_bytes).hexdigest()[:32]
+    cache_key = f"{video_hash}:{req.tier}:{(req.target_player_description or '')[:80]}"
+    try:
+        cached = await asyncio.wait_for(
+            db.video_analysis_cache.find_one({"key": cache_key}, {"_id": 0}),
+            timeout=3.0,
+        )
+        if cached and cached.get("result"):
+            res = cached["result"]
+            res.setdefault("_meta", {})["cached"] = True
+            return {"success": True, **res}
+    except (Exception, asyncio.TimeoutError):
+        pass  # cache miss is non-fatal — proceed to live analysis
 
     try:
         from ai_pipeline.vlm import analyze_video_universal
@@ -3251,13 +3271,171 @@ async def analyze_video_universal_endpoint(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Universal analysis failed: {exc}")
 
-    return {
-        "success": True,
+    payload = {
         "sport_detected": result.get("sport_detected", "unknown"),
         "summary": result.get("summary", ""),
         "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
         "events": result.get("events") or [],
         "_meta": result.get("_meta") or {},
+    }
+
+    # ─── Cache write (best-effort) ───────────────────────────────────
+    try:
+        from datetime import timedelta as _td
+        await asyncio.wait_for(db.video_analysis_cache.update_one(
+            {"key": cache_key},
+            {"$set": {
+                "key": cache_key,
+                "video_hash": video_hash,
+                "tier": req.tier,
+                "result": payload,
+                "cached_at": datetime.now(timezone.utc),
+                "expires_at": datetime.now(timezone.utc) + _td(days=7),
+            }},
+            upsert=True,
+        ), timeout=3.0)
+    except (Exception, asyncio.TimeoutError):
+        pass  # cache write failure is non-fatal
+
+    return {"success": True, **payload}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Phase 2: AI POSE-CORRECTED VIDEO (scaffold)
+# Generates a 3-5s clip of the user with corrected motion via a
+# pose-to-video diffusion model. Premium-only feature, async via job
+# polling. Spec at docs/AI_POSE_CORRECTED_VIDEO.md.
+#
+# Status: scaffold only. The actual generation call is stubbed — the
+# endpoint accepts the job but returns "feature_unavailable" until we
+# wire up Replicate / fal.ai / self-hosted MimicMotion and finalize
+# pricing. UI uses the same endpoint shape so when we flip the switch
+# nothing else changes.
+# ──────────────────────────────────────────────────────────────────────
+class CorrectedVideoRequest(BaseModel):
+    video_b64: str
+    mime_type: str = "video/mp4"
+    timestamp_sec: float
+    sport: str
+    shot_type: str
+
+
+@api_router.post("/generate-corrected-shot")
+async def generate_corrected_shot(
+    req: CorrectedVideoRequest, authorization: str = Header(None),
+):
+    """Premium-only endpoint that queues an AI pose-corrected clip
+    generation job. Returns {job_id, status, eta_seconds}.
+
+    Currently STUBBED — the generator backend isn't wired up. We
+    create the job record so the polling endpoint works end-to-end
+    and the frontend can be tested, but the job will finish with
+    status="feature_unavailable" + a clear message instead of a clip.
+    Flip GENERATION_ENABLED=True and wire pick_generator_backend()
+    when going live."""
+    user = await get_current_user(authorization)
+    if not user or not user.get("id"):
+        raise HTTPException(status_code=401, detail="Sign in to generate corrected videos")
+
+    # Premium gating: must be on pro/elite plan OR have enough tokens
+    # for a one-off generation. Generation cost: 500 tokens (~₹150).
+    GENERATION_COST = 500
+    bal = await _get_balance(user["id"])
+    if bal < GENERATION_COST:
+        raise HTTPException(
+            status_code=402,
+            detail=f"AI pose-corrected generation costs {GENERATION_COST} tokens. You have {bal}.",
+        )
+
+    if not req.video_b64:
+        raise HTTPException(status_code=400, detail="No video provided")
+
+    import base64, hashlib
+    try:
+        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+        video_bytes = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+    if len(video_bytes) < 1000:
+        raise HTTPException(status_code=400, detail="Video too small")
+
+    # Job record + cache key (so duplicate requests on same input share
+    # the same generation rather than charging the user twice)
+    src_hash = hashlib.sha256(
+        video_bytes + str(req.timestamp_sec).encode() + req.shot_type.encode()
+    ).hexdigest()[:32]
+
+    job_id = str(uuid.uuid4())
+    job = {
+        "id": job_id,
+        "user_id": user["id"],
+        "src_hash": src_hash,
+        "status": "queued",          # queued -> running -> done | failed | feature_unavailable
+        "sport": req.sport,
+        "shot_type": req.shot_type,
+        "timestamp_sec": req.timestamp_sec,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "estimated_completion_sec": 60,
+        "cost_tokens": GENERATION_COST,
+    }
+    try:
+        await asyncio.wait_for(db.video_generation_jobs.insert_one(job), timeout=5.0)
+        job.pop("_id", None)
+    except (Exception, asyncio.TimeoutError) as exc:
+        raise HTTPException(status_code=503, detail=f"Couldn't queue job: {exc}")
+
+    # ── STUB: real generation goes here ────────────────────────────
+    GENERATION_ENABLED = False  # flip when Replicate / fal.ai wired up
+    if not GENERATION_ENABLED:
+        await db.video_generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {
+                "status": "feature_unavailable",
+                "error": "AI pose-corrected video is in beta. Sign up at /pricing for early access.",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }},
+        )
+        return {
+            "job_id": job_id,
+            "status": "feature_unavailable",
+            "eta_seconds": 0,
+            "message": "AI pose-corrected video is being calibrated. We'll email you when it's live.",
+            "tokens_held": 0,  # not charged when feature is off
+        }
+
+    # When live, branch on the configured generator backend:
+    #   - "replicate"   → call Replicate API (MagicAnimate / MimicMotion)
+    #   - "fal"         → call fal.ai
+    #   - "modal"       → invoke our own Modal-hosted MimicMotion
+    # Each path: download video, extract pose sequence, build corrected
+    # pose sequence, submit to generator, return job_id for polling.
+    return {
+        "job_id": job_id,
+        "status": "queued",
+        "eta_seconds": 90,
+        "message": "Generating your AI pose-corrected clip…",
+        "tokens_held": GENERATION_COST,
+    }
+
+
+@api_router.get("/generate-corrected-shot/{job_id}")
+async def get_corrected_shot_status(job_id: str, authorization: str = Header(None)):
+    """Poll for job status. Returns {status, video_url?, error?}."""
+    user = await get_current_user(authorization)
+    if not user or not user.get("id"):
+        raise HTTPException(status_code=401)
+    job = await db.video_generation_jobs.find_one(
+        {"id": job_id, "user_id": user["id"]}, {"_id": 0},
+    )
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {
+        "job_id": job["id"],
+        "status": job["status"],
+        "video_url": job.get("video_url"),
+        "error": job.get("error"),
+        "completed_at": job.get("completed_at"),
+        "shot_type": job.get("shot_type"),
     }
 
 

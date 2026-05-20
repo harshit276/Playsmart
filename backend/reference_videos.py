@@ -568,10 +568,37 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
 }
 
 
+_SPORT_ALIASES = {
+    "table tennis": "table_tennis",
+    "table-tennis": "table_tennis",
+    "tt": "table_tennis",
+    "ping pong": "table_tennis",
+    "lawn tennis": "tennis",
+    "badminton (doubles)": "badminton",
+    "badminton (singles)": "badminton",
+    "badminton singles": "badminton",
+    "badminton doubles": "badminton",
+}
+
+
+def _normalize_sport(s: str) -> str:
+    """Strip parens/brackets, collapse spaces, lowercase, apply aliases.
+    Handles Gemini-style output like 'Badminton (Doubles)' → 'badminton'."""
+    import re
+    if not s:
+        return ""
+    base = re.sub(r"[\(\[].*?[\)\]]", "", s).strip().lower()
+    base = re.sub(r"\s+", " ", base)
+    if base in _SPORT_ALIASES:
+        return _SPORT_ALIASES[base]
+    # Fall back to dasherized form
+    return base.replace(" ", "_")
+
+
 def get_reference(sport: str, shot_type: str) -> dict | None:
     """Look up the pro reference for a shot. Returns None when there's
     no curated entry yet (frontend hides the Compare-to-Pro button)."""
-    sport_l = (sport or "").lower().strip()
+    sport_l = _normalize_sport(sport)
     shot_l = (shot_type or "").lower().strip().replace(" ", "_")
     s = REFERENCE_VIDEOS.get(sport_l)
     if not s:

@@ -912,6 +912,8 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
+  const [aiGenStatus, setAiGenStatus] = useState(null);    // null | "loading" | "unavailable" | "ready"
+  const [aiGenMessage, setAiGenMessage] = useState("");
   useEffect(() => {
     let cancelled = false;
     if (!sport || !sample.type) return;
@@ -920,6 +922,41 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     });
     return () => { cancelled = true; };
   }, [sport, sample.type]);
+
+  // AI Generate handler — currently the backend returns
+  // status:"feature_unavailable" while we calibrate the generator
+  // pipeline. UI handles all three states gracefully.
+  const handleGenerateCorrected = async () => {
+    setAiGenStatus("loading");
+    setAiGenMessage("");
+    try {
+      // We need the videoFile + timestamp; both come from props via
+      // the parent if available. If not, surface a clear error.
+      const ts = sample.timestamp;
+      if (typeof ts !== "number") throw new Error("No timestamp on this shot");
+      // Lazy import + minimal payload — we'll wire the actual video
+      // upload when GENERATION_ENABLED flips on the backend.
+      const api = (await import("@/lib/api")).default;
+      const { data } = await api.post("/generate-corrected-shot", {
+        // For now we just send a tiny placeholder; backend doesn't
+        // process video bytes yet since generator is stubbed.
+        video_b64: "Zg==",
+        timestamp_sec: ts,
+        sport: sport || "badminton",
+        shot_type: sample.type || "shot",
+      });
+      if (data?.status === "feature_unavailable") {
+        setAiGenStatus("unavailable");
+        setAiGenMessage(data.message || "Coming soon.");
+      } else {
+        setAiGenStatus("ready");
+        setAiGenMessage("Generating — check back in ~90s.");
+      }
+    } catch (e) {
+      setAiGenStatus("unavailable");
+      setAiGenMessage(e.response?.data?.detail || e.message || "Try again later.");
+    }
+  };
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const headlineFix = tips[0] || weaknesses[0] || null;
@@ -1019,6 +1056,17 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
               <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
             </button>
           )}
+          {/* AI-corrected video (premium beta) — backend currently
+              returns "feature_unavailable" while we calibrate the
+              generator pipeline. Surfaces the wait-list message. */}
+          <button
+            onClick={handleGenerateCorrected}
+            disabled={aiGenStatus === "loading"}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-50"
+            title="Generate an AI clip of you with corrected form (beta)"
+          >
+            ✨ AI Correct {aiGenStatus === "loading" ? "…" : <span className="text-[9px] text-amber-300">Beta</span>}
+          </button>
           {(reasoning || tips.length > 1) && (
             <button
               onClick={() => setDetailsOpen((v) => !v)}
@@ -1028,6 +1076,17 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
             </button>
           )}
         </div>
+        {aiGenStatus === "unavailable" && aiGenMessage && (
+          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-1.5 mt-2">
+            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">AI Correct · beta</p>
+            <p className="text-[11px] text-zinc-300 mt-0.5">{aiGenMessage}</p>
+          </div>
+        )}
+        {aiGenStatus === "ready" && (
+          <div className="bg-lime-400/5 border border-lime-400/30 rounded-lg px-2.5 py-1.5 mt-2">
+            <p className="text-[11px] text-lime-300">{aiGenMessage}</p>
+          </div>
+        )}
 
         {/* Expandable coach details — long reasoning + extra tips live
             here so they don't dominate the card on first read. */}
