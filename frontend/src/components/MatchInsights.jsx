@@ -20,6 +20,7 @@ import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity } fr
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 import PoseOverlayModal from "@/components/PoseOverlayModal";
+import FormCoachReplay from "@/components/FormCoachReplay";
 
 
 // In-flight cache so we don't refetch the same reference video for
@@ -1160,9 +1161,16 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     };
   }, [headlineShot, userVideoUrlRef.current]);
 
+  // YOU side has a toggle between "Raw clip" and "Form coach replay"
+  // (the new annotated canvas with skeleton + ideal-ghost). Default to
+  // form coach since that's the differentiator; user can flip to raw.
+  const [showCoach, setShowCoach] = useState(true);
+
   if (!proRef || !headlineShot) return null;
   const ytSrc = `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}?start=${proRef.start_sec || 0}&end=${proRef.end_sec || (proRef.start_sec || 0) + 6}&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}&controls=1&modestbranding=1&rel=0`;
   const canShowVideo = !!userVideoUrlRef.current && typeof headlineShot.timestamp === "number";
+  const canShowCoach = !!videoFile && typeof headlineShot.timestamp === "number";
+
   return (
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl overflow-hidden">
       <div className="px-4 py-3 bg-amber-400/5 border-b border-amber-400/20">
@@ -1173,15 +1181,22 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           Your {headlineShot._name} vs {proRef.player}
         </p>
         <p className="text-[10px] text-zinc-500 mt-0.5">
-          {canShowVideo
-            ? "Both clips loop side-by-side — watch contact + follow-through in each."
-            : "Pro clip loops below; your thumbnail shows the contact frame."}
+          Both clips loop side-by-side. The YOU panel marks where your
+          joints SHOULD be in green at the contact frame.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-        {/* USER side — controlled <video> looping the shot window */}
-        <div className="bg-black aspect-video flex items-center justify-center relative">
-          {canShowVideo ? (
+        {/* USER side — Form Coach Replay (skeleton + ghost) OR raw loop */}
+        <div className="bg-black aspect-video relative">
+          {showCoach && canShowCoach ? (
+            <FormCoachReplay
+              videoFile={videoFile}
+              timestamp={headlineShot.timestamp}
+              sport={sport}
+              shotType={headlineShot.type || headlineShot.label}
+              className="absolute inset-0"
+            />
+          ) : canShowVideo ? (
             <video
               ref={userVideoRef}
               src={userVideoUrlRef.current}
@@ -1194,11 +1209,25 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           ) : headlineShot.thumbnail ? (
             <img src={headlineShot.thumbnail} alt="Your shot" className="w-full h-full object-cover" />
           ) : (
-            <p className="text-zinc-500 text-xs">No preview available</p>
+            <div className="w-full h-full flex items-center justify-center">
+              <p className="text-zinc-500 text-xs">No preview available</p>
+            </div>
           )}
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
-            <p className="text-[10px] uppercase tracking-wider text-white font-bold">You</p>
+            <p className="text-[10px] uppercase tracking-wider text-white font-bold">
+              You {showCoach && canShowCoach ? "· Form coach" : ""}
+            </p>
           </div>
+          {/* Toggle in the top-right corner */}
+          {canShowCoach && (
+            <button
+              onClick={() => setShowCoach((v) => !v)}
+              className="absolute top-2 right-2 bg-black/70 hover:bg-black/85 backdrop-blur-sm rounded px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-300 hover:text-white font-bold transition-colors"
+              title={showCoach ? "Switch to raw video" : "Switch to form coach replay"}
+            >
+              {showCoach ? "Raw" : "Coach"}
+            </button>
+          )}
         </div>
         {/* PRO side — YouTube embed restricted to the curated segment */}
         <div className="bg-black aspect-video">
