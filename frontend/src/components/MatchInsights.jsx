@@ -156,6 +156,9 @@ const SHOT_COLORS = [
 
 export default function MatchInsights({
   videoFile, shots: shotsProp, sport = "badminton", playerPosition = "auto",
+  // Stash the videoFile on window so deeply-nested per-shot cards can
+  // reach it without prop drilling. Cleared on unmount.
+  // eslint-disable-next-line no-unused-vars
   fallbackSkillLevel = null,  // top-level skill from AnalyzePage, used when
                               // per-shot vlmSkill is empty across all shots
 }) {
@@ -164,6 +167,17 @@ export default function MatchInsights({
   const [progressMsg, setProgressMsg] = useState("");
   const [perShot, setPerShot] = useState([]); // [{ label, pose: {speed, extension, smoothness} | null }]
   const [overall, setOverall] = useState(null);
+
+  // Make the analyzed videoFile reachable from per-shot cards (which
+  // are deeply nested + don't get the prop). Cleared on unmount.
+  useEffect(() => {
+    if (videoFile) window.__playsmartCurrentVideo = videoFile;
+    return () => {
+      if (window.__playsmartCurrentVideo === videoFile) {
+        window.__playsmartCurrentVideo = null;
+      }
+    };
+  }, [videoFile]);
   const [narrative, setNarrative] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [wasTruncated, setWasTruncated] = useState(false);
@@ -934,35 +948,84 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     return () => { cancelled = true; };
   }, [sport, sample.type]);
 
-  // AI Generate handler — currently the backend returns
-  // status:"feature_unavailable" while we calibrate the generator
-  // pipeline. UI handles all three states gracefully.
+  // AI Generate handler — kicks off a backend job and polls until the
+  // generated clip URL lands (or we get a clear failure). Backend
+  // returns status="feature_unavailable" when REPLICATE_API_TOKEN
+  // isn't configured, "queued"/"running"/"done"/"failed" otherwise.
+  const [aiGenVideoUrl, setAiGenVideoUrl] = useState(null);
   const handleGenerateCorrected = async () => {
     setAiGenStatus("loading");
     setAiGenMessage("");
+    setAiGenVideoUrl(null);
     try {
-      // We need the videoFile + timestamp; both come from props via
-      // the parent if available. If not, surface a clear error.
       const ts = sample.timestamp;
       if (typeof ts !== "number") throw new Error("No timestamp on this shot");
-      // Lazy import + minimal payload — we'll wire the actual video
-      // upload when GENERATION_ENABLED flips on the backend.
+      // Compress the user's video down to <4 MB so it fits Vercel's
+      // body cap, then base64-encode it for the JSON payload. We
+      // reuse the same compressor the analyze flow uses.
+      if (!groupShots?.[0]?._videoFile && !window.__playsmartCurrentVideo) {
+        // The component doesn't have direct access to the videoFile,
+        // but we stash it on window during analysis so this button
+        // can find it. If neither is set, give a clear error.
+        throw new Error("Your video isn't loaded in this session — re-analyze first.");
+      }
+      const file = groupShots?.[0]?._videoFile || window.__playsmartCurrentVideo;
+      const vp = await import("@/ai/videoProcessor");
+      const compressed = await vp.compressVideoForUpload(file, {
+        maxDim: 360, bitrate: 600_000, maxDurationSec: 4,
+      });
+      const buf = await compressed.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const b64 = btoa(bin);
+
       const api = (await import("@/lib/api")).default;
       const { data } = await api.post("/generate-corrected-shot", {
-        // For now we just send a tiny placeholder; backend doesn't
-        // process video bytes yet since generator is stubbed.
-        video_b64: "Zg==",
+        video_b64: b64,
+        mime_type: compressed.type || "video/mp4",
         timestamp_sec: ts,
         sport: sport || "badminton",
         shot_type: sample.type || "shot",
-      });
+      }, { timeout: 30000 });
+
       if (data?.status === "feature_unavailable") {
         setAiGenStatus("unavailable");
         setAiGenMessage(data.message || "Coming soon.");
-      } else {
-        setAiGenStatus("ready");
-        setAiGenMessage("Generating — check back in ~90s.");
+        return;
       }
+      if (data?.status === "done" && data?.video_url) {
+        // Cache hit — generation was already done on a previous request.
+        setAiGenStatus("done");
+        setAiGenVideoUrl(data.video_url);
+        setAiGenMessage(data.cached ? "Loaded from your previous generation." : "Done!");
+        return;
+      }
+
+      // Queued / running — poll the job until it settles.
+      const jobId = data?.job_id;
+      if (!jobId) throw new Error(data?.error || "No job_id returned");
+      setAiGenMessage("Generating — usually ~75 seconds…");
+      const POLL_MS = 3000;
+      const MAX_POLLS = 60;
+      for (let i = 0; i < MAX_POLLS; i++) {
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        try {
+          const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
+          if (poll?.status === "done" && poll?.video_url) {
+            setAiGenStatus("done");
+            setAiGenVideoUrl(poll.video_url);
+            setAiGenMessage("Your AI-corrected clip is ready.");
+            return;
+          }
+          if (poll?.status === "failed") {
+            setAiGenStatus("unavailable");
+            setAiGenMessage(poll.error || "Generation failed. Your tokens were refunded.");
+            return;
+          }
+        } catch { /* poll error — keep trying */ }
+      }
+      setAiGenStatus("unavailable");
+      setAiGenMessage("Generation taking longer than expected. Check back later — your tokens are held.");
     } catch (e) {
       setAiGenStatus("unavailable");
       setAiGenMessage(e.response?.data?.detail || e.message || "Try again later.");

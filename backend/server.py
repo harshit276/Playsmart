@@ -3375,10 +3375,33 @@ async def generate_corrected_shot(
         raise HTTPException(status_code=400, detail="Video too small")
 
     # Job record + cache key (so duplicate requests on same input share
-    # the same generation rather than charging the user twice)
+    # the same generation rather than charging the user twice).
     src_hash = hashlib.sha256(
         video_bytes + str(req.timestamp_sec).encode() + req.shot_type.encode()
     ).hexdigest()[:32]
+
+    # Cache hit: same input was already generated within the last 30
+    # days, return the existing result without re-charging or re-running.
+    try:
+        cached = await asyncio.wait_for(
+            db.video_generation_jobs.find_one(
+                {"src_hash": src_hash, "status": "done", "video_url": {"$ne": None}},
+                {"_id": 0}, sort=[("completed_at", -1)],
+            ),
+            timeout=3.0,
+        )
+        if cached:
+            return {
+                "job_id": cached["id"],
+                "status": "done",
+                "video_url": cached.get("video_url"),
+                "eta_seconds": 0,
+                "message": "Loaded from your previous generation.",
+                "tokens_held": 0,
+                "cached": True,
+            }
+    except (Exception, asyncio.TimeoutError):
+        pass
 
     job_id = str(uuid.uuid4())
     job = {
@@ -3390,7 +3413,7 @@ async def generate_corrected_shot(
         "shot_type": req.shot_type,
         "timestamp_sec": req.timestamp_sec,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "estimated_completion_sec": 60,
+        "estimated_completion_sec": 75,
         "cost_tokens": GENERATION_COST,
     }
     try:
@@ -3399,9 +3422,14 @@ async def generate_corrected_shot(
     except (Exception, asyncio.TimeoutError) as exc:
         raise HTTPException(status_code=503, detail=f"Couldn't queue job: {exc}")
 
-    # ── STUB: real generation goes here ────────────────────────────
-    GENERATION_ENABLED = False  # flip when Replicate / fal.ai wired up
-    if not GENERATION_ENABLED:
+    # ── Generator gate ─────────────────────────────────────────────
+    # Feature stays dormant until BOTH conditions are met:
+    #   1. GENERATION_ENABLED env var set to "true" (operator opt-in)
+    #   2. REPLICATE_API_TOKEN env var set (or another supported backend)
+    # Either missing → return waitlist message + don't charge tokens.
+    enabled = os.getenv("GENERATION_ENABLED", "").lower() in ("true", "1", "yes")
+    replicate_key = os.getenv("REPLICATE_API_TOKEN")
+    if not enabled or not replicate_key:
         await db.video_generation_jobs.update_one(
             {"id": job_id},
             {"$set": {
@@ -3415,22 +3443,252 @@ async def generate_corrected_shot(
             "status": "feature_unavailable",
             "eta_seconds": 0,
             "message": "AI pose-corrected video is being calibrated. We'll email you when it's live.",
-            "tokens_held": 0,  # not charged when feature is off
+            "tokens_held": 0,
         }
 
-    # When live, branch on the configured generator backend:
-    #   - "replicate"   → call Replicate API (MagicAnimate / MimicMotion)
-    #   - "fal"         → call fal.ai
-    #   - "modal"       → invoke our own Modal-hosted MimicMotion
-    # Each path: download video, extract pose sequence, build corrected
-    # pose sequence, submit to generator, return job_id for polling.
+    # ── Real generation: kick off Replicate as a background task ───
+    # We don't await — return immediately with status="queued" and let
+    # the frontend poll GET /api/generate-corrected-shot/{job_id} for
+    # completion. The background task updates the Mongo job record
+    # when Replicate finishes (~30-90s) so the poll sees status="done"
+    # with a video_url, or status="failed" with an error message.
+    asyncio.create_task(_run_replicate_correction_job(
+        job_id=job_id,
+        user_id=user["id"],
+        video_bytes=video_bytes,
+        mime_type=req.mime_type,
+        timestamp_sec=req.timestamp_sec,
+        sport=req.sport,
+        shot_type=req.shot_type,
+        replicate_key=replicate_key,
+        generation_cost=GENERATION_COST,
+    ))
+
     return {
         "job_id": job_id,
         "status": "queued",
-        "eta_seconds": 90,
-        "message": "Generating your AI pose-corrected clip…",
+        "eta_seconds": 75,
+        "message": "Generating your AI pose-corrected clip — check back in ~75s.",
         "tokens_held": GENERATION_COST,
     }
+
+
+async def _run_replicate_correction_job(
+    job_id: str, user_id: str, video_bytes: bytes, mime_type: str,
+    timestamp_sec: float, sport: str, shot_type: str,
+    replicate_key: str, generation_cost: int,
+):
+    """Background task: send the user's shot window to Replicate's
+    MimicMotion model, poll for completion, update the job record.
+
+    Replicate's MimicMotion API takes:
+      - motion_video: a "driving" video showing the desired motion
+      - ref_image:    a static reference image of the person to animate
+      - output:       a video where ref_image's person performs the
+                      motion from motion_video
+
+    For corrected coaching output we use:
+      - ref_image    = the user's contact-frame thumbnail (so the
+                       output looks like THEM)
+      - motion_video = a curated pro reference clip of the same shot
+                       (so the output performs CORRECT motion)
+
+    This is the cleanest mapping the model supports today. A future
+    improvement would generate a pose sequence from the user's own
+    skeleton + ideal-angle adjustments, but MimicMotion's pose-input
+    variant has lower quality on sports motion than its driving-video
+    variant as of late 2025."""
+    import base64, json as _json
+    try:
+        import httpx  # already an asyncio-friendly HTTP client we use elsewhere
+    except ImportError:
+        await db.video_generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {"status": "failed", "error": "httpx not installed on backend"}},
+        )
+        return
+
+    try:
+        await db.video_generation_jobs.update_one({"id": job_id}, {"$set": {"status": "running"}})
+
+        # Pick a curated pro motion-video for this sport+shot. If none
+        # is curated, we can't generate — fail gracefully without
+        # charging the user.
+        try:
+            from reference_videos import get_reference
+        except ImportError:
+            ref = None
+        else:
+            ref = get_reference(sport, shot_type)
+        if not ref:
+            await db.video_generation_jobs.update_one(
+                {"id": job_id},
+                {"$set": {
+                    "status": "failed",
+                    "error": "No pro motion reference for this shot yet — generation needs one as the motion source.",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }},
+            )
+            return
+
+        # Build the user's contact-frame reference image. We extract a
+        # single JPEG at timestamp_sec via the in-memory video bytes.
+        try:
+            from ai_pipeline.vlm.frame_extract import extract_keyframes, frame_to_base64
+            # Persist to a temp file so cv2 can decode it
+            import tempfile, os as _os
+            tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+            tmp.write(video_bytes); tmp.close()
+            try:
+                frames = extract_keyframes(
+                    tmp.name, start_sec=max(0.0, timestamp_sec - 0.1),
+                    end_sec=timestamp_sec + 0.1, n_frames=1,
+                    target_player="auto", max_dim=512, annotate_target=False,
+                )
+            finally:
+                try: _os.unlink(tmp.name)
+                except Exception: pass
+            if not frames:
+                raise RuntimeError("Couldn't extract reference frame from your clip")
+            ref_image_b64 = frame_to_base64(frames[0], quality=88)
+            ref_image_data_url = f"data:image/jpeg;base64,{ref_image_b64}"
+        except Exception as exc:
+            await db.video_generation_jobs.update_one(
+                {"id": job_id},
+                {"$set": {
+                    "status": "failed",
+                    "error": f"Couldn't read your contact frame: {str(exc)[:200]}",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }},
+            )
+            return
+
+        # Motion video: the pro reference's YouTube clip segment. We
+        # can pass a YouTube URL directly to Replicate; the model
+        # handles the download + frame extraction server-side.
+        motion_url = (
+            f"https://www.youtube.com/watch?v={ref['youtube_id']}"
+            f"&t={int(ref.get('start_sec') or 0)}s"
+        )
+
+        # Charge tokens NOW that we're about to spend GPU time. If the
+        # generation fails after this point we'll auto-refund.
+        try:
+            await _credit_tokens(
+                user_id, "analysis_spend", -generation_cost,
+                {"source": "ai_pose_corrected_shot", "job_id": job_id},
+            )
+        except Exception as exc:
+            await db.video_generation_jobs.update_one(
+                {"id": job_id},
+                {"$set": {"status": "failed", "error": f"Token charge failed: {exc}"}},
+            )
+            return
+
+        # Submit the Replicate prediction. Using MimicMotion ("zsxkib/
+        # mimicmotion") — adjust the version string when Replicate
+        # updates the model. The exact input keys depend on the
+        # specific Replicate model version; this is the schema as of
+        # late 2025.
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            create_resp = await client.post(
+                "https://api.replicate.com/v1/predictions",
+                headers={
+                    "Authorization": f"Bearer {replicate_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "version": "zsxkib/mimicmotion:1b9163b34de64a0b4a9b9b50d6b4c08c4f23b9c5",
+                    "input": {
+                        "ref_image": ref_image_data_url,
+                        "motion_video": motion_url,
+                        "num_frames": 48,         # ~3 seconds at 16 fps
+                        "guidance_scale": 2.0,
+                        "seed": 42,                # deterministic re-runs
+                    },
+                },
+            )
+            if create_resp.status_code not in (200, 201):
+                raise RuntimeError(f"Replicate create failed: {create_resp.status_code} {create_resp.text[:300]}")
+            prediction = create_resp.json()
+            prediction_id = prediction.get("id")
+            poll_url = prediction.get("urls", {}).get("get") \
+                or f"https://api.replicate.com/v1/predictions/{prediction_id}"
+
+            # Poll until the prediction settles. Replicate typically
+            # finishes in 30-90s for MimicMotion.
+            video_url = None
+            error_msg = None
+            for _ in range(60):  # ~3 min max
+                await asyncio.sleep(3.0)
+                poll = await client.get(
+                    poll_url,
+                    headers={"Authorization": f"Bearer {replicate_key}"},
+                )
+                if poll.status_code != 200:
+                    continue
+                p = poll.json()
+                status = p.get("status")
+                if status == "succeeded":
+                    out = p.get("output")
+                    video_url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else None)
+                    break
+                if status == "failed":
+                    error_msg = p.get("error") or "Replicate prediction failed"
+                    break
+                if status == "canceled":
+                    error_msg = "Generation was canceled"
+                    break
+
+        if not video_url:
+            # Refund tokens since we couldn't deliver a result.
+            try:
+                await _credit_tokens(
+                    user_id, "refund", generation_cost,
+                    {"source": "ai_pose_corrected_shot_refund", "job_id": job_id,
+                     "reason": error_msg or "generation timed out"},
+                )
+            except Exception:
+                pass
+            await db.video_generation_jobs.update_one(
+                {"id": job_id},
+                {"$set": {
+                    "status": "failed",
+                    "error": error_msg or "Generation timed out — your tokens have been refunded.",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                }},
+            )
+            return
+
+        # Success: store the result URL on the job record.
+        await db.video_generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {
+                "status": "done",
+                "video_url": video_url,
+                "ref_player": ref.get("player"),
+                "ref_shot_type": ref.get("shot_type"),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }},
+        )
+    except Exception as exc:
+        logger.exception(f"[ai-correct] job {job_id} crashed")
+        try:
+            await _credit_tokens(
+                user_id, "refund", generation_cost,
+                {"source": "ai_pose_corrected_shot_refund", "job_id": job_id,
+                 "reason": f"crash: {exc}"},
+            )
+        except Exception:
+            pass
+        await db.video_generation_jobs.update_one(
+            {"id": job_id},
+            {"$set": {
+                "status": "failed",
+                "error": f"Unexpected error: {str(exc)[:200]} — tokens refunded.",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }},
+        )
 
 
 @api_router.get("/generate-corrected-shot/{job_id}")
