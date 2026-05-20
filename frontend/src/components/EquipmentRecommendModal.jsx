@@ -4,7 +4,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ChevronRight, Check, ArrowLeft, Wallet, Star, Target } from "lucide-react";
+import { Sparkles, ChevronRight, Check, ArrowLeft, Wallet, Star, Target, Trophy, Activity, Smile, Dumbbell } from "lucide-react";
 
 const SPORTS = [
   { key: "badminton", label: "Badminton", emoji: "🏸" },
@@ -31,6 +31,13 @@ const BUDGETS = [
   { key: "10k+", label: "₹10k+", sublabel: "Performance / pro" },
 ];
 
+const GOALS = [
+  { key: "technique",  label: "Improve technique",  desc: "Control + consistency over power",      icon: Activity,  color: "text-sky-400",     bg: "bg-sky-400/10",     border: "border-sky-400/50" },
+  { key: "compete",    label: "Win matches",        desc: "Tournament + competitive play",         icon: Trophy,    color: "text-amber-400",   bg: "bg-amber-400/10",   border: "border-amber-400/50" },
+  { key: "fitness",    label: "Stay fit",           desc: "Cardio + recreation, weekly play",      icon: Dumbbell,  color: "text-emerald-400", bg: "bg-emerald-400/10", border: "border-emerald-400/50" },
+  { key: "casual",     label: "Casual fun",         desc: "Just play occasionally — keep it light", icon: Smile,    color: "text-purple-400",  bg: "bg-purple-400/10",  border: "border-purple-400/50" },
+];
+
 const CATEGORY_PICKS = {
   badminton: ["rackets", "shoes", "strings"],
   tennis: ["rackets", "shoes", "strings"],
@@ -53,11 +60,13 @@ export default function EquipmentRecommendModal({
   defaultSport,
   defaultLevel,
   defaultBudget,
+  defaultGoal,
 }) {
   const [step, setStep] = useState(0);
   const [sport, setSport] = useState(defaultSport || "badminton");
   const [level, setLevel] = useState(defaultLevel || "");
   const [budget, setBudget] = useState(defaultBudget || "all");
+  const [goal, setGoal] = useState(defaultGoal || "");
 
   useEffect(() => {
     if (open) {
@@ -65,16 +74,18 @@ export default function EquipmentRecommendModal({
       setSport(defaultSport || "badminton");
       setLevel(defaultLevel || "");
       setBudget(defaultBudget || "all");
+      setGoal(defaultGoal || "");
     }
-  }, [open, defaultSport, defaultLevel, defaultBudget]);
+  }, [open, defaultSport, defaultLevel, defaultBudget, defaultGoal]);
 
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   const apply = () => {
     onApply({
       sport,
       level,
       budget,
+      goal,
       categories: CATEGORY_PICKS[sport] || [],
     });
     onClose?.();
@@ -93,6 +104,7 @@ export default function EquipmentRecommendModal({
     step === 0 ? !!sport :
     step === 1 ? true : // level optional
     step === 2 ? true : // budget optional
+    step === 3 ? true : // goal optional
     false;
 
   return (
@@ -133,7 +145,7 @@ export default function EquipmentRecommendModal({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.18 }}
               >
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 1 of 3</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 1 of 4</p>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Target className="w-4 h-4 text-lime-400" /> Which sport?
                 </h3>
@@ -167,7 +179,7 @@ export default function EquipmentRecommendModal({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.18 }}
               >
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 2 of 3</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 2 of 4</p>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Star className="w-4 h-4 text-sky-400" /> Your skill level?
                 </h3>
@@ -210,7 +222,7 @@ export default function EquipmentRecommendModal({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.18 }}
               >
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 3 of 3</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 3 of 4</p>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Wallet className="w-4 h-4 text-amber-400" /> Your budget?
                 </h3>
@@ -236,6 +248,53 @@ export default function EquipmentRecommendModal({
                     );
                   })}
                 </div>
+              </motion.div>
+            )}
+
+            {step === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.18 }}
+              >
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 4 of 4</p>
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-amber-400" /> What's your main goal?
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {GOALS.map((g) => {
+                    const active = g.key === goal;
+                    const Icon = g.icon;
+                    return (
+                      <button
+                        key={g.key}
+                        onClick={() => setGoal(g.key)}
+                        className={`flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all ${
+                          active
+                            ? `${g.bg} ${g.border}`
+                            : "bg-zinc-900 border-zinc-800 hover:border-zinc-700"
+                        }`}
+                      >
+                        <div className={`w-9 h-9 rounded-lg ${g.bg} flex items-center justify-center shrink-0`}>
+                          <Icon className={`w-4 h-4 ${g.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-semibold text-sm ${active ? "text-white" : "text-zinc-200"}`}>{g.label}</p>
+                          <p className="text-[11px] text-zinc-500 mt-0.5 leading-snug">{g.desc}</p>
+                        </div>
+                        {active && <Check className={`w-4 h-4 ${g.color} shrink-0 mt-1`} />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => { setGoal(""); apply(); }}
+                  className="w-full text-[11px] text-zinc-500 hover:text-zinc-300 py-2 mt-2"
+                >
+                  Skip — show recommendations anyway
+                </button>
               </motion.div>
             )}
           </AnimatePresence>

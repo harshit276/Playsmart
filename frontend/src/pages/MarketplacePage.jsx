@@ -78,6 +78,7 @@ export default function MarketplacePage() {
   const [search, setSearch] = useState("");
   const [brands, setBrands] = useState([]); // selected brand filter
   const [skillLevel, setSkillLevel] = useState(""); // set via recommend modal
+  const [goal, setGoal] = useState(""); // set via recommend modal
   const [filterSheet, setFilterSheet] = useState(false);
   const [sortSheet, setSortSheet] = useState(false);
   const [recommendOpen, setRecommendOpen] = useState(false);
@@ -85,10 +86,11 @@ export default function MarketplacePage() {
 
   useEffect(() => { document.title = "Marketplace · AthlyticAI"; }, []);
 
-  const applyRecommendation = ({ sport: s, level, budget, categories }) => {
+  const applyRecommendation = ({ sport: s, level, budget, goal: g, categories }) => {
     setSport(s);
     setBucket(budget || "all");
     setSkillLevel(level || "");
+    setGoal(g || "");
     // Multi-category: if multiple, pick the first as the primary category
     // filter (UI shows one at a time). Future improvement: multi-select.
     setCategory(categories?.[0] || "all");
@@ -99,6 +101,7 @@ export default function MarketplacePage() {
 
   const clearRecommendation = () => {
     setSkillLevel("");
+    setGoal("");
     setRecommendActive(false);
     setCategory("all");
     setBucket("all");
@@ -185,9 +188,20 @@ export default function MarketplacePage() {
     if (sort === "price_low") out.sort((a, b) => lowestPrice(a) - lowestPrice(b));
     else if (sort === "price_high") out.sort((a, b) => lowestPrice(b) - lowestPrice(a));
     else if (sort === "name") out.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    // "popular" = original order (curated)
+    else if (recommendActive && sort === "popular") {
+      // When the picker is on, sort the grid by overall fit so the top hits
+      // appear first. Reuses the same scoring helpers RecommendedProductCard uses.
+      const fitOf = (it) => {
+        const s = skillMatchScore(it.level, skillLevel);
+        const b2 = budgetMatchScore(it, bucket);
+        const g = goalMatchScore(it, goal);
+        return s * 0.45 + b2 * 0.3 + g * 0.25;
+      };
+      out.sort((a, b) => fitOf(b) - fitOf(a));
+    }
+    // "popular" (when picker off) = original order (curated)
     return out;
-  }, [allItems, sport, category, bucket, sort, search, brands, skillLevel]);
+  }, [allItems, sport, category, bucket, sort, search, brands, skillLevel, goal, recommendActive]);
 
   const activeFilterCount = (category !== "all" ? 1 : 0)
     + (bucket !== "all" ? 1 : 0)
@@ -209,6 +223,7 @@ export default function MarketplacePage() {
           sport={sport}
           skillLevel={skillLevel}
           bucket={bucket}
+          goal={goal}
           onOpen={() => setRecommendOpen(true)}
           onClear={clearRecommendation}
           totalCount={allItems.length}
@@ -279,9 +294,24 @@ export default function MarketplacePage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className={
+            recommendActive
+              ? "grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"
+              : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
+          }>
             {filtered.map((item, i) => (
-              <ProductCard key={`${item._sport}-${item.id}`} item={item} delay={Math.min(i * 0.015, 0.3)} />
+              recommendActive ? (
+                <RecommendedProductCard
+                  key={`${item._sport}-${item.id}`}
+                  item={item}
+                  delay={Math.min(i * 0.015, 0.3)}
+                  level={skillLevel}
+                  bucket={bucket}
+                  goal={goal}
+                />
+              ) : (
+                <ProductCard key={`${item._sport}-${item.id}`} item={item} delay={Math.min(i * 0.015, 0.3)} />
+              )
             ))}
           </div>
         )}
@@ -393,15 +423,24 @@ export default function MarketplacePage() {
         defaultSport={sport === "all" ? (profile?.active_sport || "badminton") : sport}
         defaultLevel={skillLevel || profile?.skill_level || ""}
         defaultBudget={bucket}
+        defaultGoal={goal}
       />
     </div>
   );
 }
 
 // ─── Hero: recommendation CTA strip + active-recommendation badge ───
-function RecommendHero({ recommendActive, sport, skillLevel, bucket, onOpen, onClear, totalCount, filteredCount }) {
+const GOAL_LABEL = {
+  technique: "Improve technique",
+  compete: "Win matches",
+  fitness: "Stay fit",
+  casual: "Casual fun",
+};
+
+function RecommendHero({ recommendActive, sport, skillLevel, bucket, goal, onOpen, onClear, totalCount, filteredCount }) {
   const sportLabel = SPORTS.find(s => s.key === sport)?.label;
   const bucketLabel = PRICE_BUCKETS.find(b => b.key === bucket)?.label;
+  const goalLabel = GOAL_LABEL[goal];
   if (recommendActive) {
     return (
       <motion.div
@@ -418,9 +457,10 @@ function RecommendHero({ recommendActive, sport, skillLevel, bucket, onOpen, onC
               {filteredCount} {sportLabel || "sport"} pick{filteredCount === 1 ? "" : "s"}
               {skillLevel ? ` · ${skillLevel}` : ""}
               {bucketLabel && bucket !== "all" ? ` · ${bucketLabel}` : ""}
+              {goalLabel ? ` · ${goalLabel}` : ""}
             </p>
             <p className="text-[11px] text-zinc-500 mt-0.5">
-              Showing gear that fits your level + budget.
+              Ranked by fit · pros, cons, and skill/budget/goal match shown on each card.
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
@@ -613,6 +653,272 @@ function ProductCard({ item, delay }) {
           <EnquireLocalShop productName={item.name} sport={item._sport}>
             <button className="w-full inline-flex items-center justify-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/20 transition-colors">
               <MapPin className="w-3 h-3" /> Local shop
+            </button>
+          </EnquireLocalShop>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Enriched product card shown when the recommendation picker is active ───
+// Renders pros/cons + a "fit" score panel (skill / budget / goal match) and
+// the item's specs. Layout is wider (2-col on desktop) so there's room for
+// the extra detail.
+
+const TIER_ORDER = ["beginner", "intermediate", "advanced", "pro"];
+
+// Compute skill match (0-100) from the user's level vs the item's level.
+function skillMatchScore(itemLevel, userLevel) {
+  if (!userLevel) return 70;
+  const il = (itemLevel || "").toLowerCase();
+  const ul = userLevel.toLowerCase();
+  if (!il) return 70;
+  const iIdx = TIER_ORDER.findIndex((t) => il.includes(t));
+  const uIdx = TIER_ORDER.indexOf(ul);
+  if (iIdx < 0 || uIdx < 0) return 70;
+  const gap = Math.abs(iIdx - uIdx);
+  return gap === 0 ? 100 : gap === 1 ? 75 : gap === 2 ? 45 : 20;
+}
+
+// Compute budget match — how comfortably the item sits inside the chosen bucket
+function budgetMatchScore(item, bucketKey) {
+  const b = PRICE_BUCKETS.find((x) => x.key === bucketKey) || PRICE_BUCKETS[0];
+  const price = lowestPrice(item);
+  if (!isFinite(price) || price <= 0) return 60;
+  if (b.key === "all") return 80;
+  if (price < b.min) return 80; // cheaper than range → still fine
+  if (price > b.max) {
+    const overshoot = price / b.max;
+    if (overshoot < 1.2) return 50;
+    if (overshoot < 1.5) return 25;
+    return 10;
+  }
+  // Inside range — give 100 if hugging the lower half (better value)
+  const span = b.max - b.min || 1;
+  const pct = (price - b.min) / span; // 0 = cheap end, 1 = top end
+  return Math.round(100 - pct * 25);
+}
+
+// Heuristic goal match based on item type / level / play_style / pros.
+function goalMatchScore(item, goal) {
+  if (!goal) return 65;
+  const text = `${item.type || ""} ${item.level || ""} ${(item.pros || []).join(" ")} ${item.description || ""}`.toLowerCase();
+  const has = (...keywords) => keywords.some((k) => text.includes(k));
+  switch (goal) {
+    case "technique":
+      // control, even balance, flexible shaft, all-round
+      if (has("control", "all-round", "all round", "even balance", "flexible", "beginner")) return 90;
+      if (has("power", "head-heavy", "stiff")) return 45;
+      return 70;
+    case "compete":
+      if (has("tournament", "competitive", "pro", "advanced", "stiff", "head-heavy", "power")) return 90;
+      if (has("beginner", "casual")) return 35;
+      return 65;
+    case "fitness":
+      // light + forgiving = easier on the body for regular play
+      if (has("light", "even balance", "flexible", "all-round", "intermediate")) return 85;
+      if (has("heavy", "stiff", "pro")) return 50;
+      return 70;
+    case "casual":
+      // cheap, beginner-friendly, durable
+      if (has("beginner", "casual", "durable", "budget")) return 90;
+      if (has("pro", "advanced", "competitive")) return 40;
+      return 70;
+    default:
+      return 65;
+  }
+}
+
+function FitBar({ label, value, color = "bg-lime-400" }) {
+  return (
+    <div className="flex items-center gap-2 text-[11px]">
+      <span className="text-zinc-500 w-14 shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${value}%` }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className={`h-full rounded-full ${color}`}
+        />
+      </div>
+      <span className="text-zinc-300 font-mono w-8 text-right">{value}</span>
+    </div>
+  );
+}
+
+function FitScore({ score }) {
+  // Colour ring based on score
+  const color = score >= 80 ? "text-lime-400 border-lime-400/50 bg-lime-400/10"
+    : score >= 60 ? "text-sky-400 border-sky-400/50 bg-sky-400/10"
+    : score >= 40 ? "text-amber-400 border-amber-400/50 bg-amber-400/10"
+    : "text-rose-400 border-rose-400/50 bg-rose-400/10";
+  return (
+    <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 ${color}`}>
+      <span className="font-heading font-bold text-base leading-none">{score}</span>
+      <span className="text-[8px] uppercase tracking-wider opacity-70 mt-0.5">fit</span>
+    </div>
+  );
+}
+
+function specBadges(item) {
+  const s = item.specs || {};
+  const out = [];
+  if (s.weight) out.push(s.weight);
+  if (s.balance) out.push(s.balance);
+  if (s.shaft_flexibility) out.push(s.shaft_flexibility);
+  if (item.blade_type) out.push(item.blade_type);
+  if (item.rubber_type) out.push(item.rubber_type);
+  if (item.shape) out.push(item.shape);
+  if (s.material && out.length < 3) out.push(s.material);
+  if (s.string_tension && out.length < 4) out.push(s.string_tension);
+  return out.slice(0, 5);
+}
+
+function RecommendedProductCard({ item, delay, level, bucket, goal }) {
+  const prices = item.marketplace_prices || [];
+  const cheapest = prices.length ? prices.reduce((m, p) => (p.price < m.price ? p : m), prices[0]) : null;
+  const fallbackPrice = item.price_ranges?.INR;
+  const grad = SPORT_GRADIENT[item._sport] || SPORT_GRADIENT.badminton;
+  const { url: imgUrl } = productImageFor(item);
+  const [imgErr, setImgErr] = useState(false);
+  const showImage = imgUrl && !imgErr;
+  const sportEmoji = (SPORTS.find((s) => s.key === item._sport) || {}).emoji || "🎯";
+  const isLimited = item.availability === "limited_online";
+
+  const skill = skillMatchScore(item.level, level);
+  const budget = budgetMatchScore(item, bucket);
+  const goalFit = goalMatchScore(item, goal);
+  const overallFit = Math.round(skill * 0.45 + budget * 0.3 + goalFit * 0.25);
+
+  const specs = specBadges(item);
+  const pros = (item.pros || []).slice(0, 3);
+  const cons = (item.cons || []).slice(0, 2);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}
+      className="bg-zinc-900/80 border border-zinc-800 rounded-2xl overflow-hidden hover:border-lime-400/30 transition-colors flex flex-col md:flex-row"
+    >
+      {/* Image */}
+      <div className={`relative md:w-56 md:shrink-0 aspect-square md:aspect-auto bg-gradient-to-br ${grad}`}>
+        {showImage ? (
+          <img src={imgUrl} alt={item.name} loading="lazy" referrerPolicy="no-referrer"
+            className="w-full h-full object-contain"
+            onError={() => setImgErr(true)} />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center text-center px-3 relative">
+            <span className="absolute text-[140px] opacity-[0.07] select-none leading-none">{sportEmoji}</span>
+            <div className="relative z-10">
+              <p className="font-heading font-black text-2xl uppercase tracking-tight text-white drop-shadow-lg">{item.brand}</p>
+              {item.type && (
+                <p className="text-[10px] uppercase tracking-widest text-zinc-300/80 mt-1.5">{item.type}</p>
+              )}
+            </div>
+          </div>
+        )}
+        {item.level && (
+          <Badge className="absolute top-2 left-2 bg-zinc-900/80 text-zinc-200 border-zinc-700 text-[9px] backdrop-blur-sm">{item.level}</Badge>
+        )}
+        {isLimited && (
+          <Badge className="absolute top-2 right-2 bg-amber-400/15 text-amber-300 border-amber-400/30 text-[9px] backdrop-blur-sm">Limited online</Badge>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="p-4 flex-1 flex flex-col gap-3">
+        {/* Header row: name + fit score */}
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold truncate">{item.brand}</p>
+            <h3 className="text-base font-bold text-white leading-tight">{item.name}</h3>
+            {/* Cheapest price */}
+            {cheapest ? (
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className="text-lg font-bold text-lime-400 font-mono">₹{cheapest.price?.toLocaleString("en-IN")}</span>
+                <span className="text-[10px] text-zinc-500">on {cheapest.platform}{prices.length > 1 ? ` · cheapest of ${prices.length}` : ""}</span>
+              </div>
+            ) : fallbackPrice ? (
+              <p className="text-sm text-zinc-300 mt-1 font-mono">₹{fallbackPrice.min?.toLocaleString("en-IN")}–{fallbackPrice.max?.toLocaleString("en-IN")}</p>
+            ) : null}
+          </div>
+          <FitScore score={overallFit} />
+        </div>
+
+        {/* Spec badges */}
+        {specs.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {specs.map((s, i) => (
+              <Badge key={i} variant="outline" className="border-zinc-700 text-zinc-400 text-[10px] font-medium">{s}</Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Description */}
+        {item.description && (
+          <p className="text-[11px] text-zinc-500 leading-relaxed line-clamp-2">{item.description}</p>
+        )}
+
+        {/* Fit bars */}
+        <div className="space-y-1.5 bg-zinc-950/60 border border-zinc-800 rounded-xl px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">How well it fits you</p>
+          <FitBar label="Skill" value={skill} color="bg-lime-400" />
+          <FitBar label="Budget" value={budget} color="bg-amber-400" />
+          <FitBar label="Goal" value={goalFit} color="bg-sky-400" />
+        </div>
+
+        {/* Pros + Cons side by side */}
+        {(pros.length > 0 || cons.length > 0) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {pros.length > 0 && (
+              <div className="bg-lime-400/5 border border-lime-400/20 rounded-lg p-2.5">
+                <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">Pros</p>
+                <ul className="space-y-1">
+                  {pros.map((p, i) => (
+                    <li key={i} className="text-[11px] text-zinc-300 flex gap-1.5 leading-snug">
+                      <span className="text-lime-400 shrink-0">+</span><span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {cons.length > 0 && (
+              <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg p-2.5">
+                <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">Cons</p>
+                <ul className="space-y-1">
+                  {cons.map((c, i) => (
+                    <li key={i} className="text-[11px] text-zinc-300 flex gap-1.5 leading-snug">
+                      <span className="text-amber-400 shrink-0">−</span><span>{c}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Buy buttons */}
+        <div className="flex flex-col gap-1.5 mt-auto">
+          {cheapest && (
+            <a href={withAffiliate(cheapest.url)} target="_blank" rel="noopener noreferrer sponsored"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-lime-400 text-black hover:bg-lime-500 transition-colors">
+              <ShoppingCart className="w-3.5 h-3.5" /> Buy on {cheapest.platform} · ₹{cheapest.price?.toLocaleString("en-IN")}
+            </a>
+          )}
+          {prices.length > 1 && (
+            <div className="flex gap-1.5 flex-wrap">
+              {prices.filter(p => p !== cheapest).slice(0, 3).map((p, i) => (
+                <a key={i} href={withAffiliate(p.url)} target="_blank" rel="noopener noreferrer sponsored"
+                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[11px] bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors min-w-0">
+                  <span className="truncate">{p.platform}</span>
+                  <span className="font-mono shrink-0">₹{p.price}</span>
+                </a>
+              ))}
+            </div>
+          )}
+          <EnquireLocalShop productName={item.name} sport={item._sport}>
+            <button className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 border border-amber-400/20 transition-colors">
+              <MapPin className="w-3 h-3" /> Enquire local shop · callback 1-2 hr
             </button>
           </EnquireLocalShop>
         </div>
