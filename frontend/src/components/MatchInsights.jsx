@@ -1156,9 +1156,48 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
             <p className="text-[11px] text-zinc-300 mt-0.5">{aiGenMessage}</p>
           </div>
         )}
-        {aiGenStatus === "ready" && (
-          <div className="bg-lime-400/5 border border-lime-400/30 rounded-lg px-2.5 py-1.5 mt-2">
-            <p className="text-[11px] text-lime-300">{aiGenMessage}</p>
+        {aiGenStatus === "loading" && (
+          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-2 mt-2 flex items-center gap-2">
+            <Loader2 className="w-4 h-4 text-purple-300 animate-spin shrink-0" />
+            <p className="text-[11px] text-zinc-300">{aiGenMessage || "Generating your AI-corrected clip…"}</p>
+          </div>
+        )}
+        {aiGenStatus === "done" && aiGenVideoUrl && (
+          <div className="mt-2 bg-zinc-900/80 border border-purple-400/30 rounded-xl overflow-hidden">
+            <div className="px-3 py-2 bg-purple-400/5 border-b border-purple-400/20">
+              <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold flex items-center gap-1">
+                ✨ AI-corrected coaching visualization
+              </p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">{aiGenMessage}</p>
+            </div>
+            <video
+              src={aiGenVideoUrl}
+              controls
+              loop
+              muted
+              autoPlay
+              playsInline
+              className="w-full bg-black"
+              data-playsmart-ai-correct
+            />
+            <div className="px-3 py-2 bg-zinc-900/60 border-t border-zinc-800">
+              <p className="text-[10px] text-zinc-500 leading-relaxed">
+                <span className="text-purple-300 font-bold">How to read this:</span> An AI synthesized
+                this clip by applying the pro's motion to your image. It's NOT real footage of you — use
+                it to learn what the corrected swing looks like in your body. Hands holding the racket
+                are often distorted (model limitation). Focus on the BODY motion: torso rotation,
+                hip drive, arm extension at contact.
+              </p>
+              <a
+                href={aiGenVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                className="text-[10px] text-purple-300 hover:text-purple-200 mt-1 inline-block"
+              >
+                Open / download full-size ↗
+              </a>
+            </div>
           </div>
         )}
 
