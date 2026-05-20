@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Loader2, ShieldCheck, Check } from "lucide-react";
+import { Coins, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/App";
+import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 
 let cashfreeSdkPromise = null;
 function loadCashfreeSdk() {
@@ -40,11 +41,13 @@ function loadCashfreeSdk() {
 }
 
 export default function BuyTokensDialog({ open, onOpenChange }) {
-  const { refreshTokens } = useAuth();
+  const { refreshTokens, updateTokens } = useAuth();
   const [packs, setPacks] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(null); // {tokens, balance, demo}
+  // success drives the standalone celebration modal (rendered as a sibling
+  // dialog so the user sees it even after the buy dialog closes)
+  const [success, setSuccess] = useState(null); // {tokens, balance, pack}
   const [isDemo, setIsDemo] = useState(false); // detected after first create-order
 
   useEffect(() => {
@@ -54,10 +57,11 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
       .catch(() => {});
   }, [open]);
 
-  // Reset on close
+  // Reset selection/loading when the dialog closes — but DON'T clear `success`,
+  // the celebration modal owns its own lifecycle and closes itself.
   useEffect(() => {
     if (!open) {
-      setTimeout(() => { setSelected(null); setSuccess(null); setLoading(false); }, 250);
+      setTimeout(() => { setSelected(null); setLoading(false); }, 250);
     }
   }, [open]);
 
@@ -100,9 +104,17 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
       // 4. Server-side verification — never trust client
       const verify = await api.post("/payments/verify", { order_id: data.order_id }, { timeout: 30000 });
       if (verify.data?.ok) {
-        setSuccess({ tokens: verify.data.tokens_credited, balance: verify.data.balance });
-        refreshTokens();
-        toast.success(`+${verify.data.tokens_credited} tokens added!`);
+        // Instant wallet chip update (skip the /tokens/balance round-trip)
+        updateTokens?.(verify.data.balance);
+        refreshTokens?.(); // background reconcile of the full transaction list
+        // Fire the celebration modal AFTER closing the buy dialog so it
+        // takes the spotlight (sequential dialogs avoid stacked-z-index mess)
+        setSuccess({
+          tokens: verify.data.tokens_credited,
+          balance: verify.data.balance,
+          pack,
+        });
+        onOpenChange(false);
       } else {
         toast.error("Couldn't confirm payment yet — refresh in a moment.");
       }
@@ -111,27 +123,12 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
       toast.error(err?.response?.data?.detail || err.message || "Payment failed");
     }
     setLoading(false);
-  }, [refreshTokens]);
+  }, [refreshTokens, updateTokens, onOpenChange]);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-lg">
-        {success ? (
-          <div className="py-4 text-center">
-            <div className="w-14 h-14 rounded-full bg-lime-400/15 flex items-center justify-center mx-auto mb-3">
-              <Check className="w-7 h-7 text-lime-400" />
-            </div>
-            <h3 className="text-white font-bold text-lg mb-1">Tokens added!</h3>
-            <p className="text-zinc-400 text-sm mb-1">
-              <span className="text-lime-400 font-bold">+{success.tokens?.toLocaleString("en-IN")}</span> tokens credited
-            </p>
-            <p className="text-zinc-500 text-xs mb-4">New balance: {success.balance?.toLocaleString("en-IN")}</p>
-            <Button onClick={() => onOpenChange(false)}
-              className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6">
-              Done
-            </Button>
-          </div>
-        ) : (
           <>
             <DialogHeader>
               <DialogTitle className="text-white flex items-center gap-2">
@@ -191,8 +188,18 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
               <span>Payments processed by Cashfree · India · GST-compliant</span>
             </div>
           </>
-        )}
       </DialogContent>
     </Dialog>
+
+    {/* Celebration — opens once the buy dialog closes after a successful verify */}
+    <PaymentSuccessModal
+      open={!!success}
+      onClose={() => setSuccess(null)}
+      tokensCredited={success?.tokens}
+      newBalance={success?.balance}
+      packLabel={success?.pack?.label ? `${success.pack.label} pack` : null}
+      amountInr={success?.pack?.price_inr}
+    />
+    </>
   );
 }
