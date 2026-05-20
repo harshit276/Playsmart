@@ -3236,8 +3236,13 @@ async def analyze_video_universal_endpoint(
         raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
 
     # ─── Cache lookup ────────────────────────────────────────────────
+    # Bump PROMPT_VERSION whenever the universal-mode system prompt
+    # materially changes — old cache entries auto-invalidate so users
+    # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
+    # a backhand-only TT clip after we hardened serve detection).
+    PROMPT_VERSION = "v2026-05-21-serve-strict"
     video_hash = hashlib.sha256(video_bytes).hexdigest()[:32]
-    cache_key = f"{video_hash}:{req.tier}:{(req.target_player_description or '')[:80]}"
+    cache_key = f"{PROMPT_VERSION}:{video_hash}:{req.tier}:{(req.target_player_description or '')[:80]}"
     try:
         cached = await asyncio.wait_for(
             db.video_analysis_cache.find_one({"key": cache_key}, {"_id": 0}),

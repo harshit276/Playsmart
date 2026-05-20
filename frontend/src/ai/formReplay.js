@@ -304,32 +304,61 @@ export async function extractFormReplay(videoFile, timestamp, sport, shotType, o
 
 
 /**
+ * Compute the letterbox transform that fits a video frame of size
+ * (videoW, videoH) into a canvas of size (canvasW, canvasH) preserving
+ * aspect ratio. Returns the {dx, dy, dw, dh} draw rectangle PLUS the
+ * scale factors used so callers can transform keypoint coordinates
+ * into the same letterboxed space.
+ */
+function fitLetterbox(videoW, videoH, canvasW, canvasH) {
+  const scale = Math.min(canvasW / videoW, canvasH / videoH);
+  const dw = videoW * scale;
+  const dh = videoH * scale;
+  const dx = (canvasW - dw) / 2;
+  const dy = (canvasH - dh) / 2;
+  return { dx, dy, dw, dh, scale };
+}
+
+
+/**
  * Draw a frame's pose + (when contact frame) the green ideal-ghost
  * overlay onto a 2D canvas context. Used by FormCoachReplay.jsx in
  * its requestAnimationFrame loop.
+ *
+ * Letterboxes the video frame so portrait phone clips don't get
+ * squashed into a 16:9 panel — they render with black bars left/right
+ * and the player stays centered + correctly proportioned.
  */
 export function drawFormFrame(ctx, frame, replay, options = {}) {
   const { canvasW, canvasH } = options;
-  const { videoSize, contactGhost, racketSide } = replay;
-  const sx = canvasW / videoSize.originalW;
-  const sy = canvasH / videoSize.originalH;
+  const { videoSize, contactGhost } = replay;
+  const vw = videoSize.originalW;
+  const vh = videoSize.originalH;
+  const fit = fitLetterbox(vw, vh, canvasW, canvasH);
 
-  // Draw the underlying frame (already downscaled to maxDim)
-  const img = new Image();
-  img.src = frame.dataUrl;
-  if (img.complete) {
-    ctx.drawImage(img, 0, 0, canvasW, canvasH);
-  } else {
-    img.onload = () => ctx.drawImage(img, 0, 0, canvasW, canvasH);
-    // Fill while loading to avoid flicker
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, canvasW, canvasH);
+  // Fill the canvas with a neutral background so letterbox bars are
+  // visually consistent (no garbage left over from prior frames).
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  // Draw the underlying frame letterboxed
+  const img = options.cachedImage || null;
+  if (img && img.complete) {
+    ctx.drawImage(img, fit.dx, fit.dy, fit.dw, fit.dh);
   }
 
   if (!frame.keypoints) return;
 
-  // Draw USER skeleton (white on every frame, color-coded at contact)
-  const lineW = Math.max(2, Math.round(canvasW / 220));
+  // Keypoint coords are in NATIVE video pixels, so transform via the
+  // letterbox scale + offset, NOT a naive canvasW/videoW ratio (that
+  // was the bug — it stretched the skeleton off the picture).
+  const tx = (x) => fit.dx + x * fit.scale;
+  const ty = (y) => fit.dy + y * fit.scale;
+  // Use the SHORTER edge of the fitted box for line/dot sizing so
+  // portrait clips don't get hairline-thin overlays.
+  const refDim = Math.min(fit.dw, fit.dh);
+  const lineW = Math.max(2, Math.round(refDim / 220));
+
   const drawSkeleton = (kps, color, alpha = 1.0, dotR = 4) => {
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -340,31 +369,29 @@ export function drawFormFrame(ctx, frame, replay, options = {}) {
       if (!pa || !pb) continue;
       if ((pa.score || 0) < 0.2 || (pb.score || 0) < 0.2) continue;
       ctx.beginPath();
-      ctx.moveTo(pa.x * sx, pa.y * sy);
-      ctx.lineTo(pb.x * sx, pb.y * sy);
+      ctx.moveTo(tx(pa.x), ty(pa.y));
+      ctx.lineTo(tx(pb.x), ty(pb.y));
       ctx.stroke();
     }
     ctx.fillStyle = color;
     for (const kp of kps) {
       if (!kp || (kp.score || 0) < 0.2) continue;
       ctx.beginPath();
-      ctx.arc(kp.x * sx, kp.y * sy, dotR, 0, Math.PI * 2);
+      ctx.arc(tx(kp.x), ty(kp.y), dotR, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
   };
 
   if (frame.isContact) {
-    // At the contact frame, draw USER in white outline + colored joints,
-    // then GHOST in green dashed overlay.
-    drawSkeleton(frame.keypoints, "rgba(255,255,255,0.85)", 1.0, Math.max(5, Math.round(canvasW / 90)));
+    drawSkeleton(frame.keypoints, "rgba(255,255,255,0.9)", 1.0, Math.max(5, Math.round(refDim / 80)));
     if (contactGhost) {
       ctx.save();
-      ctx.setLineDash([4, 3]);
-      drawSkeleton(contactGhost, "#84cc16", 0.85, Math.max(5, Math.round(canvasW / 90)));
+      ctx.setLineDash([5, 3]);
+      drawSkeleton(contactGhost, "#84cc16", 0.95, Math.max(5, Math.round(refDim / 80)));
       ctx.restore();
     }
   } else {
-    drawSkeleton(frame.keypoints, "rgba(255,255,255,0.7)", 0.7, Math.max(3, Math.round(canvasW / 150)));
+    drawSkeleton(frame.keypoints, "rgba(255,255,255,0.75)", 0.8, Math.max(3, Math.round(refDim / 150)));
   }
 }

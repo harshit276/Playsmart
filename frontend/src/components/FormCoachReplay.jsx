@@ -45,57 +45,65 @@ export default function FormCoachReplay({ videoFile, timestamp, sport, shotType,
     return () => { cancelled = true; };
   }, [videoFile, timestamp, sport, shotType]);
 
-  // Animation loop. Runs at the source frame rate (default 10 fps) and
-  // pauses on the contact frame for ~600ms so the user has time to see
-  // the green ghost before the loop continues.
+  // Animation loop. Canvas intrinsic size tracks its DISPLAY size (so
+  // it fills the 16:9 panel cleanly) and frames are letterboxed inside.
+  // ResizeObserver keeps the canvas backing store in sync when the
+  // parent flex container reflows.
   useEffect(() => {
     if (!replay || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    // Size canvas to the frame's display size at first paint
-    canvas.width = replay.videoSize.w;
-    canvas.height = replay.videoSize.h;
-
     const drawMod = import("@/ai/formReplay");
+
+    // Pre-cache all frame Image objects so the draw loop is synchronous.
+    // 25 frames × ~30 KB JPEG = ~750 KB total, fine for memory.
+    const imgs = new Array(replay.frames.length);
+    let loadedCount = 0;
+    replay.frames.forEach((f, i) => {
+      const img = new Image();
+      img.onload = img.onerror = () => { loadedCount++; };
+      img.src = f.dataUrl;
+      imgs[i] = img;
+    });
+
+    // Track canvas display size so frames are letterboxed inside the
+    // actual rendered box, not the video's intrinsic resolution.
+    const resizeCanvas = () => {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    };
+    resizeCanvas();
+    const ro = new ResizeObserver(resizeCanvas);
+    ro.observe(canvas);
 
     let cancelled = false;
     let frameIdx = 0;
     let lastSwap = performance.now();
-    const FRAME_MS = 1000 / 10;            // 10 fps source = 100ms/frame
-    const CONTACT_HOLD_MS = 600;            // dwell on contact frame
-
-    let imgCache = null;
-    let imgCacheIdx = -1;
-    const ensureImg = (idx) => new Promise((res) => {
-      if (imgCacheIdx === idx && imgCache?.complete) { res(imgCache); return; }
-      const img = new Image();
-      img.onload = () => res(img);
-      img.onerror = () => res(null);
-      img.src = replay.frames[idx].dataUrl;
-      imgCache = img; imgCacheIdx = idx;
-    });
+    const FRAME_MS = 1000 / 10;
+    const CONTACT_HOLD_MS = 600;
 
     const tick = async (now) => {
       if (cancelled) return;
       const f = replay.frames[frameIdx];
       const wait = f.isContact ? CONTACT_HOLD_MS : FRAME_MS;
       if (now - lastSwap >= wait) {
-        // Advance
         frameIdx = (frameIdx + 1) % replay.frames.length;
         lastSwap = now;
       }
       const cur = replay.frames[frameIdx];
-      const img = await ensureImg(frameIdx);
-      // Draw current frame
-      if (img) ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      else { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
-      // Draw skeleton overlay
+      const img = imgs[frameIdx];
       const mod = await drawMod;
-      mod.drawFormFrame(ctx, cur, replay, { canvasW: canvas.width, canvasH: canvas.height });
+      mod.drawFormFrame(ctx, cur, replay, {
+        canvasW: canvas.width,
+        canvasH: canvas.height,
+        cachedImage: img && img.complete && img.naturalWidth > 0 ? img : null,
+      });
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-    return () => { cancelled = true; };
+    return () => { cancelled = true; ro.disconnect(); };
   }, [replay]);
 
   if (!videoFile || typeof timestamp !== "number") return null;
