@@ -11109,12 +11109,34 @@ async def health():
     broken — tells you which secrets are missing on Vercel."""
     mongo_ok = False
     mongo_err = None
+    mongo_write_ok = None
+    mongo_write_err = None
     if mongo_url:
         try:
             await asyncio.wait_for(client.admin.command("ping"), timeout=4.0)
             mongo_ok = True
         except Exception as e:
             mongo_err = f"{type(e).__name__}: {str(e)[:120]}"
+        # Also probe a WRITE — read-only Atlas users or a stalled primary
+        # election will pass ping but fail every update. Touch a throwaway
+        # doc so we can distinguish "reachable" from "writeable".
+        try:
+            probe_id = f"__health_probe__"
+            await asyncio.wait_for(db.users.update_one(
+                {"id": probe_id},
+                {"$set": {"id": probe_id, "tokens": 0, "_probe_at": datetime.now(timezone.utc).isoformat()}},
+                upsert=True,
+            ), timeout=5.0)
+            res = await asyncio.wait_for(db.users.find_one_and_update(
+                {"id": probe_id},
+                {"$inc": {"tokens": 1}},
+                return_document=True,
+                projection={"_id": 0, "tokens": 1},
+            ), timeout=5.0)
+            mongo_write_ok = bool(res and "tokens" in res)
+        except Exception as e:
+            mongo_write_ok = False
+            mongo_write_err = f"{type(e).__name__}: {str(e)[:200]}"
     return {
         "status": "healthy" if mongo_ok else "degraded",
         "env": {
@@ -11136,6 +11158,8 @@ async def health():
             "configured": bool(mongo_url),
             "reachable": mongo_ok,
             "error": mongo_err,
+            "writeable": mongo_write_ok,
+            "write_error": mongo_write_err,
         },
     }
 
