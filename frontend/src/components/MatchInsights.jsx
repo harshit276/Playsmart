@@ -1124,17 +1124,31 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   useEffect(() => {
     const v = userVideoRef.current;
     if (!v || !headlineShot || typeof headlineShot.timestamp !== "number") return;
-    const SHOT_LEAD = 1.0;   // start 1s before contact
-    const SHOT_TAIL = 1.5;   // 1.5s after = ~2.5s total window
-    const ts = headlineShot.timestamp;
+    const SHOT_LEAD = 1.0;
+    const SHOT_TAIL = 1.5;
     let active = true;
     const setLoop = () => {
       if (!active) return;
-      try { v.currentTime = Math.max(0, ts - SHOT_LEAD); v.muted = true; v.play?.(); } catch {}
+      // Edge case: when Gemini didn't return a real timestamp it
+      // defaults to 0, which on most clips is a black intro frame.
+      // Fall back to 25% into the duration so the user sees actual
+      // gameplay instead of a black screen.
+      let ts = headlineShot.timestamp;
+      const dur = v.duration;
+      if ((!ts || ts < 0.5) && isFinite(dur) && dur > 2) {
+        ts = dur * 0.25;
+      }
+      try {
+        v.currentTime = Math.max(0, ts - SHOT_LEAD);
+        v.muted = true;
+        v.play?.();
+      } catch {}
+      v._loopStart = Math.max(0, ts - SHOT_LEAD);
+      v._loopEnd = ts + SHOT_TAIL;
     };
     const onTimeUpdate = () => {
       if (!active) return;
-      if (v.currentTime >= ts + SHOT_TAIL) setLoop();
+      if (v._loopEnd != null && v.currentTime >= v._loopEnd) setLoop();
     };
     v.addEventListener("timeupdate", onTimeUpdate);
     v.addEventListener("loadeddata", setLoop, { once: true });

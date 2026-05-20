@@ -580,10 +580,34 @@ def get_reference(sport: str, shot_type: str) -> dict | None:
     entry = s.get(shot_l)
     if entry:
         return {**entry, "sport": sport_l, "shot_type": shot_l}
-    # Fuzzy fallback: try removing common suffixes / prefixes
+    # Substring fallback: "smash" matches "smash_overhead" and vice-versa
     for known in s:
         if known in shot_l or shot_l in known:
             return {**s[known], "sport": sport_l, "shot_type": known}
+    # Token-overlap fallback: "back_court_smash" matches "smash" via the
+    # shared "smash" token. Generic words like "shot"/"play"/"hit" are
+    # stopworded so unrelated shots don't all collapse to "net_shot" just
+    # because they share the word "shot".
+    GENERIC_TOKENS = {
+        "shot", "shots", "play", "hit", "stroke", "action",
+        "ball", "court", "side", "front", "back", "side", "type",
+    }
+    shot_tokens = {t for t in shot_l.split("_")
+                   if len(t) >= 4 and t not in GENERIC_TOKENS}
+    if not shot_tokens:
+        return None
+    best = None
+    best_overlap = 0
+    for known, entry in s.items():
+        known_tokens = {t for t in known.split("_")
+                        if len(t) >= 4 and t not in GENERIC_TOKENS}
+        overlap = len(shot_tokens & known_tokens)
+        if overlap > best_overlap:
+            best_overlap = overlap
+            best = (known, entry)
+    if best:
+        known, entry = best
+        return {**entry, "sport": sport_l, "shot_type": known}
     return None
 
 
