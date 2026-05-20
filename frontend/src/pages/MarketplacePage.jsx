@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Filter, ArrowUpDown, ShoppingCart, ExternalLink, MapPin,
-  CheckCircle2, X, Sparkles, ChevronRight, ArrowDown,
+  CheckCircle2, X, Sparkles, ChevronRight, ArrowDown, Target, Wand2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ import EnquireLocalShop from "@/components/EnquireLocalShop";
 import SEO from "@/components/SEO";
 import { withAffiliate } from "@/lib/affiliateLinks";
 import { productImageFor } from "@/lib/productImage";
+import EquipmentRecommendModal from "@/components/EquipmentRecommendModal";
+import { useAuth } from "@/App";
 
 const SPORTS = [
   { key: "all", label: "All", emoji: "🌐" },
@@ -66,6 +68,7 @@ function lowestPrice(item) {
 }
 
 export default function MarketplacePage() {
+  const { profile } = useAuth();
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sport, setSport] = useState("all");
@@ -74,10 +77,32 @@ export default function MarketplacePage() {
   const [sort, setSort] = useState("popular");
   const [search, setSearch] = useState("");
   const [brands, setBrands] = useState([]); // selected brand filter
+  const [skillLevel, setSkillLevel] = useState(""); // set via recommend modal
   const [filterSheet, setFilterSheet] = useState(false);
   const [sortSheet, setSortSheet] = useState(false);
+  const [recommendOpen, setRecommendOpen] = useState(false);
+  const [recommendActive, setRecommendActive] = useState(false); // hero shows "personalised" mode
 
   useEffect(() => { document.title = "Marketplace · AthlyticAI"; }, []);
+
+  const applyRecommendation = ({ sport: s, level, budget, categories }) => {
+    setSport(s);
+    setBucket(budget || "all");
+    setSkillLevel(level || "");
+    // Multi-category: if multiple, pick the first as the primary category
+    // filter (UI shows one at a time). Future improvement: multi-select.
+    setCategory(categories?.[0] || "all");
+    setBrands([]);
+    setRecommendActive(true);
+    window.scrollTo({ top: 320, behavior: "smooth" });
+  };
+
+  const clearRecommendation = () => {
+    setSkillLevel("");
+    setRecommendActive(false);
+    setCategory("all");
+    setBucket("all");
+  };
 
   // Load every sport's equipment JSON in parallel from static assets.
   useEffect(() => {
@@ -130,6 +155,7 @@ export default function MarketplacePage() {
   const filtered = useMemo(() => {
     const b = PRICE_BUCKETS.find((x) => x.key === bucket) || PRICE_BUCKETS[0];
     const q = search.trim().toLowerCase();
+    const lvl = (skillLevel || "").toLowerCase();
     let out = allItems
       .filter((it) => sport === "all" || it._sport === sport)
       .filter((it) => category === "all" || it._category === category)
@@ -139,6 +165,20 @@ export default function MarketplacePage() {
       })
       .filter((it) => brands.length === 0 || brands.includes(it.brand))
       .filter((it) => {
+        // Soft skill filter: when the item declares a level, only show
+        // items at that level OR one tier above/below. Items without a
+        // level field always pass.
+        if (!lvl) return true;
+        const il = (it.level || "").toLowerCase();
+        if (!il) return true;
+        if (il.includes(lvl)) return true;
+        // Tolerant matching for nearby tiers
+        const tiers = ["beginner", "intermediate", "advanced", "pro"];
+        const myI = tiers.indexOf(lvl);
+        const itI = tiers.findIndex((t) => il.includes(t));
+        return myI >= 0 && itI >= 0 && Math.abs(myI - itI) <= 1;
+      })
+      .filter((it) => {
         if (!q) return true;
         return (`${it.name} ${it.brand} ${it.type || ""}`.toLowerCase()).includes(q);
       });
@@ -147,7 +187,7 @@ export default function MarketplacePage() {
     else if (sort === "name") out.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     // "popular" = original order (curated)
     return out;
-  }, [allItems, sport, category, bucket, sort, search, brands]);
+  }, [allItems, sport, category, bucket, sort, search, brands, skillLevel]);
 
   const activeFilterCount = (category !== "all" ? 1 : 0)
     + (bucket !== "all" ? 1 : 0)
@@ -162,7 +202,19 @@ export default function MarketplacePage() {
         description="Browse and compare prices for badminton, tennis, table tennis, and pickleball equipment across Amazon, Flipkart, and Decathlon. Curated for Indian players."
         url="https://athlyticai.com/marketplace"
       />
-      <div className="container mx-auto px-3 sm:px-4 max-w-7xl pt-6">
+      <div className="container mx-auto px-3 sm:px-4 max-w-7xl pt-4 sm:pt-6">
+        {/* ── Hero: "Get my picks" recommendation flow ── */}
+        <RecommendHero
+          recommendActive={recommendActive}
+          sport={sport}
+          skillLevel={skillLevel}
+          bucket={bucket}
+          onOpen={() => setRecommendOpen(true)}
+          onClear={clearRecommendation}
+          totalCount={allItems.length}
+          filteredCount={filtered.length}
+        />
+
         {/* Sport pills row + search */}
         <div className="mb-4 space-y-3">
           <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1 scrollbar-hide">
@@ -332,7 +384,80 @@ export default function MarketplacePage() {
           ))}
         </div>
       </BottomSheet>
+
+      {/* Equipment recommendation quiz */}
+      <EquipmentRecommendModal
+        open={recommendOpen}
+        onClose={() => setRecommendOpen(false)}
+        onApply={applyRecommendation}
+        defaultSport={sport === "all" ? (profile?.active_sport || "badminton") : sport}
+        defaultLevel={skillLevel || profile?.skill_level || ""}
+        defaultBudget={bucket}
+      />
     </div>
+  );
+}
+
+// ─── Hero: recommendation CTA strip + active-recommendation badge ───
+function RecommendHero({ recommendActive, sport, skillLevel, bucket, onOpen, onClear, totalCount, filteredCount }) {
+  const sportLabel = SPORTS.find(s => s.key === sport)?.label;
+  const bucketLabel = PRICE_BUCKETS.find(b => b.key === bucket)?.label;
+  if (recommendActive) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+        className="mb-4 rounded-2xl border border-lime-400/40 bg-gradient-to-br from-lime-400/10 via-emerald-900/10 to-zinc-950 p-4 sm:p-5"
+      >
+        <div className="flex items-start gap-3 flex-wrap">
+          <div className="w-10 h-10 rounded-xl bg-lime-400/15 flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-lime-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold">Personalised for you</p>
+            <p className="text-sm sm:text-base font-bold text-white mt-0.5 truncate">
+              {filteredCount} {sportLabel || "sport"} pick{filteredCount === 1 ? "" : "s"}
+              {skillLevel ? ` · ${skillLevel}` : ""}
+              {bucketLabel && bucket !== "all" ? ` · ${bucketLabel}` : ""}
+            </p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">
+              Showing gear that fits your level + budget.
+            </p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button onClick={onOpen} variant="outline" size="sm"
+              className="border-lime-400/40 text-lime-300 hover:bg-lime-400/10 text-xs h-9 rounded-lg">
+              <Wand2 className="w-3.5 h-3.5 mr-1.5" /> Adjust
+            </Button>
+            <Button onClick={onClear} variant="ghost" size="sm"
+              className="text-zinc-400 hover:text-white text-xs h-9 rounded-lg">
+              <X className="w-3.5 h-3.5 mr-1" /> Clear
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+      onClick={onOpen}
+      className="group w-full mb-4 rounded-2xl border border-zinc-800 bg-gradient-to-br from-lime-400/10 via-emerald-900/10 to-zinc-950 p-4 sm:p-5 text-left hover:border-lime-400/40 transition-colors"
+    >
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className="w-12 h-12 rounded-xl bg-lime-400/15 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+          <Sparkles className="w-6 h-6 text-lime-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm sm:text-base font-bold text-white">
+            Not sure what to buy? <span className="text-lime-300">Get my picks →</span>
+          </p>
+          <p className="text-[11px] sm:text-xs text-zinc-500 mt-0.5">
+            Answer 3 quick questions · we'll narrow {totalCount} products to the right gear for your level + budget.
+          </p>
+        </div>
+        <ChevronRight className="w-5 h-5 text-zinc-500 group-hover:text-lime-400 transition-colors shrink-0" />
+      </div>
+    </motion.button>
   );
 }
 

@@ -12,30 +12,27 @@ import { useState, useEffect } from "react";
 import { getSportEmoji, getSportLabel } from "@/lib/sportConfig";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Desktop nav items (shown in top bar)
+// Desktop nav items (shown in top bar). Equipment merged into Marketplace.
+// Community demoted (kept reachable via Host page) until we have enough users.
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/analyze", label: "Analyze", icon: Video },
   { path: "/marketplace", label: "Marketplace", icon: ShoppingCart },
-  { path: "/equipment", label: "Equipment", icon: Target },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/community?host=1", label: "Host Game", icon: Swords },
-  { path: "/community", label: "Community", icon: Users },
 ];
 
 // Mobile bottom nav - 5 key items (like Instagram/YouTube)
 const MOBILE_NAV_PRIMARY = [
   { path: "/dashboard", label: "Home", icon: Home },
   { path: "/analyze", label: "Analyze", icon: Video },
-  { path: "/community?host=1", label: "Host", icon: Swords },
+  { path: "/marketplace", label: "Shop", icon: ShoppingCart },
   { path: "/training", label: "Training", icon: Dumbbell },
 ];
 
 // "More" menu items on mobile
 const MOBILE_NAV_MORE = [
-  { path: "/marketplace", label: "Marketplace", icon: ShoppingCart },
-  { path: "/equipment", label: "Equipment", icon: Target },
-  { path: "/community", label: "Community", icon: Users },
+  { path: "/community?host=1", label: "Host Game", icon: Swords },
   { path: "/progress", label: "Progress", icon: BarChart3 },
   { path: "/card", label: "My Card", icon: CreditCard },
   { path: "/blog", label: "Blog", icon: BookOpen },
@@ -137,7 +134,8 @@ export default function Navbar() {
           {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-1">
             {showNav && NAV_ITEMS.filter(item => {
-              if (isGuest && (item.path === "/community" || item.path === "/card")) return false;
+              // Guests don't see host (signin required) or My Card (no profile yet)
+              if (isGuest && (item.path?.startsWith("/community") || item.path === "/card")) return false;
               return true;
             }).map(({ path, label, icon: Icon }) => (
               <Link key={path} to={path} data-testid={`nav-${label.toLowerCase()}`}

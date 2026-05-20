@@ -214,7 +214,8 @@ function AppRoutes() {
       <Route path="/download" element={<DownloadPage />} />
       <Route path="/install" element={<Navigate to="/download" replace />} />
       <Route path="/app" element={<Navigate to="/download" replace />} />
-      <Route path="/equipment" element={<EquipmentPage />} />
+      <Route path="/equipment" element={<Navigate to="/marketplace" replace />} />
+      <Route path="/equipment-legacy" element={<EquipmentPage />} />
       <Route path="/training" element={<TrainingPage />} />
       <Route path="/progress" element={<ProgressPage />} />
       <Route path="/analyze" element={<AnalyzePage />} />
