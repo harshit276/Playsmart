@@ -159,6 +159,21 @@ function StatsTab({ headers }) {
     }
     setPingingCF(false);
   };
+  const [fixing, setFixing] = useState(false);
+  const fixPhoneIndex = async () => {
+    if (!confirm("Drop + recreate the users.phone index as partial-unique?\n(One-shot fix. Safe.)")) return;
+    setFixing(true);
+    try {
+      const r = await api.post("/admin/fix-phone-index", {}, { headers, timeout: 15000 });
+      const ok = r.data?.write_probe_after_fix === "ok";
+      if (ok) toast.success("Phone index fixed! Writes work now.");
+      else toast.error("Fix ran but writes still failing — check details");
+      setCfResult({ ok, env: "INDEX FIX", configured: true, response: r.data });
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Fix failed");
+    }
+    setFixing(false);
+  };
   if (loading) return <Spinner />;
   if (!data) return null;
   const tiles = [
@@ -183,6 +198,10 @@ function StatsTab({ headers }) {
           <Button onClick={pingCashfree} disabled={pingingCF} size="sm" variant="outline"
             className="border-lime-400/30 text-lime-300 hover:bg-lime-400/10 text-xs h-7">
             {pingingCF ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "💳"} Ping Cashfree
+          </Button>
+          <Button onClick={fixPhoneIndex} disabled={fixing} size="sm" variant="outline"
+            className="border-rose-400/30 text-rose-300 hover:bg-rose-400/10 text-xs h-7">
+            {fixing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔧"} Fix phone index
           </Button>
           <Button onClick={refresh} size="sm" variant="ghost" className="text-zinc-400 text-xs">
             <RefreshCw className="w-3 h-3 mr-1" /> Refresh
