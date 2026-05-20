@@ -599,6 +599,57 @@ async def demo_login():
 ADMIN_WIPE_KEY = os.environ.get("ADMIN_WIPE_KEY", "").strip()
 
 
+@api_router.post("/admin/fix-phone-index")
+async def admin_fix_phone_index(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """One-shot migration: the users collection has a bad `phone_1` unique
+    index. MongoDB treats null as a value in unique indexes, so the first
+    Google-only user (phone=null) blocks every subsequent passwordless
+    signup with E11000. Fix: drop the bad index + recreate it as a
+    partialFilterExpression unique (only enforced when phone exists)."""
+    _require_admin(x_admin_key)
+    result = {"actions": []}
+    try:
+        existing = await db.users.list_indexes().to_list(50)
+        result["before"] = [i.get("name") for i in existing]
+        # Drop any index keyed on phone (regardless of name)
+        for idx in existing:
+            keys = idx.get("key") or {}
+            if "phone" in keys and idx.get("name") not in ("_id_",):
+                try:
+                    await db.users.drop_index(idx["name"])
+                    result["actions"].append(f"dropped {idx['name']}")
+                except Exception as e:
+                    result["actions"].append(f"drop failed {idx['name']}: {e}")
+        # Recreate as partial-unique (only when phone is a non-null string)
+        try:
+            await db.users.create_index(
+                "phone",
+                unique=True,
+                partialFilterExpression={"phone": {"$type": "string"}},
+                name="phone_unique_partial",
+            )
+            result["actions"].append("created phone_unique_partial (partial unique)")
+        except Exception as e:
+            result["actions"].append(f"create partial failed: {e}")
+        existing_after = await db.users.list_indexes().to_list(50)
+        result["after"] = [i.get("name") for i in existing_after]
+        # Sanity-check: probe a write now that the index is fixed
+        try:
+            probe_id = "__post_fix_probe__"
+            await db.users.update_one(
+                {"id": probe_id},
+                {"$set": {"id": probe_id, "tokens": 0}},
+                upsert=True,
+            )
+            result["write_probe_after_fix"] = "ok"
+        except Exception as e:
+            result["write_probe_after_fix"] = f"FAILED: {type(e).__name__}: {str(e)[:200]}"
+        return result
+    except Exception as e:
+        result["error"] = f"{type(e).__name__}: {str(e)[:300]}"
+        return result
+
+
 @api_router.post("/admin/dedup-users")
 async def admin_dedup_users(x_admin_key: str = Header(None, alias="X-Admin-Key")):
     """Repair existing accounts that ended up with TWO docs in the users
