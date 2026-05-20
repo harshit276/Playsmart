@@ -3585,60 +3585,115 @@ async def _run_replicate_correction_job(
             )
             return
 
-        # Submit the Replicate prediction. Using MimicMotion ("zsxkib/
-        # mimicmotion") — adjust the version string when Replicate
-        # updates the model. The exact input keys depend on the
-        # specific Replicate model version; this is the schema as of
-        # late 2025.
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            create_resp = await client.post(
-                "https://api.replicate.com/v1/predictions",
-                headers={
-                    "Authorization": f"Bearer {replicate_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "version": "zsxkib/mimicmotion:1b9163b34de64a0b4a9b9b50d6b4c08c4f23b9c5",
-                    "input": {
-                        "ref_image": ref_image_data_url,
-                        "motion_video": motion_url,
-                        "num_frames": 48,         # ~3 seconds at 16 fps
-                        "guidance_scale": 2.0,
-                        "seed": 42,                # deterministic re-runs
-                    },
-                },
-            )
-            if create_resp.status_code not in (200, 201):
-                raise RuntimeError(f"Replicate create failed: {create_resp.status_code} {create_resp.text[:300]}")
-            prediction = create_resp.json()
-            prediction_id = prediction.get("id")
-            poll_url = prediction.get("urls", {}).get("get") \
-                or f"https://api.replicate.com/v1/predictions/{prediction_id}"
+        # ── Pick generator backend ────────────────────────────────
+        # GENERATOR_BACKEND env var: "mimicmotion" (paid, ~$0.10-0.13/gen,
+        # motion-accurate via driving video), "minimax" (free-trial
+        # tier on Replicate, image-to-video with text prompt, less
+        # precise motion control), or "auto" (try minimax first, fall
+        # back to mimicmotion on out-of-quota). Default to "minimax"
+        # because it has a free tier — operator can switch to
+        # "mimicmotion" once they've tested + funded their account.
+        backend_choice = (os.getenv("GENERATOR_BACKEND") or "minimax").lower()
 
-            # Poll until the prediction settles. Replicate typically
-            # finishes in 30-90s for MimicMotion.
+        def _build_minimax_payload():
+            # MiniMax video-01: image-to-video with text prompt.
+            # Free quota; falls through with 402-equivalent error
+            # when exhausted. We describe the corrected motion
+            # verbally since the model doesn't accept pose input.
+            coach_cue = ref.get("description") or "Perform the shot with textbook technique"
+            prompt = (
+                f"{(shot_type or 'shot').replace('_', ' ').title()} — "
+                f"the player in the frame performs the technique with "
+                f"correct form. {coach_cue}. Smooth, balanced motion, "
+                f"realistic sports footage style."
+            )
+            return {
+                "version": "minimax/video-01",
+                "input": {
+                    "prompt": prompt[:500],
+                    "first_frame_image": ref_image_data_url,
+                    "prompt_optimizer": True,
+                },
+            }
+
+        def _build_mimicmotion_payload():
+            return {
+                "version": "zsxkib/mimicmotion:1b9163b34de64a0b4a9b9b50d6b4c08c4f23b9c5",
+                "input": {
+                    "ref_image": ref_image_data_url,
+                    "motion_video": motion_url,
+                    "num_frames": 48,
+                    "guidance_scale": 2.0,
+                    "seed": 42,
+                },
+            }
+
+        # Build the attempt list (in fall-back order).
+        attempts = []
+        if backend_choice == "minimax":
+            attempts = [("minimax", _build_minimax_payload)]
+        elif backend_choice == "mimicmotion":
+            attempts = [("mimicmotion", _build_mimicmotion_payload)]
+        else:  # auto
+            attempts = [
+                ("minimax", _build_minimax_payload),
+                ("mimicmotion", _build_mimicmotion_payload),
+            ]
+
+        # ── Submit the Replicate prediction(s) ────────────────────
+        async with httpx.AsyncClient(timeout=120.0) as client:
             video_url = None
             error_msg = None
-            for _ in range(60):  # ~3 min max
-                await asyncio.sleep(3.0)
-                poll = await client.get(
-                    poll_url,
-                    headers={"Authorization": f"Bearer {replicate_key}"},
+            used_backend = None
+            for backend_name, build_payload in attempts:
+                used_backend = backend_name
+                create_resp = await client.post(
+                    "https://api.replicate.com/v1/predictions",
+                    headers={
+                        "Authorization": f"Bearer {replicate_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=build_payload(),
                 )
-                if poll.status_code != 200:
+                # 402 / 429 = free-tier exhausted or rate-limited.
+                # In "auto" mode this triggers the fallback attempt.
+                if create_resp.status_code in (402, 429) and len(attempts) > 1:
+                    error_msg = f"{backend_name} quota exhausted — trying fallback"
                     continue
-                p = poll.json()
-                status = p.get("status")
-                if status == "succeeded":
-                    out = p.get("output")
-                    video_url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else None)
-                    break
-                if status == "failed":
-                    error_msg = p.get("error") or "Replicate prediction failed"
-                    break
-                if status == "canceled":
-                    error_msg = "Generation was canceled"
-                    break
+                if create_resp.status_code not in (200, 201):
+                    raise RuntimeError(
+                        f"Replicate {backend_name} create failed: "
+                        f"{create_resp.status_code} {create_resp.text[:300]}"
+                    )
+                prediction = create_resp.json()
+                prediction_id = prediction.get("id")
+                poll_url = prediction.get("urls", {}).get("get") \
+                    or f"https://api.replicate.com/v1/predictions/{prediction_id}"
+
+                # Poll until the prediction settles. MimicMotion ~30-90s,
+                # MiniMax ~60-180s for a 6s output.
+                for _ in range(80):
+                    await asyncio.sleep(3.0)
+                    poll = await client.get(
+                        poll_url,
+                        headers={"Authorization": f"Bearer {replicate_key}"},
+                    )
+                    if poll.status_code != 200:
+                        continue
+                    p = poll.json()
+                    status = p.get("status")
+                    if status == "succeeded":
+                        out = p.get("output")
+                        video_url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else None)
+                        break
+                    if status == "failed":
+                        error_msg = p.get("error") or f"Replicate {backend_name} prediction failed"
+                        break
+                    if status == "canceled":
+                        error_msg = f"{backend_name} generation was canceled"
+                        break
+                if video_url:
+                    break  # success with this backend; don't try the next
 
         if not video_url:
             # Refund tokens since we couldn't deliver a result.
@@ -3666,6 +3721,7 @@ async def _run_replicate_correction_job(
             {"$set": {
                 "status": "done",
                 "video_url": video_url,
+                "backend": used_backend,
                 "ref_player": ref.get("player"),
                 "ref_shot_type": ref.get("shot_type"),
                 "completed_at": datetime.now(timezone.utc).isoformat(),
@@ -3706,6 +3762,7 @@ async def get_corrected_shot_status(job_id: str, authorization: str = Header(Non
         "job_id": job["id"],
         "status": job["status"],
         "video_url": job.get("video_url"),
+        "backend": job.get("backend"),
         "error": job.get("error"),
         "completed_at": job.get("completed_at"),
         "shot_type": job.get("shot_type"),
