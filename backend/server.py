@@ -3738,46 +3738,59 @@ async def _run_replicate_correction_job(
                 f"realistic athletic motion, same player same outfit, no "
                 f"extra people, no extra equipment, no dancing."
             )
-            # MiniMax accepts no version when called via the model endpoint
-            # — Replicate auto-uses the latest hosted version.
-            return ("minimax/video-01", {
-                "prompt": prompt[:500],
-                "first_frame_image": ref_image_data_url,
-                "prompt_optimizer": True,
-            })
+            # MiniMax is an OFFICIAL Replicate model — supports the
+            # /v1/models/{slug}/predictions endpoint with no version hash.
+            return {
+                "url": "https://api.replicate.com/v1/models/minimax/video-01/predictions",
+                "body": {
+                    "input": {
+                        "prompt": prompt[:500],
+                        "first_frame_image": ref_image_data_url,
+                        "prompt_optimizer": True,
+                    },
+                },
+            }
 
         def _build_mimicmotion_payload():
-            # MimicMotion uses a driving pose video + reference image of
-            # the person. Output looks like THE PERSON performing the
-            # DRIVING VIDEO's motion. Model slug fixed (was wrong:
-            # "mimicmotion" → correct: "mimic-motion") and version-less so
-            # Replicate uses the latest hosted version automatically.
-            return ("zsxkib/mimic-motion", {
-                "motion_video": motion_url,
-                "appearance_image": ref_image_data_url,
-                "chunk_size": 16,
-                "frames_overlap": 6,
-                "denoising_steps": 25,
-                "noise_strength": 0.0,
-                "checkpoint_version": "v1-1",
-                "sample_stride": 2,
-                "guidance_scale": 2.0,
-                "fps": 15,
-                "seed": 42,
-            })
+            # MimicMotion is a COMMUNITY model — the /v1/models/.../
+            # predictions endpoint returns 404 for these. Must use the
+            # legacy /v1/predictions endpoint with explicit version hash
+            # in the body. Hash pinned to the latest published version.
+            return {
+                "url": "https://api.replicate.com/v1/predictions",
+                "body": {
+                    "version": "b3edd455f68ec4ccf045da8732be7db837cb8832d1a2459ef057ddcd3ff87dea",
+                    "input": {
+                        "motion_video": motion_url,
+                        "appearance_image": ref_image_data_url,
+                        "chunk_size": 16,
+                        "frames_overlap": 6,
+                        "denoising_steps": 25,
+                        "noise_strength": 0.0,
+                        "checkpoint_version": "v1-1",
+                        "sample_stride": 2,
+                        "guidance_scale": 2.0,
+                        "fps": 15,
+                        "seed": 42,
+                    },
+                },
+            }
 
         def _build_kling_payload():
-            # Kling 1.6 Pro: high-quality image-to-video with prompt.
-            # Better motion fidelity than MiniMax for athletic clips,
-            # ~$0.50/gen. Available to billed Replicate users.
-            return ("kwaivgi/kling-v1.6-pro", {
-                "prompt": _build_minimax_payload()[1]["prompt"],
-                "start_image": ref_image_data_url,
-                "duration": 5,
-                "aspect_ratio": "16:9",
-                "cfg_scale": 0.5,
-                "negative_prompt": "extra people, extra equipment, wrong sport, tennis ball, dancing, low quality, blurry, distorted",
-            })
+            # Kling 1.6 Pro: OFFICIAL — uses model endpoint. ~$0.50/gen.
+            return {
+                "url": "https://api.replicate.com/v1/models/kwaivgi/kling-v1.6-pro/predictions",
+                "body": {
+                    "input": {
+                        "prompt": _build_minimax_payload()["body"]["input"]["prompt"],
+                        "start_image": ref_image_data_url,
+                        "duration": 5,
+                        "aspect_ratio": "16:9",
+                        "cfg_scale": 0.5,
+                        "negative_prompt": "extra people, extra equipment, wrong sport, tennis ball, dancing, low quality, blurry, distorted",
+                    },
+                },
+            }
 
         # Build the attempt list (in fall-back order). Adding the "kling"
         # backend for users who have funded their Replicate account —
@@ -3798,23 +3811,25 @@ async def _run_replicate_correction_job(
             ]
 
         # ── Submit the Replicate prediction(s) ────────────────────
-        # Uses the model endpoint format (POST /v1/models/{owner}/{name}/
-        # predictions) so we don't need to track + update version hashes
-        # — Replicate auto-resolves to the latest hosted version.
+        # Each builder returns the exact URL + body for its model. Official
+        # Replicate models (minimax, kling) use /v1/models/{slug}/predictions
+        # with no version. Community models (mimicmotion) need the legacy
+        # /v1/predictions endpoint with an explicit `version` hash because
+        # the model-namespaced endpoint returns 404 for non-official models.
         async with httpx.AsyncClient(timeout=120.0) as client:
             video_url = None
             error_msg = None
             used_backend = None
             for backend_name, build_payload in attempts:
                 used_backend = backend_name
-                model_slug, input_obj = build_payload()
+                req_spec = build_payload()
                 create_resp = await client.post(
-                    f"https://api.replicate.com/v1/models/{model_slug}/predictions",
+                    req_spec["url"],
                     headers={
                         "Authorization": f"Bearer {replicate_key}",
                         "Content-Type": "application/json",
                     },
-                    json={"input": input_obj},
+                    json=req_spec["body"],
                 )
                 # 402 / 429 = free-tier exhausted or rate-limited.
                 # In "auto" mode this triggers the fallback attempt.
@@ -4011,23 +4026,27 @@ async def test_ai_gen(req: TestAiGenRequest):
             )[:500]
 
             if req.backend == "minimax":
-                model_slug = "minimax/video-01"
-                input_obj = {
-                    "prompt": text_prompt,
-                    "first_frame_image": ref_data_url,
-                    "prompt_optimizer": True,
+                request_url = "https://api.replicate.com/v1/models/minimax/video-01/predictions"
+                request_body = {
+                    "input": {
+                        "prompt": text_prompt,
+                        "first_frame_image": ref_data_url,
+                        "prompt_optimizer": True,
+                    },
                 }
             elif req.backend == "kling":
-                model_slug = "kwaivgi/kling-v1.6-pro"
-                input_obj = {
-                    "prompt": text_prompt,
-                    "start_image": ref_data_url,
-                    "duration": 5,
-                    "aspect_ratio": "16:9",
-                    "cfg_scale": 0.5,
-                    "negative_prompt": "extra people, extra equipment, wrong sport, tennis ball, dancing, low quality, blurry, distorted",
+                request_url = "https://api.replicate.com/v1/models/kwaivgi/kling-v1.6-pro/predictions"
+                request_body = {
+                    "input": {
+                        "prompt": text_prompt,
+                        "start_image": ref_data_url,
+                        "duration": 5,
+                        "aspect_ratio": "16:9",
+                        "cfg_scale": 0.5,
+                        "negative_prompt": "extra people, extra equipment, wrong sport, tennis ball, dancing, low quality, blurry, distorted",
+                    },
                 }
-            else:  # mimicmotion
+            else:  # mimicmotion — community model, needs version hash
                 if not ref:
                     _TEST_AI_GEN_JOBS[test_id].update({
                         "status": "failed",
@@ -4035,30 +4054,33 @@ async def test_ai_gen(req: TestAiGenRequest):
                     })
                     return
                 motion_url = f"https://www.youtube.com/watch?v={ref['youtube_id']}&t={int(ref.get('start_sec') or 0)}s"
-                model_slug = "zsxkib/mimic-motion"
-                input_obj = {
-                    "motion_video": motion_url,
-                    "appearance_image": ref_data_url,
-                    "chunk_size": 16,
-                    "frames_overlap": 6,
-                    "denoising_steps": 25,
-                    "noise_strength": 0.0,
-                    "checkpoint_version": "v1-1",
-                    "sample_stride": 2,
-                    "guidance_scale": 2.0,
-                    "fps": 15,
-                    "seed": 42,
+                request_url = "https://api.replicate.com/v1/predictions"
+                request_body = {
+                    "version": "b3edd455f68ec4ccf045da8732be7db837cb8832d1a2459ef057ddcd3ff87dea",
+                    "input": {
+                        "motion_video": motion_url,
+                        "appearance_image": ref_data_url,
+                        "chunk_size": 16,
+                        "frames_overlap": 6,
+                        "denoising_steps": 25,
+                        "noise_strength": 0.0,
+                        "checkpoint_version": "v1-1",
+                        "sample_stride": 2,
+                        "guidance_scale": 2.0,
+                        "fps": 15,
+                        "seed": 42,
+                    },
                 }
 
-            _TEST_AI_GEN_JOBS[test_id]["model_slug"] = model_slug
+            _TEST_AI_GEN_JOBS[test_id]["request_url"] = request_url
             async with httpx.AsyncClient(timeout=120.0) as client:
                 create_resp = await client.post(
-                    f"https://api.replicate.com/v1/models/{model_slug}/predictions",
+                    request_url,
                     headers={
                         "Authorization": f"Bearer {replicate_key}",
                         "Content-Type": "application/json",
                     },
-                    json={"input": input_obj},
+                    json=request_body,
                 )
                 _TEST_AI_GEN_JOBS[test_id]["create_status"] = create_resp.status_code
                 if create_resp.status_code not in (200, 201):
