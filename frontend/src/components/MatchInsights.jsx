@@ -787,6 +787,10 @@ function IndividualShotCard({ shot, label, sport }) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // AI Correct beta state — same as ShotGroupCard
+  const [aiGenStatus, setAiGenStatus] = useState(null);
+  const [aiGenMessage, setAiGenMessage] = useState("");
+  const [aiGenVideoUrl, setAiGenVideoUrl] = useState(null);
   useEffect(() => {
     let cancelled = false;
     if (!sport || !shot.type) return;
@@ -795,6 +799,80 @@ function IndividualShotCard({ shot, label, sport }) {
     });
     return () => { cancelled = true; };
   }, [sport, shot.type]);
+
+  // AI Correct handler — kicks off a backend job + polls.
+  // Same logic as ShotGroupCard's handler, kept inline so each card
+  // has its own independent state.
+  const handleGenerateCorrected = async () => {
+    setAiGenStatus("loading");
+    setAiGenMessage("");
+    setAiGenVideoUrl(null);
+    try {
+      const ts = shot.timestamp;
+      if (typeof ts !== "number") throw new Error("No timestamp on this shot");
+      const file = window.__playsmartCurrentVideo;
+      if (!file) {
+        throw new Error("Your video isn't loaded in this session — re-analyze first.");
+      }
+      const vp = await import("@/ai/videoProcessor");
+      const compressed = await vp.compressVideoForUpload(file, {
+        maxDim: 360, bitrate: 600_000, maxDurationSec: 4,
+      });
+      const buf = await compressed.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const b64 = btoa(bin);
+
+      const api = (await import("@/lib/api")).default;
+      const { data } = await api.post("/generate-corrected-shot", {
+        video_b64: b64,
+        mime_type: compressed.type || "video/mp4",
+        timestamp_sec: ts,
+        sport: sport || "badminton",
+        shot_type: shot.type || "shot",
+      }, { timeout: 30000 });
+
+      if (data?.status === "feature_unavailable") {
+        setAiGenStatus("unavailable");
+        setAiGenMessage(data.message || "Coming soon.");
+        return;
+      }
+      if (data?.status === "done" && data?.video_url) {
+        setAiGenStatus("done");
+        setAiGenVideoUrl(data.video_url);
+        setAiGenMessage(data.cached ? "Loaded from your previous generation." : "Done!");
+        return;
+      }
+
+      const jobId = data?.job_id;
+      if (!jobId) throw new Error(data?.error || "No job_id returned");
+      setAiGenMessage("Generating — usually ~75 seconds…");
+      const POLL_MS = 3000;
+      const MAX_POLLS = 80;
+      for (let i = 0; i < MAX_POLLS; i++) {
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        try {
+          const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
+          if (poll?.status === "done" && poll?.video_url) {
+            setAiGenStatus("done");
+            setAiGenVideoUrl(poll.video_url);
+            setAiGenMessage("Your AI-corrected clip is ready.");
+            return;
+          }
+          if (poll?.status === "failed") {
+            setAiGenStatus("unavailable");
+            setAiGenMessage(poll.error || "Generation failed. Your tokens were refunded.");
+            return;
+          }
+        } catch { /* keep polling */ }
+      }
+      setAiGenStatus("unavailable");
+      setAiGenMessage("Generation taking longer than expected. Check back later — your tokens are held.");
+    } catch (e) {
+      setAiGenStatus("unavailable");
+      setAiGenMessage(e.response?.data?.detail || e.message || "Try again later.");
+    }
+  };
 
   const cleanLabel = String(label || "").replace(/\bShot at [\d.]+s\b/g, "").replace(/^\s*[·•]\s*/, "").trim() || "Shot";
   const strengths = Array.isArray(ff.strengths) ? ff.strengths.slice(0, 3) : [];
@@ -907,6 +985,17 @@ function IndividualShotCard({ shot, label, sport }) {
               <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
             </button>
           )}
+          {/* AI Correct beta — premium feature, generates a video of
+              the user with corrected motion via Replicate (MiniMax or
+              MimicMotion depending on GENERATOR_BACKEND env). */}
+          <button
+            onClick={handleGenerateCorrected}
+            disabled={aiGenStatus === "loading"}
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-50"
+            title="Generate an AI clip of you with corrected form (beta)"
+          >
+            ✨ AI Correct {aiGenStatus === "loading" ? "…" : <span className="text-[9px] text-amber-300">Beta</span>}
+          </button>
           {shot.reasoning && (
             <button
               onClick={() => setDetailsOpen((v) => !v)}
@@ -916,6 +1005,50 @@ function IndividualShotCard({ shot, label, sport }) {
             </button>
           )}
         </div>
+
+        {/* AI Correct inline status / result */}
+        {aiGenStatus === "loading" && (
+          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-2 flex items-center gap-2">
+            <Loader2 className="w-4 h-4 text-purple-300 animate-spin shrink-0" />
+            <p className="text-[11px] text-zinc-300">{aiGenMessage || "Generating your AI-corrected clip…"}</p>
+          </div>
+        )}
+        {aiGenStatus === "unavailable" && aiGenMessage && (
+          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">AI Correct · beta</p>
+            <p className="text-[11px] text-zinc-300 mt-0.5">{aiGenMessage}</p>
+          </div>
+        )}
+        {aiGenStatus === "done" && aiGenVideoUrl && (
+          <div className="bg-zinc-900/80 border border-purple-400/30 rounded-xl overflow-hidden">
+            <div className="px-3 py-2 bg-purple-400/5 border-b border-purple-400/20">
+              <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">
+                ✨ AI-corrected coaching visualization
+              </p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">{aiGenMessage}</p>
+            </div>
+            <video
+              src={aiGenVideoUrl}
+              controls loop muted autoPlay playsInline
+              className="w-full bg-black"
+              data-playsmart-ai-correct
+            />
+            <div className="px-3 py-2 bg-zinc-900/60 border-t border-zinc-800">
+              <p className="text-[10px] text-zinc-500 leading-relaxed">
+                <span className="text-purple-300 font-bold">How to read this:</span> An AI synthesized
+                this clip by applying the pro's motion to your image. It's NOT real footage of you —
+                use it to learn what the corrected swing looks like in your body. Hands holding the
+                racket are often distorted (model limitation).
+              </p>
+              <a
+                href={aiGenVideoUrl} target="_blank" rel="noopener noreferrer" download
+                className="text-[10px] text-purple-300 hover:text-purple-200 mt-1 inline-block"
+              >
+                Open / download full-size ↗
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Expandable coach details — long reasoning lives here so it
             doesn't dominate the card on first read. */}
