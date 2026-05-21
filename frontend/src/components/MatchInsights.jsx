@@ -289,6 +289,16 @@ export default function MatchInsights({
       canvas.height = cropBox.h;
       const ctx = canvas.getContext("2d");
 
+      // Separate canvas for the per-shot contact-frame THUMBNAIL — used
+      // by the AI-Correct generator + comparison modal. Sized small so
+      // the resulting data-URL stays under a few hundred KB.
+      const THUMB_MAX = 360;
+      const thumbCanvas = document.createElement("canvas");
+      const aspect = W / Math.max(1, H);
+      if (aspect >= 1) { thumbCanvas.width = THUMB_MAX; thumbCanvas.height = Math.round(THUMB_MAX / aspect); }
+      else            { thumbCanvas.height = THUMB_MAX; thumbCanvas.width  = Math.round(THUMB_MAX * aspect); }
+      const thumbCtx = thumbCanvas.getContext("2d");
+
       // Per-shot pose extraction with hard timeout
       const merged = [];
       const t0 = performance.now();
@@ -309,6 +319,22 @@ export default function MatchInsights({
           // skip this shot
         }
 
+        // Capture a thumbnail at the contact moment — used downstream
+        // as the AI-Correct reference image. Done AFTER the pose pass
+        // because the video is already loaded + seekable. We snap to
+        // `center` instead of `start` so the frame shows the contact
+        // moment, not the wind-up.
+        let capturedThumb = shot.thumbnail || null;
+        if (!capturedThumb && typeof center === "number" && center >= 0) {
+          try {
+            const seekOk = await safeSeek(videoEl, Math.max(0, Math.min(videoEl.duration || center, center)));
+            if (seekOk) {
+              thumbCtx.drawImage(videoEl, 0, 0, thumbCanvas.width, thumbCanvas.height);
+              capturedThumb = thumbCanvas.toDataURL("image/jpeg", 0.78);
+            }
+          } catch { /* silent — fallback panel handles missing thumbs */ }
+        }
+
         merged.push({
           label: shot.type || "unknown",
           name: shot.name || shot.type || "unknown",
@@ -324,9 +350,10 @@ export default function MatchInsights({
           // (Was missing earlier — caused Level to render "—" even with VLM data.)
           vlmSkill: shot.vlmSkill || null,
           vlmMeta: shot.vlmMeta || null,
-          // Thumbnail of the shot moment — visual proof of which player
-          // the AI Coach attributed this shot to (esp. doubles videos).
-          thumbnail: shot.thumbnail || null,
+          // Thumbnail of the shot moment — used by AI-Correct as the
+          // reference image AND by comparison modal. Captured here so
+          // every accuracy mode (not just video-direct) has one.
+          thumbnail: capturedThumb,
           timestamp: shot.timestamp,
         });
 
@@ -1024,7 +1051,13 @@ function IndividualShotCard({ shot, label, sport }) {
           )}
           {aiGenStatus === "idle" && (
             <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex items-center justify-center">
-              <p className="text-[11px] text-zinc-600 text-center">Waiting for shot data…</p>
+              <p className="text-[11px] text-zinc-600 text-center">
+                {!shot.thumbnail
+                  ? "No reference frame for this shot."
+                  : typeof shot.timestamp !== "number"
+                    ? "No timestamp for this shot."
+                    : "Waiting for shot data…"}
+              </p>
             </div>
           )}
         </div>
