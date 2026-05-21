@@ -20,6 +20,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("equipment_recommend")
 
+
+def _pick_gemini_model() -> str:
+    """gemini-2.0-flash is retired for new accounts. If env still has the
+    old name (left over from earlier work) silently upgrade to 2.5-flash."""
+    m = (os.getenv("GEMINI_MODEL") or "").strip()
+    if not m or m == "gemini-2.0-flash":
+        return "gemini-2.5-flash"
+    return m
+
 # ─── Catalog loading ─────────────────────────────────────────────────
 
 # We look for sport JSONs in 2 places — prefer the frontend copy (kept fresh
@@ -126,7 +135,7 @@ def parse_intent(description: str, sport: str) -> Dict[str, Any]:
     try:
         import google.generativeai as genai
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
+        model = genai.GenerativeModel(_pick_gemini_model())
         prompt = _INTENT_PROMPT.format(
             sport=sport,
             description=description[:600],
@@ -353,7 +362,7 @@ def enrich_reasoning(items: List[dict], query: dict, parsed: Dict[str, Any]) -> 
     try:
         import google.generativeai as genai
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-        model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
+        model = genai.GenerativeModel(_pick_gemini_model())
 
         # Compress each candidate so the prompt stays small
         def _slim(it):

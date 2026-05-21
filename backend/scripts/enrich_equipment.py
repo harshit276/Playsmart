@@ -24,6 +24,13 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# Force UTF-8 stdout on Windows so emoji prints don't crash with cp1252
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 # Resolve project paths regardless of cwd
 SCRIPT_DIR = Path(__file__).resolve().parent
 BACKEND_DIR = SCRIPT_DIR.parent
@@ -97,10 +104,17 @@ price_inr_range: {price}
 """
 
 
+def _pick_model() -> str:
+    m = (os.getenv("GEMINI_MODEL") or "").strip()
+    if not m or m == "gemini-2.0-flash":
+        return "gemini-2.5-flash"
+    return m
+
+
 def _call_gemini(prompt: str) -> Dict[str, Any]:
     import google.generativeai as genai
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
+    model = genai.GenerativeModel(_pick_model())
     resp = model.generate_content(
         [{"text": prompt}],
         generation_config={"temperature": 0.1, "response_mime_type": "application/json"},
