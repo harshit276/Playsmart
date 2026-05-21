@@ -786,11 +786,14 @@ function IndividualShotCard({ shot, label, sport }) {
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  // AI Correct beta state — same as ShotGroupCard
-  const [aiGenStatus, setAiGenStatus] = useState(null);
+  // AI Correct auto-generation state (per card). Fires on mount if
+  // we have a thumbnail + timestamp; dedupe ref prevents re-fires on
+  // re-renders.
+  const [aiGenStatus, setAiGenStatus] = useState("idle"); // idle | running | done | failed
   const [aiGenMessage, setAiGenMessage] = useState("");
   const [aiGenVideoUrl, setAiGenVideoUrl] = useState(null);
+  const aiGenFiredRef = useRef(null);
+
   useEffect(() => {
     let cancelled = false;
     if (!sport || !shot.type) return;
@@ -800,72 +803,71 @@ function IndividualShotCard({ shot, label, sport }) {
     return () => { cancelled = true; };
   }, [sport, shot.type]);
 
-  // AI Correct handler — kicks off a backend job + polls.
-  // Same logic as ShotGroupCard's handler, kept inline so each card
-  // has its own independent state.
-  const handleGenerateCorrected = async () => {
-    setAiGenStatus("loading");
-    setAiGenMessage("");
-    setAiGenVideoUrl(null);
-    try {
-      const ts = shot.timestamp;
-      if (typeof ts !== "number") throw new Error("No timestamp on this shot");
-      // We send the per-shot thumbnail (already extracted by the
-      // browser at analysis time) as the reference image. This avoids
-      // re-compressing + re-uploading the full video, AND avoids the
-      // cv2-on-backend dependency that broke the initial wiring.
-      if (!shot.thumbnail) {
-        throw new Error("No contact-frame thumbnail for this shot. Re-analyze the video and try again.");
-      }
-      const api = (await import("@/lib/api")).default;
-      const { data } = await api.post("/generate-corrected-shot", {
-        reference_image_b64: shot.thumbnail,   // data:image/jpeg;base64,...
-        timestamp_sec: ts,
-        sport: sport || "badminton",
-        shot_type: shot.type || "shot",
-      }, { timeout: 30000 });
+  // Auto-generate the AI-corrected clip when the card mounts, IF the
+  // shot has the data we need. Free-tier mode so we burn a generation
+  // per shot. Cache de-dupes identical inputs server-side so re-
+  // analysis returns the previous clip without re-charging.
+  useEffect(() => {
+    if (!shot.thumbnail || typeof shot.timestamp !== "number" || !sport) return;
+    const fireKey = `${sport}::${shot.type || "shot"}::${shot.timestamp}`;
+    if (aiGenFiredRef.current === fireKey) return;
+    aiGenFiredRef.current = fireKey;
 
-      if (data?.status === "feature_unavailable") {
-        setAiGenStatus("unavailable");
-        setAiGenMessage(data.message || "Coming soon.");
-        return;
+    let cancelled = false;
+    (async () => {
+      setAiGenStatus("running");
+      setAiGenMessage("Generating AI-corrected clip…");
+      try {
+        const api = (await import("@/lib/api")).default;
+        const { data } = await api.post("/generate-corrected-shot", {
+          reference_image_b64: shot.thumbnail,
+          timestamp_sec: shot.timestamp,
+          sport,
+          shot_type: shot.type || "shot",
+        }, { timeout: 30000 });
+        if (cancelled) return;
+        if (data?.status === "feature_unavailable") {
+          setAiGenStatus("failed");
+          setAiGenMessage(data.message || "");
+          return;
+        }
+        if (data?.status === "done" && data?.video_url) {
+          setAiGenStatus("done");
+          setAiGenVideoUrl(data.video_url);
+          setAiGenMessage(data.cached ? "Loaded from cache." : "");
+          return;
+        }
+        const jobId = data?.job_id;
+        if (!jobId) throw new Error("No job_id returned");
+        for (let i = 0; i < 80; i++) {
+          if (cancelled) return;
+          await new Promise((r) => setTimeout(r, 3000));
+          try {
+            const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
+            if (cancelled) return;
+            if (poll?.status === "done" && poll?.video_url) {
+              setAiGenStatus("done");
+              setAiGenVideoUrl(poll.video_url);
+              setAiGenMessage("");
+              return;
+            }
+            if (poll?.status === "failed") {
+              setAiGenStatus("failed");
+              setAiGenMessage(poll.error || "Generation failed.");
+              return;
+            }
+          } catch { /* keep polling */ }
+        }
+        setAiGenStatus("failed");
+        setAiGenMessage("Taking longer than expected.");
+      } catch (e) {
+        if (cancelled) return;
+        setAiGenStatus("failed");
+        setAiGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
       }
-      if (data?.status === "done" && data?.video_url) {
-        setAiGenStatus("done");
-        setAiGenVideoUrl(data.video_url);
-        setAiGenMessage(data.cached ? "Loaded from your previous generation." : "Done!");
-        return;
-      }
-
-      const jobId = data?.job_id;
-      if (!jobId) throw new Error(data?.error || "No job_id returned");
-      setAiGenMessage("Generating — usually ~75 seconds…");
-      const POLL_MS = 3000;
-      const MAX_POLLS = 80;
-      for (let i = 0; i < MAX_POLLS; i++) {
-        await new Promise((r) => setTimeout(r, POLL_MS));
-        try {
-          const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
-          if (poll?.status === "done" && poll?.video_url) {
-            setAiGenStatus("done");
-            setAiGenVideoUrl(poll.video_url);
-            setAiGenMessage("Your AI-corrected clip is ready.");
-            return;
-          }
-          if (poll?.status === "failed") {
-            setAiGenStatus("unavailable");
-            setAiGenMessage(poll.error || "Generation failed. Your tokens were refunded.");
-            return;
-          }
-        } catch { /* keep polling */ }
-      }
-      setAiGenStatus("unavailable");
-      setAiGenMessage("Generation taking longer than expected. Check back later — your tokens are held.");
-    } catch (e) {
-      setAiGenStatus("unavailable");
-      setAiGenMessage(e.response?.data?.detail || e.message || "Try again later.");
-    }
-  };
+    })();
+    return () => { cancelled = true; };
+  }, [shot.thumbnail, shot.timestamp, shot.type, sport]);
 
   const cleanLabel = String(label || "").replace(/\bShot at [\d.]+s\b/g, "").replace(/^\s*[·•]\s*/, "").trim() || "Shot";
   const strengths = Array.isArray(ff.strengths) ? ff.strengths.slice(0, 3) : [];
@@ -879,35 +881,24 @@ function IndividualShotCard({ shot, label, sport }) {
 
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl overflow-hidden">
-      {/* Compact header: thumbnail + name + quality bar (mirrors
-          ShotGroupCard layout so the UI is consistent regardless
-          of whether we group or list individual shots). */}
+      {/* Compact header: thumbnail + name + quality bar */}
       <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
         {shot.thumbnail && (
-          <img
-            src={shot.thumbnail}
-            alt={cleanLabel}
-            className="w-20 h-20 rounded-lg object-cover bg-black shrink-0"
-            loading="lazy"
-          />
+          <img src={shot.thumbnail} alt={cleanLabel}
+               className="w-20 h-20 rounded-lg object-cover bg-black shrink-0" loading="lazy" />
         )}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-base font-semibold text-white capitalize leading-tight">{cleanLabel}</p>
             <div className="flex items-center gap-1.5">
               {shot.powerLevel && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">
-                  {shot.powerLevel}
-                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">{shot.powerLevel}</span>
               )}
               {shot.speed != null && shot.speed > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                  {Math.round(shot.speed)} km/h
-                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">{Math.round(shot.speed)} km/h</span>
               )}
             </div>
           </div>
-          {/* Quality bar — same as group card */}
           <div className="space-y-1">
             <div className="flex items-baseline justify-between">
               <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Shot quality</span>
@@ -928,130 +919,116 @@ function IndividualShotCard({ shot, label, sport }) {
         </div>
       </div>
 
-      {/* Top fix callout */}
-      {headlineFix && (
-        <div className="px-3 py-2.5 bg-amber-400/8 border-b border-amber-400/20">
-          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">🎯 Top fix</p>
-          <p className="text-sm text-white leading-snug">{headlineFix}</p>
-        </div>
-      )}
-
-      <div className="p-3 space-y-2.5">
-        {/* Compact chips for strengths/weaknesses */}
-        {(strengths.length > 0 || weaknesses.length > 0) && (
-          <div className="flex flex-wrap gap-1.5">
-            {strengths.map((x, j) => (
-              <span key={`s-${j}`}
-                className="inline-flex items-center gap-1 text-[10px] font-medium text-lime-300 bg-lime-400/10 border border-lime-400/20 rounded-full px-2 py-1 max-w-full">
-                <span className="text-lime-400">✓</span>
-                <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
-              </span>
-            ))}
-            {weaknesses.map((x, j) => {
-              if (x === headlineFix) return null;
-              return (
-                <span key={`w-${j}`}
-                  className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-1 max-w-full">
-                  <span className="text-amber-400">⚠</span>
-                  <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
-                </span>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Action buttons row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {shot.thumbnail && (
-            <button
-              onClick={() => setPoseOpen(true)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Activity className="w-3 h-3" /> See your form
-            </button>
-          )}
-          {proRef && (
-            <button
-              onClick={() => setCompareOpen(true)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-            </button>
-          )}
-          {/* AI Correct beta — premium feature, generates a video of
-              the user with corrected motion via Replicate (MiniMax or
-              MimicMotion depending on GENERATOR_BACKEND env). */}
-          <button
-            onClick={handleGenerateCorrected}
-            disabled={aiGenStatus === "loading"}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-50"
-            title="Generate an AI clip of you with corrected form (beta)"
-          >
-            ✨ AI Correct {aiGenStatus === "loading" ? "…" : <span className="text-[9px] text-amber-300">Beta</span>}
-          </button>
-          {shot.reasoning && (
-            <button
-              onClick={() => setDetailsOpen((v) => !v)}
-              className="text-[11px] text-zinc-400 hover:text-white ml-auto"
-            >
-              {detailsOpen ? "Hide details ▲" : "Coach details ▼"}
-            </button>
-          )}
-        </div>
-
-        {/* AI Correct inline status / result */}
-        {aiGenStatus === "loading" && (
-          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-2 flex items-center gap-2">
-            <Loader2 className="w-4 h-4 text-purple-300 animate-spin shrink-0" />
-            <p className="text-[11px] text-zinc-300">{aiGenMessage || "Generating your AI-corrected clip…"}</p>
-          </div>
-        )}
-        {aiGenStatus === "unavailable" && aiGenMessage && (
-          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-1.5">
-            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">AI Correct · beta</p>
-            <p className="text-[11px] text-zinc-300 mt-0.5">{aiGenMessage}</p>
-          </div>
-        )}
-        {aiGenStatus === "done" && aiGenVideoUrl && (
-          <div className="bg-zinc-900/80 border border-purple-400/30 rounded-xl overflow-hidden">
-            <div className="px-3 py-2 bg-purple-400/5 border-b border-purple-400/20">
-              <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">
-                ✨ AI-corrected coaching visualization
-              </p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">{aiGenMessage}</p>
+      {/* TWO-COLUMN BODY: bullet feedback on the left, AI-generated
+          video on the right. Stacks vertically on mobile. */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-0">
+        {/* LEFT COLUMN — bullet-pointed feedback */}
+        <div className="p-3 space-y-3">
+          {headlineFix && (
+            <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
+              <p className="text-sm text-white leading-snug">{headlineFix}</p>
             </div>
-            <video
-              src={aiGenVideoUrl}
-              controls loop muted autoPlay playsInline
-              className="w-full bg-black"
-              data-playsmart-ai-correct
-            />
-            <div className="px-3 py-2 bg-zinc-900/60 border-t border-zinc-800">
-              <p className="text-[10px] text-zinc-500 leading-relaxed">
-                <span className="text-purple-300 font-bold">How to read this:</span> An AI synthesized
-                this clip by applying the pro's motion to your image. It's NOT real footage of you —
-                use it to learn what the corrected swing looks like in your body. Hands holding the
-                racket are often distorted (model limitation).
+          )}
+
+          {strengths.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">What's working</p>
+              <ul className="space-y-1">
+                {strengths.map((x, j) => (
+                  <li key={`s-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                    <span className="text-lime-400 shrink-0 mt-[2px]">✓</span>
+                    <span>{x}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {weaknesses.filter((x) => x !== headlineFix).length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">Areas to improve</p>
+              <ul className="space-y-1">
+                {weaknesses.filter((x) => x !== headlineFix).map((x, j) => (
+                  <li key={`w-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                    <span className="text-amber-400 shrink-0 mt-[2px]">⚠</span>
+                    <span>{x}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {shot.reasoning && (
+            <div className="pt-2 border-t border-zinc-800/60">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
+              <p className="text-[12px] text-zinc-300 leading-relaxed">{shot.reasoning}</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
+            {shot.thumbnail && (
+              <button
+                onClick={() => setPoseOpen(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Activity className="w-3 h-3" /> See your form
+              </button>
+            )}
+            {proRef && (
+              <button
+                onClick={() => setCompareOpen(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN — AI-generated corrected swing */}
+        <div className="bg-zinc-950/40 border-t md:border-t-0 md:border-l border-zinc-800 p-3 flex flex-col">
+          <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-2 flex items-center gap-1">
+            ✨ AI-corrected swing
+          </p>
+          {aiGenStatus === "running" && (
+            <div className="flex-1 bg-zinc-900/60 border border-purple-400/20 rounded-lg flex flex-col items-center justify-center p-4 min-h-[160px]">
+              <Loader2 className="w-5 h-5 text-purple-300 animate-spin mb-2" />
+              <p className="text-[11px] text-zinc-400 text-center">{aiGenMessage || "Generating…"}</p>
+              <p className="text-[9px] text-zinc-600 mt-1">~75 seconds typically</p>
+            </div>
+          )}
+          {aiGenStatus === "done" && aiGenVideoUrl && (
+            <>
+              <video
+                src={aiGenVideoUrl}
+                controls loop muted autoPlay playsInline
+                className="w-full bg-black rounded-lg"
+                data-playsmart-ai-correct
+              />
+              <p className="text-[9px] text-zinc-500 leading-tight mt-1.5">
+                AI synthesized — focus on body motion, not the racket (model limitation).
               </p>
               <a
                 href={aiGenVideoUrl} target="_blank" rel="noopener noreferrer" download
-                className="text-[10px] text-purple-300 hover:text-purple-200 mt-1 inline-block"
+                className="text-[9px] text-purple-300 hover:text-purple-200 mt-0.5 inline-block"
               >
-                Open / download full-size ↗
+                Download ↗
               </a>
+            </>
+          )}
+          {aiGenStatus === "failed" && (
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px]">
+              <p className="text-[11px] text-zinc-400 leading-relaxed">{aiGenMessage || "Not available right now."}</p>
             </div>
-          </div>
-        )}
-
-        {/* Expandable coach details — long reasoning lives here so it
-            doesn't dominate the card on first read. */}
-        {detailsOpen && shot.reasoning && (
-          <div className="pt-2 border-t border-zinc-800/60">
-            <p className="text-xs text-zinc-300 leading-relaxed">
-              <span className="text-lime-400/80 font-semibold">Coach: </span>{shot.reasoning}
-            </p>
-          </div>
-        )}
+          )}
+          {aiGenStatus === "idle" && (
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex items-center justify-center">
+              <p className="text-[11px] text-zinc-600 text-center">Waiting for shot data…</p>
+            </div>
+          )}
+        </div>
       </div>
       <ProComparisonModal
         open={compareOpen}
