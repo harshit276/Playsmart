@@ -829,71 +829,63 @@ function IndividualShotCard({ shot, label, sport }) {
     return () => { cancelled = true; };
   }, [sport, shot.type]);
 
-  // Auto-generate the AI-corrected clip when the card mounts, IF the
-  // shot has the data we need. Free-tier mode so we burn a generation
-  // per shot. Cache de-dupes identical inputs server-side so re-
-  // analysis returns the previous clip without re-charging.
-  useEffect(() => {
-    if (!shot.thumbnail || typeof shot.timestamp !== "number" || !sport) return;
-    const fireKey = `${sport}::${shot.type || "shot"}::${shot.timestamp}`;
-    if (aiGenFiredRef.current === fireKey) return;
-    aiGenFiredRef.current = fireKey;
-
-    let cancelled = false;
-    (async () => {
-      setAiGenStatus("running");
-      setAiGenMessage("Generating AI-corrected clip…");
-      try {
-        const api = (await import("@/lib/api")).default;
-        const { data } = await api.post("/generate-corrected-shot", {
-          reference_image_b64: shot.thumbnail,
-          timestamp_sec: shot.timestamp,
-          sport,
-          shot_type: shot.type || "shot",
-        }, { timeout: 30000 });
-        if (cancelled) return;
-        if (data?.status === "feature_unavailable") {
-          setAiGenStatus("failed");
-          setAiGenMessage(data.message || "");
-          return;
-        }
-        if (data?.status === "done" && data?.video_url) {
-          setAiGenStatus("done");
-          setAiGenVideoUrl(data.video_url);
-          setAiGenMessage(data.cached ? "Loaded from cache." : "");
-          return;
-        }
-        const jobId = data?.job_id;
-        if (!jobId) throw new Error("No job_id returned");
-        for (let i = 0; i < 80; i++) {
-          if (cancelled) return;
-          await new Promise((r) => setTimeout(r, 3000));
-          try {
-            const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
-            if (cancelled) return;
-            if (poll?.status === "done" && poll?.video_url) {
-              setAiGenStatus("done");
-              setAiGenVideoUrl(poll.video_url);
-              setAiGenMessage("");
-              return;
-            }
-            if (poll?.status === "failed") {
-              setAiGenStatus("failed");
-              setAiGenMessage(poll.error || "Generation failed.");
-              return;
-            }
-          } catch { /* keep polling */ }
-        }
+  // MANUAL generation — user clicks "Generate" on each card. We used to
+  // auto-fire but Replicate's free tier is 6 req/min with burst=1, so
+  // a single video with 4+ cards saturated the quota immediately. The
+  // headline shot still auto-fires once via AutoProReferencePanel.
+  const runGeneration = async () => {
+    if (!shot.thumbnail || typeof shot.timestamp !== "number" || !sport) {
+      setAiGenStatus("failed");
+      setAiGenMessage("Missing reference frame or timestamp.");
+      return;
+    }
+    setAiGenStatus("running");
+    setAiGenMessage("Generating AI-corrected clip…");
+    try {
+      const api = (await import("@/lib/api")).default;
+      const { data } = await api.post("/generate-corrected-shot", {
+        reference_image_b64: shot.thumbnail,
+        timestamp_sec: shot.timestamp,
+        sport,
+        shot_type: shot.type || "shot",
+      }, { timeout: 30000 });
+      if (data?.status === "feature_unavailable") {
         setAiGenStatus("failed");
-        setAiGenMessage("Taking longer than expected.");
-      } catch (e) {
-        if (cancelled) return;
-        setAiGenStatus("failed");
-        setAiGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
+        setAiGenMessage(data.message || "");
+        return;
       }
-    })();
-    return () => { cancelled = true; };
-  }, [shot.thumbnail, shot.timestamp, shot.type, sport]);
+      if (data?.status === "done" && data?.video_url) {
+        setAiGenStatus("done");
+        setAiGenVideoUrl(data.video_url);
+        setAiGenMessage(data.cached ? "Loaded from cache." : "");
+        return;
+      }
+      const jobId = data?.job_id;
+      if (!jobId) throw new Error("No job_id returned");
+      for (let i = 0; i < 80; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        try {
+          const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
+          if (poll?.status === "done" && poll?.video_url) {
+            setAiGenStatus("done");
+            setAiGenVideoUrl(poll.video_url);
+            setAiGenMessage("");
+            return;
+          }
+          if (poll?.status === "failed") {
+            setAiGenStatus("failed");
+            setAiGenMessage(poll.error || "Generation failed.");
+            return;
+          }
+        } catch { /* keep polling */ }
+      }
+      setAiGenStatus("failed");
+      setAiGenMessage("Taking longer than expected.");
+    } catch (e) {
+      setAiGenStatus("failed");
+      setAiGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
+    }
+  };
 
   const cleanLabel = String(label || "").replace(/\bShot at [\d.]+s\b/g, "").replace(/^\s*[·•]\s*/, "").trim() || "Shot";
   const strengths = Array.isArray(ff.strengths) ? ff.strengths.slice(0, 3) : [];
@@ -1045,19 +1037,36 @@ function IndividualShotCard({ shot, label, sport }) {
             </>
           )}
           {aiGenStatus === "failed" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px]">
-              <p className="text-[11px] text-zinc-400 leading-relaxed">{aiGenMessage || "Not available right now."}</p>
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col gap-2">
+              <p className="text-[11px] text-zinc-400 leading-relaxed flex-1">{aiGenMessage || "Not available right now."}</p>
+              <button
+                onClick={runGeneration}
+                disabled={!shot.thumbnail || typeof shot.timestamp !== "number"}
+                className="text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-40"
+              >
+                Retry
+              </button>
             </div>
           )}
           {aiGenStatus === "idle" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex items-center justify-center">
-              <p className="text-[11px] text-zinc-600 text-center">
-                {!shot.thumbnail
-                  ? "No reference frame for this shot."
-                  : typeof shot.timestamp !== "number"
-                    ? "No timestamp for this shot."
-                    : "Waiting for shot data…"}
-              </p>
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col items-center justify-center gap-2">
+              {(!shot.thumbnail || typeof shot.timestamp !== "number") ? (
+                <p className="text-[11px] text-zinc-600 text-center">
+                  {!shot.thumbnail ? "No reference frame for this shot." : "No timestamp for this shot."}
+                </p>
+              ) : (
+                <>
+                  <button
+                    onClick={runGeneration}
+                    className="text-[11px] font-bold text-purple-200 hover:text-white bg-purple-500/30 hover:bg-purple-500/50 border border-purple-400/50 rounded-full px-3 py-1.5 transition-colors"
+                  >
+                    ✨ Generate AI-corrected swing
+                  </button>
+                  <p className="text-[9px] text-zinc-600 text-center px-2 leading-tight">
+                    Costs 500 tokens · ~75 sec
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1146,72 +1155,62 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     return () => { cancelled = true; };
   }, [sport, sample.type]);
 
-  // Auto-fire AI generation once per (sport, shot type, timestamp)
-  // when the group has a usable source frame. Free tier so we burn a
-  // generation per shot group; backend caches identical inputs.
-  useEffect(() => {
-    if (!aiSourceShot || !sport) return;
-    const ts = aiSourceShot.timestamp;
-    const thumb = aiSourceShot.thumbnail;
-    const fireKey = `${sport}::${sample.type || "shot"}::${ts}`;
-    if (aiGenFiredRef.current === fireKey) return;
-    aiGenFiredRef.current = fireKey;
-
-    let cancelled = false;
-    (async () => {
-      setAiGenStatus("running");
-      setAiGenMessage("Generating AI-corrected clip…");
-      try {
-        const api = (await import("@/lib/api")).default;
-        const { data } = await api.post("/generate-corrected-shot", {
-          reference_image_b64: thumb,
-          timestamp_sec: ts,
-          sport,
-          shot_type: sample.type || "shot",
-        }, { timeout: 30000 });
-        if (cancelled) return;
-        if (data?.status === "feature_unavailable") {
-          setAiGenStatus("failed");
-          setAiGenMessage(data.message || "");
-          return;
-        }
-        if (data?.status === "done" && data?.video_url) {
-          setAiGenStatus("done");
-          setAiGenVideoUrl(data.video_url);
-          setAiGenMessage(data.cached ? "Loaded from cache." : "");
-          return;
-        }
-        const jobId = data?.job_id;
-        if (!jobId) throw new Error("No job_id returned");
-        for (let i = 0; i < 80; i++) {
-          if (cancelled) return;
-          await new Promise((r) => setTimeout(r, 3000));
-          try {
-            const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
-            if (cancelled) return;
-            if (poll?.status === "done" && poll?.video_url) {
-              setAiGenStatus("done");
-              setAiGenVideoUrl(poll.video_url);
-              setAiGenMessage("");
-              return;
-            }
-            if (poll?.status === "failed") {
-              setAiGenStatus("failed");
-              setAiGenMessage(poll.error || "Generation failed.");
-              return;
-            }
-          } catch { /* keep polling */ }
-        }
+  // MANUAL generation — user clicks Generate. Auto-fire would saturate
+  // Replicate's free tier (6 req/min, burst=1) across N grouped cards.
+  // The headline shot still auto-fires once via AutoProReferencePanel.
+  const runGeneration = async () => {
+    if (!aiSourceShot || !sport) {
+      setAiGenStatus("failed");
+      setAiGenMessage("No usable reference frame in this group.");
+      return;
+    }
+    setAiGenStatus("running");
+    setAiGenMessage("Generating AI-corrected clip…");
+    try {
+      const api = (await import("@/lib/api")).default;
+      const { data } = await api.post("/generate-corrected-shot", {
+        reference_image_b64: aiSourceShot.thumbnail,
+        timestamp_sec: aiSourceShot.timestamp,
+        sport,
+        shot_type: sample.type || "shot",
+      }, { timeout: 30000 });
+      if (data?.status === "feature_unavailable") {
         setAiGenStatus("failed");
-        setAiGenMessage("Taking longer than expected.");
-      } catch (e) {
-        if (cancelled) return;
-        setAiGenStatus("failed");
-        setAiGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
+        setAiGenMessage(data.message || "");
+        return;
       }
-    })();
-    return () => { cancelled = true; };
-  }, [aiSourceShot?.thumbnail, aiSourceShot?.timestamp, sample.type, sport]);
+      if (data?.status === "done" && data?.video_url) {
+        setAiGenStatus("done");
+        setAiGenVideoUrl(data.video_url);
+        setAiGenMessage(data.cached ? "Loaded from cache." : "");
+        return;
+      }
+      const jobId = data?.job_id;
+      if (!jobId) throw new Error("No job_id returned");
+      for (let i = 0; i < 80; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        try {
+          const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
+          if (poll?.status === "done" && poll?.video_url) {
+            setAiGenStatus("done");
+            setAiGenVideoUrl(poll.video_url);
+            setAiGenMessage("");
+            return;
+          }
+          if (poll?.status === "failed") {
+            setAiGenStatus("failed");
+            setAiGenMessage(poll.error || "Generation failed.");
+            return;
+          }
+        } catch { /* keep polling */ }
+      }
+      setAiGenStatus("failed");
+      setAiGenMessage("Taking longer than expected.");
+    } catch (e) {
+      setAiGenStatus("failed");
+      setAiGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
+    }
+  };
 
   const headlineFix = tips[0] || weaknesses[0] || null;
   const scorePct = Math.round(avgConf * 100);
@@ -1358,15 +1357,36 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
             </>
           )}
           {aiGenStatus === "failed" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px]">
-              <p className="text-[11px] text-zinc-400 leading-relaxed">{aiGenMessage || "Not available right now."}</p>
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col gap-2">
+              <p className="text-[11px] text-zinc-400 leading-relaxed flex-1">{aiGenMessage || "Not available right now."}</p>
+              <button
+                onClick={runGeneration}
+                disabled={!aiSourceShot}
+                className="text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-40"
+              >
+                Retry
+              </button>
             </div>
           )}
           {aiGenStatus === "idle" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex items-center justify-center">
-              <p className="text-[11px] text-zinc-600 text-center">
-                {aiSourceShot ? "Waiting for shot data…" : "No reference frame available for this group."}
-              </p>
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col items-center justify-center gap-2">
+              {!aiSourceShot ? (
+                <p className="text-[11px] text-zinc-600 text-center">
+                  No reference frame available for this group.
+                </p>
+              ) : (
+                <>
+                  <button
+                    onClick={runGeneration}
+                    className="text-[11px] font-bold text-purple-200 hover:text-white bg-purple-500/30 hover:bg-purple-500/50 border border-purple-400/50 rounded-full px-3 py-1.5 transition-colors"
+                  >
+                    ✨ Generate AI-corrected swing
+                  </button>
+                  <p className="text-[9px] text-zinc-600 text-center px-2 leading-tight">
+                    Costs 500 tokens · ~75 sec
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>

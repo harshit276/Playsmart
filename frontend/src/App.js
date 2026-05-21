@@ -28,6 +28,7 @@ const TableTennisPage = lazy(() => import("@/pages/TableTennisPage"));
 const PickleballPage = lazy(() => import("@/pages/PickleballPage"));
 const LabelPage = lazy(() => import("@/pages/LabelPage"));
 const TestModelPage = lazy(() => import("@/pages/TestModelPage"));
+const TestAiGenPage = lazy(() => import("@/pages/TestAiGenPage"));
 const WalletPage = lazy(() => import("@/pages/WalletPage"));
 const PricingPage = lazy(() => import("@/pages/PricingPage"));
 const ReferralPage = lazy(() => import("@/pages/ReferralPage"));
@@ -223,6 +224,7 @@ function AppRoutes() {
       <Route path="/card" element={<PlayerCardPage />} />
       <Route path="/label" element={<LabelPage />} />
       <Route path="/test-model" element={<TestModelPage />} />
+      <Route path="/test-ai-gen" element={<TestAiGenPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </Suspense>

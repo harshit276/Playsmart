@@ -3783,6 +3783,150 @@ async def get_corrected_shot_status(job_id: str, authorization: str = Header(Non
 
 
 # ──────────────────────────────────────────────────────────────────────
+# DEV TEST endpoint for the AI generation pipeline. No auth, no token
+# gating, no DB persistence — fires ONE Replicate call against the
+# user-provided reference image and reports back the raw outcome so we
+# can verify the pipeline end-to-end without burning quotas on the
+# per-shot flow. Useful for proving "the model is alive" when the main
+# UI is rate-limited.
+# ──────────────────────────────────────────────────────────────────────
+_TEST_AI_GEN_JOBS: dict[str, dict] = {}  # in-memory, dev-only
+
+
+class TestAiGenRequest(BaseModel):
+    reference_image_b64: str
+    sport: str = "badminton"
+    shot_type: str = "smash"
+    backend: str = "minimax"  # "minimax" | "mimicmotion"
+
+
+@api_router.post("/test-ai-gen")
+async def test_ai_gen(req: TestAiGenRequest):
+    """Dev test: fire a single Replicate prediction with the supplied
+    reference image. Returns {test_id, status}. Poll GET /test-ai-gen/
+    {test_id} for the result.
+
+    Bypasses auth + token cost so you can verify the pipeline works
+    independently from the per-shot UI."""
+    replicate_key = os.getenv("REPLICATE_API_TOKEN", "").strip()
+    if not replicate_key:
+        return {
+            "status": "feature_unavailable",
+            "error": "REPLICATE_API_TOKEN is not set on the backend.",
+        }
+
+    if not req.reference_image_b64:
+        raise HTTPException(status_code=400, detail="reference_image_b64 is required")
+
+    import base64, uuid as _uuid
+    try:
+        b64 = req.reference_image_b64.split(",", 1)[1] if req.reference_image_b64.startswith("data:") else req.reference_image_b64
+        ref_bytes = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"bad reference image: {exc}")
+    if len(ref_bytes) < 500:
+        raise HTTPException(status_code=400, detail="reference image too small")
+
+    mime = "image/jpeg"
+    if ref_bytes[:8] == b"\x89PNG\r\n\x1a\n":
+        mime = "image/png"
+    ref_data_url = f"data:{mime};base64,{base64.b64encode(ref_bytes).decode('ascii')}"
+
+    try:
+        from reference_videos import get_reference
+        ref = get_reference(req.sport, req.shot_type)
+    except Exception:
+        ref = None
+
+    test_id = _uuid.uuid4().hex[:16]
+    _TEST_AI_GEN_JOBS[test_id] = {"status": "running", "backend": req.backend}
+
+    async def _run():
+        try:
+            import httpx
+            if req.backend == "minimax":
+                coach_cue = (ref.get("description") if ref else "") or "Perform with textbook technique"
+                payload = {
+                    "version": "minimax/video-01",
+                    "input": {
+                        "prompt": (
+                            f"{req.shot_type.replace('_', ' ').title()} — the player in the "
+                            f"frame performs the technique with correct form. {coach_cue}. "
+                            f"Smooth, balanced motion, realistic sports footage style."
+                        )[:500],
+                        "first_frame_image": ref_data_url,
+                        "prompt_optimizer": True,
+                    },
+                }
+            else:
+                motion_url = (
+                    f"https://www.youtube.com/watch?v={ref['youtube_id']}&t={int(ref.get('start_sec') or 0)}s"
+                    if ref else "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                )
+                payload = {
+                    "version": "zsxkib/mimicmotion:1b9163b34de64a0b4a9b9b50d6b4c08c4f23b9c5",
+                    "input": {
+                        "ref_image": ref_data_url,
+                        "motion_video": motion_url,
+                        "num_frames": 48,
+                        "guidance_scale": 2.0,
+                        "seed": 42,
+                    },
+                }
+
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                create_resp = await client.post(
+                    "https://api.replicate.com/v1/predictions",
+                    headers={
+                        "Authorization": f"Bearer {replicate_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+                _TEST_AI_GEN_JOBS[test_id]["create_status"] = create_resp.status_code
+                if create_resp.status_code not in (200, 201):
+                    _TEST_AI_GEN_JOBS[test_id].update({
+                        "status": "failed",
+                        "error": f"Replicate create returned {create_resp.status_code}: {create_resp.text[:300]}",
+                    })
+                    return
+                pred = create_resp.json()
+                _TEST_AI_GEN_JOBS[test_id]["prediction_id"] = pred.get("id")
+                poll_url = pred.get("urls", {}).get("get") or f"https://api.replicate.com/v1/predictions/{pred.get('id')}"
+
+                for _ in range(80):
+                    await asyncio.sleep(3.0)
+                    poll = await client.get(poll_url, headers={"Authorization": f"Bearer {replicate_key}"})
+                    if poll.status_code != 200:
+                        continue
+                    p = poll.json()
+                    s = p.get("status")
+                    _TEST_AI_GEN_JOBS[test_id]["replicate_status"] = s
+                    if s == "succeeded":
+                        out = p.get("output")
+                        url = out if isinstance(out, str) else (out[0] if isinstance(out, list) and out else None)
+                        _TEST_AI_GEN_JOBS[test_id].update({"status": "done", "video_url": url})
+                        return
+                    if s in ("failed", "canceled"):
+                        _TEST_AI_GEN_JOBS[test_id].update({"status": "failed", "error": p.get("error") or s})
+                        return
+                _TEST_AI_GEN_JOBS[test_id].update({"status": "failed", "error": "timed out polling Replicate"})
+        except Exception as exc:
+            _TEST_AI_GEN_JOBS[test_id].update({"status": "failed", "error": f"{type(exc).__name__}: {str(exc)[:300]}"})
+
+    asyncio.create_task(_run())
+    return {"test_id": test_id, "status": "running", "ref_used": ref.get("player") if ref else None}
+
+
+@api_router.get("/test-ai-gen/{test_id}")
+async def test_ai_gen_status(test_id: str):
+    job = _TEST_AI_GEN_JOBS.get(test_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="unknown test_id")
+    return {"test_id": test_id, **job}
+
+
+# ──────────────────────────────────────────────────────────────────────
 # Gemini-based player picker: describe everyone in the video so the
 # user can pick the target player by description (clothing + court
 # position) instead of guessing from a bbox. Used in both singles and
