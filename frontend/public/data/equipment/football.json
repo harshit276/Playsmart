@@ -12,14 +12,69 @@
           "brand": "Vector X",
           "type": "Street Ball",
           "level": "beginner",
-          "specs": {"size": "5", "panels": "32 panels", "material": "Rubberized PVC", "bladder": "Rubber"},
-          "price_ranges": {"INR": {"min": 300, "max": 550}},
+          "specs": {
+            "size": "5",
+            "panels": "32 panels",
+            "material": "Rubberized PVC",
+            "bladder": "Rubber"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 300,
+              "max": 550
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Vector+X+Street+Soccer+Football",
             "flipkart": "https://www.flipkart.com/search?q=vector+x+street+soccer+football"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Budget rubberized football for street and park play. Very durable."
+          "description": "Budget rubberized football for street and park play. Very durable.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 40,
+              "speed": 45,
+              "spin": 30,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Beginners and casual players seeking a durable, affordable ball for street, park, or backyard games.",
+            "not_for_persona": "Competitive players or those needing high-performance touch and precision for organized matches.",
+            "upgrade_after_months": 6,
+            "standout_qualities": [
+              "Exceptional durability for rough surfaces",
+              "Affordable price point"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl02",
@@ -27,14 +82,65 @@
           "brand": "Nivia",
           "type": "Training Ball",
           "level": "beginner",
-          "specs": {"size": "5", "panels": "32 panels", "material": "PVC", "bladder": "Rubber"},
-          "price_ranges": {"INR": {"min": 350, "max": 650}},
+          "specs": {
+            "size": "5",
+            "panels": "32 panels",
+            "material": "PVC",
+            "bladder": "Rubber"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 350,
+              "max": 650
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Shining+Star+Football",
             "flipkart": "https://www.flipkart.com/search?q=nivia+shining+star+football"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "India's most popular budget football. Durable PVC construction for street and park play."
+          "description": "India's most popular budget football. Durable PVC construction for street and park play.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "improve_technique",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 50,
+              "speed": 50,
+              "spin": 40,
+              "forgiveness": 70,
+              "durability": 95
+            },
+            "best_for_persona": "Beginner players or casual groups seeking a highly durable, budget-friendly football for street, park, or backyard play.",
+            "not_for_persona": "Advanced players or competitive teams requiring superior touch, flight, and performance for serious matches.",
+            "upgrade_after_months": 9,
+            "standout_qualities": [
+              "Exceptional durability for rough surfaces",
+              "Highly affordable price point"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl03",
@@ -42,14 +148,69 @@
           "brand": "Cosco",
           "type": "Training Ball",
           "level": "beginner",
-          "specs": {"size": "5", "panels": "32 panels", "material": "PVC with nylon wound", "bladder": "Butyl"},
-          "price_ranges": {"INR": {"min": 400, "max": 750}},
+          "specs": {
+            "size": "5",
+            "panels": "32 panels",
+            "material": "PVC with nylon wound",
+            "bladder": "Butyl"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 400,
+              "max": 750
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+Milano+Football",
             "flipkart": "https://www.flipkart.com/search?q=cosco+milano+football"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Trusted Indian brand training ball. Nylon wound for better shape retention."
+          "description": "Trusted Indian brand training ball. Nylon wound for better shape retention.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 55,
+              "speed": 35,
+              "spin": 30,
+              "forgiveness": 85,
+              "durability": 75
+            },
+            "best_for_persona": "Beginners and casual players needing a durable, affordable ball for basic skill development and recreational play.",
+            "not_for_persona": "Competitive players or those in advanced leagues seeking high-performance, professional-grade equipment.",
+            "common_complaints": [],
+            "standout_qualities": [
+              "Maintains shape well for consistent performance",
+              "Affordable and reliable choice for everyday training"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl04",
@@ -57,14 +218,62 @@
           "brand": "Nivia",
           "type": "Match Ball",
           "level": "intermediate",
-          "specs": {"size": "5", "panels": "32 panels", "material": "PU", "bladder": "Butyl"},
-          "price_ranges": {"INR": {"min": 700, "max": 1200}},
+          "specs": {
+            "size": "5",
+            "panels": "32 panels",
+            "material": "PU",
+            "bladder": "Butyl"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 700,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Vega+Football",
             "flipkart": "https://www.flipkart.com/search?q=nivia+vega+football"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "PU match ball used in Indian tournaments. Good touch and flight."
+          "description": "PU match ball used in Indian tournaments. Good touch and flight.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 75,
+              "speed": 65,
+              "spin": 60,
+              "forgiveness": 60,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players seeking a durable, reliable match ball for competitive club or regional tournament play.",
+            "not_for_persona": "Elite professional players requiring a FIFA-approved, top-tier match ball for international competitions.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "Reliable touch and consistent flight characteristics."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl05",
@@ -72,14 +281,69 @@
           "brand": "Adidas",
           "type": "Training Ball",
           "level": "intermediate",
-          "specs": {"size": "5", "panels": "32 panels", "material": "TPU", "bladder": "Butyl"},
-          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "specs": {
+            "size": "5",
+            "panels": "32 panels",
+            "material": "TPU",
+            "bladder": "Butyl"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 2000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Starlancer+Club+Football",
             "flipkart": "https://www.flipkart.com/search?q=adidas+starlancer+club+football"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Adidas club-level training ball. Machine-stitched with good durability."
+          "description": "Adidas club-level training ball. Machine-stitched with good durability.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 65,
+              "speed": 50,
+              "spin": 55,
+              "forgiveness": 70,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate players needing a durable, reliable ball for club training and recreational play.",
+            "not_for_persona": "Professional players seeking a match-grade ball for elite competition.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [],
+            "standout_qualities": [
+              "good durability",
+              "reliable construction"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl06",
@@ -87,14 +351,80 @@
           "brand": "Nike",
           "type": "Match Ball",
           "level": "advanced",
-          "specs": {"size": "5", "panels": "4 panels", "material": "Premium PU", "bladder": "Latex", "FIFA_quality": "Pro"},
-          "price_ranges": {"INR": {"min": 4000, "max": 7000}},
+          "specs": {
+            "size": "5",
+            "panels": "4 panels",
+            "material": "Premium PU",
+            "bladder": "Latex",
+            "FIFA_quality": "Pro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4000,
+              "max": 7000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Flight+Premier+League+Football",
             "flipkart": "https://www.flipkart.com/search?q=nike+flight+premier+league+football"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Official Premier League match ball. AerowSculpt technology for consistent flight."
+          "description": "Official Premier League match ball. AerowSculpt technology for consistent flight.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "power_hitter",
+              "control_focused",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 95,
+              "speed": 90,
+              "spin": 85,
+              "forgiveness": 75,
+              "durability": 85
+            },
+            "best_for_persona": "Competitive adult players and elite teams seeking a FIFA Pro-certified match ball for tournaments and high-level training.",
+            "not_for_persona": "Beginners, casual players, or those on a tight budget for recreational use.",
+            "common_complaints": [
+              "High price point.",
+              "May require more frequent inflation due to latex bladder."
+            ],
+            "standout_qualities": [
+              "Official Premier League match ball.",
+              "Exceptional flight consistency with AerowSculpt technology.",
+              "Premium feel and touch for elite performance.",
+              "FIFA Pro certified for top-level competition."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl07",
@@ -102,14 +432,74 @@
           "brand": "Adidas",
           "type": "Match Ball",
           "level": "advanced",
-          "specs": {"size": "5", "panels": "20 panels", "material": "Textured PU", "bladder": "Latex", "FIFA_quality": "Pro"},
-          "price_ranges": {"INR": {"min": 5000, "max": 9000}},
+          "specs": {
+            "size": "5",
+            "panels": "20 panels",
+            "material": "Textured PU",
+            "bladder": "Latex",
+            "FIFA_quality": "Pro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5000,
+              "max": 9000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Al+Rihla+Pro+Match+Ball",
             "flipkart": "https://www.flipkart.com/search?q=adidas+al+rihla+pro+match+ball"
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "FIFA World Cup match ball. Premium quality with thermal bonding."
+          "description": "FIFA World Cup match ball. Premium quality with thermal bonding.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "power_hitter",
+              "control_focused",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "tournament_elite",
+              "tournament_open",
+              "academy_training",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 90,
+              "speed": 90,
+              "spin": 85,
+              "forgiveness": 70,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced players and professionals needing a FIFA-approved match ball for elite competition and high-intensity training, demanding peak performance.",
+            "not_for_persona": "Beginners or casual players seeking an affordable, highly durable ball for recreational backyard games or light practice.",
+            "standout_qualities": [
+              "Official match ball status",
+              "Exceptional build quality and consistency",
+              "Optimized for high-level performance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl08",
@@ -118,8 +508,23 @@
           "type": "Training Ball",
           "level": "intermediate",
           "recommended_for": "Club training and amateur league matches",
-          "specs": {"size": "5", "panels": "32-panel classic", "material": "TPU", "bladder": "Butyl", "FIFA_quality": "Basic"},
-          "price_ranges": {"INR": {"min": 1800, "max": 2800}, "USD": {"min": 23, "max": 36}},
+          "specs": {
+            "size": "5",
+            "panels": "32-panel classic",
+            "material": "TPU",
+            "bladder": "Butyl",
+            "FIFA_quality": "Basic"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1800,
+              "max": 2800
+            },
+            "USD": {
+              "min": 23,
+              "max": 36
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Tango+League+Football",
             "flipkart": "https://www.flipkart.com/search?q=adidas+tango+league+football",
@@ -129,7 +534,57 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Iconic Adidas Tango design reborn as a training ball. Thermal bonded panels for consistent flight."
+          "description": "Iconic Adidas Tango design reborn as a training ball. Thermal bonded panels for consistent flight.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "school_college",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 75,
+              "speed": 60,
+              "spin": 65,
+              "forgiveness": 80,
+              "durability": 90
+            },
+            "best_for_persona": "Intermediate players and serious beginners needing a durable, consistent ball for regular training and recreational matches.",
+            "not_for_persona": "Elite competitive players seeking a FIFA Quality Pro match ball for high-stakes tournaments.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Lacks the premium touch and responsiveness of a match ball",
+              "Not ideal for high-level competitive play"
+            ],
+            "standout_qualities": [
+              "Excellent durability for frequent training sessions",
+              "Consistent flight and predictable bounce",
+              "Reliable air retention"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl09",
@@ -138,8 +593,23 @@
           "type": "Match Ball",
           "level": "advanced",
           "recommended_for": "Professional league matches, top-tier European competitions",
-          "specs": {"size": "5", "panels": "32-panel classic", "material": "Premium PU", "bladder": "Latex", "FIFA_quality": "Quality Pro"},
-          "price_ranges": {"INR": {"min": 5500, "max": 8500}, "USD": {"min": 70, "max": 109}},
+          "specs": {
+            "size": "5",
+            "panels": "32-panel classic",
+            "material": "Premium PU",
+            "bladder": "Latex",
+            "FIFA_quality": "Quality Pro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5500,
+              "max": 8500
+            },
+            "USD": {
+              "min": 70,
+              "max": 109
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Select+Derbystar+Brillant+APS",
             "flipkart": "https://www.flipkart.com/search?q=select+derbystar+brillant+aps",
@@ -149,7 +619,55 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Official Bundesliga match ball. Hand-stitched premium PU with zero-wing valve for balanced flight."
+          "description": "Official Bundesliga match ball. Hand-stitched premium PU with zero-wing valve for balanced flight.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "power_hitter",
+              "control_focused",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 90,
+              "speed": 85,
+              "spin": 80,
+              "forgiveness": 55,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced players and competitive teams needing a FIFA Quality Pro match ball for optimal performance, precision, and consistent flight in high-level games.",
+            "not_for_persona": "Beginner players, casual users, or those seeking a highly durable, budget-friendly ball for rough surfaces or recreational backyard play.",
+            "common_complaints": [],
+            "standout_qualities": [
+              "Official Bundesliga match ball status",
+              "Exceptional flight stability and balance",
+              "Premium hand-stitched construction",
+              "FIFA Quality Pro certified"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl10",
@@ -158,8 +676,23 @@
           "type": "Match Ball",
           "level": "advanced",
           "recommended_for": "UEFA Europa League, continental competitions",
-          "specs": {"size": "5", "panels": "Thermal bonded (12 panels)", "material": "Premium PU", "bladder": "Latex", "FIFA_quality": "Quality Pro"},
-          "price_ranges": {"INR": {"min": 4500, "max": 7500}, "USD": {"min": 58, "max": 96}},
+          "specs": {
+            "size": "5",
+            "panels": "Thermal bonded (12 panels)",
+            "material": "Premium PU",
+            "bladder": "Latex",
+            "FIFA_quality": "Quality Pro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 4500,
+              "max": 7500
+            },
+            "USD": {
+              "min": 58,
+              "max": 96
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Molten+UEFA+Europa+League+ball",
             "flipkart": "https://www.flipkart.com/search?q=molten+uefa+europa+league+ball",
@@ -169,7 +702,51 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "Official UEFA Europa League match ball. Acentec technology provides stable and accurate trajectory."
+          "description": "Official UEFA Europa League match ball. Acentec technology provides stable and accurate trajectory.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 95,
+              "speed": 85,
+              "spin": 80,
+              "forgiveness": 65,
+              "durability": 90
+            },
+            "best_for_persona": "Advanced players and professionals needing a FIFA Quality Pro match ball for competitive league games and elite training sessions.",
+            "not_for_persona": "Beginners, casual players, or those needing a highly durable ball for rough, non-grass surfaces.",
+            "standout_qualities": [
+              "Official match ball status",
+              "Exceptional flight stability",
+              "High-quality construction"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bl11",
@@ -178,8 +755,23 @@
           "type": "Match Ball",
           "level": "intermediate",
           "recommended_for": "School/college matches, club training",
-          "specs": {"size": "5", "panels": "32-panel classic", "material": "PU", "bladder": "Butyl", "FIFA_quality": "Quality"},
-          "price_ranges": {"INR": {"min": 2200, "max": 3800}, "USD": {"min": 28, "max": 49}},
+          "specs": {
+            "size": "5",
+            "panels": "32-panel classic",
+            "material": "PU",
+            "bladder": "Butyl",
+            "FIFA_quality": "Quality"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2200,
+              "max": 3800
+            },
+            "USD": {
+              "min": 28,
+              "max": 49
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Molten+Vantaggio+5000+football",
             "flipkart": "https://www.flipkart.com/search?q=molten+vantaggio+5000+football",
@@ -189,7 +781,48 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71fK8gP8kBL._SL1500_.jpg",
-          "description": "FIFA Quality certified match ball. Dual-cushion construction offers consistent rebound and soft touch."
+          "description": "FIFA Quality certified match ball. Dual-cushion construction offers consistent rebound and soft touch.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 85,
+              "speed": 70,
+              "spin": 65,
+              "forgiveness": 70,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate players needing a FIFA Quality match ball for competitive club or academy matches, prioritizing consistent feel and performance.",
+            "not_for_persona": "Casual players on rough surfaces or beginners seeking a very cheap, highly durable training ball.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "FIFA Quality certified for match play",
+              "Consistent rebound for reliable performance",
+              "Soft touch for enhanced control"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -202,14 +835,68 @@
           "brand": "Nivia",
           "type": "Turf Shoes",
           "level": "beginner",
-          "specs": {"surface": "Turf/Hard Ground", "upper": "PU", "studs": "Rubber moulded"},
-          "price_ranges": {"INR": {"min": 600, "max": 1200}},
+          "specs": {
+            "surface": "Turf/Hard Ground",
+            "upper": "PU",
+            "studs": "Rubber moulded"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Dominator+Football+Shoes",
             "flipkart": "https://www.flipkart.com/search?q=nivia+dominator+football+shoes"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "India's most popular budget football shoes. Great for gully and turf football."
+          "description": "India's most popular budget football shoes. Great for gully and turf football.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 60,
+              "speed": 45,
+              "spin": 40,
+              "forgiveness": 80,
+              "durability": 75
+            },
+            "best_for_persona": "Beginners and casual players seeking affordable, durable boots for turf or hard ground surfaces.",
+            "not_for_persona": "Competitive players or those requiring specialized performance on natural grass.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 9,
+            "standout_qualities": [
+              "Affordable price point",
+              "Suitable for turf and hard ground",
+              "Good for casual play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt02",
@@ -217,14 +904,63 @@
           "brand": "Vector X",
           "type": "Firm Ground",
           "level": "beginner",
-          "specs": {"surface": "Firm Ground", "upper": "PU", "studs": "Moulded"},
-          "price_ranges": {"INR": {"min": 500, "max": 1000}},
+          "specs": {
+            "surface": "Firm Ground",
+            "upper": "PU",
+            "studs": "Moulded"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 1000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Vector+X+Chaser+Football+Shoes",
             "flipkart": "https://www.flipkart.com/search?q=vector+x+chaser+football+shoes"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Budget Indian brand boots. Moulded studs for firm ground play."
+          "description": "Budget Indian brand boots. Moulded studs for firm ground play.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 55,
+              "speed": 45,
+              "spin": 0,
+              "forgiveness": 75,
+              "durability": 65
+            },
+            "best_for_persona": "Beginners or casual players seeking an affordable, comfortable boot for firm ground football.",
+            "not_for_persona": "Competitive or advanced players needing specialized features, superior touch, or enhanced performance.",
+            "upgrade_after_months": 12,
+            "standout_qualities": [
+              "Affordable price point for entry-level players.",
+              "Suitable for firm ground surfaces with moulded studs."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt03",
@@ -232,14 +968,68 @@
           "brand": "Cosco",
           "type": "Firm Ground",
           "level": "beginner",
-          "specs": {"surface": "Firm/Hard Ground", "upper": "Synthetic PU", "studs": "Moulded"},
-          "price_ranges": {"INR": {"min": 700, "max": 1300}},
+          "specs": {
+            "surface": "Firm/Hard Ground",
+            "upper": "Synthetic PU",
+            "studs": "Moulded"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 700,
+              "max": 1300
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+Brusco+Football+Shoes",
             "flipkart": "https://www.flipkart.com/search?q=cosco+brusco+football+shoes"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Affordable Cosco football boots. Good for school and recreational football."
+          "description": "Affordable Cosco football boots. Good for school and recreational football.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 45,
+              "speed": 35,
+              "spin": 30,
+              "forgiveness": 85,
+              "durability": 60
+            },
+            "best_for_persona": "Beginner footballers needing an affordable, basic boot for casual play or school matches on firm ground surfaces.",
+            "not_for_persona": "Competitive players requiring advanced features, superior comfort, or specialized performance for high-level matches.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Lacks advanced features for competitive performance.",
+              "May not offer premium comfort or ball feel."
+            ],
+            "standout_qualities": [
+              "Extremely affordable entry-level option.",
+              "Ideal for casual and school-level football."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt04",
@@ -247,14 +1037,62 @@
           "brand": "Adidas",
           "type": "Firm Ground",
           "level": "intermediate",
-          "specs": {"surface": "Firm Ground", "upper": "Synthetic", "studs": "FG moulded"},
-          "price_ranges": {"INR": {"min": 3000, "max": 5000}},
+          "specs": {
+            "surface": "Firm Ground",
+            "upper": "Synthetic",
+            "studs": "FG moulded"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 3000,
+              "max": 5000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Club+FG+football",
             "flipkart": "https://www.flipkart.com/search?q=adidas+predator+club+fg"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Entry-level Predator boots. Textured upper for improved ball control."
+          "description": "Entry-level Predator boots. Textured upper for improved ball control.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "beach_outdoor",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 85,
+              "speed": 55,
+              "spin": 60,
+              "forgiveness": 75,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players prioritizing ball control and comfort on firm natural grass pitches.",
+            "not_for_persona": "Elite players needing lightweight speed or specialized grip for artificial turf surfaces.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 18,
+            "standout_qualities": [
+              "Enhanced ball control from textured upper."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt05",
@@ -262,14 +1100,71 @@
           "brand": "Nike",
           "type": "Multi Ground",
           "level": "intermediate",
-          "specs": {"surface": "Multi Ground", "upper": "Synthetic", "studs": "MG moulded"},
-          "price_ranges": {"INR": {"min": 3500, "max": 5500}},
+          "specs": {
+            "surface": "Multi Ground",
+            "upper": "Synthetic",
+            "studs": "MG moulded"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 3500,
+              "max": 5500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Mercurial+Vapor+15+Club",
             "flipkart": "https://www.flipkart.com/search?q=nike+mercurial+vapor+15+club"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Nike speed boot at an accessible price. Lightweight and responsive."
+          "description": "Nike speed boot at an accessible price. Lightweight and responsive.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "attacker",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "tournament_open",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult",
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 65,
+              "speed": 90,
+              "spin": 0,
+              "forgiveness": 75,
+              "durability": 65
+            },
+            "best_for_persona": "Intermediate players prioritizing speed and agility on various surfaces, seeking a lightweight and responsive boot at an accessible price.",
+            "not_for_persona": "Elite-level players requiring premium materials and specialized performance, or those who prioritize maximum power and touch.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 18,
+            "standout_qualities": [
+              "High speed and responsiveness",
+              "Good value for a performance-oriented boot",
+              "Versatile multi-ground soleplate"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt06",
@@ -277,14 +1172,59 @@
           "brand": "Adidas",
           "type": "Firm Ground",
           "level": "advanced",
-          "specs": {"surface": "Firm Ground", "upper": "Primeknit", "studs": "FG"},
-          "price_ranges": {"INR": {"min": 12000, "max": 18000}},
+          "specs": {
+            "surface": "Firm Ground",
+            "upper": "Primeknit",
+            "studs": "FG"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 12000,
+              "max": 18000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Edge+1+FG",
             "flipkart": "https://www.flipkart.com/search?q=adidas+predator+edge+1+fg"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Professional-grade Predator boots. Zone Skin technology for ultimate control."
+          "description": "Professional-grade Predator boots. Zone Skin technology for ultimate control.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "power_hitter",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 88,
+              "control": 95,
+              "speed": 72,
+              "spin": 65,
+              "forgiveness": 55,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced players prioritizing exceptional control and power for competitive firm ground matches.",
+            "not_for_persona": "Beginners or casual players seeking a forgiving boot for non-firm ground surfaces.",
+            "standout_qualities": [
+              "Exceptional ball control and touch due to Zone Skin technology."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt07",
@@ -292,14 +1232,70 @@
           "brand": "Nike",
           "type": "Firm Ground",
           "level": "advanced",
-          "specs": {"surface": "Firm Ground", "upper": "Flyknit + Gripknit", "studs": "FG"},
-          "price_ranges": {"INR": {"min": 15000, "max": 22000}},
+          "specs": {
+            "surface": "Firm Ground",
+            "upper": "Flyknit + Gripknit",
+            "studs": "FG"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 15000,
+              "max": 22000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Phantom+GX+Elite+FG",
             "flipkart": "https://www.flipkart.com/search?q=nike+phantom+gx+elite+fg"
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Top-tier Nike boot. Gripknit for enhanced touch and control at pace."
+          "description": "Top-tier Nike boot. Gripknit for enhanced touch and control at pace.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 90,
+              "speed": 85,
+              "spin": 70,
+              "forgiveness": 40,
+              "durability": 70
+            },
+            "best_for_persona": "Advanced players seeking elite touch, control, and agility on firm ground to dominate competitive matches.",
+            "not_for_persona": "Beginners or casual players needing high forgiveness or playing on artificial turf/soft ground.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 15,
+            "common_complaints": [
+              "High cost of entry",
+              "Less forgiving for developing players"
+            ],
+            "standout_qualities": [
+              "Exceptional ball touch and control",
+              "High-performance design for agility",
+              "Premium materials and construction"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt08",
@@ -308,8 +1304,21 @@
           "type": "Firm Ground",
           "level": "advanced",
           "recommended_for": "Elite playmakers seeking maximum control and spin",
-          "specs": {"surface": "FG firm ground", "upper": "HybridTouch synthetic with Strike Rib 2.0", "studs": "FG conical + bladed"},
-          "price_ranges": {"INR": {"min": 17000, "max": 24000}, "USD": {"min": 218, "max": 308}},
+          "specs": {
+            "surface": "FG firm ground",
+            "upper": "HybridTouch synthetic with Strike Rib 2.0",
+            "studs": "FG conical + bladed"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 17000,
+              "max": 24000
+            },
+            "USD": {
+              "min": 218,
+              "max": 308
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Elite+FG",
             "flipkart": "https://www.flipkart.com/search?q=adidas+predator+elite+fg",
@@ -319,7 +1328,46 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Flagship Adidas control boot. Strike Rib 2.0 elements on the forefoot deliver extra spin and dip on shots."
+          "description": "Flagship Adidas control boot. Strike Rib 2.0 elements on the forefoot deliver extra spin and dip on shots.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "spin_focused",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 95,
+              "speed": 65,
+              "spin": 95,
+              "forgiveness": 40,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced and pro players who prioritize exceptional control and spin on firm ground to dictate play and score goals.",
+            "not_for_persona": "Beginners or casual players needing a forgiving, versatile boot for various surfaces or a budget-friendly option.",
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt09",
@@ -328,8 +1376,21 @@
           "type": "Firm Ground",
           "level": "advanced",
           "recommended_for": "Speed wingers and counter-attacking forwards",
-          "specs": {"surface": "FG firm ground", "upper": "Aerocage speed cage + ultralight knit", "studs": "FG bladed"},
-          "price_ranges": {"INR": {"min": 14000, "max": 20000}, "USD": {"min": 179, "max": 256}},
+          "specs": {
+            "surface": "FG firm ground",
+            "upper": "Aerocage speed cage + ultralight knit",
+            "studs": "FG bladed"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 14000,
+              "max": 20000
+            },
+            "USD": {
+              "min": 179,
+              "max": 256
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+X+Crazyfast+1+FG",
             "flipkart": "https://www.flipkart.com/search?q=adidas+x+crazyfast+1+fg",
@@ -339,7 +1400,51 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Adidas' fastest boot. Aerocage structure locks the foot for explosive sprints on firm ground."
+          "description": "Adidas' fastest boot. Aerocage structure locks the foot for explosive sprints on firm ground.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "speed_focused",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 80,
+              "control": 65,
+              "speed": 95,
+              "spin": 0,
+              "forgiveness": 45,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced players seeking explosive speed and agility on firm natural grass to outpace opponents and create scoring opportunities.",
+            "not_for_persona": "Beginner players, those prioritizing comfort, or players on artificial turf or soft ground surfaces.",
+            "learning_curve_hours": 10,
+            "upgrade_after_months": 18,
+            "standout_qualities": [
+              "Exceptional speed and acceleration",
+              "Secure foot lockdown for dynamic movements"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt10",
@@ -348,8 +1453,21 @@
           "type": "Firm Ground",
           "level": "advanced",
           "recommended_for": "Central midfielders and defenders who prize touch and comfort",
-          "specs": {"surface": "FG firm ground", "upper": "Premium Kangaroo-alternative leather (FlyTouch Plus)", "studs": "FG conical"},
-          "price_ranges": {"INR": {"min": 16000, "max": 22000}, "USD": {"min": 205, "max": 282}},
+          "specs": {
+            "surface": "FG firm ground",
+            "upper": "Premium Kangaroo-alternative leather (FlyTouch Plus)",
+            "studs": "FG conical"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 16000,
+              "max": 22000
+            },
+            "USD": {
+              "min": 205,
+              "max": 282
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Tiempo+Legend+10+Elite+FG",
             "flipkart": "https://www.flipkart.com/search?q=nike+tiempo+legend+10+elite+fg",
@@ -359,7 +1477,45 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Classic leather-style Nike silo. Plush FlyTouch Plus upper for authentic leather feel with modern durability."
+          "description": "Classic leather-style Nike silo. Plush FlyTouch Plus upper for authentic leather feel with modern durability.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 90,
+              "speed": 80,
+              "spin": 75,
+              "forgiveness": 60,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced players seeking classic leather touch, modern durability, and agile performance on firm natural grass.",
+            "not_for_persona": "Beginners needing maximum forgiveness or players on artificial turf/indoor surfaces.",
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt11",
@@ -368,8 +1524,21 @@
           "type": "Firm Ground / Artificial Grass",
           "level": "advanced",
           "recommended_for": "Creative midfielders needing adaptive fit",
-          "specs": {"surface": "FG firm ground / AG artificial grass", "upper": "FUZIONFIT+ adaptive compression knit", "studs": "Hybrid FG/AG"},
-          "price_ranges": {"INR": {"min": 14500, "max": 20500}, "USD": {"min": 186, "max": 263}},
+          "specs": {
+            "surface": "FG firm ground / AG artificial grass",
+            "upper": "FUZIONFIT+ adaptive compression knit",
+            "studs": "Hybrid FG/AG"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 14500,
+              "max": 20500
+            },
+            "USD": {
+              "min": 186,
+              "max": 263
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Puma+Future+7+Ultimate+FG",
             "flipkart": "https://www.flipkart.com/search?q=puma+future+7+ultimate+fg",
@@ -379,7 +1548,55 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Puma's top creator boot. FUZIONFIT+ band wraps the midfoot for locked-in, sock-like fit across surfaces."
+          "description": "Puma's top creator boot. FUZIONFIT+ band wraps the midfoot for locked-in, sock-like fit across surfaces.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 90,
+              "speed": 85,
+              "spin": 75,
+              "forgiveness": 60,
+              "durability": 70
+            },
+            "best_for_persona": "Advanced players seeking a secure, adaptive fit for creative playmaking and precise ball control on firm or artificial ground.",
+            "not_for_persona": "Beginner players needing maximum forgiveness or those playing only casually.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [],
+            "standout_qualities": [
+              "Adaptive, sock-like fit for secure lockdown",
+              "Versatile for both firm natural and artificial grass",
+              "Designed for creative playmakers"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt12",
@@ -388,8 +1605,21 @@
           "type": "Firm Ground",
           "level": "intermediate",
           "recommended_for": "Agile dribblers and creative wingers",
-          "specs": {"surface": "FG firm ground", "upper": "Hypoknit knit with TPU skin", "studs": "FG conical"},
-          "price_ranges": {"INR": {"min": 7500, "max": 11500}, "USD": {"min": 96, "max": 147}},
+          "specs": {
+            "surface": "FG firm ground",
+            "upper": "Hypoknit knit with TPU skin",
+            "studs": "FG conical"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7500,
+              "max": 11500
+            },
+            "USD": {
+              "min": 96,
+              "max": 147
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=New+Balance+Tekela+v4+Pro+FG",
             "flipkart": "https://www.flipkart.com/search?q=new+balance+tekela+v4+pro+fg",
@@ -399,7 +1629,47 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "New Balance's control silo. Hypoknit upper adds stretch where needed and support where it counts."
+          "description": "New Balance's control silo. Hypoknit upper adds stretch where needed and support where it counts.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 90,
+              "speed": 65,
+              "spin": 80,
+              "forgiveness": 60,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate players who prioritize precise ball control, agility, and a responsive feel on firm natural grass pitches.",
+            "not_for_persona": "Beginners seeking maximum comfort and forgiveness, or players primarily on soft ground or artificial turf.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "standout_qualities": [
+              "Adaptive Hypoknit upper for a secure and comfortable fit",
+              "Enhanced ball control and touch for precise play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_bt13",
@@ -408,8 +1678,21 @@
           "type": "Firm Ground",
           "level": "intermediate",
           "recommended_for": "All-round midfielders seeking lightweight fit",
-          "specs": {"surface": "FG firm ground", "upper": "A-Frame microfibre synthetic", "studs": "FG bladed + conical mix"},
-          "price_ranges": {"INR": {"min": 5500, "max": 8000}, "USD": {"min": 70, "max": 103}},
+          "specs": {
+            "surface": "FG firm ground",
+            "upper": "A-Frame microfibre synthetic",
+            "studs": "FG bladed + conical mix"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5500,
+              "max": 8000
+            },
+            "USD": {
+              "min": 70,
+              "max": 103
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Umbro+Velocita+Elite+FG",
             "flipkart": "https://www.flipkart.com/search?q=umbro+velocita+elite+fg",
@@ -419,7 +1702,41 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71kGvQqpURL._SL1500_.jpg",
-          "description": "Umbro's flagship speed boot. A-Frame cage locks the foot for explosive direction changes."
+          "description": "Umbro's flagship speed boot. A-Frame cage locks the foot for explosive direction changes.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 70,
+              "speed": 90,
+              "spin": 0,
+              "forgiveness": 60,
+              "durability": 65
+            },
+            "best_for_persona": "Intermediate players needing a secure, lightweight boot for explosive speed and quick changes of direction on firm ground.",
+            "not_for_persona": "Beginners needing maximum cushioning or players on soft ground/artificial turf.",
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -432,14 +1749,65 @@
           "brand": "Nivia",
           "type": "Shin Guard",
           "level": "beginner",
-          "specs": {"material": "PP Shell", "padding": "EVA foam", "ankle_protection": false},
-          "price_ranges": {"INR": {"min": 150, "max": 350}},
+          "specs": {
+            "material": "PP Shell",
+            "padding": "EVA foam",
+            "ankle_protection": false
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 150,
+              "max": 350
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Classic+Shin+Guard",
             "flipkart": "https://www.flipkart.com/search?q=nivia+classic+shin+guard"
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Budget Indian shin guards. Basic protection for casual games."
+          "description": "Budget Indian shin guards. Basic protection for casual games.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 30,
+              "durability": 60
+            },
+            "best_for_persona": "New players or kids needing basic, affordable protection for casual football games and light training sessions.",
+            "not_for_persona": "Competitive players or those in high-impact matches requiring advanced protection and durability.",
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Limited protection for high-impact play",
+              "May not offer advanced comfort features"
+            ],
+            "standout_qualities": [
+              "Very affordable price point",
+              "Suitable for casual and recreational use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_sg02",
@@ -447,14 +1815,71 @@
           "brand": "Cosco",
           "type": "Shin Guard",
           "level": "beginner",
-          "specs": {"material": "PP Shell", "padding": "EVA foam", "ankle_protection": false},
-          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "specs": {
+            "material": "PP Shell",
+            "padding": "EVA foam",
+            "ankle_protection": false
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 200,
+              "max": 400
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+football+shin+guards",
             "flipkart": "https://www.flipkart.com/search?q=cosco+football+shin+guards"
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Basic shin guards from Cosco. Lightweight and functional."
+          "description": "Basic shin guards from Cosco. Lightweight and functional.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "average_adult"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 70,
+              "durability": 65
+            },
+            "best_for_persona": "Beginner players needing basic, lightweight protection for casual football, school sports, or light recreational play.",
+            "not_for_persona": "Competitive players needing robust protection for intense matches, hard tackles, or advanced training.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Minimal features compared to advanced models",
+              "Less robust protection for harder impacts",
+              "No ankle protection"
+            ],
+            "standout_qualities": [
+              "Very affordable price point",
+              "Lightweight and comfortable design",
+              "Simple and functional protection"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_sg03",
@@ -462,14 +1887,60 @@
           "brand": "Kipsta (Decathlon)",
           "type": "Shin Guard",
           "level": "beginner",
-          "specs": {"material": "PP Shell", "padding": "EVA + ankle guard", "ankle_protection": true},
-          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "specs": {
+            "material": "PP Shell",
+            "padding": "EVA + ankle guard",
+            "ankle_protection": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 300,
+              "max": 600
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Kipsta+F140+shin+guard",
             "flipkart": "https://www.flipkart.com/search?q=kipsta+f140+shin+guard"
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Decathlon shin guards with ankle protection. Good value for beginners."
+          "description": "Decathlon shin guards with ankle protection. Good value for beginners.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "garden_backyard"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "tournament_open",
+              "academy_training"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 70
+            },
+            "best_for_persona": "Beginner football players seeking affordable, basic protection with added ankle support for casual play.",
+            "not_for_persona": "Advanced players needing professional-grade, lightweight, or custom-fit protection for competitive matches.",
+            "upgrade_after_months": 18,
+            "standout_qualities": [
+              "Integrated ankle protection",
+              "Affordable entry-level option"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_sg04",
@@ -477,14 +1948,68 @@
           "brand": "Nike",
           "type": "Shin Guard",
           "level": "intermediate",
-          "specs": {"material": "Hard shell", "padding": "Low-profile foam", "ankle_protection": false},
-          "price_ranges": {"INR": {"min": 600, "max": 1200}},
+          "specs": {
+            "material": "Hard shell",
+            "padding": "Low-profile foam",
+            "ankle_protection": false
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Charge+Shin+Guard",
             "flipkart": "https://www.flipkart.com/search?q=nike+charge+shin+guard"
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Sleek Nike shin guards. Lightweight and comfortable under socks."
+          "description": "Sleek Nike shin guards. Lightweight and comfortable under socks.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "stay_fit",
+              "win_matches",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 85,
+              "spin": 0,
+              "forgiveness": 65,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate football players prioritizing lightweight comfort and adequate protection for regular club or school matches.",
+            "not_for_persona": "Professional players needing maximum impact protection or those requiring integrated ankle support.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 18,
+            "common_complaints": [],
+            "standout_qualities": [
+              "Lightweight and comfortable design",
+              "Sleek, low-profile fit"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_sg05",
@@ -492,14 +2017,65 @@
           "brand": "Adidas",
           "type": "Shin Guard",
           "level": "advanced",
-          "specs": {"material": "EVA backed shield", "padding": "Anatomical fit", "ankle_protection": false},
-          "price_ranges": {"INR": {"min": 1000, "max": 2000}},
+          "specs": {
+            "material": "EVA backed shield",
+            "padding": "Anatomical fit",
+            "ankle_protection": false
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1000,
+              "max": 2000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+X+Pro+Shin+Guard",
             "flipkart": "https://www.flipkart.com/search?q=adidas+x+pro+shin+guard"
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Pro-level shin guards. Anatomical design for optimal protection."
+          "description": "Pro-level shin guards. Anatomical design for optimal protection.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 80,
+              "spin": 0,
+              "forgiveness": 90,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced and pro footballers prioritizing lightweight, anatomical protection for competitive matches and intense training.",
+            "not_for_persona": "Casual players needing basic protection for recreational games or those on a very tight budget.",
+            "standout_qualities": [
+              "Pro-level protection",
+              "Anatomical fit for comfort",
+              "Lightweight design"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_sg06",
@@ -508,8 +2084,23 @@
           "type": "Shin Guard",
           "level": "intermediate",
           "recommended_for": "Club players who want lightweight sleeve-style protection",
-          "specs": {"size": "M", "material": "PE shield with EVA backing", "protection_level": "Medium-high impact", "attachment": "Slip-in (compression sleeve)", "ankle_protection": false},
-          "price_ranges": {"INR": {"min": 900, "max": 1600}, "USD": {"min": 12, "max": 21}},
+          "specs": {
+            "size": "M",
+            "material": "PE shield with EVA backing",
+            "protection_level": "Medium-high impact",
+            "attachment": "Slip-in (compression sleeve)",
+            "ankle_protection": false
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 900,
+              "max": 1600
+            },
+            "USD": {
+              "min": 12,
+              "max": 21
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Puma+Ultra+Flex+Sleeve+Shin+Guard",
             "flipkart": "https://www.flipkart.com/search?q=puma+ultra+flex+sleeve+shin+guard",
@@ -519,7 +2110,46 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Puma slip-in shin guards with integrated compression sleeve. Flex zones reduce bulk under socks."
+          "description": "Puma slip-in shin guards with integrated compression sleeve. Flex zones reduce bulk under socks.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 70,
+              "speed": 75,
+              "spin": 50,
+              "forgiveness": 80,
+              "durability": 65
+            },
+            "best_for_persona": "Intermediate footballers seeking comfortable, low-profile protection for regular training and matches without hindering movement.",
+            "not_for_persona": "Players needing integrated ankle protection or those who prefer traditional strap-on shin guards.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 24,
+            "standout_qualities": [
+              "Integrated compression sleeve for secure fit",
+              "Flex zones minimize bulk under socks"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_sg07",
@@ -528,8 +2158,23 @@
           "type": "Shin Guard",
           "level": "intermediate",
           "recommended_for": "Outfield players who need strap-secured stable protection",
-          "specs": {"size": "L", "material": "Hard PP shell with PU foam backing", "protection_level": "High impact", "attachment": "Elastic strap with velcro", "ankle_protection": true},
-          "price_ranges": {"INR": {"min": 1200, "max": 2200}, "USD": {"min": 15, "max": 28}},
+          "specs": {
+            "size": "L",
+            "material": "Hard PP shell with PU foam backing",
+            "protection_level": "High impact",
+            "attachment": "Elastic strap with velcro",
+            "ankle_protection": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 2200
+            },
+            "USD": {
+              "min": 15,
+              "max": 28
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Under+Armour+Challenge+Shin+Guard",
             "flipkart": "https://www.flipkart.com/search?q=under+armour+challenge+shin+guard",
@@ -539,7 +2184,42 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Under Armour strap-on shin guards. Includes removable ankle guards for full lower-leg coverage."
+          "description": "Under Armour strap-on shin guards. Includes removable ankle guards for full lower-leg coverage.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 50,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate footballers seeking robust high-impact protection and comprehensive lower-leg coverage, ideal for club matches and training.",
+            "not_for_persona": "Casual players needing minimal protection, or elite professionals requiring ultra-light, custom-fit shin guards for peak performance.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "High impact protection",
+              "Removable ankle guards"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_sg08",
@@ -548,8 +2228,23 @@
           "type": "Shin Guard",
           "level": "advanced",
           "recommended_for": "Competitive players needing lightweight, high-impact protection",
-          "specs": {"size": "S", "material": "Carbon-reinforced polymer shell", "protection_level": "Pro-grade high impact", "attachment": "Slip-in", "ankle_protection": false},
-          "price_ranges": {"INR": {"min": 1800, "max": 3000}, "USD": {"min": 23, "max": 38}},
+          "specs": {
+            "size": "S",
+            "material": "Carbon-reinforced polymer shell",
+            "protection_level": "Pro-grade high impact",
+            "attachment": "Slip-in",
+            "ankle_protection": false
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1800,
+              "max": 3000
+            },
+            "USD": {
+              "min": 23,
+              "max": 38
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Joma+Pro+Carbon+Shin+Guard",
             "flipkart": "https://www.flipkart.com/search?q=joma+pro+carbon+shin+guard",
@@ -559,7 +2254,49 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71QZnJHRL5L._SL1500_.jpg",
-          "description": "Joma's pro-level carbon shield. Ultralight yet rigid for top-tier impact dispersion."
+          "description": "Joma's pro-level carbon shield. Ultralight yet rigid for top-tier impact dispersion.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 90,
+              "spin": 0,
+              "forgiveness": 95,
+              "durability": 90
+            },
+            "best_for_persona": "Advanced players seeking ultralight, pro-grade carbon protection for competitive matches and intense training, prioritizing agility and safety.",
+            "not_for_persona": "Beginners or casual players who do not need elite impact protection and prefer more budget-friendly options.",
+            "standout_qualities": [
+              "Exceptional impact protection",
+              "Extremely lightweight design",
+              "Durable carbon construction"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -572,14 +2309,60 @@
           "brand": "Nivia",
           "type": "Training Gloves",
           "level": "beginner",
-          "specs": {"palm": "Latex (3mm)", "cut": "Flat cut", "closure": "Velcro"},
-          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "specs": {
+            "palm": "Latex (3mm)",
+            "cut": "Flat cut",
+            "closure": "Velcro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 300,
+              "max": 600
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Web+Goalkeeper+Gloves",
             "flipkart": "https://www.flipkart.com/search?q=nivia+web+goalkeeper+gloves"
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Budget goalkeeper gloves from India's popular sports brand."
+          "description": "Budget goalkeeper gloves from India's popular sports brand.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 45,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 70
+            },
+            "best_for_persona": "New goalkeepers or young players needing affordable gloves for practice and casual play.",
+            "not_for_persona": "Competitive goalkeepers seeking advanced grip, protection, or professional-level performance.",
+            "upgrade_after_months": 6,
+            "standout_qualities": [
+              "Affordable price point",
+              "Suitable for entry-level use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_gk02",
@@ -587,14 +2370,60 @@
           "brand": "Cosco",
           "type": "Training Gloves",
           "level": "beginner",
-          "specs": {"palm": "Latex (3mm)", "cut": "Flat cut", "closure": "Velcro"},
-          "price_ranges": {"INR": {"min": 350, "max": 700}},
+          "specs": {
+            "palm": "Latex (3mm)",
+            "cut": "Flat cut",
+            "closure": "Velcro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 350,
+              "max": 700
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+Defender+Goalkeeper+Gloves",
             "flipkart": "https://www.flipkart.com/search?q=cosco+defender+goalkeeper+gloves"
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Affordable training gloves for recreational goalkeepers."
+          "description": "Affordable training gloves for recreational goalkeepers.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 50,
+              "speed": 50,
+              "spin": 0,
+              "forgiveness": 70,
+              "durability": 60
+            },
+            "best_for_persona": "Beginner goalkeepers seeking an affordable, basic glove for casual play and light training sessions.",
+            "not_for_persona": "Competitive goalkeepers needing advanced grip, protection, and durability for serious matches.",
+            "upgrade_after_months": 9,
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_gk03",
@@ -602,14 +2431,66 @@
           "brand": "Kipsta (Decathlon)",
           "type": "Training Gloves",
           "level": "beginner",
-          "specs": {"palm": "Latex (3.5mm)", "cut": "Negative cut", "closure": "Velcro strap"},
-          "price_ranges": {"INR": {"min": 800, "max": 1500}},
+          "specs": {
+            "palm": "Latex (3.5mm)",
+            "cut": "Negative cut",
+            "closure": "Velcro strap"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 800,
+              "max": 1500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Kipsta+F500+goalkeeper+gloves",
             "flipkart": "https://www.flipkart.com/search?q=kipsta+f500+goalkeeper+gloves"
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Good value Decathlon GK gloves with negative cut for better feel."
+          "description": "Good value Decathlon GK gloves with negative cut for better feel.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 80,
+              "speed": 70,
+              "spin": 60,
+              "forgiveness": 85,
+              "durability": 70
+            },
+            "best_for_persona": "Beginner goalkeepers learning fundamentals and needing reliable, affordable gloves for regular training sessions.",
+            "not_for_persona": "Advanced goalkeepers needing elite grip, protection, and durability for competitive tournament play.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 9,
+            "common_complaints": [],
+            "standout_qualities": [
+              "Good value for money",
+              "Enhanced ball feel due to negative cut"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_gk04",
@@ -617,14 +2498,55 @@
           "brand": "Nike",
           "type": "Match Gloves",
           "level": "intermediate",
-          "specs": {"palm": "Latex (3.5mm)", "cut": "Flat palm", "closure": "Adjustable cuff"},
-          "price_ranges": {"INR": {"min": 1500, "max": 3000}},
+          "specs": {
+            "palm": "Latex (3.5mm)",
+            "cut": "Flat palm",
+            "closure": "Adjustable cuff"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1500,
+              "max": 3000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Match+Goalkeeper+Gloves",
             "flipkart": "https://www.flipkart.com/search?q=nike+match+goalkeeper+gloves"
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Nike branded GK gloves. Good grip and comfort for regular play."
+          "description": "Nike branded GK gloves. Good grip and comfort for regular play.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 75,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 70,
+              "durability": 65
+            },
+            "best_for_persona": "Intermediate goalkeepers needing reliable grip and comfort for regular club or training sessions.",
+            "not_for_persona": "Professional goalkeepers needing elite-level grip and advanced features for top-tier tournaments.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 9,
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_gk05",
@@ -632,14 +2554,74 @@
           "brand": "Adidas",
           "type": "Professional Gloves",
           "level": "advanced",
-          "specs": {"palm": "URG 2.0 Latex (4mm)", "cut": "Negative cut", "closure": "Bandage strap"},
-          "price_ranges": {"INR": {"min": 5000, "max": 9000}},
+          "specs": {
+            "palm": "URG 2.0 Latex (4mm)",
+            "cut": "Negative cut",
+            "closure": "Bandage strap"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5000,
+              "max": 9000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Predator+Pro+Goalkeeper+Gloves",
             "flipkart": "https://www.flipkart.com/search?q=adidas+predator+pro+goalkeeper+gloves"
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Professional-grade GK gloves. URG 2.0 latex for exceptional grip."
+          "description": "Professional-grade GK gloves. URG 2.0 latex for exceptional grip.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 95,
+              "speed": 75,
+              "spin": 50,
+              "forgiveness": 80,
+              "durability": 35
+            },
+            "best_for_persona": "Advanced goalkeepers needing exceptional grip and a snug fit for competitive matches and elite training sessions.",
+            "not_for_persona": "Beginner goalkeepers or casual players prioritizing extreme durability over top-tier grip for recreational use.",
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Reduced durability compared to training gloves",
+              "High price point for frequent replacement"
+            ],
+            "standout_qualities": [
+              "Exceptional grip and ball control in various conditions",
+              "Snug, second-skin fit for enhanced feel"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_gk06",
@@ -647,14 +2629,60 @@
           "brand": "Reusch",
           "type": "Professional Gloves",
           "level": "advanced",
-          "specs": {"palm": "Gold X (4mm)", "cut": "Evolution Negative", "closure": "Full latex backhand"},
-          "price_ranges": {"INR": {"min": 7000, "max": 12000}},
+          "specs": {
+            "palm": "Gold X (4mm)",
+            "cut": "Evolution Negative",
+            "closure": "Full latex backhand"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7000,
+              "max": 12000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Reusch+Attrakt+Gold+X+goalkeeper",
             "flipkart": "https://www.flipkart.com/search?q=reusch+attrakt+gold+x"
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Elite GK gloves. Premium palm foam for maximum grip in all conditions."
+          "description": "Elite GK gloves. Premium palm foam for maximum grip in all conditions.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 95,
+              "speed": 80,
+              "spin": 10,
+              "forgiveness": 70,
+              "durability": 60
+            },
+            "best_for_persona": "Advanced and pro goalkeepers seeking maximum grip and control for competitive matches in all conditions.",
+            "not_for_persona": "Beginner or recreational players who do not need elite performance and prefer higher durability.",
+            "standout_qualities": [
+              "Exceptional grip in all weather conditions",
+              "Professional-grade performance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_gk07",
@@ -663,8 +2691,23 @@
           "type": "Professional Gloves",
           "level": "advanced",
           "recommended_for": "Elite keepers wanting hybrid strap lockdown",
-          "specs": {"size": "9", "palm": "Ultragrip Pro Latex (4mm)", "cut": "Negative cut", "latex_grade": "Pro grade German latex", "closure": "Hybrid bandage + velcro"},
-          "price_ranges": {"INR": {"min": 6500, "max": 10000}, "USD": {"min": 83, "max": 128}},
+          "specs": {
+            "size": "9",
+            "palm": "Ultragrip Pro Latex (4mm)",
+            "cut": "Negative cut",
+            "latex_grade": "Pro grade German latex",
+            "closure": "Hybrid bandage + velcro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6500,
+              "max": 10000
+            },
+            "USD": {
+              "min": 83,
+              "max": 128
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Puma+Ultra+Ultimate+Hybrid+Goalkeeper+Gloves",
             "flipkart": "https://www.flipkart.com/search?q=puma+ultra+ultimate+hybrid+goalkeeper+gloves",
@@ -674,7 +2717,56 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Puma's flagship GK glove. Hybrid wrist closure combines bandage security with velcro adjustability."
+          "description": "Puma's flagship GK glove. Hybrid wrist closure combines bandage security with velcro adjustability.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 10,
+              "control": 90,
+              "speed": 20,
+              "spin": 10,
+              "forgiveness": 40,
+              "durability": 30
+            },
+            "best_for_persona": "Advanced goalkeepers seeking maximum grip and ball feel for competitive matches and elite training.",
+            "not_for_persona": "Beginner goalkeepers needing high durability or a more forgiving fit for casual play.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Latex durability may be limited with frequent use.",
+              "High price point for recreational players."
+            ],
+            "standout_qualities": [
+              "Exceptional grip and ball control.",
+              "Snug, responsive fit for enhanced feel.",
+              "Secure and adjustable wrist closure."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "fb_gk08",
@@ -683,8 +2775,23 @@
           "type": "Match Gloves",
           "level": "intermediate",
           "recommended_for": "Club-level keepers seeking comfort and reliable grip",
-          "specs": {"size": "8", "palm": "Japanese Super Soft Latex (3.5mm)", "cut": "Roll finger", "latex_grade": "Mid-high grade", "closure": "Wrap-around velcro"},
-          "price_ranges": {"INR": {"min": 2800, "max": 4500}, "USD": {"min": 36, "max": 58}},
+          "specs": {
+            "size": "8",
+            "palm": "Japanese Super Soft Latex (3.5mm)",
+            "cut": "Roll finger",
+            "latex_grade": "Mid-high grade",
+            "closure": "Wrap-around velcro"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2800,
+              "max": 4500
+            },
+            "USD": {
+              "min": 36,
+              "max": 58
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Mizuno+Monarcida+Neo+Select+Goalkeeper+Gloves",
             "flipkart": "https://www.flipkart.com/search?q=mizuno+monarcida+neo+select+goalkeeper+gloves",
@@ -694,7 +2801,50 @@
             ]
           },
           "image": "https://m.media-amazon.com/images/I/71pF4vj8sTL._SL1500_.jpg",
-          "description": "Mizuno's roll-finger GK glove. Japanese soft latex palm offers a plush, tacky feel for confident catching."
+          "description": "Mizuno's roll-finger GK glove. Japanese soft latex palm offers a plush, tacky feel for confident catching.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "tournament_open",
+              "office_casual",
+              "garden_backyard"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 85,
+              "speed": 50,
+              "spin": 0,
+              "forgiveness": 80,
+              "durability": 60
+            },
+            "best_for_persona": "Intermediate goalkeepers prioritizing secure grip and comfortable ball handling during competitive club matches.",
+            "not_for_persona": "Elite professional goalkeepers requiring maximum durability and specialized features for daily intense training or top-level tournaments.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Potentially lower durability compared to harder latex options."
+            ],
+            "standout_qualities": [
+              "Excellent grip and plush feel from Japanese Super Soft Latex.",
+              "Enhanced ball contact and comfort due to roll finger cut."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     }

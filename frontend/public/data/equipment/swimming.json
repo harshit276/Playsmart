@@ -12,14 +12,63 @@
           "brand": "Nabaiji (Decathlon)",
           "type": "Recreational Goggles",
           "level": "beginner",
-          "specs": {"lens": "Anti-fog, UV protection, clear", "seal": "Soft silicone", "strap": "Single split strap"},
-          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "specs": {
+            "lens": "Anti-fog, UV protection, clear",
+            "seal": "Soft silicone",
+            "strap": "Single split strap"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 200,
+              "max": 400
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nabaiji+100+Soft+Goggles",
             "flipkart": "https://www.flipkart.com/search?q=nabaiji+100+soft+goggles"
           },
           "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
-          "description": "India's most affordable branded swim goggle. Great starter option."
+          "description": "India's most affordable branded swim goggle. Great starter option.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 65
+            },
+            "best_for_persona": "New swimmers or casual users seeking an affordable, comfortable goggle for recreational swimming in pools or calm open water.",
+            "not_for_persona": "Competitive swimmers or those needing advanced hydrodynamics, a secure fit, and superior optics for intense training.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 12,
+            "standout_qualities": [
+              "Exceptional value for money",
+              "Comfortable soft seal",
+              "Basic anti-fog and UV protection"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_g02",
@@ -27,14 +76,58 @@
           "brand": "Nivia",
           "type": "Training Goggles",
           "level": "beginner",
-          "specs": {"lens": "Anti-fog, UV protection, polycarbonate", "seal": "PVC gasket", "strap": "Adjustable silicone"},
-          "price_ranges": {"INR": {"min": 250, "max": 450}},
+          "specs": {
+            "lens": "Anti-fog, UV protection, polycarbonate",
+            "seal": "PVC gasket",
+            "strap": "Adjustable silicone"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 250,
+              "max": 450
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Marine+Swimming+Goggles",
             "flipkart": "https://www.flipkart.com/search?q=nivia+marine+swimming+goggles"
           },
           "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
-          "description": "Budget Indian brand goggles. Decent anti-fog and comfortable fit."
+          "description": "Budget Indian brand goggles. Decent anti-fog and comfortable fit.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "stay_fit",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "forgiveness": 80,
+              "durability": 65
+            },
+            "best_for_persona": "Beginners or casual swimmers seeking affordable, comfortable goggles for basic training and recreational use.",
+            "not_for_persona": "Competitive swimmers needing high-performance, low-drag goggles for races.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 12,
+            "standout_qualities": [
+              "Good anti-fog properties",
+              "Comfortable fit for extended use",
+              "Affordable price point",
+              "UV protection"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_g03",
@@ -42,14 +135,59 @@
           "brand": "Cosco",
           "type": "Recreational Goggles",
           "level": "beginner",
-          "specs": {"lens": "Anti-fog, polycarbonate", "seal": "Silicone gasket", "strap": "Adjustable"},
-          "price_ranges": {"INR": {"min": 300, "max": 550}},
+          "specs": {
+            "lens": "Anti-fog, polycarbonate",
+            "seal": "Silicone gasket",
+            "strap": "Adjustable"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 300,
+              "max": 550
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+Aqua+Dash+Goggles",
             "flipkart": "https://www.flipkart.com/search?q=cosco+aqua+dash+goggles"
           },
           "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
-          "description": "Affordable Indian-brand goggles for recreational swimming."
+          "description": "Affordable Indian-brand goggles for recreational swimming.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 80,
+              "durability": 65
+            },
+            "best_for_persona": "Beginners and casual swimmers seeking an affordable, comfortable option for recreational use.",
+            "not_for_persona": "Competitive swimmers or those needing high-performance, low-drag goggles for races.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 9,
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_g04",
@@ -57,14 +195,59 @@
           "brand": "Speedo",
           "type": "Training Goggles",
           "level": "intermediate",
-          "specs": {"lens": "Anti-fog, UV, wide vision", "seal": "Biofuse flexible seal", "strap": "Double head strap"},
-          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "specs": {
+            "lens": "Anti-fog, UV, wide vision",
+            "seal": "Biofuse flexible seal",
+            "strap": "Double head strap"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 2000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Biofuse+2.0+goggles",
             "flipkart": "https://www.flipkart.com/search?q=speedo+biofuse+2.0+goggles"
           },
           "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
-          "description": "Comfortable Speedo training goggles. Flexible seal for long sessions."
+          "description": "Comfortable Speedo training goggles. Flexible seal for long sessions.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 50,
+              "spin": 0,
+              "forgiveness": 90,
+              "durability": 80
+            },
+            "best_for_persona": "Swimmers prioritizing comfort and a secure fit for regular training, fitness, and recreational swimming.",
+            "not_for_persona": "Competitive swimmers requiring ultra-low profile, minimal drag race goggles for elite performance.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 18,
+            "standout_qualities": [
+              "Exceptional comfort and adaptable fit",
+              "Clear, wide field of vision with UV protection",
+              "Reliable anti-fog performance for extended use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_g05",
@@ -72,14 +255,65 @@
           "brand": "Arena",
           "type": "Racing Goggles",
           "level": "intermediate",
-          "specs": {"lens": "Anti-fog Swipe, mirrored", "seal": "Low profile silicone", "strap": "Double strap"},
-          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "specs": {
+            "lens": "Anti-fog Swipe, mirrored",
+            "seal": "Low profile silicone",
+            "strap": "Double strap"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 4000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Arena+Cobra+Ultra+Swipe+goggles",
             "flipkart": "https://www.flipkart.com/search?q=arena+cobra+ultra+swipe"
           },
           "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
-          "description": "Premium racing goggles with Swipe anti-fog. Low drag hydrodynamic design."
+          "description": "Premium racing goggles with Swipe anti-fog. Low drag hydrodynamic design.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 95,
+              "spin": 0,
+              "forgiveness": 40,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate competitive swimmers seeking minimal drag and clear vision for races and intense training.",
+            "not_for_persona": "Casual swimmers prioritizing maximum comfort for leisurely laps or beginners learning basic strokes.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "Advanced anti-fog technology",
+              "Optimized for minimal water resistance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_g06",
@@ -87,14 +321,67 @@
           "brand": "Speedo",
           "type": "Racing Goggles",
           "level": "advanced",
-          "specs": {"lens": "IQ Fit, anti-fog, mirrored", "seal": "Ultra-thin silicone", "strap": "Double strap"},
-          "price_ranges": {"INR": {"min": 3500, "max": 5500}},
+          "specs": {
+            "lens": "IQ Fit, anti-fog, mirrored",
+            "seal": "Ultra-thin silicone",
+            "strap": "Double strap"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 3500,
+              "max": 5500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Fastskin+Hyper+Elite+goggles",
             "flipkart": "https://www.flipkart.com/search?q=speedo+fastskin+hyper+elite"
           },
           "image": "https://m.media-amazon.com/images/I/71QhG7fnURL._SL1500_.jpg",
-          "description": "Top-tier racing goggles. Ultra-low profile for maximum hydrodynamics."
+          "description": "Top-tier racing goggles. Ultra-low profile for maximum hydrodynamics.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "speed": 95,
+              "forgiveness": 35,
+              "durability": 65
+            },
+            "best_for_persona": "Advanced swimmers and competitive racers seeking maximum speed and minimal drag in competition.",
+            "not_for_persona": "Casual swimmers or beginners looking for comfortable, everyday training goggles.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Specific fit may not suit all face shapes.",
+              "Less comfortable for prolonged training sessions."
+            ],
+            "standout_qualities": [
+              "Superior hydrodynamics for competitive advantage.",
+              "Excellent clarity and anti-fog performance.",
+              "Secure and stable fit during high-speed swimming."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -107,14 +394,61 @@
           "brand": "Nabaiji (Decathlon)",
           "type": "Training Swimsuit (Women)",
           "level": "beginner",
-          "specs": {"material": "Polyester (100%)", "chlorine_resistant": true, "fit": "Regular"},
-          "price_ranges": {"INR": {"min": 400, "max": 800}},
+          "specs": {
+            "material": "Polyester (100%)",
+            "chlorine_resistant": true,
+            "fit": "Regular"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 400,
+              "max": 800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nabaiji+100+Plus+Swimsuit",
             "flipkart": "https://www.flipkart.com/search?q=nabaiji+100+plus+swimsuit"
           },
           "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
-          "description": "Budget Decathlon swimsuit. Chlorine resistant polyester for pool use."
+          "description": "Budget Decathlon swimsuit. Chlorine resistant polyester for pool use.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "stay_fit",
+              "casual_fun",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 90,
+              "durability": 85
+            },
+            "best_for_persona": "Beginner swimmers and casual users seeking a durable, comfortable, and affordable swimsuit for regular pool training.",
+            "not_for_persona": "Competitive swimmers requiring advanced hydrodynamic designs for race performance.",
+            "upgrade_after_months": 12,
+            "standout_qualities": [
+              "Excellent chlorine resistance for frequent pool use",
+              "Highly affordable and budget-friendly"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_ss02",
@@ -122,14 +456,73 @@
           "brand": "Nabaiji (Decathlon)",
           "type": "Training Jammer (Men)",
           "level": "beginner",
-          "specs": {"material": "Polyester (100%)", "chlorine_resistant": true, "fit": "Regular knee length"},
-          "price_ranges": {"INR": {"min": 400, "max": 700}},
+          "specs": {
+            "material": "Polyester (100%)",
+            "chlorine_resistant": true,
+            "fit": "Regular knee length"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 400,
+              "max": 700
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nabaiji+100+Jammer+swimsuit",
             "flipkart": "https://www.flipkart.com/search?q=nabaiji+100+jammer"
           },
           "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
-          "description": "Affordable men's jammer. Durable polyester for daily pool use."
+          "description": "Affordable men's jammer. Durable polyester for daily pool use.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "stay_fit",
+              "casual_fun",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 20,
+              "control": 50,
+              "speed": 25,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Beginner swimmers seeking an affordable, durable jammer for regular pool training and fitness.",
+            "not_for_persona": "Competitive swimmers needing maximum hydrodynamic efficiency and advanced performance features.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Lacks advanced hydrodynamic features",
+              "Not designed for competitive racing",
+              "Basic aesthetic design"
+            ],
+            "standout_qualities": [
+              "Excellent chlorine resistance",
+              "High durability for frequent use",
+              "Very affordable price point",
+              "Comfortable regular fit"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_ss03",
@@ -137,14 +530,65 @@
           "brand": "Speedo",
           "type": "Training Jammer (Men)",
           "level": "intermediate",
-          "specs": {"material": "Endurance+ (Polyester blend)", "chlorine_resistant": true, "fit": "Athletic"},
-          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "specs": {
+            "material": "Endurance+ (Polyester blend)",
+            "chlorine_resistant": true,
+            "fit": "Athletic"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1500,
+              "max": 2500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Essential+Endurance+Jammer",
             "flipkart": "https://www.flipkart.com/search?q=speedo+essential+endurance+jammer"
           },
           "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
-          "description": "Speedo's durable training jammer. Endurance+ fabric lasts 20x longer."
+          "description": "Speedo's durable training jammer. Endurance+ fabric lasts 20x longer.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 15,
+              "control": 15,
+              "speed": 75,
+              "spin": 10,
+              "forgiveness": 65,
+              "durability": 95
+            },
+            "best_for_persona": "Intermediate swimmers focused on regular training, lap swimming, and exceptional durability in chlorinated pools.",
+            "not_for_persona": "Casual beachgoers or elite racers needing a FINA-approved technical suit for competition.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 36,
+            "standout_qualities": [
+              "Exceptional chlorine resistance and longevity",
+              "Durable fabric designed for frequent use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_ss04",
@@ -152,14 +596,63 @@
           "brand": "Arena",
           "type": "Training Swimsuit (Women)",
           "level": "intermediate",
-          "specs": {"material": "MaxLife (Polyester blend)", "chlorine_resistant": true, "fit": "Athletic, open back"},
-          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "specs": {
+            "material": "MaxLife (Polyester blend)",
+            "chlorine_resistant": true,
+            "fit": "Athletic, open back"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Arena+Team+Stripe+Swimsuit",
             "flipkart": "https://www.flipkart.com/search?q=arena+team+stripe+swimsuit"
           },
           "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
-          "description": "Durable training suit from Arena. MaxLife fabric for extended use."
+          "description": "Durable training suit from Arena. MaxLife fabric for extended use.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 10,
+              "control": 10,
+              "speed": 40,
+              "spin": 10,
+              "forgiveness": 70,
+              "durability": 95
+            },
+            "best_for_persona": "Intermediate swimmers needing a highly durable, chlorine-resistant suit for frequent pool training sessions.",
+            "not_for_persona": "Casual beachgoers prioritizing fashion and a relaxed fit over performance and longevity.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [],
+            "standout_qualities": [
+              "Exceptional chlorine resistance for extended use",
+              "Long-lasting fabric designed for frequent training"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_ss05",
@@ -167,14 +660,74 @@
           "brand": "Speedo",
           "type": "Racing Jammer (Men)",
           "level": "advanced",
-          "specs": {"material": "LZR Pulse+ fabric", "chlorine_resistant": false, "fit": "Competition tight", "FINA_approved": true},
-          "price_ranges": {"INR": {"min": 15000, "max": 25000}},
+          "specs": {
+            "material": "LZR Pulse+ fabric",
+            "chlorine_resistant": false,
+            "fit": "Competition tight",
+            "FINA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 15000,
+              "max": 25000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Fastskin+LZR+Pure+Intent+Jammer",
             "flipkart": "https://www.flipkart.com/search?q=speedo+fastskin+lzr+pure+intent"
           },
           "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
-          "description": "Top-tier FINA approved racing jammer. Maximum compression and hydrodynamics."
+          "description": "Top-tier FINA approved racing jammer. Maximum compression and hydrodynamics.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "tournament_elite",
+              "tournament_open",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_recreational",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 70,
+              "speed": 95,
+              "spin": 0,
+              "forgiveness": 10,
+              "durability": 30
+            },
+            "best_for_persona": "Elite competitive swimmers seeking maximum hydrodynamic advantage and FINA approval for race day.",
+            "not_for_persona": "Casual swimmers, beginners, or those needing a durable swimsuit for daily training sessions.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 12,
+            "common_complaints": [
+              "High cost",
+              "Limited lifespan with frequent use",
+              "Extremely tight and restrictive fit"
+            ],
+            "standout_qualities": [
+              "Superior hydrodynamic design",
+              "Optimized muscle compression",
+              "FINA approved for competition"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_ss06",
@@ -182,14 +735,66 @@
           "brand": "Arena",
           "type": "Racing Swimsuit (Women)",
           "level": "advanced",
-          "specs": {"material": "Carbon fiber cage", "chlorine_resistant": false, "fit": "Competition tight, open back", "FINA_approved": true},
-          "price_ranges": {"INR": {"min": 18000, "max": 30000}},
+          "specs": {
+            "material": "Carbon fiber cage",
+            "chlorine_resistant": false,
+            "fit": "Competition tight, open back",
+            "FINA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 18000,
+              "max": 30000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Arena+Powerskin+Carbon+Air2",
             "flipkart": "https://www.flipkart.com/search?q=arena+powerskin+carbon+air2"
           },
           "image": "https://m.media-amazon.com/images/I/61Yvf5GYXPL._SL1500_.jpg",
-          "description": "Elite racing suit with carbon fiber cage. Maximum compression for competition."
+          "description": "Elite racing suit with carbon fiber cage. Maximum compression for competition.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "tournament_elite",
+              "tournament_open",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_recreational",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor",
+              "office_casual"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 80,
+              "speed": 95,
+              "spin": 0,
+              "forgiveness": 20,
+              "durability": 30
+            },
+            "best_for_persona": "Elite swimmers needing FINA-approved maximum compression and hydrodynamic efficiency for competitive racing and peak performance.",
+            "not_for_persona": "Recreational swimmers, beginners, or those seeking a comfortable, chlorine-resistant suit for regular training.",
+            "common_complaints": [
+              "Limited durability in chlorinated water",
+              "Uncomfortable for extended wear or non-racing use"
+            ],
+            "standout_qualities": [
+              "Exceptional compression for performance",
+              "Advanced carbon fiber technology",
+              "FINA-approved for elite races"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -202,14 +807,60 @@
           "brand": "Nabaiji (Decathlon)",
           "type": "Silicone Cap",
           "level": "beginner",
-          "specs": {"material": "Silicone", "size": "One size fits most"},
-          "price_ranges": {"INR": {"min": 150, "max": 300}},
+          "specs": {
+            "material": "Silicone",
+            "size": "One size fits most"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 150,
+              "max": 300
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nabaiji+Silicone+Swim+Cap",
             "flipkart": "https://www.flipkart.com/search?q=nabaiji+silicone+swim+cap"
           },
           "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
-          "description": "Budget silicone swim cap. Durable and easy to put on."
+          "description": "Budget silicone swim cap. Durable and easy to put on.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 5,
+              "control": 5,
+              "speed": 30,
+              "spin": 5,
+              "forgiveness": 90,
+              "durability": 90
+            },
+            "best_for_persona": "Beginner swimmers seeking a durable, easy-to-wear, and budget-friendly cap for recreational swimming or lessons.",
+            "not_for_persona": "Competitive swimmers or athletes prioritizing hydrodynamic performance and minimal drag for races.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 6,
+            "standout_qualities": [
+              "High durability for regular use",
+              "Simple and comfortable to wear"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_cap02",
@@ -217,14 +868,55 @@
           "brand": "Nivia",
           "type": "Silicone Cap",
           "level": "beginner",
-          "specs": {"material": "Silicone", "size": "One size"},
-          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "specs": {
+            "material": "Silicone",
+            "size": "One size"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 200,
+              "max": 400
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Classic+Swim+Cap",
             "flipkart": "https://www.flipkart.com/search?q=nivia+classic+swim+cap"
           },
           "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
-          "description": "Affordable Indian brand silicone cap. Good for regular pool use."
+          "description": "Affordable Indian brand silicone cap. Good for regular pool use.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "stay_fit",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "speed": 60,
+              "durability": 75
+            },
+            "best_for_persona": "Beginners and recreational swimmers seeking an affordable, durable silicone cap for regular pool sessions.",
+            "not_for_persona": "Elite or competitive swimmers requiring advanced hydrodynamic designs for peak race performance.",
+            "common_complaints": [],
+            "standout_qualities": [
+              "Affordable price point",
+              "Durable silicone construction",
+              "Suitable for everyday recreational swimming"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_cap03",
@@ -232,14 +924,75 @@
           "brand": "Speedo",
           "type": "Silicone Cap",
           "level": "intermediate",
-          "specs": {"material": "Moulded silicone", "size": "One size", "shape": "3D moulded"},
-          "price_ranges": {"INR": {"min": 500, "max": 900}},
+          "specs": {
+            "material": "Moulded silicone",
+            "size": "One size",
+            "shape": "3D moulded"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 900
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Plain+Moulded+Silicone+Cap",
             "flipkart": "https://www.flipkart.com/search?q=speedo+moulded+silicone+cap"
           },
           "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
-          "description": "Speedo's popular silicone cap. 3D moulded for comfortable fit."
+          "description": "Speedo's popular silicone cap. 3D moulded for comfortable fit.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "stay_fit",
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 75,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 90
+            },
+            "best_for_persona": "Swimmers seeking a comfortable, durable, and hydrodynamic cap for regular training, club competitions, and general fitness.",
+            "not_for_persona": "Elite competitive swimmers seeking the absolute fastest, most specialized race cap for top-tier tournaments.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 36,
+            "common_complaints": [
+              "Can pull hair if not applied carefully.",
+              "May feel tight on very large heads."
+            ],
+            "standout_qualities": [
+              "Excellent comfort and fit due to 3D moulding.",
+              "High durability and longevity of silicone material.",
+              "Reliable performance from a trusted brand.",
+              "Reduces drag for improved hydrodynamics."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_cap04",
@@ -247,14 +1000,70 @@
           "brand": "Arena",
           "type": "Racing Cap",
           "level": "intermediate",
-          "specs": {"material": "Premium silicone", "size": "One size", "shape": "3D dome shape"},
-          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "specs": {
+            "material": "Premium silicone",
+            "size": "One size",
+            "shape": "3D dome shape"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 1000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Arena+Moulded+Pro+II+Cap",
             "flipkart": "https://www.flipkart.com/search?q=arena+moulded+pro+ii+cap"
           },
           "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
-          "description": "Premium racing cap. Dome shape reduces drag in competition."
+          "description": "Premium racing cap. Dome shape reduces drag in competition.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 95,
+              "spin": 0,
+              "forgiveness": 30,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate to advanced swimmers prioritizing speed and hydrodynamic efficiency in competitive races and intense training sessions.",
+            "not_for_persona": "Beginner swimmers or those seeking a loose, comfortable cap for casual swimming or water aerobics.",
+            "common_complaints": [],
+            "standout_qualities": [
+              "Excellent drag reduction due to dome shape",
+              "Premium silicone material for durability",
+              "Snug, hydrodynamic fit for performance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_cap05",
@@ -262,14 +1071,66 @@
           "brand": "Speedo",
           "type": "Racing Cap",
           "level": "advanced",
-          "specs": {"material": "3D moulded silicone", "size": "S/M/L", "shape": "Hydrodynamic dome"},
-          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "specs": {
+            "material": "3D moulded silicone",
+            "size": "S/M/L",
+            "shape": "Hydrodynamic dome"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 2000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Fastskin+Racing+Cap",
             "flipkart": "https://www.flipkart.com/search?q=speedo+fastskin+racing+cap"
           },
           "image": "https://m.media-amazon.com/images/I/61RG0QC2VQL._SL1500_.jpg",
-          "description": "Elite racing cap. Wrinkle-free fit for minimum drag."
+          "description": "Elite racing cap. Wrinkle-free fit for minimum drag.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 95,
+              "spin": 0,
+              "forgiveness": 30,
+              "durability": 70
+            },
+            "best_for_persona": "Competitive swimmers and triathletes prioritizing maximum speed and hydrodynamic efficiency in races and intense training.",
+            "not_for_persona": "Recreational swimmers or beginners seeking a comfortable, easy-to-wear cap for casual pool sessions.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "Minimizes drag for maximum speed",
+              "Provides a secure, wrinkle-free fit",
+              "Designed for competitive performance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -282,14 +1143,60 @@
           "brand": "Nabaiji (Decathlon)",
           "type": "Short Training Fins",
           "level": "beginner",
-          "specs": {"blade_length": "Short (15cm)", "material": "Silicone + TPE", "fit": "Closed heel"},
-          "price_ranges": {"INR": {"min": 600, "max": 1200}},
+          "specs": {
+            "blade_length": "Short (15cm)",
+            "material": "Silicone + TPE",
+            "fit": "Closed heel"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nabaiji+Short+Swim+Fins",
             "flipkart": "https://www.flipkart.com/search?q=nabaiji+short+swim+fins"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Affordable short fins for kick drills. Builds leg strength without changing technique."
+          "description": "Affordable short fins for kick drills. Builds leg strength without changing technique.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 85,
+              "speed": 40,
+              "spin": 0,
+              "forgiveness": 90,
+              "durability": 75
+            },
+            "best_for_persona": "Beginner swimmers focusing on kick technique and leg strength in pool training sessions.",
+            "not_for_persona": "Advanced swimmers seeking maximum propulsion for speed training or racing.",
+            "learning_curve_hours": 1,
+            "upgrade_after_months": 9,
+            "standout_qualities": [
+              "Aids in developing proper kick technique",
+              "Effective for building leg strength",
+              "Budget-friendly option"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_fn02",
@@ -297,14 +1204,68 @@
           "brand": "Speedo",
           "type": "Short Training Fins",
           "level": "beginner",
-          "specs": {"blade_length": "Short (17cm)", "material": "Silicone", "fit": "Open heel"},
-          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "specs": {
+            "blade_length": "Short (17cm)",
+            "material": "Silicone",
+            "fit": "Open heel"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1500,
+              "max": 2500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Biofuse+Training+Fins",
             "flipkart": "https://www.flipkart.com/search?q=speedo+biofuse+training+fins"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Comfortable Speedo training fins. Biofuse technology for natural feel."
+          "description": "Comfortable Speedo training fins. Biofuse technology for natural feel.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 85,
+              "speed": 75,
+              "spin": 0,
+              "forgiveness": 90,
+              "durability": 80
+            },
+            "best_for_persona": "Beginner swimmers and those improving kick technique, focusing on leg strength and ankle flexibility in pool training.",
+            "not_for_persona": "Advanced swimmers needing maximum propulsion for sprint training or open water distance swimming.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 18,
+            "common_complaints": [],
+            "standout_qualities": [
+              "Excellent comfort and natural feel during use."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_fn03",
@@ -312,14 +1273,67 @@
           "brand": "Arena",
           "type": "Short Training Fins",
           "level": "intermediate",
-          "specs": {"blade_length": "Short (16cm)", "material": "Silicone", "fit": "Closed heel"},
-          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "specs": {
+            "blade_length": "Short (16cm)",
+            "material": "Silicone",
+            "fit": "Closed heel"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Arena+Powerfin+Pro",
             "flipkart": "https://www.flipkart.com/search?q=arena+powerfin+pro"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Premium training fins. Angled blade for efficient kick training."
+          "description": "Premium training fins. Angled blade for efficient kick training.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "power_hitter",
+              "speed_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_competitive",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 75,
+              "speed": 70,
+              "forgiveness": 65,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate swimmers aiming to enhance kick power, speed, and technique during pool training sessions.",
+            "not_for_persona": "Novice swimmers seeking basic buoyancy assistance or open water swimmers needing maximum propulsion.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 30,
+            "standout_qualities": [
+              "Angled blade for efficient kick training",
+              "Premium training construction"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_fn04",
@@ -327,14 +1341,65 @@
           "brand": "FINIS",
           "type": "Short Training Fins",
           "level": "intermediate",
-          "specs": {"blade_length": "Short (15cm)", "material": "Natural rubber", "fit": "Closed heel"},
-          "price_ranges": {"INR": {"min": 2500, "max": 4000}},
+          "specs": {
+            "blade_length": "Short (15cm)",
+            "material": "Natural rubber",
+            "fit": "Closed heel"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2500,
+              "max": 4000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=FINIS+Zoomers+Gold+Fins",
             "flipkart": "https://www.flipkart.com/search?q=finis+zoomers+gold+fins"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Natural rubber fins for serious training. Great for building kick tempo."
+          "description": "Natural rubber fins for serious training. Great for building kick tempo.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 85,
+              "speed": 75,
+              "spin": 0,
+              "forgiveness": 45,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate swimmers focusing on improving kick tempo, technique, and leg strength during structured pool training.",
+            "not_for_persona": "Beginners needing maximum propulsion or casual swimmers seeking relaxed, effortless swimming.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 24,
+            "standout_qualities": [
+              "Excellent for developing kick tempo and technique",
+              "Durable natural rubber construction"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_fn05",
@@ -342,14 +1407,62 @@
           "brand": "TYR",
           "type": "Short Training Fins",
           "level": "advanced",
-          "specs": {"blade_length": "Short (14cm)", "material": "Multi-density silicone", "fit": "Closed heel"},
-          "price_ranges": {"INR": {"min": 3000, "max": 5000}},
+          "specs": {
+            "blade_length": "Short (14cm)",
+            "material": "Multi-density silicone",
+            "fit": "Closed heel"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 3000,
+              "max": 5000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=TYR+Crossblade+Training+Fins",
             "flipkart": "https://www.flipkart.com/search?q=tyr+crossblade+training+fins"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Advanced training fins with cross-blade design for varied resistance."
+          "description": "Advanced training fins with cross-blade design for varied resistance.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "beach_outdoor",
+              "garden_backyard"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 85,
+              "speed": 90,
+              "forgiveness": 55,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced swimmers refining kick technique, increasing tempo, and building specific leg strength for competitive swimming.",
+            "not_for_persona": "Beginner swimmers needing basic propulsion or casual users seeking relaxed recreational swimming.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "Cross-blade design for varied resistance",
+              "Multi-density silicone for comfort and durability",
+              "Enhances kick tempo and technique"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -362,14 +1475,58 @@
           "brand": "Nabaiji (Decathlon)",
           "type": "Pull Buoy",
           "level": "beginner",
-          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "Medium"},
-          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "specs": {
+            "material": "EVA Foam",
+            "size": "Standard",
+            "buoyancy": "Medium"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 300,
+              "max": 600
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nabaiji+Pull+Buoy",
             "flipkart": "https://www.flipkart.com/search?q=nabaiji+pull+buoy"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Affordable pull buoy for arm stroke drills. Good buoyancy for beginners."
+          "description": "Affordable pull buoy for arm stroke drills. Good buoyancy for beginners.",
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 5,
+              "control": 75,
+              "speed": 5,
+              "spin": 0,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "Beginner swimmers focusing on isolating arm strength and refining stroke technique during training sessions.",
+            "not_for_persona": "Advanced competitive swimmers needing varied resistance or full-body training, or those seeking speed-focused equipment.",
+            "learning_curve_hours": 1,
+            "upgrade_after_months": 12,
+            "standout_qualities": [
+              "Excellent value for money",
+              "Provides stable buoyancy for technique focus"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_pb02",
@@ -377,14 +1534,61 @@
           "brand": "Speedo",
           "type": "Pull Buoy",
           "level": "intermediate",
-          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "High"},
-          "price_ranges": {"INR": {"min": 700, "max": 1200}},
+          "specs": {
+            "material": "EVA Foam",
+            "size": "Standard",
+            "buoyancy": "High"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 700,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Speedo+Elite+Pull+Buoy",
             "flipkart": "https://www.flipkart.com/search?q=speedo+elite+pull+buoy"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Speedo branded pull buoy. Ergonomic shape for comfortable use."
+          "description": "Speedo branded pull buoy. Ergonomic shape for comfortable use.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 10,
+              "control": 85,
+              "speed": 10,
+              "spin": 0,
+              "forgiveness": 90,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate swimmers aiming to isolate upper body, build strength, and refine stroke technique during pool training sessions.",
+            "not_for_persona": "New swimmers still learning basic strokes or those seeking a general flotation aid for recreational water play.",
+            "learning_curve_hours": 1,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "High buoyancy for effective leg isolation",
+              "Ergonomic shape for comfortable use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_pb03",
@@ -392,14 +1596,64 @@
           "brand": "Arena",
           "type": "Pull Buoy / Kickboard Combo",
           "level": "intermediate",
-          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "High", "dual_use": true},
-          "price_ranges": {"INR": {"min": 900, "max": 1500}},
+          "specs": {
+            "material": "EVA Foam",
+            "size": "Standard",
+            "buoyancy": "High",
+            "dual_use": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 900,
+              "max": 1500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Arena+Pull+Kick+Pro",
             "flipkart": "https://www.flipkart.com/search?q=arena+pull+kick+pro"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Dual-purpose pull buoy and kickboard. Versatile training aid."
+          "description": "Dual-purpose pull buoy and kickboard. Versatile training aid.",
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused",
+              "power_hitter",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_competitive",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 75,
+              "speed": 70,
+              "spin": 0,
+              "forgiveness": 80,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate swimmers refining stroke technique, body position, and building strength in both upper and lower body during training.",
+            "not_for_persona": "Swimmers seeking a competitive edge solely through race-day equipment or those not focused on technique drills.",
+            "learning_curve_hours": 1,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "Dual-purpose design for upper and lower body training",
+              "Provides high buoyancy for effective drills",
+              "Versatile aid for stroke refinement"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_pb04",
@@ -407,14 +1661,58 @@
           "brand": "FINIS",
           "type": "Pull Buoy",
           "level": "advanced",
-          "specs": {"material": "EVA Foam", "size": "Standard", "buoyancy": "Medium-Low", "shape": "Ergonomic"},
-          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "specs": {
+            "material": "EVA Foam",
+            "size": "Standard",
+            "buoyancy": "Medium-Low",
+            "shape": "Ergonomic"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 2000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=FINIS+Axis+Buoy",
             "flipkart": "https://www.flipkart.com/search?q=finis+axis+buoy"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Advanced pull buoy with aligned buoyancy. Forces proper body rotation."
+          "description": "Advanced pull buoy with aligned buoyancy. Forces proper body rotation.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "casual_fun"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 85,
+              "speed": 30,
+              "spin": 0,
+              "forgiveness": 30,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced swimmers refining body rotation, improving stroke mechanics, and isolating upper body strength during focused training sessions.",
+            "not_for_persona": "Beginner swimmers needing maximum buoyancy or those seeking a simple flotation device for casual pool use.",
+            "common_complaints": [],
+            "standout_qualities": [
+              "Forces proper body rotation",
+              "Aligned buoyancy for optimal body position",
+              "Ergonomic and comfortable design"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "sw_pb05",
@@ -422,14 +1720,64 @@
           "brand": "TYR",
           "type": "Pull Buoy",
           "level": "advanced",
-          "specs": {"material": "High-density EVA", "size": "Standard", "buoyancy": "Medium"},
-          "price_ranges": {"INR": {"min": 1000, "max": 1800}},
+          "specs": {
+            "material": "High-density EVA",
+            "size": "Standard",
+            "buoyancy": "Medium"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1000,
+              "max": 1800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=TYR+Pull+Float",
             "flipkart": "https://www.flipkart.com/search?q=tyr+pull+float"
           },
           "image": "https://m.media-amazon.com/images/I/71X8-kRqjNL._SL1500_.jpg",
-          "description": "Durable TYR pull float. High-density foam for consistent buoyancy."
+          "description": "Durable TYR pull float. High-density foam for consistent buoyancy.",
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "beach_outdoor",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 85,
+              "speed": 70,
+              "spin": 10,
+              "forgiveness": 60,
+              "durability": 90
+            },
+            "best_for_persona": "Advanced swimmers refining upper body technique, building strength, and improving stroke efficiency during pool training.",
+            "not_for_persona": "Beginner swimmers needing full body coordination practice or open water enthusiasts.",
+            "learning_curve_hours": 1,
+            "upgrade_after_months": null,
+            "standout_qualities": [
+              "Consistent buoyancy",
+              "High durability"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     }
