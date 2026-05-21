@@ -888,8 +888,12 @@ export default function AnalyzePage() {
           // for shot identification while staying under Vercel's 4.5 MB
           // body cap for a 30s clip. Was 480p / 0.8 Mbps which lost too
           // much detail on personal phone-recorded clips.
+          // Tighter compression: 480p / 0.8 Mbps / 20s. Cuts upload payload
+          // and Gemini processing time by ~30-40% vs the previous 540p /
+          // 1Mbps / 30s, which was the main reason Standard analyses hit
+          // the 120s frontend timeout on mobile networks.
           uploadFile = await vp.compressVideoForUpload(file, {
-            maxDim: 540, bitrate: 1_000_000, maxDurationSec: 30,
+            maxDim: 480, bitrate: 800_000, maxDurationSec: 20,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
           if (uploadFile.size > 4 * 1024 * 1024) {
@@ -955,7 +959,11 @@ export default function AnalyzePage() {
           video_b64: b64,
           target_player_description: targetDesc,
           tier: accuracyMode === "premium" ? "premium" : "standard",
-        }, { timeout: accuracyMode === "premium" ? 120000 : 90000 });
+          // Bumped to 180s/210s so we don't false-fail when Gemini has
+          // a slow moment. The backend itself caps Gemini at 55s and
+          // returns 504 if it overruns — these are upper bounds for
+          // upload + processing + transit combined.
+        }, { timeout: accuracyMode === "premium" ? 210000 : 180000 });
         setProgress(95);
         setLoadingText("Building results...");
         // Build a minimal result object the existing UI can render.
