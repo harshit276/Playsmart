@@ -1762,6 +1762,58 @@ async def get_token_packs():
     return {"packs": TOKEN_PACKS, "currency": "INR"}
 
 
+# ─── Hybrid equipment recommendation engine ──────────────────────────
+# The proprietary piece: structured filters + free-text intent (LLM) +
+# deterministic scoring against an enriched fit_profile + LLM-generated
+# explanation chain per pick. See backend/equipment_recommend.py.
+
+class EquipmentRecommendRequest(BaseModel):
+    sport: str = Field(..., max_length=40)
+    category: Optional[str] = Field(None, max_length=40)
+    skill_level: Optional[str] = Field(None, max_length=20)
+    play_style: Optional[str] = Field(None, max_length=40)
+    goal: Optional[str] = Field(None, max_length=40)
+    context: Optional[str] = Field(None, max_length=40)
+    body_fit: Optional[List[str]] = None
+    budget_inr_min: Optional[int] = Field(None, ge=0)
+    budget_inr_max: Optional[int] = Field(None, ge=0)
+    description: Optional[str] = Field(None, max_length=600)
+    limit: int = Field(5, ge=1, le=20)
+
+
+@api_router.post("/recommend/equipment")
+async def recommend_equipment(req: EquipmentRecommendRequest, authorization: str = Header(None)):
+    """Hybrid recommender. Public — guests can use it too. If a JWT is
+    present we may later add user-history boosting; today the response is
+    identical for guests and users."""
+    # Best-effort auth — don't reject guests
+    try:
+        _ = await get_current_user_or_none(authorization)
+    except Exception:
+        pass
+
+    try:
+        from equipment_recommend import recommend as _do_recommend
+    except Exception as e:
+        logger.error(f"equipment_recommend import failed: {e}")
+        raise HTTPException(status_code=503, detail="Recommender unavailable")
+
+    try:
+        # The pipeline does a Gemini call for intent parsing + a second for
+        # explanation enrichment. Each is ~1-2s, so run them in a thread to
+        # avoid blocking the event loop.
+        result = await asyncio.wait_for(
+            asyncio.to_thread(_do_recommend, req.model_dump()),
+            timeout=15.0,
+        )
+        return result
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Recommender timed out")
+    except Exception as e:
+        logger.error(f"recommend_equipment failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Recommender error: {str(e)[:200]}")
+
+
 @api_router.post("/tokens/redeem-referral")
 async def redeem_referral(req: RedeemReferralRequest, authorization: str = Header(None)):
     """Apply a referral code on signup. Stored as pending — both sides credited
@@ -3686,53 +3738,82 @@ async def _run_replicate_correction_job(
                 f"realistic athletic motion, same player same outfit, no "
                 f"extra people, no extra equipment, no dancing."
             )
-            return {
-                "version": "minimax/video-01",
-                "input": {
-                    "prompt": prompt[:500],
-                    "first_frame_image": ref_image_data_url,
-                    "prompt_optimizer": True,
-                },
-            }
+            # MiniMax accepts no version when called via the model endpoint
+            # — Replicate auto-uses the latest hosted version.
+            return ("minimax/video-01", {
+                "prompt": prompt[:500],
+                "first_frame_image": ref_image_data_url,
+                "prompt_optimizer": True,
+            })
 
         def _build_mimicmotion_payload():
-            return {
-                "version": "zsxkib/mimicmotion:1b9163b34de64a0b4a9b9b50d6b4c08c4f23b9c5",
-                "input": {
-                    "ref_image": ref_image_data_url,
-                    "motion_video": motion_url,
-                    "num_frames": 48,
-                    "guidance_scale": 2.0,
-                    "seed": 42,
-                },
-            }
+            # MimicMotion uses a driving pose video + reference image of
+            # the person. Output looks like THE PERSON performing the
+            # DRIVING VIDEO's motion. Model slug fixed (was wrong:
+            # "mimicmotion" → correct: "mimic-motion") and version-less so
+            # Replicate uses the latest hosted version automatically.
+            return ("zsxkib/mimic-motion", {
+                "motion_video": motion_url,
+                "appearance_image": ref_image_data_url,
+                "chunk_size": 16,
+                "frames_overlap": 6,
+                "denoising_steps": 25,
+                "noise_strength": 0.0,
+                "checkpoint_version": "v1-1",
+                "sample_stride": 2,
+                "guidance_scale": 2.0,
+                "fps": 15,
+                "seed": 42,
+            })
 
-        # Build the attempt list (in fall-back order).
+        def _build_kling_payload():
+            # Kling 1.6 Pro: high-quality image-to-video with prompt.
+            # Better motion fidelity than MiniMax for athletic clips,
+            # ~$0.50/gen. Available to billed Replicate users.
+            return ("kwaivgi/kling-v1.6-pro", {
+                "prompt": _build_minimax_payload()[1]["prompt"],
+                "start_image": ref_image_data_url,
+                "duration": 5,
+                "aspect_ratio": "16:9",
+                "cfg_scale": 0.5,
+                "negative_prompt": "extra people, extra equipment, wrong sport, tennis ball, dancing, low quality, blurry, distorted",
+            })
+
+        # Build the attempt list (in fall-back order). Adding the "kling"
+        # backend for users who have funded their Replicate account —
+        # significantly better motion than MiniMax for sports.
         attempts = []
         if backend_choice == "minimax":
             attempts = [("minimax", _build_minimax_payload)]
         elif backend_choice == "mimicmotion":
             attempts = [("mimicmotion", _build_mimicmotion_payload)]
-        else:  # auto
+        elif backend_choice == "kling":
+            attempts = [("kling", _build_kling_payload)]
+        else:  # auto: try kling (best) → minimax (free) → mimicmotion
             attempts = [
+                ("kling", _build_kling_payload),
                 ("minimax", _build_minimax_payload),
                 ("mimicmotion", _build_mimicmotion_payload),
             ]
 
         # ── Submit the Replicate prediction(s) ────────────────────
+        # Uses the model endpoint format (POST /v1/models/{owner}/{name}/
+        # predictions) so we don't need to track + update version hashes
+        # — Replicate auto-resolves to the latest hosted version.
         async with httpx.AsyncClient(timeout=120.0) as client:
             video_url = None
             error_msg = None
             used_backend = None
             for backend_name, build_payload in attempts:
                 used_backend = backend_name
+                model_slug, input_obj = build_payload()
                 create_resp = await client.post(
-                    "https://api.replicate.com/v1/predictions",
+                    f"https://api.replicate.com/v1/models/{model_slug}/predictions",
                     headers={
                         "Authorization": f"Bearer {replicate_key}",
                         "Content-Type": "application/json",
                     },
-                    json=build_payload(),
+                    json={"input": input_obj},
                 )
                 # 402 / 429 = free-tier exhausted or rate-limited.
                 # In "auto" mode this triggers the fallback attempt.
@@ -3863,7 +3944,7 @@ class TestAiGenRequest(BaseModel):
     reference_image_b64: str
     sport: str = "badminton"
     shot_type: str = "smash"
-    backend: str = "minimax"  # "minimax" | "mimicmotion"
+    backend: str = "minimax"  # "minimax" | "mimicmotion" | "kling"
 
 
 @api_router.post("/test-ai-gen")
@@ -3910,44 +3991,73 @@ async def test_ai_gen(req: TestAiGenRequest):
     async def _run():
         try:
             import httpx
+            coach_cue = (ref.get("description") if ref else "") or "textbook technique"
+            sport_lc = req.sport.lower()
+            stage_anchors = {
+                "badminton": "indoor badminton court, shuttlecock and racket, no tennis ball",
+                "tennis": "tennis court, tennis ball and racket",
+                "table_tennis": "table tennis table, ping pong ball and paddle",
+                "pickleball": "pickleball court, plastic ball and paddle",
+            }
+            stage = stage_anchors.get(sport_lc, f"{sport_lc} match setting")
+            sport_word = sport_lc.replace("_", " ")
+            shot_label = req.shot_type.replace("_", " ").title()
+            text_prompt = (
+                f"{sport_word} {shot_label} — single athlete performs ONE complete "
+                f"corrected swing motion. Coaching cue: {coach_cue}. Setting: {stage}. "
+                f"Continuous realistic athletic motion, same player same outfit, no "
+                f"extra people, no extra equipment, no dancing."
+            )[:500]
+
             if req.backend == "minimax":
-                coach_cue = (ref.get("description") if ref else "") or "Perform with textbook technique"
-                payload = {
-                    "version": "minimax/video-01",
-                    "input": {
-                        "prompt": (
-                            f"{req.shot_type.replace('_', ' ').title()} — the player in the "
-                            f"frame performs the technique with correct form. {coach_cue}. "
-                            f"Smooth, balanced motion, realistic sports footage style."
-                        )[:500],
-                        "first_frame_image": ref_data_url,
-                        "prompt_optimizer": True,
-                    },
+                model_slug = "minimax/video-01"
+                input_obj = {
+                    "prompt": text_prompt,
+                    "first_frame_image": ref_data_url,
+                    "prompt_optimizer": True,
                 }
-            else:
-                motion_url = (
-                    f"https://www.youtube.com/watch?v={ref['youtube_id']}&t={int(ref.get('start_sec') or 0)}s"
-                    if ref else "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                )
-                payload = {
-                    "version": "zsxkib/mimicmotion:1b9163b34de64a0b4a9b9b50d6b4c08c4f23b9c5",
-                    "input": {
-                        "ref_image": ref_data_url,
-                        "motion_video": motion_url,
-                        "num_frames": 48,
-                        "guidance_scale": 2.0,
-                        "seed": 42,
-                    },
+            elif req.backend == "kling":
+                model_slug = "kwaivgi/kling-v1.6-pro"
+                input_obj = {
+                    "prompt": text_prompt,
+                    "start_image": ref_data_url,
+                    "duration": 5,
+                    "aspect_ratio": "16:9",
+                    "cfg_scale": 0.5,
+                    "negative_prompt": "extra people, extra equipment, wrong sport, tennis ball, dancing, low quality, blurry, distorted",
+                }
+            else:  # mimicmotion
+                if not ref:
+                    _TEST_AI_GEN_JOBS[test_id].update({
+                        "status": "failed",
+                        "error": "mimicmotion needs a curated pro reference clip; none for this sport+shot.",
+                    })
+                    return
+                motion_url = f"https://www.youtube.com/watch?v={ref['youtube_id']}&t={int(ref.get('start_sec') or 0)}s"
+                model_slug = "zsxkib/mimic-motion"
+                input_obj = {
+                    "motion_video": motion_url,
+                    "appearance_image": ref_data_url,
+                    "chunk_size": 16,
+                    "frames_overlap": 6,
+                    "denoising_steps": 25,
+                    "noise_strength": 0.0,
+                    "checkpoint_version": "v1-1",
+                    "sample_stride": 2,
+                    "guidance_scale": 2.0,
+                    "fps": 15,
+                    "seed": 42,
                 }
 
+            _TEST_AI_GEN_JOBS[test_id]["model_slug"] = model_slug
             async with httpx.AsyncClient(timeout=120.0) as client:
                 create_resp = await client.post(
-                    "https://api.replicate.com/v1/predictions",
+                    f"https://api.replicate.com/v1/models/{model_slug}/predictions",
                     headers={
                         "Authorization": f"Bearer {replicate_key}",
                         "Content-Type": "application/json",
                     },
-                    json=payload,
+                    json={"input": input_obj},
                 )
                 _TEST_AI_GEN_JOBS[test_id]["create_status"] = create_resp.status_code
                 if create_resp.status_code not in (200, 201):
