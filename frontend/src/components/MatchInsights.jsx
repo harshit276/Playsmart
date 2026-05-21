@@ -806,115 +806,145 @@ function _seekToShot(timestamp) {
   } catch {}
 }
 
-// Auto-runs pose detection on a shot's contact-frame thumbnail and
-// renders the annotated skeleton + per-joint angle bars inline. Pure
-// client-side (MoveNet via TFJS), no network cost — safe to fire on
-// every shot card. Falls back to "no curated range" when the sport+
-// shot combo isn't in the IDEAL_ANGLES table.
-function InlinePoseAnalysis({ thumbnail, sport, shotType, onOpenFull }) {
-  const [state, setState] = useState({ phase: "idle", result: null, error: null });
-  const firedRef = useRef(null);
+// Side-by-side looped clip viewer: user's shot window vs pro reference.
+// Auto-loops a 2.5-sec window around the contact timestamp from the
+// user's uploaded file (no re-encode, just controlled <video> playback)
+// next to the curated YouTube pro clip looped over its `start_sec` →
+// `end_sec` window. Pure JS, no AI, works on any clip quality.
+function InlineShotVsPro({ shot, sport, shotType }) {
+  const userVideoRef = useRef(null);
+  const userUrlRef = useRef(null);
+  const [proRef, setProRef] = useState(null);
 
+  // Build a blob URL from the global video file (set by MatchInsights
+  // on mount). Cleaned up when the card unmounts. The same file is
+  // reused across all per-shot cards on the page — browsers handle
+  // simultaneous <video> elements sharing a blob URL fine.
   useEffect(() => {
-    if (!thumbnail) return;
-    const key = `${sport}::${shotType}::${thumbnail.slice(0, 60)}`;
-    if (firedRef.current === key) return;
-    firedRef.current = key;
-    let cancelled = false;
-    setState({ phase: "running", result: null, error: null });
-    (async () => {
-      try {
-        const mod = await import("@/ai/poseOverlay");
-        const r = await mod.analyzePoseOnFrame(thumbnail, sport, shotType, { maxDim: 400 });
-        if (cancelled) return;
-        if (r?.error) setState({ phase: "failed", result: null, error: r.error });
-        else setState({ phase: "done", result: r, error: null });
-      } catch (e) {
-        if (!cancelled) setState({ phase: "failed", result: null, error: e.message || "pose failed" });
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [thumbnail, sport, shotType]);
+    const file = typeof window !== "undefined" ? window.__playsmartCurrentVideo : null;
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    userUrlRef.current = url;
+    return () => { try { URL.revokeObjectURL(url); } catch {} userUrlRef.current = null; };
+  }, [shot?.timestamp]);
 
-  if (!thumbnail) return null;
-  const { phase, result, error } = state;
+  // Fetch the curated pro reference for this sport+shot combo.
+  useEffect(() => {
+    let cancelled = false;
+    if (!sport || !shotType) return;
+    fetchProReference(sport, shotType).then((r) => {
+      if (!cancelled) setProRef(r);
+    });
+    return () => { cancelled = true; };
+  }, [sport, shotType]);
+
+  // Seek the user-video to the shot's contact window and loop. Mirrors
+  // what AutoProReferencePanel does for its headline shot.
+  useEffect(() => {
+    const v = userVideoRef.current;
+    if (!v || typeof shot?.timestamp !== "number") return;
+    const SHOT_LEAD = 0.8;
+    const SHOT_TAIL = 1.7;
+    let active = true;
+    const setLoop = () => {
+      if (!active) return;
+      let ts = shot.timestamp;
+      const dur = v.duration;
+      // Gemini sometimes gives timestamp 0 on the first shot — that's
+      // usually a black intro frame. Hop 25% into the clip instead so
+      // we land on real gameplay.
+      if ((!ts || ts < 0.4) && isFinite(dur) && dur > 2) ts = dur * 0.25;
+      try {
+        v.currentTime = Math.max(0, ts - SHOT_LEAD);
+        v.muted = true;
+        v.play?.();
+      } catch {}
+      v._loopEnd = ts + SHOT_TAIL;
+    };
+    const onTime = () => {
+      if (!active) return;
+      if (v._loopEnd != null && v.currentTime >= v._loopEnd) setLoop();
+    };
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("loadeddata", setLoop, { once: true });
+    if (v.readyState >= 2) setLoop();
+    return () => {
+      active = false;
+      v.removeEventListener("timeupdate", onTime);
+      try { v.pause?.(); } catch {}
+    };
+  }, [shot?.timestamp, userUrlRef.current]);
+
+  const canShowUser = !!userUrlRef.current && typeof shot?.timestamp === "number";
+  if (!canShowUser && !proRef && !shot?.thumbnail) return null;
+
+  const ytSrc = proRef
+    ? `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}?start=${proRef.start_sec || 0}&end=${proRef.end_sec || (proRef.start_sec || 0) + 6}&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}&controls=0&modestbranding=1&rel=0`
+    : null;
 
   return (
     <div className="bg-zinc-950/50 border border-zinc-800 rounded-lg overflow-hidden mt-2">
       <div className="px-2.5 py-1.5 bg-zinc-900/70 border-b border-zinc-800 flex items-center justify-between">
-        <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold flex items-center gap-1">
-          <Activity className="w-3 h-3" /> Pose overlay
+        <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
+          <Trophy className="w-3 h-3" /> You vs pro · looped side-by-side
         </p>
-        {result && onOpenFull && (
-          <button onClick={onOpenFull} className="text-[10px] text-zinc-400 hover:text-white">Open full ↗</button>
+        {proRef && (
+          <a
+            href={`https://www.youtube.com/watch?v=${proRef.youtube_id}&t=${Math.max(0, proRef.start_sec || 0)}s`}
+            target="_blank" rel="noopener noreferrer"
+            className="text-[10px] text-amber-300 hover:text-amber-200"
+          >
+            Open on YouTube ↗
+          </a>
         )}
       </div>
-      {phase === "running" && (
-        <div className="flex items-center gap-2 px-3 py-3">
-          <Loader2 className="w-3.5 h-3.5 text-lime-400 animate-spin" />
-          <p className="text-[11px] text-zinc-500">Reading your skeleton…</p>
-        </div>
-      )}
-      {phase === "failed" && (
-        <p className="text-[11px] text-zinc-500 px-3 py-3 leading-snug">
-          {error === "no-pose-detected"
-            ? "Body wasn't clearly visible at contact — try a side-angle clip."
-            : "Couldn't read pose from this frame."}
-        </p>
-      )}
-      {phase === "done" && result && (
-        <div className="grid grid-cols-[140px_1fr] gap-2 p-2">
-          {/* Annotated thumbnail */}
-          <button
-            onClick={onOpenFull}
-            className="block bg-black rounded overflow-hidden cursor-zoom-in"
-            title="Click for full view"
-          >
-            <img src={result.annotatedDataUrl} alt="Skeleton" className="w-full h-auto block" />
-          </button>
-          {/* Compact angle bars */}
-          <div className="space-y-1.5">
-            {!result.hasIdealRange && (
-              <p className="text-[10px] text-zinc-500 italic leading-tight">
-                No curated angle target for this shot — measurements only.
-              </p>
-            )}
-            {result.measurements.length === 0 ? (
-              <p className="text-[10px] text-zinc-500">No measurable joints.</p>
-            ) : result.measurements.map((m) => {
-              const tone =
-                m.status === "good" ? { dot: "bg-lime-400", text: "text-lime-300", label: "GOOD" } :
-                m.status === "okay" ? { dot: "bg-amber-400", text: "text-amber-300", label: "CLOSE" } :
-                m.status === "off"  ? { dot: "bg-red-400",  text: "text-red-300",  label: "OFF" } :
-                                      { dot: "bg-zinc-500", text: "text-zinc-400", label: "—" };
-              const jointLabel = { elbow: "Elbow", shoulder: "Shoulder", knee: "Knee" }[m.joint] || m.joint;
-              return (
-                <div key={m.joint}>
-                  <div className="flex items-baseline justify-between gap-1">
-                    <span className="text-[10px] text-zinc-400 font-semibold">{jointLabel}</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[11px] font-bold text-white">{m.value}°</span>
-                      {m.ideal && (
-                        <span className="text-[9px] text-zinc-600">/{m.ideal.target}°</span>
-                      )}
-                      <span className={`text-[9px] font-bold ${tone.text} ml-0.5`}>{tone.label}</span>
-                    </div>
-                  </div>
-                  {m.ideal && (
-                    <div className="relative h-1 bg-zinc-800 rounded-full overflow-hidden">
-                      <div className="absolute h-full bg-lime-400/30"
-                        style={{
-                          left: `${Math.max(0, Math.min(100, (m.ideal.min / 180) * 100))}%`,
-                          width: `${Math.max(0, Math.min(100, ((m.ideal.max - m.ideal.min) / 180) * 100))}%`,
-                        }} />
-                      <div className={`absolute w-0.5 h-full ${tone.dot}`}
-                        style={{ left: `${Math.max(0, Math.min(100, (m.value / 180) * 100))}%` }} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      <div className="grid grid-cols-2 gap-0">
+        {/* YOUR clip — looped from the upload */}
+        <div className="bg-black aspect-video relative">
+          {canShowUser ? (
+            <video
+              ref={userVideoRef}
+              src={userUrlRef.current}
+              muted playsInline preload="auto"
+              className="w-full h-full object-cover"
+            />
+          ) : shot?.thumbnail ? (
+            <img src={shot.thumbnail} alt="Your shot" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <p className="text-[10px] text-zinc-600">No preview</p>
+            </div>
+          )}
+          <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm rounded px-1.5 py-0.5">
+            <p className="text-[9px] uppercase tracking-wider text-white font-bold">You</p>
           </div>
+        </div>
+        {/* PRO clip — curated YouTube segment looping */}
+        <div className="bg-black aspect-video relative">
+          {ytSrc ? (
+            <iframe
+              src={ytSrc}
+              title={`${proRef.player} ${proRef.shot_type}`}
+              allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center px-2">
+              <p className="text-[10px] text-zinc-600 text-center">No curated pro clip for this shot yet</p>
+            </div>
+          )}
+          {proRef && (
+            <div className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm rounded px-1.5 py-0.5">
+              <p className="text-[9px] uppercase tracking-wider text-amber-300 font-bold">{proRef.player}</p>
+            </div>
+          )}
+        </div>
+      </div>
+      {proRef?.description && (
+        <div className="px-2.5 py-1.5 bg-zinc-900/40 border-t border-zinc-800">
+          <p className="text-[10px] uppercase tracking-wider text-amber-400/80 font-bold mb-0.5">What to watch</p>
+          <p className="text-[11px] text-zinc-300 leading-snug">{proRef.description}</p>
         </div>
       )}
     </div>
@@ -1104,17 +1134,9 @@ function IndividualShotCard({ shot, label, sport }) {
           </div>
         )}
 
-        {/* Auto pose-overlay — runs MoveNet client-side on the contact
-            frame and grades each joint against the sport+shot's ideal
-            range. Click to open full view. */}
-        {shot.thumbnail && (
-          <InlinePoseAnalysis
-            thumbnail={shot.thumbnail}
-            sport={sport}
-            shotType={shot.type}
-            onOpenFull={() => setPoseOpen(true)}
-          />
-        )}
+        {/* Looped side-by-side: your clip vs the pro reference for this
+            shot type. Pure JS, no AI, works on any clip quality. */}
+        <InlineShotVsPro shot={shot} sport={sport} shotType={shot.type} />
 
         {proRef && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
@@ -1364,16 +1386,8 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
           </div>
         )}
 
-        {/* Auto pose-overlay on the group's hero (highest-confidence)
-            shot — same MoveNet + ideal-angle grading as IndividualShotCard. */}
-        {heroShot?.thumbnail && (
-          <InlinePoseAnalysis
-            thumbnail={heroShot.thumbnail}
-            sport={sport}
-            shotType={sample.type}
-            onOpenFull={() => setPoseOpen(true)}
-          />
-        )}
+        {/* Looped side-by-side: hero shot from this group vs pro reference. */}
+        <InlineShotVsPro shot={heroShot || sample} sport={sport} shotType={sample.type} />
 
         {proRef && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
