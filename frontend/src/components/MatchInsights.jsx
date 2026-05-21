@@ -848,6 +848,11 @@ function IndividualShotCard({ shot, label, sport }) {
         timestamp_sec: shot.timestamp,
         sport,
         shot_type: shot.type || "shot",
+        // Personalize the prompt with this user's specific feedback so
+        // MiniMax animates THIS user's corrections, not a generic ideal.
+        top_fix: ff.tip || (Array.isArray(ff.weaknesses) && ff.weaknesses[0]) || null,
+        weaknesses: Array.isArray(ff.weaknesses) ? ff.weaknesses.slice(0, 3) : [],
+        strengths: Array.isArray(ff.strengths) ? ff.strengths.slice(0, 3) : [],
       }, { timeout: 30000 });
       if (data?.status === "feature_unavailable") {
         setAiGenStatus("failed");
@@ -1173,6 +1178,11 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         timestamp_sec: aiSourceShot.timestamp,
         sport,
         shot_type: sample.type || "shot",
+        // Personalize the prompt with the group's aggregated feedback so
+        // MiniMax shows corrections that target this user's actual issues.
+        top_fix: tips[0] || weaknesses[0] || null,
+        weaknesses: weaknesses.slice(0, 3),
+        strengths: strengths.slice(0, 3),
       }, { timeout: 30000 });
       if (data?.status === "feature_unavailable") {
         setAiGenStatus("failed");
@@ -1491,11 +1501,19 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       setAutoGenVideoUrl(null);
       try {
         const api = (await import("@/lib/api")).default;
+        const hsff = headlineShot.formFeedback || {};
+        const hsWeaknesses = Array.isArray(hsff.weaknesses) ? hsff.weaknesses.slice(0, 3) : [];
+        const hsStrengths = Array.isArray(hsff.strengths) ? hsff.strengths.slice(0, 3) : [];
         const { data } = await api.post("/generate-corrected-shot", {
           reference_image_b64: headlineShot.thumbnail,
           timestamp_sec: headlineShot.timestamp,
           sport,
           shot_type: headlineShot.type || headlineShot.label || "shot",
+          // Personalize the prompt with the headline shot's coach feedback
+          // so the generated video targets THIS user's actual mistakes.
+          top_fix: hsff.tip || hsWeaknesses[0] || null,
+          weaknesses: hsWeaknesses,
+          strengths: hsStrengths,
         }, { timeout: 30000 });
 
         if (cancelled) return;

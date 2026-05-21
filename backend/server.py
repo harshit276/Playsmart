@@ -3337,6 +3337,13 @@ class CorrectedVideoRequest(BaseModel):
     timestamp_sec: float
     sport: str
     shot_type: str
+    # Personalization for the prompt — what the AI Coach flagged about
+    # THIS user's shot. Used to make MiniMax show targeted corrections
+    # ("fix the limited hip rotation") rather than a generic ideal-form
+    # demo for the shot type.
+    top_fix: str | None = None
+    weaknesses: list[str] = []
+    strengths: list[str] = []
 
 
 @api_router.post("/generate-corrected-shot")
@@ -3394,8 +3401,19 @@ async def generate_corrected_shot(
             raise HTTPException(status_code=400, detail=f"bad video b64: {exc}")
 
     # Job record + cache key (so duplicate requests on same input share
-    # the same generation rather than charging the user twice).
-    hash_source = (ref_image_bytes or video_bytes or b"") + str(req.timestamp_sec).encode() + req.shot_type.encode()
+    # the same generation rather than charging the user twice). Includes
+    # the personalization signals because they shape the prompt — same
+    # image + different feedback should produce a different video.
+    personalization_blob = (
+        (req.top_fix or "")
+        + "|" + "||".join(req.weaknesses or [])
+    ).encode("utf-8", errors="ignore")
+    hash_source = (
+        (ref_image_bytes or video_bytes or b"")
+        + str(req.timestamp_sec).encode()
+        + req.shot_type.encode()
+        + personalization_blob
+    )
     src_hash = hashlib.sha256(hash_source).hexdigest()[:32]
 
     # Cache hit: same input was already generated within the last 30
@@ -3479,6 +3497,9 @@ async def generate_corrected_shot(
         shot_type=req.shot_type,
         replicate_key=replicate_key,
         generation_cost=GENERATION_COST,
+        top_fix=req.top_fix,
+        weaknesses=req.weaknesses,
+        strengths=req.strengths,
     ))
 
     return {
@@ -3495,6 +3516,9 @@ async def _run_replicate_correction_job(
     video_bytes: bytes | None, mime_type: str,
     timestamp_sec: float, sport: str, shot_type: str,
     replicate_key: str, generation_cost: int,
+    top_fix: str | None = None,
+    weaknesses: list[str] | None = None,
+    strengths: list[str] | None = None,
 ):
     """Background task: send the user's shot window to Replicate's
     MimicMotion model, poll for completion, update the job record.
@@ -3609,16 +3633,43 @@ async def _run_replicate_correction_job(
         backend_choice = (os.getenv("GENERATOR_BACKEND") or "minimax").lower()
 
         def _build_minimax_payload():
-            # MiniMax video-01: image-to-video with text prompt.
-            # Free quota; falls through with 402-equivalent error
-            # when exhausted. We describe the corrected motion
-            # verbally since the model doesn't accept pose input.
-            coach_cue = ref.get("description") or "Perform the shot with textbook technique"
+            # MiniMax video-01: image-to-video with text prompt. We describe
+            # the corrected motion verbally since the model doesn't accept
+            # pose input. The prompt weaves together:
+            #   1. shot type    — what kind of swing this is
+            #   2. top_fix      — the AI Coach's single biggest correction
+            #   3. weaknesses   — secondary issues (capped at 2)
+            #   4. ref.description — pro coaching cue for textbook form
+            # ...so MiniMax animates the player from `first_frame_image`
+            # specifically CORRECTING the issues this analysis flagged,
+            # rather than producing a generic ideal-form demo.
+            shot_label = (shot_type or "shot").replace("_", " ").title()
+            coach_cue = (ref.get("description") if ref else "") or "textbook technique"
+
+            corrections: list[str] = []
+            tf = (top_fix or "").strip()
+            if tf:
+                corrections.append(tf.rstrip(". "))
+            for w in (weaknesses or [])[:2]:
+                ws = str(w or "").strip()
+                if ws and ws != tf:
+                    corrections.append(ws.rstrip(". "))
+
+            if corrections:
+                # Frame the AI coach's findings as motion the video must show.
+                corrections_block = (
+                    " The corrected swing specifically fixes: "
+                    + "; ".join(corrections[:3])
+                    + "."
+                )
+            else:
+                corrections_block = ""
+
             prompt = (
-                f"{(shot_type or 'shot').replace('_', ' ').title()} — "
-                f"the player in the frame performs the technique with "
-                f"correct form. {coach_cue}. Smooth, balanced motion, "
-                f"realistic sports footage style."
+                f"{shot_label} — the player in the frame demonstrates the "
+                f"corrected technique with proper form.{corrections_block} "
+                f"Coaching cue: {coach_cue}. Smooth balanced motion, "
+                f"realistic sports footage style, same player same outfit."
             )
             return {
                 "version": "minimax/video-01",
