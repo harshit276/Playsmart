@@ -4,7 +4,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ChevronRight, Check, ArrowLeft, Wallet, Star, Target, Trophy, Activity, Smile, Dumbbell } from "lucide-react";
+import { Sparkles, ChevronRight, Check, ArrowLeft, Wallet, Star, Target, Trophy, Activity, Smile, Dumbbell, MessageCircle } from "lucide-react";
 
 const SPORTS = [
   { key: "badminton", label: "Badminton", emoji: "🏸" },
@@ -67,6 +67,7 @@ export default function EquipmentRecommendModal({
   const [level, setLevel] = useState(defaultLevel || "");
   const [budget, setBudget] = useState(defaultBudget || "all");
   const [goal, setGoal] = useState(defaultGoal || "");
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -75,10 +76,11 @@ export default function EquipmentRecommendModal({
       setLevel(defaultLevel || "");
       setBudget(defaultBudget || "all");
       setGoal(defaultGoal || "");
+      setDescription("");
     }
   }, [open, defaultSport, defaultLevel, defaultBudget, defaultGoal]);
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const apply = () => {
     onApply({
@@ -86,6 +88,7 @@ export default function EquipmentRecommendModal({
       level,
       budget,
       goal,
+      description: description.trim(),
       categories: CATEGORY_PICKS[sport] || [],
     });
     onClose?.();
@@ -105,6 +108,7 @@ export default function EquipmentRecommendModal({
     step === 1 ? true : // level optional
     step === 2 ? true : // budget optional
     step === 3 ? true : // goal optional
+    step === 4 ? true : // description optional
     false;
 
   return (
@@ -145,7 +149,7 @@ export default function EquipmentRecommendModal({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.18 }}
               >
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 1 of 4</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 1 of 5</p>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Target className="w-4 h-4 text-lime-400" /> Which sport?
                 </h3>
@@ -179,7 +183,7 @@ export default function EquipmentRecommendModal({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.18 }}
               >
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 2 of 4</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 2 of 5</p>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Star className="w-4 h-4 text-sky-400" /> Your skill level?
                 </h3>
@@ -222,7 +226,7 @@ export default function EquipmentRecommendModal({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.18 }}
               >
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 3 of 4</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 3 of 5</p>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Wallet className="w-4 h-4 text-amber-400" /> Your budget?
                 </h3>
@@ -259,7 +263,7 @@ export default function EquipmentRecommendModal({
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.18 }}
               >
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 4 of 4</p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 4 of 5</p>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-amber-400" /> What's your main goal?
                 </h3>
@@ -290,11 +294,68 @@ export default function EquipmentRecommendModal({
                   })}
                 </div>
                 <button
-                  onClick={() => { setGoal(""); apply(); }}
+                  onClick={() => { setGoal(""); next(); }}
                   className="w-full text-[11px] text-zinc-500 hover:text-zinc-300 py-2 mt-2"
                 >
-                  Skip — show recommendations anyway
+                  Skip — continue
                 </button>
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div
+                key="step4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.18 }}
+              >
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">Step 5 of 5 · optional</p>
+                <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-lime-400" /> Anything else we should know?
+                </h3>
+                <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
+                  Tell us your situation in your own words — our AI will read this and tune the picks.
+                </p>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  maxLength={500}
+                  placeholder="e.g. I play mostly in office basement twice a week. My forehand is weak so I'd like something forgiving. Lightweight preferred."
+                  className="w-full bg-zinc-900 border border-zinc-800 focus:border-lime-400 rounded-xl p-3 text-sm text-white placeholder-zinc-600 resize-none focus:outline-none"
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-[10px] text-zinc-600">{description.length}/500 · this powers smarter ranking</p>
+                  {description && (
+                    <button
+                      onClick={() => setDescription("")}
+                      className="text-[10px] text-zinc-500 hover:text-zinc-300"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Examples to spark ideas */}
+                <div className="mt-4">
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-600 font-bold mb-1.5">Examples</p>
+                  <div className="space-y-1.5">
+                    {[
+                      "Beginner, just bought my first racket last year. Want better control.",
+                      "Office casual player. Light + forgiving. Under ₹3000.",
+                      "Returning after 5 years. Used to be advanced. Wrist gets sore.",
+                    ].map((ex) => (
+                      <button
+                        key={ex}
+                        onClick={() => setDescription(ex)}
+                        className="w-full text-left text-[11px] text-zinc-400 hover:text-lime-300 hover:bg-lime-400/5 rounded-lg px-2 py-1.5 border border-zinc-800 hover:border-lime-400/20 transition-colors"
+                      >
+                        "{ex}"
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

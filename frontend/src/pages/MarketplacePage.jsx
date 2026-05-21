@@ -25,6 +25,7 @@ import { withAffiliate } from "@/lib/affiliateLinks";
 import { productImageFor } from "@/lib/productImage";
 import EquipmentRecommendModal from "@/components/EquipmentRecommendModal";
 import { useAuth } from "@/App";
+import api from "@/lib/api";
 
 const SPORTS = [
   { key: "all", label: "All", emoji: "🌐" },
@@ -79,29 +80,58 @@ export default function MarketplacePage() {
   const [brands, setBrands] = useState([]); // selected brand filter
   const [skillLevel, setSkillLevel] = useState(""); // set via recommend modal
   const [goal, setGoal] = useState(""); // set via recommend modal
+  const [description, setDescription] = useState(""); // free-text from modal
   const [filterSheet, setFilterSheet] = useState(false);
   const [sortSheet, setSortSheet] = useState(false);
   const [recommendOpen, setRecommendOpen] = useState(false);
   const [recommendActive, setRecommendActive] = useState(false); // hero shows "personalised" mode
+  // Backend-returned ranked picks (with reasoning chains)
+  const [serverPicks, setServerPicks] = useState(null); // null | { items: [{item_id, why_this_fits, why_to_be_careful, fit_score, score_breakdown}], parsed_intent }
+  const [picksLoading, setPicksLoading] = useState(false);
 
   useEffect(() => { document.title = "Marketplace · AthlyticAI"; }, []);
 
-  const applyRecommendation = ({ sport: s, level, budget, goal: g, categories }) => {
+  const applyRecommendation = async ({ sport: s, level, budget, goal: g, description: desc, categories }) => {
     setSport(s);
     setBucket(budget || "all");
     setSkillLevel(level || "");
     setGoal(g || "");
-    // Multi-category: if multiple, pick the first as the primary category
-    // filter (UI shows one at a time). Future improvement: multi-select.
+    setDescription(desc || "");
     setCategory(categories?.[0] || "all");
     setBrands([]);
     setRecommendActive(true);
     window.scrollTo({ top: 320, behavior: "smooth" });
+
+    // Translate price-bucket key to absolute budget for the backend
+    const bucketObj = PRICE_BUCKETS.find((b) => b.key === (budget || "all")) || PRICE_BUCKETS[0];
+    setPicksLoading(true);
+    setServerPicks(null);
+    try {
+      const { data } = await api.post("/recommend/equipment", {
+        sport: s,
+        category: categories?.[0] && categories[0] !== "all" ? categories[0] : undefined,
+        skill_level: level || undefined,
+        goal: g || undefined,
+        budget_inr_min: bucketObj.min || 0,
+        budget_inr_max: isFinite(bucketObj.max) ? bucketObj.max : undefined,
+        description: desc || undefined,
+        limit: 8,
+      }, { timeout: 25000 });
+      setServerPicks(data);
+    } catch (e) {
+      // Fail-soft — the local fit-bar fallback still works on the cards
+      console.warn("recommend failed, falling back to local ranking:", e?.response?.data || e.message);
+      setServerPicks(null);
+    } finally {
+      setPicksLoading(false);
+    }
   };
 
   const clearRecommendation = () => {
     setSkillLevel("");
     setGoal("");
+    setDescription("");
+    setServerPicks(null);
     setRecommendActive(false);
     setCategory("all");
     setBucket("all");
@@ -224,6 +254,9 @@ export default function MarketplacePage() {
           skillLevel={skillLevel}
           bucket={bucket}
           goal={goal}
+          description={description}
+          serverPicks={serverPicks}
+          picksLoading={picksLoading}
           onOpen={() => setRecommendOpen(true)}
           onClear={clearRecommendation}
           totalCount={allItems.length}
@@ -299,20 +332,44 @@ export default function MarketplacePage() {
               ? "grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"
               : "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4"
           }>
-            {filtered.map((item, i) => (
-              recommendActive ? (
-                <RecommendedProductCard
-                  key={`${item._sport}-${item.id}`}
-                  item={item}
-                  delay={Math.min(i * 0.015, 0.3)}
-                  level={skillLevel}
-                  bucket={bucket}
-                  goal={goal}
-                />
-              ) : (
-                <ProductCard key={`${item._sport}-${item.id}`} item={item} delay={Math.min(i * 0.015, 0.3)} />
-              )
-            ))}
+            {(() => {
+              // When backend returned ranked picks with reasoning, prepend them
+              // in the server's order and annotate each card with the reasoning.
+              if (recommendActive && serverPicks?.items?.length) {
+                const picksMap = new Map(serverPicks.items.map((p) => [p.item_id, p]));
+                const pickedIds = new Set(picksMap.keys());
+                const orderedPicks = serverPicks.items
+                  .map((p) => filtered.find((it) => it.id === p.item_id))
+                  .filter(Boolean);
+                const others = filtered.filter((it) => !pickedIds.has(it.id));
+                const ordered = [...orderedPicks, ...others];
+                return ordered.map((item, i) => (
+                  <RecommendedProductCard
+                    key={`${item._sport}-${item.id}`}
+                    item={item}
+                    delay={Math.min(i * 0.015, 0.3)}
+                    level={skillLevel}
+                    bucket={bucket}
+                    goal={goal}
+                    serverPick={picksMap.get(item.id)}
+                  />
+                ));
+              }
+              return filtered.map((item, i) => (
+                recommendActive ? (
+                  <RecommendedProductCard
+                    key={`${item._sport}-${item.id}`}
+                    item={item}
+                    delay={Math.min(i * 0.015, 0.3)}
+                    level={skillLevel}
+                    bucket={bucket}
+                    goal={goal}
+                  />
+                ) : (
+                  <ProductCard key={`${item._sport}-${item.id}`} item={item} delay={Math.min(i * 0.015, 0.3)} />
+                )
+              ));
+            })()}
           </div>
         )}
       </div>
@@ -437,11 +494,12 @@ const GOAL_LABEL = {
   casual: "Casual fun",
 };
 
-function RecommendHero({ recommendActive, sport, skillLevel, bucket, goal, onOpen, onClear, totalCount, filteredCount }) {
+function RecommendHero({ recommendActive, sport, skillLevel, bucket, goal, description, serverPicks, picksLoading, onOpen, onClear, totalCount, filteredCount }) {
   const sportLabel = SPORTS.find(s => s.key === sport)?.label;
   const bucketLabel = PRICE_BUCKETS.find(b => b.key === bucket)?.label;
   const goalLabel = GOAL_LABEL[goal];
   if (recommendActive) {
+    const aiTaggedCount = serverPicks?.items?.length || 0;
     return (
       <motion.div
         initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
@@ -449,10 +507,15 @@ function RecommendHero({ recommendActive, sport, skillLevel, bucket, goal, onOpe
       >
         <div className="flex items-start gap-3 flex-wrap">
           <div className="w-10 h-10 rounded-xl bg-lime-400/15 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-lime-400" />
+            {picksLoading
+              ? <div className="w-4 h-4 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+              : <Sparkles className="w-5 h-5 text-lime-400" />
+            }
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold">Personalised for you</p>
+            <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold">
+              {picksLoading ? "AI is ranking picks…" : "Personalised for you"}
+            </p>
             <p className="text-sm sm:text-base font-bold text-white mt-0.5 truncate">
               {filteredCount} {sportLabel || "sport"} pick{filteredCount === 1 ? "" : "s"}
               {skillLevel ? ` · ${skillLevel}` : ""}
@@ -460,8 +523,16 @@ function RecommendHero({ recommendActive, sport, skillLevel, bucket, goal, onOpe
               {goalLabel ? ` · ${goalLabel}` : ""}
             </p>
             <p className="text-[11px] text-zinc-500 mt-0.5">
-              Ranked by fit · pros, cons, and skill/budget/goal match shown on each card.
+              {aiTaggedCount > 0
+                ? `Top ${aiTaggedCount} ranked by our AI engine — see "Why this fits you" on each card.`
+                : "Ranked locally · skill/budget/goal match on each card."}
             </p>
+            {description && (
+              <div className="mt-2 inline-flex items-start gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900/60 border border-zinc-800 max-w-full">
+                <span className="text-[10px] text-zinc-500 shrink-0">You said:</span>
+                <span className="text-[11px] text-zinc-300 line-clamp-2">"{description}"</span>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 shrink-0">
             <Button onClick={onOpen} variant="outline" size="sm"
@@ -775,7 +846,7 @@ function specBadges(item) {
   return out.slice(0, 5);
 }
 
-function RecommendedProductCard({ item, delay, level, bucket, goal }) {
+function RecommendedProductCard({ item, delay, level, bucket, goal, serverPick }) {
   const prices = item.marketplace_prices || [];
   const cheapest = prices.length ? prices.reduce((m, p) => (p.price < m.price ? p : m), prices[0]) : null;
   const fallbackPrice = item.price_ranges?.INR;
@@ -786,10 +857,17 @@ function RecommendedProductCard({ item, delay, level, bucket, goal }) {
   const sportEmoji = (SPORTS.find((s) => s.key === item._sport) || {}).emoji || "🎯";
   const isLimited = item.availability === "limited_online";
 
-  const skill = skillMatchScore(item.level, level);
-  const budget = budgetMatchScore(item, bucket);
-  const goalFit = goalMatchScore(item, goal);
-  const overallFit = Math.round(skill * 0.45 + budget * 0.3 + goalFit * 0.25);
+  // If the server returned a ranked pick for this item, prefer its scores
+  // and reasoning chains. Otherwise fall back to local heuristic scoring.
+  const localSkill = skillMatchScore(item.level, level);
+  const localBudget = budgetMatchScore(item, bucket);
+  const localGoal = goalMatchScore(item, goal);
+  const skill = serverPick?.score_breakdown?.skill ?? localSkill;
+  const budgetScore = serverPick?.score_breakdown?.budget ?? localBudget;
+  const goalFit = serverPick?.score_breakdown?.goal ?? localGoal;
+  const overallFit = serverPick?.fit_score ?? Math.round(skill * 0.45 + budgetScore * 0.3 + goalFit * 0.25);
+  const whyFits = serverPick?.why_this_fits || [];
+  const whyCareful = serverPick?.why_to_be_careful || [];
 
   const specs = specBadges(item);
   const pros = (item.pros || []).slice(0, 3);
@@ -863,9 +941,37 @@ function RecommendedProductCard({ item, delay, level, bucket, goal }) {
         <div className="space-y-1.5 bg-zinc-950/60 border border-zinc-800 rounded-xl px-3 py-2.5">
           <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">How well it fits you</p>
           <FitBar label="Skill" value={skill} color="bg-lime-400" />
-          <FitBar label="Budget" value={budget} color="bg-amber-400" />
+          <FitBar label="Budget" value={budgetScore} color="bg-amber-400" />
           <FitBar label="Goal" value={goalFit} color="bg-sky-400" />
         </div>
+
+        {/* AI-derived reasoning chain — shown when the server returned a
+            personalised pick for this item */}
+        {(whyFits.length > 0 || whyCareful.length > 0) && (
+          <div className="bg-gradient-to-br from-lime-400/10 via-zinc-900/0 to-zinc-900/0 border border-lime-400/25 rounded-xl p-3 space-y-2">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-lime-300 font-bold">
+              <Sparkles className="w-3 h-3" /> Why this fits you
+            </div>
+            {whyFits.length > 0 && (
+              <ul className="space-y-1">
+                {whyFits.map((p, i) => (
+                  <li key={i} className="text-[12px] text-zinc-200 flex gap-1.5 leading-snug">
+                    <span className="text-lime-400 shrink-0">→</span><span>{p}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {whyCareful.length > 0 && (
+              <ul className="space-y-1 pt-1 border-t border-zinc-800/60">
+                {whyCareful.map((c, i) => (
+                  <li key={i} className="text-[11px] text-amber-300/90 flex gap-1.5 leading-snug">
+                    <span className="text-amber-400 shrink-0">!</span><span>{c}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Pros + Cons side by side */}
         {(pros.length > 0 || cons.length > 0) && (
