@@ -942,137 +942,68 @@ function IndividualShotCard({ shot, label, sport }) {
         </div>
       </div>
 
-      {/* TWO-COLUMN BODY: bullet feedback on the left, AI-generated
-          video on the right. Stacks vertically on mobile. */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-0">
-        {/* LEFT COLUMN — bullet-pointed feedback */}
-        <div className="p-3 space-y-3">
-          {headlineFix && (
-            <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
-              <p className="text-sm text-white leading-snug">{headlineFix}</p>
-            </div>
-          )}
-
-          {strengths.length > 0 && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">What's working</p>
-              <ul className="space-y-1">
-                {strengths.map((x, j) => (
-                  <li key={`s-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
-                    <span className="text-lime-400 shrink-0 mt-[2px]">✓</span>
-                    <span>{x}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {weaknesses.filter((x) => x !== headlineFix).length > 0 && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">Areas to improve</p>
-              <ul className="space-y-1">
-                {weaknesses.filter((x) => x !== headlineFix).map((x, j) => (
-                  <li key={`w-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
-                    <span className="text-amber-400 shrink-0 mt-[2px]">⚠</span>
-                    <span>{x}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {shot.reasoning && (
-            <div className="pt-2 border-t border-zinc-800/60">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
-              <p className="text-[12px] text-zinc-300 leading-relaxed">{shot.reasoning}</p>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-            {shot.thumbnail && (
-              <button
-                onClick={() => setPoseOpen(true)}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Activity className="w-3 h-3" /> See your form
-              </button>
-            )}
-            {proRef && (
-              <button
-                onClick={() => setCompareOpen(true)}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-              </button>
-            )}
+      {/* Bullet-pointed feedback. Per-shot AI-video generation was removed
+          — only the headline shot gets a generation (in AutoProReferencePanel)
+          to keep cost per analysis bounded. */}
+      <div className="p-3 space-y-3">
+        {headlineFix && (
+          <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
+            <p className="text-sm text-white leading-snug">{headlineFix}</p>
           </div>
-        </div>
+        )}
 
-        {/* RIGHT COLUMN — AI-generated corrected swing */}
-        <div className="bg-zinc-950/40 border-t md:border-t-0 md:border-l border-zinc-800 p-3 flex flex-col">
-          <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-2 flex items-center gap-1">
-            ✨ AI-corrected swing
-          </p>
-          {aiGenStatus === "running" && (
-            <div className="flex-1 bg-zinc-900/60 border border-purple-400/20 rounded-lg flex flex-col items-center justify-center p-4 min-h-[160px]">
-              <Loader2 className="w-5 h-5 text-purple-300 animate-spin mb-2" />
-              <p className="text-[11px] text-zinc-400 text-center">{aiGenMessage || "Generating…"}</p>
-              <p className="text-[9px] text-zinc-600 mt-1">~75 seconds typically</p>
-            </div>
+        {strengths.length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">What's working</p>
+            <ul className="space-y-1">
+              {strengths.map((x, j) => (
+                <li key={`s-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                  <span className="text-lime-400 shrink-0 mt-[2px]">✓</span>
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {weaknesses.filter((x) => x !== headlineFix).length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">Areas to improve</p>
+            <ul className="space-y-1">
+              {weaknesses.filter((x) => x !== headlineFix).map((x, j) => (
+                <li key={`w-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                  <span className="text-amber-400 shrink-0 mt-[2px]">⚠</span>
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {shot.reasoning && (
+          <div className="pt-2 border-t border-zinc-800/60">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
+            <p className="text-[12px] text-zinc-300 leading-relaxed">{shot.reasoning}</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
+          {shot.thumbnail && (
+            <button
+              onClick={() => setPoseOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Activity className="w-3 h-3" /> See your form
+            </button>
           )}
-          {aiGenStatus === "done" && aiGenVideoUrl && (
-            <>
-              <video
-                src={aiGenVideoUrl}
-                controls loop muted autoPlay playsInline
-                className="w-full bg-black rounded-lg"
-                data-playsmart-ai-correct
-              />
-              <p className="text-[9px] text-zinc-500 leading-tight mt-1.5">
-                AI synthesized — focus on body motion, not the racket (model limitation).
-              </p>
-              <a
-                href={aiGenVideoUrl} target="_blank" rel="noopener noreferrer" download
-                className="text-[9px] text-purple-300 hover:text-purple-200 mt-0.5 inline-block"
-              >
-                Download ↗
-              </a>
-            </>
-          )}
-          {aiGenStatus === "failed" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col gap-2">
-              <p className="text-[11px] text-zinc-400 leading-relaxed flex-1">{aiGenMessage || "Not available right now."}</p>
-              <button
-                onClick={runGeneration}
-                disabled={!shot.thumbnail || typeof shot.timestamp !== "number"}
-                className="text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-40"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-          {aiGenStatus === "idle" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col items-center justify-center gap-2">
-              {(!shot.thumbnail || typeof shot.timestamp !== "number") ? (
-                <p className="text-[11px] text-zinc-600 text-center">
-                  {!shot.thumbnail ? "No reference frame for this shot." : "No timestamp for this shot."}
-                </p>
-              ) : (
-                <>
-                  <button
-                    onClick={runGeneration}
-                    className="text-[11px] font-bold text-purple-200 hover:text-white bg-purple-500/30 hover:bg-purple-500/50 border border-purple-400/50 rounded-full px-3 py-1.5 transition-colors"
-                  >
-                    ✨ Generate AI-corrected swing
-                  </button>
-                  <p className="text-[9px] text-zinc-600 text-center px-2 leading-tight">
-                    Costs 500 tokens · ~75 sec
-                  </p>
-                </>
-              )}
-            </div>
+          {proRef && (
+            <button
+              onClick={() => setCompareOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+            </button>
           )}
         </div>
       </div>
@@ -1267,137 +1198,68 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         </div>
       </div>
 
-      {/* TWO-COLUMN BODY: bullet feedback on the left, AI-generated
-          video on the right. Stacks vertically on mobile. */}
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-0">
-        {/* LEFT COLUMN — bullet-pointed feedback */}
-        <div className="p-3 space-y-3">
-          {headlineFix && (
-            <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
-              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
-              <p className="text-sm text-white leading-snug">{headlineFix}</p>
-            </div>
-          )}
-
-          {strengths.length > 0 && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">What's working</p>
-              <ul className="space-y-1">
-                {strengths.map((x, j) => (
-                  <li key={`s-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
-                    <span className="text-lime-400 shrink-0 mt-[2px]">✓</span>
-                    <span>{x}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {weaknesses.filter((x) => x !== headlineFix).length > 0 && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">Areas to improve</p>
-              <ul className="space-y-1">
-                {weaknesses.filter((x) => x !== headlineFix).map((x, j) => (
-                  <li key={`w-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
-                    <span className="text-amber-400 shrink-0 mt-[2px]">⚠</span>
-                    <span>{x}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {reasoning && (
-            <div className="pt-2 border-t border-zinc-800/60">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
-              <p className="text-[12px] text-zinc-300 leading-relaxed">{reasoning}</p>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-            {heroShot?.thumbnail && (
-              <button
-                onClick={() => setPoseOpen(true)}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Activity className="w-3 h-3" /> See your form
-              </button>
-            )}
-            {proRef && (
-              <button
-                onClick={() => setCompareOpen(true)}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-              </button>
-            )}
+      {/* Bullet feedback. Per-shot AI video was removed to keep cost
+          per analysis bounded — only the headline shot in the Pro
+          Reference panel gets a generation. */}
+      <div className="p-3 space-y-3">
+        {headlineFix && (
+          <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
+            <p className="text-sm text-white leading-snug">{headlineFix}</p>
           </div>
-        </div>
+        )}
 
-        {/* RIGHT COLUMN — AI-generated corrected swing */}
-        <div className="bg-zinc-950/40 border-t md:border-t-0 md:border-l border-zinc-800 p-3 flex flex-col">
-          <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-2 flex items-center gap-1">
-            ✨ AI-corrected swing
-          </p>
-          {aiGenStatus === "running" && (
-            <div className="flex-1 bg-zinc-900/60 border border-purple-400/20 rounded-lg flex flex-col items-center justify-center p-4 min-h-[160px]">
-              <Loader2 className="w-5 h-5 text-purple-300 animate-spin mb-2" />
-              <p className="text-[11px] text-zinc-400 text-center">{aiGenMessage || "Generating…"}</p>
-              <p className="text-[9px] text-zinc-600 mt-1">~75 seconds typically</p>
-            </div>
+        {strengths.length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">What's working</p>
+            <ul className="space-y-1">
+              {strengths.map((x, j) => (
+                <li key={`s-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                  <span className="text-lime-400 shrink-0 mt-[2px]">✓</span>
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {weaknesses.filter((x) => x !== headlineFix).length > 0 && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">Areas to improve</p>
+            <ul className="space-y-1">
+              {weaknesses.filter((x) => x !== headlineFix).map((x, j) => (
+                <li key={`w-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                  <span className="text-amber-400 shrink-0 mt-[2px]">⚠</span>
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {reasoning && (
+          <div className="pt-2 border-t border-zinc-800/60">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
+            <p className="text-[12px] text-zinc-300 leading-relaxed">{reasoning}</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
+          {heroShot?.thumbnail && (
+            <button
+              onClick={() => setPoseOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Activity className="w-3 h-3" /> See your form
+            </button>
           )}
-          {aiGenStatus === "done" && aiGenVideoUrl && (
-            <>
-              <video
-                src={aiGenVideoUrl}
-                controls loop muted autoPlay playsInline
-                className="w-full bg-black rounded-lg"
-                data-playsmart-ai-correct
-              />
-              <p className="text-[9px] text-zinc-500 leading-tight mt-1.5">
-                AI synthesized — focus on body motion, not the racket (model limitation).
-              </p>
-              <a
-                href={aiGenVideoUrl} target="_blank" rel="noopener noreferrer" download
-                className="text-[9px] text-purple-300 hover:text-purple-200 mt-0.5 inline-block"
-              >
-                Download ↗
-              </a>
-            </>
-          )}
-          {aiGenStatus === "failed" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col gap-2">
-              <p className="text-[11px] text-zinc-400 leading-relaxed flex-1">{aiGenMessage || "Not available right now."}</p>
-              <button
-                onClick={runGeneration}
-                disabled={!aiSourceShot}
-                className="text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-40"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-          {aiGenStatus === "idle" && (
-            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex flex-col items-center justify-center gap-2">
-              {!aiSourceShot ? (
-                <p className="text-[11px] text-zinc-600 text-center">
-                  No reference frame available for this group.
-                </p>
-              ) : (
-                <>
-                  <button
-                    onClick={runGeneration}
-                    className="text-[11px] font-bold text-purple-200 hover:text-white bg-purple-500/30 hover:bg-purple-500/50 border border-purple-400/50 rounded-full px-3 py-1.5 transition-colors"
-                  >
-                    ✨ Generate AI-corrected swing
-                  </button>
-                  <p className="text-[9px] text-zinc-600 text-center px-2 leading-tight">
-                    Costs 500 tokens · ~75 sec
-                  </p>
-                </>
-              )}
-            </div>
+          {proRef && (
+            <button
+              onClick={() => setCompareOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+            </button>
           )}
         </div>
       </div>

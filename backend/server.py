@@ -3417,7 +3417,7 @@ async def generate_corrected_shot(
 
     # Premium gating: must be on pro/elite plan OR have enough tokens
     # for a one-off generation. Generation cost: 500 tokens (~₹150).
-    GENERATION_COST = 500
+    GENERATION_COST = 100
     bal = await _get_balance(user["id"])
     if bal < GENERATION_COST:
         raise HTTPException(
@@ -3682,7 +3682,7 @@ async def _run_replicate_correction_job(
         # back to mimicmotion on out-of-quota). Default to "minimax"
         # because it has a free tier — operator can switch to
         # "mimicmotion" once they've tested + funded their account.
-        backend_choice = (os.getenv("GENERATOR_BACKEND") or "minimax").lower()
+        backend_choice = (os.getenv("GENERATOR_BACKEND") or "mimicmotion").lower()
 
         def _build_minimax_payload():
             # MiniMax video-01: image-to-video with text prompt. The model
@@ -3789,11 +3789,12 @@ async def _run_replicate_correction_job(
             attempts = [("mimicmotion", _build_mimicmotion_payload)]
         elif backend_choice == "kling":
             attempts = [("kling", _build_kling_payload)]
-        else:  # auto: try kling (best) → minimax (free) → mimicmotion
+        else:  # auto: try mimicmotion (cheapest + faithful motion) →
+                # minimax (cheap commercial) → kling (premium)
             attempts = [
-                ("kling", _build_kling_payload),
-                ("minimax", _build_minimax_payload),
                 ("mimicmotion", _build_mimicmotion_payload),
+                ("minimax", _build_minimax_payload),
+                ("kling", _build_kling_payload),
             ]
 
         # ── Submit the Replicate prediction(s) ────────────────────
