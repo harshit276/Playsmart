@@ -3633,18 +3633,32 @@ async def _run_replicate_correction_job(
         backend_choice = (os.getenv("GENERATOR_BACKEND") or "minimax").lower()
 
         def _build_minimax_payload():
-            # MiniMax video-01: image-to-video with text prompt. We describe
-            # the corrected motion verbally since the model doesn't accept
-            # pose input. The prompt weaves together:
-            #   1. shot type    — what kind of swing this is
-            #   2. top_fix      — the AI Coach's single biggest correction
-            #   3. weaknesses   — secondary issues (capped at 2)
-            #   4. ref.description — pro coaching cue for textbook form
-            # ...so MiniMax animates the player from `first_frame_image`
-            # specifically CORRECTING the issues this analysis flagged,
-            # rather than producing a generic ideal-form demo.
+            # MiniMax video-01: image-to-video with text prompt. The model
+            # is general-purpose and WILL improvise wrong-sport elements
+            # (tennis ball on a badminton image, dancing instead of
+            # swinging) without strong anchors, so the prompt builds in:
+            #   1. sport-specific stage cues (court + projectile names)
+            #   2. shot type + WHICH user-specific fixes to demonstrate
+            #   3. identity lock ("same player same outfit") + "single
+            #      athlete, no extra equipment" to suppress hallucinations
+            # MiniMax doesn't take negative prompts the way Stable Diffusion
+            # does — instead we crowd out wrong behaviors with strong
+            # positive anchors on the right ones.
             shot_label = (shot_type or "shot").replace("_", " ").title()
             coach_cue = (ref.get("description") if ref else "") or "textbook technique"
+
+            # Sport-specific stage anchors. Wrong-sport hallucinations
+            # (e.g. tennis-ball-on-badminton-court) collapse when we
+            # name the right court + projectile explicitly.
+            sport_lc = (sport or "").lower().strip()
+            stage_anchors = {
+                "badminton":     "indoor badminton court, shuttlecock and racket, no tennis ball",
+                "tennis":        "tennis court, tennis ball and racket",
+                "table_tennis":  "table tennis table, ping pong ball and paddle",
+                "pickleball":    "pickleball court, plastic ball with holes and paddle",
+                "squash":        "indoor squash court, squash ball and racket",
+            }
+            stage = stage_anchors.get(sport_lc, f"{sport_lc} match setting")
 
             corrections: list[str] = []
             tf = (top_fix or "").strip()
@@ -3656,7 +3670,6 @@ async def _run_replicate_correction_job(
                     corrections.append(ws.rstrip(". "))
 
             if corrections:
-                # Frame the AI coach's findings as motion the video must show.
                 corrections_block = (
                     " The corrected swing specifically fixes: "
                     + "; ".join(corrections[:3])
@@ -3665,11 +3678,13 @@ async def _run_replicate_correction_job(
             else:
                 corrections_block = ""
 
+            sport_word = sport_lc.replace("_", " ") if sport_lc else "sports"
             prompt = (
-                f"{shot_label} — the player in the frame demonstrates the "
-                f"corrected technique with proper form.{corrections_block} "
-                f"Coaching cue: {coach_cue}. Smooth balanced motion, "
-                f"realistic sports footage style, same player same outfit."
+                f"{sport_word} {shot_label} — single athlete performs ONE "
+                f"complete corrected swing motion.{corrections_block} "
+                f"Coaching cue: {coach_cue}. Setting: {stage}. Continuous "
+                f"realistic athletic motion, same player same outfit, no "
+                f"extra people, no extra equipment, no dancing."
             )
             return {
                 "version": "minimax/video-01",
