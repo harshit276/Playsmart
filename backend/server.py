@@ -3328,7 +3328,11 @@ async def analyze_video_universal_endpoint(
 # nothing else changes.
 # ──────────────────────────────────────────────────────────────────────
 class CorrectedVideoRequest(BaseModel):
-    video_b64: str
+    # Either reference_image_b64 (preferred, faster, doesn't need cv2)
+    # OR video_b64 (legacy — backend would need to decode it). At least
+    # one is required.
+    reference_image_b64: str | None = None
+    video_b64: str | None = None
     mime_type: str = "video/mp4"
     timestamp_sec: float
     sport: str
@@ -3362,23 +3366,37 @@ async def generate_corrected_shot(
             detail=f"AI pose-corrected generation costs {GENERATION_COST} tokens. You have {bal}.",
         )
 
-    if not req.video_b64:
-        raise HTTPException(status_code=400, detail="No video provided")
+    if not req.reference_image_b64 and not req.video_b64:
+        raise HTTPException(status_code=400, detail="Either reference_image_b64 or video_b64 is required")
 
     import base64, hashlib
-    try:
-        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
-        video_bytes = base64.b64decode(b64)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
-    if len(video_bytes) < 1000:
-        raise HTTPException(status_code=400, detail="Video too small")
+    # Reference image (the user's contact frame, pre-extracted by the
+    # browser). Preferred path because we don't need cv2 on the backend.
+    ref_image_bytes = None
+    if req.reference_image_b64:
+        try:
+            b64 = req.reference_image_b64.split(",", 1)[1] if req.reference_image_b64.startswith("data:") else req.reference_image_b64
+            ref_image_bytes = base64.b64decode(b64)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"bad reference image: {exc}")
+        if len(ref_image_bytes) < 500:
+            raise HTTPException(status_code=400, detail="Reference image too small")
+
+    # Optional video bytes (legacy / future use). Decoding requires cv2
+    # which isn't installed on Vercel — so we skip it for now and just
+    # use the reference image.
+    video_bytes = None
+    if req.video_b64 and not ref_image_bytes:
+        try:
+            b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+            video_bytes = base64.b64decode(b64)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"bad video b64: {exc}")
 
     # Job record + cache key (so duplicate requests on same input share
     # the same generation rather than charging the user twice).
-    src_hash = hashlib.sha256(
-        video_bytes + str(req.timestamp_sec).encode() + req.shot_type.encode()
-    ).hexdigest()[:32]
+    hash_source = (ref_image_bytes or video_bytes or b"") + str(req.timestamp_sec).encode() + req.shot_type.encode()
+    src_hash = hashlib.sha256(hash_source).hexdigest()[:32]
 
     # Cache hit: same input was already generated within the last 30
     # days, return the existing result without re-charging or re-running.
@@ -3447,14 +3465,13 @@ async def generate_corrected_shot(
         }
 
     # ── Real generation: kick off Replicate as a background task ───
-    # We don't await — return immediately with status="queued" and let
-    # the frontend poll GET /api/generate-corrected-shot/{job_id} for
-    # completion. The background task updates the Mongo job record
-    # when Replicate finishes (~30-90s) so the poll sees status="done"
-    # with a video_url, or status="failed" with an error message.
+    # We pass the reference image directly (already base64-encoded by
+    # the browser as the per-shot thumbnail), bypassing the cv2-based
+    # frame extraction that doesn't work on Vercel.
     asyncio.create_task(_run_replicate_correction_job(
         job_id=job_id,
         user_id=user["id"],
+        ref_image_bytes=ref_image_bytes,
         video_bytes=video_bytes,
         mime_type=req.mime_type,
         timestamp_sec=req.timestamp_sec,
@@ -3474,7 +3491,8 @@ async def generate_corrected_shot(
 
 
 async def _run_replicate_correction_job(
-    job_id: str, user_id: str, video_bytes: bytes, mime_type: str,
+    job_id: str, user_id: str, ref_image_bytes: bytes | None,
+    video_bytes: bytes | None, mime_type: str,
     timestamp_sec: float, sport: str, shot_type: str,
     replicate_key: str, generation_cost: int,
 ):
@@ -3531,33 +3549,28 @@ async def _run_replicate_correction_job(
             )
             return
 
-        # Build the user's contact-frame reference image. We extract a
-        # single JPEG at timestamp_sec via the in-memory video bytes.
-        try:
-            from ai_pipeline.vlm.frame_extract import extract_keyframes, frame_to_base64
-            # Persist to a temp file so cv2 can decode it
-            import tempfile, os as _os
-            tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-            tmp.write(video_bytes); tmp.close()
-            try:
-                frames = extract_keyframes(
-                    tmp.name, start_sec=max(0.0, timestamp_sec - 0.1),
-                    end_sec=timestamp_sec + 0.1, n_frames=1,
-                    target_player="auto", max_dim=512, annotate_target=False,
-                )
-            finally:
-                try: _os.unlink(tmp.name)
-                except Exception: pass
-            if not frames:
-                raise RuntimeError("Couldn't extract reference frame from your clip")
-            ref_image_b64 = frame_to_base64(frames[0], quality=88)
-            ref_image_data_url = f"data:image/jpeg;base64,{ref_image_b64}"
-        except Exception as exc:
+        # Reference image: we prefer the pre-extracted thumbnail the
+        # browser sent (works on Vercel, no cv2 needed). Only fall
+        # through to the video-bytes path if a future deployment ever
+        # installs cv2.
+        ref_image_data_url = None
+        if ref_image_bytes:
+            import base64 as _b64
+            mime = "image/jpeg"
+            # Quick magic-byte sniff for PNG (browsers often hand us
+            # data:image/png;base64,...).
+            if ref_image_bytes[:8] == b"\x89PNG\r\n\x1a\n":
+                mime = "image/png"
+            elif ref_image_bytes[:6] in (b"GIF87a", b"GIF89a"):
+                mime = "image/gif"
+            ref_image_data_url = f"data:{mime};base64,{_b64.b64encode(ref_image_bytes).decode('ascii')}"
+
+        if not ref_image_data_url:
             await db.video_generation_jobs.update_one(
                 {"id": job_id},
                 {"$set": {
                     "status": "failed",
-                    "error": f"Couldn't read your contact frame: {str(exc)[:200]}",
+                    "error": "No contact-frame image provided. Re-analyze the video so we have a thumbnail.",
                     "completed_at": datetime.now(timezone.utc).isoformat(),
                 }},
             )

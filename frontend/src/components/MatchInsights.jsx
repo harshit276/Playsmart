@@ -810,23 +810,16 @@ function IndividualShotCard({ shot, label, sport }) {
     try {
       const ts = shot.timestamp;
       if (typeof ts !== "number") throw new Error("No timestamp on this shot");
-      const file = window.__playsmartCurrentVideo;
-      if (!file) {
-        throw new Error("Your video isn't loaded in this session — re-analyze first.");
+      // We send the per-shot thumbnail (already extracted by the
+      // browser at analysis time) as the reference image. This avoids
+      // re-compressing + re-uploading the full video, AND avoids the
+      // cv2-on-backend dependency that broke the initial wiring.
+      if (!shot.thumbnail) {
+        throw new Error("No contact-frame thumbnail for this shot. Re-analyze the video and try again.");
       }
-      const vp = await import("@/ai/videoProcessor");
-      const compressed = await vp.compressVideoForUpload(file, {
-        maxDim: 360, bitrate: 600_000, maxDurationSec: 4,
-      });
-      const buf = await compressed.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-      const b64 = btoa(bin);
-
       const api = (await import("@/lib/api")).default;
       const { data } = await api.post("/generate-corrected-shot", {
-        video_b64: b64,
-        mime_type: compressed.type || "video/mp4",
+        reference_image_b64: shot.thumbnail,   // data:image/jpeg;base64,...
         timestamp_sec: ts,
         sport: sport || "badminton",
         shot_type: shot.type || "shot",
@@ -1149,29 +1142,17 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     try {
       const ts = sample.timestamp;
       if (typeof ts !== "number") throw new Error("No timestamp on this shot");
-      // Compress the user's video down to <4 MB so it fits Vercel's
-      // body cap, then base64-encode it for the JSON payload. We
-      // reuse the same compressor the analyze flow uses.
-      if (!groupShots?.[0]?._videoFile && !window.__playsmartCurrentVideo) {
-        // The component doesn't have direct access to the videoFile,
-        // but we stash it on window during analysis so this button
-        // can find it. If neither is set, give a clear error.
-        throw new Error("Your video isn't loaded in this session — re-analyze first.");
+      // Send the group's hero thumbnail (highest-confidence shot's
+      // pre-extracted contact frame) as the reference image. Skips
+      // re-uploading the full video AND avoids the cv2 dependency
+      // that breaks on Vercel.
+      const thumb = heroShot?.thumbnail || sample.thumbnail;
+      if (!thumb) {
+        throw new Error("No contact-frame thumbnail for this shot. Re-analyze the video and try again.");
       }
-      const file = groupShots?.[0]?._videoFile || window.__playsmartCurrentVideo;
-      const vp = await import("@/ai/videoProcessor");
-      const compressed = await vp.compressVideoForUpload(file, {
-        maxDim: 360, bitrate: 600_000, maxDurationSec: 4,
-      });
-      const buf = await compressed.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-      const b64 = btoa(bin);
-
       const api = (await import("@/lib/api")).default;
       const { data } = await api.post("/generate-corrected-shot", {
-        video_b64: b64,
-        mime_type: compressed.type || "video/mp4",
+        reference_image_b64: thumb,
         timestamp_sec: ts,
         sport: sport || "badminton",
         shot_type: sample.type || "shot",
