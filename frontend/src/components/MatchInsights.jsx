@@ -1417,6 +1417,14 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   const [headlineShot, setHeadlineShot] = useState(null);
   const userVideoRef = useRef(null);
   const userVideoUrlRef = useRef(null);
+  // Auto-AI-Correct state: runs ONCE per headline shot when both the
+  // shot + sport + thumbnail are ready. Free tier so we burn the
+  // generation as a default ("here's your corrected smash") rather
+  // than gating behind a click.
+  const [autoGenStatus, setAutoGenStatus] = useState("idle"); // idle | running | done | failed
+  const [autoGenMessage, setAutoGenMessage] = useState("");
+  const [autoGenVideoUrl, setAutoGenVideoUrl] = useState(null);
+  const autoGenFiredRef = useRef(null);
 
   // Build an object URL for the user's video file once — we use it as
   // the src of a <video> element and seek to the shot's window for
@@ -1459,6 +1467,79 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     });
     return () => { cancelled = true; };
   }, [sport, perShot]);
+
+  // Auto-trigger ONE AI Correct generation for the headline shot when
+  // analysis completes. We're on Replicate's free tier so it's safe to
+  // burn one generation per analysis as the default "here's your
+  // corrected swing" output. Manual per-shot buttons still work for
+  // additional generations.
+  useEffect(() => {
+    if (!headlineShot || !sport) return;
+    if (!headlineShot.thumbnail || typeof headlineShot.timestamp !== "number") return;
+    // Dedupe: only fire once per (shot, sport) combination per mount
+    const fireKey = `${sport}::${headlineShot.type || headlineShot.label}::${headlineShot.timestamp}`;
+    if (autoGenFiredRef.current === fireKey) return;
+    autoGenFiredRef.current = fireKey;
+
+    let cancelled = false;
+    (async () => {
+      setAutoGenStatus("running");
+      setAutoGenMessage("Generating your AI-corrected swing…");
+      setAutoGenVideoUrl(null);
+      try {
+        const api = (await import("@/lib/api")).default;
+        const { data } = await api.post("/generate-corrected-shot", {
+          reference_image_b64: headlineShot.thumbnail,
+          timestamp_sec: headlineShot.timestamp,
+          sport,
+          shot_type: headlineShot.type || headlineShot.label || "shot",
+        }, { timeout: 30000 });
+
+        if (cancelled) return;
+        if (data?.status === "feature_unavailable") {
+          setAutoGenStatus("failed");
+          setAutoGenMessage(data.message || "");
+          return;
+        }
+        if (data?.status === "done" && data?.video_url) {
+          setAutoGenStatus("done");
+          setAutoGenVideoUrl(data.video_url);
+          setAutoGenMessage(data.cached ? "Loaded from previous generation." : "Done!");
+          return;
+        }
+        const jobId = data?.job_id;
+        if (!jobId) throw new Error("No job_id returned");
+
+        // Poll up to ~4 minutes
+        for (let i = 0; i < 80; i++) {
+          if (cancelled) return;
+          await new Promise((r) => setTimeout(r, 3000));
+          try {
+            const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
+            if (cancelled) return;
+            if (poll?.status === "done" && poll?.video_url) {
+              setAutoGenStatus("done");
+              setAutoGenVideoUrl(poll.video_url);
+              setAutoGenMessage("Your AI-corrected swing is ready.");
+              return;
+            }
+            if (poll?.status === "failed") {
+              setAutoGenStatus("failed");
+              setAutoGenMessage(poll.error || "Generation failed — tokens refunded.");
+              return;
+            }
+          } catch { /* keep polling */ }
+        }
+        setAutoGenStatus("failed");
+        setAutoGenMessage("Generation taking longer than expected.");
+      } catch (e) {
+        if (cancelled) return;
+        setAutoGenStatus("failed");
+        setAutoGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [headlineShot, sport]);
 
   // Seek the user-video to the shot's contact window (-1s .. +1.5s)
   // and auto-loop. Mirrors the YouTube iframe's behavior on the pro
@@ -1603,6 +1684,58 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           >
             Open on YouTube ↗
           </a>
+        </div>
+      )}
+      {/* Auto-generated AI Correct clip — fires once per analysis on
+          the headline shot. Free tier so we burn it as a default
+          rather than gating behind a click. Renders inside the same
+          panel as the Pro Reference so the user gets the full
+          "you / pro / corrected you" comparison in one place. */}
+      {autoGenStatus !== "idle" && (
+        <div className="border-t border-amber-400/20">
+          <div className="px-4 py-2 bg-purple-400/5">
+            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold flex items-center gap-1">
+              ✨ AI-corrected swing
+              {autoGenStatus === "running" && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
+            </p>
+            {autoGenMessage && (
+              <p className="text-[11px] text-zinc-400 mt-0.5">{autoGenMessage}</p>
+            )}
+          </div>
+          {autoGenStatus === "done" && autoGenVideoUrl && (
+            <>
+              <video
+                src={autoGenVideoUrl}
+                controls loop muted autoPlay playsInline
+                className="w-full bg-black"
+                data-playsmart-ai-correct
+              />
+              <div className="px-4 py-2 bg-zinc-900/40">
+                <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  <span className="text-purple-300 font-bold">How to read this:</span> An AI
+                  synthesized this clip from your contact frame to show what the corrected
+                  swing would look like in YOUR body. It's NOT real footage of you — hands
+                  holding the racket are often distorted (model limitation). Focus on the
+                  BODY motion: torso rotation, hip drive, arm extension at contact.
+                </p>
+                <a
+                  href={autoGenVideoUrl} target="_blank" rel="noopener noreferrer" download
+                  className="text-[10px] text-purple-300 hover:text-purple-200 mt-1 inline-block"
+                >
+                  Open / download full-size ↗
+                </a>
+              </div>
+            </>
+          )}
+          {autoGenStatus === "failed" && (
+            <div className="px-4 py-2 bg-zinc-900/40">
+              <p className="text-[11px] text-zinc-500">
+                AI Correct isn't available right now. The free-tier quota may be exhausted —
+                check Replicate billing or try later. The "See your form" + "Compare to Pro"
+                features still work normally.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
