@@ -54,7 +54,57 @@
               "price": 699,
               "url": "https://www.flipkart.com/search?q=cossack+offensive+table+tennis+blade"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 95,
+              "speed": 40,
+              "spin": 65,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "Beginners and juniors focused on developing fundamental strokes and control in recreational or school environments.",
+            "not_for_persona": "Competitive players needing high speed and power for advanced looping or attacking strategies.",
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Lacks speed for advanced offensive play.",
+              "Inconsistent manufacturing quality across batches.",
+              "Difficult to find and has low resale value."
+            ],
+            "standout_qualities": [
+              "Exceptional value for its price point.",
+              "High control, ideal for learning basic techniques.",
+              "Forgiving feel for stroke development.",
+              "Lightweight design benefits junior players."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl02",
@@ -110,7 +160,56 @@
               "price": 1299,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=dhs_pg_7"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 85,
+              "speed": 60,
+              "spin": 45,
+              "forgiveness": 75,
+              "durability": 85
+            },
+            "best_for_persona": "Beginners seeking a durable, affordable all-round blade to develop fundamental strokes and a solid, controlled game.",
+            "not_for_persona": "Young junior players sensitive to weight or advanced players prioritizing maximum spin and dwell time for looping.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Can feel head-heavy for some users",
+              "Requires precise brushing for heavy spin loops",
+              "Lacks aesthetic appeal or premium finish"
+            ],
+            "standout_qualities": [
+              "Excellent value for a beginner blade",
+              "Solid construction with reliable quality control",
+              "Promotes good fundamental technique",
+              "Offers decent power for flat hits"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl03",
@@ -166,7 +265,61 @@
               "price": 3199,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=stiga_allround_classic"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 95,
+              "speed": 35,
+              "spin": 65,
+              "forgiveness": 90,
+              "durability": 80
+            },
+            "best_for_persona": "Beginners and developing players prioritizing control, feel, and technique development in a lightweight, easy-to-handle blade.",
+            "not_for_persona": "Aggressive attackers or advanced players needing high speed and power for competitive, fast-paced matches.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Lacks sufficient speed for competitive play beyond early club level.",
+              "Higher price point compared to other beginner options.",
+              "Soft feel may not suit all rubber types or player preferences."
+            ],
+            "standout_qualities": [
+              "Exceptional control and feel for developing technique.",
+              "Lightweight and easy to maneuver for new players.",
+              "Proven design trusted by coaches for decades.",
+              "Maintains good resale value."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl04",
@@ -217,7 +370,62 @@
               "price": 11999,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=butterfly_timo_boll_alc"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "looper",
+              "power_hitter",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 75,
+              "speed": 88,
+              "spin": 78,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate to advanced players seeking a balanced offensive blade with good feel and a forgiving sweet spot for competitive play.",
+            "not_for_persona": "Beginners or casual players on a tight budget who prioritize extreme control over speed.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High cost for non-professional players.",
+              "Prevalence of counterfeit products in some markets.",
+              "Demanding for players with developing technique."
+            ],
+            "standout_qualities": [
+              "Excellent balance of power and feel.",
+              "Proven performance at elite levels.",
+              "Large and forgiving sweet spot.",
+              "Versatile with various rubber types."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl05",
@@ -273,7 +481,61 @@
               "price": 4999,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=dhs_hurricane_long_5"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused",
+              "looper"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 65,
+              "speed": 90,
+              "spin": 80,
+              "forgiveness": 35,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate to advanced attackers seeking explosive power and spin for competitive play, especially those using tacky Chinese rubbers.",
+            "not_for_persona": "Beginners or defensive players prioritizing touch, dwell time, and lightweight feel for control and short game.",
+            "learning_curve_hours": 75,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Heavy and head-heavy feel can cause fatigue over long sessions",
+              "Reduced dwell time impacts short game and touch shots",
+              "Handle finish is less refined compared to premium European brands"
+            ],
+            "standout_qualities": [
+              "Exceptional power for aggressive attacking shots",
+              "Optimized for tacky Chinese rubbers",
+              "Directly associated with professional play (Ma Long)",
+              "Good value compared to similar high-performance blades"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl06",
@@ -323,7 +585,55 @@
               "price": 6699,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=stiga_carbonado_245"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "looper",
+              "power_hitter",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 70,
+              "speed": 90,
+              "spin": 75,
+              "forgiveness": 85,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate offensive players seeking lightweight power, speed, and forgiveness for aggressive looping and attacking play.",
+            "not_for_persona": "Beginners or defensive players who prioritize touch, feel, and extreme control for short game over power.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Hollow feel on slow touch shots due to catapult effect."
+            ],
+            "standout_qualities": [
+              "Exceptional power and speed for its weight.",
+              "Large, forgiving sweet spot.",
+              "High-quality craftsmanship and good looping arc."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl07",
@@ -373,7 +683,62 @@
               "price": 14999,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=butterfly_viscaria"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "looper",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 60,
+              "speed": 95,
+              "spin": 80,
+              "forgiveness": 30,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced or professional players seeking explosive power and speed for competitive matches and high-level training.",
+            "not_for_persona": "Beginner or intermediate players who need a forgiving blade for casual or recreational play.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Unforgiving for players below advanced skill level",
+              "High price point for non-competitive use",
+              "Prevalence of counterfeit products"
+            ],
+            "standout_qualities": [
+              "Exceptional speed and explosive contact",
+              "Used by top professional players",
+              "Versatile with various rubber types",
+              "Maintains high resale value"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl08",
@@ -424,7 +789,61 @@
               "price": 23499,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=butterfly_zhang_jike_super_zlc"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "looper",
+              "counter_attacker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 98,
+              "control": 35,
+              "speed": 98,
+              "spin": 85,
+              "forgiveness": 68,
+              "durability": 75
+            },
+            "best_for_persona": "Elite offensive players with precise technique seeking maximum speed, power, and a large sweet spot for competitive matches.",
+            "not_for_persona": "Beginners or intermediate players who struggle with control and require high forgiveness.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High price point",
+              "Can be overly stiff with certain rubbers",
+              "Low inherent control magnifies errors",
+              "Risk of purchasing counterfeit products"
+            ],
+            "standout_qualities": [
+              "Advanced Super ZLC carbon fiber construction",
+              "Large sweet spot for an offensive blade",
+              "Professional player endorsement",
+              "Consistent feel across the blade surface"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl09",
@@ -490,7 +909,52 @@
               "price": 5299,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=tibhar_samsonov_alpha"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "looper",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 55,
+              "control": 90,
+              "speed": 60,
+              "spin": 85,
+              "forgiveness": 80,
+              "durability": 45
+            },
+            "best_for_persona": "Intermediate technical loopers seeking a controlled, spin-friendly all-wood blade to refine technique before advanced composites.",
+            "not_for_persona": "Aggressive power hitters or advanced players prioritizing maximum speed and stiffness for hard tensors.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Perceived lack of raw speed for aggressive play",
+              "Vulnerability to cosmetic damage without protection"
+            ],
+            "standout_qualities": [
+              "Exceptional dwell time for looping",
+              "Excellent control and spin feedback",
+              "Ideal progression blade for technical players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl10",
@@ -556,7 +1020,52 @@
               "price": 5999,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=tibhar_stratus_power_wood"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 85,
+              "speed": 90,
+              "spin": 75,
+              "forgiveness": 65,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate to advanced two-winged attackers seeking carbon-like speed and balanced control for competitive club and league matches.",
+            "not_for_persona": "Junior players, those with smaller frames, or defensive players prioritizing extreme touch and short game.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Reduced touch and feel for delicate short game shots due to stiffness.",
+              "Heavier weight may not suit players with smaller builds or those preferring lighter setups."
+            ],
+            "standout_qualities": [
+              "Offers carbon-like speed and power in an all-wood construction.",
+              "Exceptional balance between speed and control for offensive play.",
+              "Proven performance in competitive league environments.",
+              "Provides excellent value compared to composite blades."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl11",
@@ -622,7 +1131,55 @@
               "price": 7199,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=donic_waldner_senso_carbon"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 70,
+              "speed": 90,
+              "spin": 75,
+              "forgiveness": 65,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate all-round attackers seeking a head-light blade with carbon speed and wood feel for creative, offensive play.",
+            "not_for_persona": "Defensive players needing maximum short-game touch or those who dislike head-light balance.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Reduced short-game touch compared to pure wood blades",
+              "Hollow handle balance may not suit all players"
+            ],
+            "standout_qualities": [
+              "Head-light balance from Senso hollow handle",
+              "Excellent blend of carbon speed and wood feel",
+              "Supports creative, all-round attacking play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl12",
@@ -693,7 +1250,55 @@
               "price": 2499,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=sanwei_fextra_7"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "looper"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 80,
+              "speed": 75,
+              "spin": 70,
+              "forgiveness": 70,
+              "durability": 80
+            },
+            "best_for_persona": "Beginner to intermediate players seeking powerful offensive play with Chinese-style characteristics on a budget.",
+            "not_for_persona": "Young or physically weaker players who struggle with heavier, head-heavy blades.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Can feel heavy and tiring for some users.",
+              "Inconsistent weight between individual blades.",
+              "Cosmetic finish may not be premium."
+            ],
+            "standout_qualities": [
+              "Exceptional value for an offensive 7-ply blade.",
+              "Excellent balance of speed and control for its price.",
+              "Performance comparable to much more expensive blades.",
+              "Optimized for Chinese tacky rubbers."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl13",
@@ -760,7 +1365,62 @@
               "price": 8499,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=victas_koji_matsushita_offensive"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "defender",
+              "looper",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 20,
+              "control": 95,
+              "speed": 15,
+              "spin": 85,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "Advanced defensive players specializing in heavy backspin chops and precise ball placement from distance.",
+            "not_for_persona": "Aggressive attackers or all-round players seeking high speed and power for offensive shots.",
+            "learning_curve_hours": 40,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Lacks speed for offensive play",
+              "Not versatile for attacking styles",
+              "Incompatible with standard racket cases",
+              "Difficult to purchase in some regions"
+            ],
+            "standout_qualities": [
+              "Exceptional control and dwell time for heavy backspin",
+              "Large sweet spot enhances defensive consistency",
+              "Lightweight design reduces fatigue for choppers",
+              "Proven performance at elite defensive level"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_bl14",
@@ -826,7 +1486,54 @@
               "price": 4799,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=andro_treiber_k"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "looper",
+              "spin_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 75,
+              "spin": 80,
+              "forgiveness": 70,
+              "durability": 40
+            },
+            "best_for_persona": "Intermediate players transitioning from allround blades, seeking balanced offensive play with excellent looping capabilities and good control.",
+            "not_for_persona": "Beginners needing maximum forgiveness or advanced power hitters requiring extreme explosiveness.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Prone to denting with rough handling",
+              "Not the most explosive blade for extreme power shots"
+            ],
+            "standout_qualities": [
+              "Excellent dwell time for looping",
+              "Balanced blend of speed and control",
+              "Lightweight and highly maneuverable",
+              "Optimized for modern tensor rubbers"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -886,7 +1593,59 @@
               "price": 899,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=dhs_neo_hurricane_3"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "looper",
+              "attacker",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 75,
+              "speed": 65,
+              "spin": 95,
+              "forgiveness": 65,
+              "durability": 35
+            },
+            "best_for_persona": "Beginner to intermediate players focused on developing powerful, spin-heavy loops and serves, seeking an affordable, tacky Chinese rubber.",
+            "not_for_persona": "Players preferring lightweight setups, passive blocking styles, or those needing extreme durability for long-term use.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Relatively heavy, potentially causing arm fatigue",
+              "Requires active, fast swings to generate speed",
+              "Topsheet durability is limited to 3-4 months"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation for serves and loops",
+              "Excellent short game control due to tacky surface",
+              "Highly affordable for a performance Chinese rubber",
+              "Enhanced catapult effect from Neo sponge"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb02",
@@ -935,7 +1694,56 @@
               "price": 2099,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=stiga_mantra_m"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "looper",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 55,
+              "control": 85,
+              "speed": 60,
+              "spin": 85,
+              "forgiveness": 80,
+              "durability": 65
+            },
+            "best_for_persona": "Beginner to intermediate players learning looping and control, upgrading from basic equipment for recreational play.",
+            "not_for_persona": "Advanced, aggressive attackers who prioritize high speed and power for competitive tournament matches.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Limited speed for aggressive attacking play",
+              "Higher price point for its performance tier",
+              "Outclassed by some alternative rubbers at similar cost"
+            ],
+            "standout_qualities": [
+              "Excellent balance of spin and control for learning",
+              "Easy to execute brush-loops with",
+              "Reliable quality and consistent feel"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb03",
@@ -990,7 +1798,55 @@
               "price": 1599,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=yasaka_mark_v"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_recreational",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 90,
+              "speed": 50,
+              "spin": 55,
+              "forgiveness": 80,
+              "durability": 95
+            },
+            "best_for_persona": "Beginners and intermediate players focused on developing fundamental strokes and clean technique with a durable, predictable rubber.",
+            "not_for_persona": "Players seeking high-speed, high-spin modern tensor rubbers for competitive play or advanced looping techniques.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Lacks modern speed and spin compared to tensor rubbers",
+              "Produces less arc on loops, making advanced shots harder"
+            ],
+            "standout_qualities": [
+              "Excellent for developing fundamental technique and stroke building",
+              "Highly durable with a long lifespan",
+              "Provides predictable and linear feel"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb04",
@@ -1045,7 +1901,56 @@
               "price": 3199,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=butterfly_rozena"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "looper"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 70,
+              "speed": 75,
+              "spin": 75,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players developing modern looping techniques, seeking a forgiving, all-round rubber with premium feel for club play and training.",
+            "not_for_persona": "Advanced or professional attackers who require maximum speed and power for elite tournament competition.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Speed ceiling limits advanced offensive play.",
+              "Durability is good but not as long-lasting as top-tier rubbers.",
+              "Premium price compared to some non-Butterfly alternatives."
+            ],
+            "standout_qualities": [
+              "Offers a premium, Tenergy-like feel at a more accessible price.",
+              "Lightweight design promotes easy handling and arm comfort.",
+              "High forgiveness aids in developing modern looping techniques.",
+              "Reliable Butterfly quality and consistency."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb05",
@@ -1094,7 +1999,54 @@
               "price": 2399,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=xiom_vega_europe"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "looper",
+              "spin_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "tournament_open"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 85,
+              "speed": 70,
+              "spin": 95,
+              "forgiveness": 90,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate looper seeking high spin, control, and forgiveness for consistent backhand and forehand looping, prioritizing arc over raw speed.",
+            "not_for_persona": "Aggressive power hitter or counter-attacker who relies on flat smashes and over-the-table speed.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 15,
+            "common_complaints": [
+              "Lacks power for flat smashes",
+              "Insufficient speed for aggressive over-the-table play",
+              "Confusion with similar product variants"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation with high arc",
+              "Excellent spin-to-control ratio for its price",
+              "Proven consistency and reliability",
+              "High forgiveness, especially for backhand loops"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb06",
@@ -1145,7 +2097,61 @@
               "price": 5799,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=butterfly_tenergy_05"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "looper",
+              "attacker",
+              "spin_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 65,
+              "speed": 95,
+              "spin": 100,
+              "forgiveness": 25,
+              "durability": 30
+            },
+            "best_for_persona": "Advanced attackers and loopers prioritizing maximum spin and speed for competitive matches, with strong technique and a flexible budget.",
+            "not_for_persona": "Beginners, casual players, or those with developing technique and a limited budget.",
+            "learning_curve_hours": 20,
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "High cost of ownership",
+              "Limited lifespan under heavy use",
+              "Risk of purchasing counterfeit products",
+              "Unforgiving on imperfect technique"
+            ],
+            "standout_qualities": [
+              "Industry-leading performance benchmark",
+              "Exceptional spin generation and high arc for looping",
+              "Trusted by professional players globally",
+              "Reliable and consistent quality"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb07",
@@ -1195,7 +2201,61 @@
               "price": 7999,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=butterfly_dignics_05"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "looper",
+              "power_hitter",
+              "spin_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 92,
+              "control": 35,
+              "speed": 98,
+              "spin": 98,
+              "forgiveness": 30,
+              "durability": 80
+            },
+            "best_for_persona": "Elite-level attackers and loopers seeking maximum speed and spin for competitive tournament play.",
+            "not_for_persona": "Beginners or intermediate players focused on control, touch play, or budget-conscious casual use.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High price point",
+              "Lack of control for touch shots",
+              "Not suitable for lower skill levels",
+              "Risk of counterfeit products"
+            ],
+            "standout_qualities": [
+              "Exceptional speed and spin",
+              "Enhanced durability compared to predecessors",
+              "High throw angle for powerful loops",
+              "Firm feel for aggressive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb08",
@@ -1255,7 +2315,61 @@
               "price": 4999,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=tibhar_evolution_mx_p"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "looper",
+              "power_hitter",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 60,
+              "speed": 90,
+              "spin": 95,
+              "forgiveness": 30,
+              "durability": 50
+            },
+            "best_for_persona": "Advanced players with strong, fast strokes seeking maximum spin and speed for competitive attacking play.",
+            "not_for_persona": "Beginners or intermediate players who prioritize forgiveness and passive control over raw power and spin.",
+            "learning_curve_hours": 75,
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Demanding stroke requirement",
+              "Low forgiveness for passive play",
+              "Performance degrades with age"
+            ],
+            "standout_qualities": [
+              "Exceptional spin and speed",
+              "Crisp, direct ball feedback",
+              "High-level competitive performance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb09",
@@ -1315,7 +2429,56 @@
               "price": 4799,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=andro_rasanter_r47"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "looper",
+              "spin_focused",
+              "attacker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 88,
+              "control": 72,
+              "speed": 93,
+              "spin": 97,
+              "forgiveness": 82,
+              "durability": 45
+            },
+            "best_for_persona": "Modern loopers seeking massive spin and forgiving power for over-the-table topspin attacks and aggressive play.",
+            "not_for_persona": "Beginners or casual players who lack advanced looping technique and consistent stroke mechanics.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 5,
+            "common_complaints": [
+              "Requires advanced technique to fully utilize its potential",
+              "Durability is limited with heavy, consistent use",
+              "Availability can be an issue in some regions"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation and dwell time for looping",
+              "High power with surprising forgiveness for an advanced rubber",
+              "Optimized for modern topspin attacks and brush-looping"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb10",
@@ -1375,7 +2538,53 @@
               "price": 3099,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=andro_hexer_grip"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "looper",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 80,
+              "speed": 85,
+              "spin": 92,
+              "forgiveness": 80
+            },
+            "best_for_persona": "Intermediate players seeking an all-round rubber with excellent spin and control for loop-drive play and short game.",
+            "not_for_persona": "Advanced attackers prioritizing maximum explosive power and speed over spin and control.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Lacks top-end power for aggressive attacking shots.",
+              "Sponge technology claims may be overstated.",
+              "Higher cost compared to some alternatives with similar performance."
+            ],
+            "standout_qualities": [
+              "Exceptional grip for high-spin opening loops.",
+              "Well-balanced feel for both dwell and rebound.",
+              "Strong all-round performance suitable for intermediate play.",
+              "Excellent choice for upgrading from classic beginner rubbers."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb11",
@@ -1435,7 +2644,58 @@
               "price": 4599,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=donic_bluefire_m1"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "looper",
+              "power_hitter",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 40,
+              "speed": 90,
+              "spin": 90,
+              "forgiveness": 30,
+              "durability": 60
+            },
+            "best_for_persona": "Advanced attackers and loopers seeking explosive power, speed, and spin for competitive play, comfortable with a lower throw angle.",
+            "not_for_persona": "Beginners or intermediate players needing high forgiveness, or those preferring a higher throw angle for consistency.",
+            "learning_curve_hours": 30,
+            "common_complaints": [
+              "Unforgiving low throw angle",
+              "Fatiguing for the arm during extended play"
+            ],
+            "standout_qualities": [
+              "Exceptional power and spin for looping",
+              "Suits fast, flat attacking styles",
+              "Proven at elite competitive levels",
+              "Good value for its performance tier"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb12",
@@ -1496,7 +2756,60 @@
               "price": 5999,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=victas_v_15_extra"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "looper",
+              "power_hitter",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 30,
+              "speed": 95,
+              "spin": 90,
+              "forgiveness": 20,
+              "durability": 60
+            },
+            "best_for_persona": "Advanced offensive players and loopers seeking extreme power and spin for competitive matches, who possess confident, full-stroke technique.",
+            "not_for_persona": "Intermediate or developing players who prioritize control, forgiveness, or lack consistent, powerful strokes.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High price point for non-competitive players",
+              "Demanding control, especially on passive or slow shots",
+              "Too hard and unforgiving for players below advanced skill"
+            ],
+            "standout_qualities": [
+              "Exceptional power and spin for offensive play",
+              "Unique blend of Japanese tensor and Chinese feel",
+              "Proven performance at the professional level",
+              "Premium Japanese manufacturing quality"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb13",
@@ -1560,7 +2873,56 @@
               "price": 799,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=friendship_729_geospin"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "looper",
+              "spin_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 75,
+              "speed": 55,
+              "spin": 95,
+              "forgiveness": 85,
+              "durability": 30
+            },
+            "best_for_persona": "Beginner to intermediate players learning spin-focused Chinese techniques on a budget, prioritizing control and feel for training and recreational play.",
+            "not_for_persona": "Advanced competitive players needing high speed, long-lasting tackiness, or consistent quality for serious tournament matches.",
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Tackiness fades relatively quickly with competitive use",
+              "Lower top-end speed compared to premium rubbers",
+              "Inconsistent quality control between sheets"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation for its price point",
+              "Excellent value for money",
+              "Good for learning spin-heavy techniques",
+              "Softer feel offers good control"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb14",
@@ -1621,7 +2983,61 @@
               "price": 7499,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=dhs_hurricane_3_national_blue_sponge"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "looper",
+              "attacker",
+              "spin_focused",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 75,
+              "speed": 90,
+              "spin": 100,
+              "forgiveness": 30,
+              "durability": 40
+            },
+            "best_for_persona": "Advanced attackers and loopers seeking maximum spin and power for forehand, willing to generate extreme racket-head speed.",
+            "not_for_persona": "Beginner or intermediate players, or those prioritizing forgiveness and easy power.",
+            "learning_curve_hours": 75,
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "High weight, typically for forehand only",
+              "Requires high swing speed to activate",
+              "Authenticity concerns due to counterfeits",
+              "Performance degrades as factory tuning fades"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation, a category benchmark",
+              "Premium factory-tuned blue sponge",
+              "Used by elite professional players",
+              "Outstanding for heavy short underspin serves"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb15",
@@ -1671,7 +3087,55 @@
               "price": 5799,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=butterfly_tenergy_64"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "counter_attacker",
+              "speed_focused",
+              "attacker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 60,
+              "speed": 98,
+              "spin": 88,
+              "forgiveness": 35,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced players, especially counter-loopers and backhand specialists, who prioritize extreme speed and a flat trajectory for aggressive, match-winning play.",
+            "not_for_persona": "Beginner or intermediate players, or those who rely on high-throw opening loops and require significant forgiveness.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Demanding for opening loops due to low throw",
+              "High cost compared to other rubbers"
+            ],
+            "standout_qualities": [
+              "Exceptional speed and flat trajectory for counter-attacking",
+              "Superior backhand performance for aggressive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb16",
@@ -1721,7 +3185,59 @@
               "price": 5799,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=butterfly_tenergy_80"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "all_round",
+              "looper",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 65,
+              "speed": 95,
+              "spin": 95,
+              "forgiveness": 75,
+              "durability": 25
+            },
+            "best_for_persona": "Advanced two-winged attackers seeking a balanced, high-performance rubber excelling in both speed and spin for competitive matches.",
+            "not_for_persona": "Beginners or recreational players who prioritize durability and budget over top-tier performance.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "High purchase cost",
+              "Short lifespan requiring frequent replacement",
+              "Decision paralysis due to similar high-performance alternatives"
+            ],
+            "standout_qualities": [
+              "Exceptional balance of speed and spin",
+              "Forgiving arc for looping and attacking shots",
+              "Preferred by professional players globally"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rb17",
@@ -1772,7 +3288,56 @@
               "price": 4999,
               "url": "https://www.megaspin.net/store/?cPath=64&products_id=nittaku_fastarc_g_1"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "looper",
+              "attacker",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 70,
+              "speed": 94,
+              "spin": 96,
+              "forgiveness": 45,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced loopers and attackers seeking high spin and speed with a unique hybrid feel, prioritizing performance and durability.",
+            "not_for_persona": "Beginner or intermediate players who lack consistent technique and prefer softer, more forgiving rubbers.",
+            "learning_curve_hours": 15,
+            "common_complaints": [
+              "Availability can be limited in some regions.",
+              "Requires advanced technique due to hard sponge.",
+              "Lower brand recognition compared to competitors."
+            ],
+            "standout_qualities": [
+              "Unique hybrid feel combining tackiness and tensor catapult.",
+              "Exceptional spin generation at a competitive price.",
+              "High build quality and consistent performance.",
+              "Good durability for a high-performance tensor rubber."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -1825,7 +3390,50 @@
               "price": 279,
               "url": "https://www.flipkart.com/search?q=gki+3+star+table+tennis+ball"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 40,
+              "speed": 35,
+              "spin": 40,
+              "forgiveness": 50,
+              "durability": 20
+            },
+            "best_for_persona": "Beginners and casual players seeking affordable 3-star balls for multi-ball training, recreational rallies, and general practice sessions.",
+            "not_for_persona": "Competitive players, advanced loopers, or anyone needing ITTF-approved, highly durable, and consistent balls for serious matches.",
+            "common_complaints": [
+              "Inconsistent bounce quality between balls",
+              "Prone to cracking with aggressive play",
+              "Not suitable for sanctioned tournaments"
+            ],
+            "standout_qualities": [
+              "Highly affordable for 3-star rating",
+              "Good for high-volume practice",
+              "Easily accessible in local markets"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba02",
@@ -1873,7 +3481,52 @@
               "price": 329,
               "url": "https://www.flipkart.com/search?q=stag+3+star+table+tennis+ball"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 70,
+              "speed": 40,
+              "spin": 40,
+              "forgiveness": 75,
+              "durability": 60
+            },
+            "best_for_persona": "Beginners and intermediate players seeking consistent, affordable practice balls for club or school use.",
+            "not_for_persona": "Competitive players needing ITTF-approved balls or consistent weight for serious match play.",
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "Not suitable for official tournaments",
+              "Variable weight between balls",
+              "Performance degrades quickly with heavy use"
+            ],
+            "standout_qualities": [
+              "Good roundness for its price point",
+              "Improved durability over celluloid balls",
+              "Reliable for entry-level practice"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba03",
@@ -1927,7 +3580,54 @@
               "price": 749,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=dhs_d40_plus_3_star"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 80,
+              "spin": 80,
+              "forgiveness": 85,
+              "durability": 40
+            },
+            "best_for_persona": "Competitive players needing ITTF-approved, consistent match balls for tournaments and serious training, offering great value.",
+            "not_for_persona": "Casual players or beginners who prioritize lowest cost over tournament-grade consistency and ITTF approval.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Prone to cracking faster than seamless balls",
+              "Higher cost for casual play",
+              "Inconsistent feel in some batches"
+            ],
+            "standout_qualities": [
+              "ITTF-approved for competitive play",
+              "Highly consistent bounce and roundness",
+              "Excellent value for a tournament-grade ball"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba04",
@@ -1976,7 +3676,60 @@
               "price": 849,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=nittaku_premium_3_star"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "defender",
+              "looper",
+              "blocker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 95,
+              "speed": 80,
+              "spin": 90,
+              "forgiveness": 90,
+              "durability": 85
+            },
+            "best_for_persona": "Competitive players seeking ITTF-approved, consistent match balls for tournaments and serious training sessions.",
+            "not_for_persona": "Casual players or beginners looking for budget-friendly balls for recreational play or daily practice.",
+            "common_complaints": [
+              "High cost per ball",
+              "Limited availability in some regions",
+              "Not cost-effective for casual practice"
+            ],
+            "standout_qualities": [
+              "Exceptional consistency and sphericity",
+              "Reliable and predictable spin generation",
+              "Excellent durability for a poly ball",
+              "Tournament-grade quality"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba05",
@@ -2024,7 +3777,50 @@
               "price": 1099,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=butterfly_g40_3_star"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 95,
+              "speed": 90,
+              "spin": 90,
+              "forgiveness": 50,
+              "durability": 30
+            },
+            "best_for_persona": "Advanced and professional players requiring ITTF-approved, consistent balls for competitive matches and high-level training.",
+            "not_for_persona": "Beginners or recreational players seeking durable, budget-friendly balls for casual practice sessions.",
+            "common_complaints": [
+              "High cost per ball",
+              "Lower durability compared to some alternatives"
+            ],
+            "standout_qualities": [
+              "Official tournament standard",
+              "Exceptional consistency and bounce",
+              "Superior roundness and seam quality"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba06",
@@ -2082,7 +3878,47 @@
               "price": 649,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=sanwei_target_pro_40_3_star"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 70,
+              "speed": 80,
+              "spin": 75,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Intermediate to advanced hardhitters needing durable, consistent balls for intense training and competitive club matches.",
+            "not_for_persona": "Players with a soft touch or those using very tacky rubbers who struggle with amplified spin response.",
+            "common_complaints": [
+              "Can amplify spin excessively with certain rubbers",
+              "Occasional batch inconsistency in feel"
+            ],
+            "standout_qualities": [
+              "Exceptional durability for extended training",
+              "Highly consistent bounce due to seamless design",
+              "Affordable ITTF-approved option for training",
+              "Lively, hard feel preferred by power hitters"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba07",
@@ -2140,7 +3976,53 @@
               "price": 949,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=tibhar_3_star_sl_plus"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 90,
+              "speed": 50,
+              "spin": 50,
+              "forgiveness": 50,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate players needing consistent, durable 3-star balls for competitive club matches and open tournaments.",
+            "not_for_persona": "Budget-conscious casual players or those who prioritize brand recognition over performance.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Higher price point compared to some competitors",
+              "Limited availability in certain regions",
+              "Lower brand recognition at major events"
+            ],
+            "standout_qualities": [
+              "Exceptional roundness and consistency",
+              "Predictable and crisp bounce",
+              "Good durability for competitive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba08",
@@ -2189,7 +4071,54 @@
               "price": 1199,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=nittaku_premium_3_star_40_plus"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "academy_training",
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 95,
+              "speed": 85,
+              "spin": 90,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Advanced players and pros seeking consistent, durable, ITTF-approved balls for serious training and competitive matches.",
+            "not_for_persona": "Casual players or beginners who prioritize low cost over premium performance and durability.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High cost per ball",
+              "Limited availability in some regions",
+              "Overkill for non-competitive play"
+            ],
+            "standout_qualities": [
+              "Exceptional consistency and roundness",
+              "Superior durability and lifespan",
+              "Tournament-grade quality",
+              "Predictable bounce"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba09",
@@ -2242,7 +4171,49 @@
               "price": 2499,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=butterfly_r40_plus_3_star"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 70,
+              "spin": 75,
+              "forgiveness": 80,
+              "durability": 40
+            },
+            "best_for_persona": "Intermediate to advanced players needing consistent, ITTF-approved 3-star balls for high-volume club training and multi-ball coaching sessions.",
+            "not_for_persona": "Beginners or casual players looking for the cheapest, most durable balls for light recreational play.",
+            "common_complaints": [
+              "High initial cost for a bulk pack",
+              "Slightly different feel compared to premium match balls",
+              "Prone to cracking faster under heavy topspin"
+            ],
+            "standout_qualities": [
+              "Cost-effective 3-star ITTF-approved bulk option",
+              "Consistent and predictable bounce for reliable play",
+              "Excellent for multi-ball training and club practice"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_ba10",
@@ -2291,7 +4262,65 @@
               "price": 799,
               "url": "https://www.megaspin.net/store/?cPath=70&products_id=xushaofa_seamless_3_star"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "defender",
+              "counter_attacker",
+              "looper",
+              "blocker",
+              "power_hitter",
+              "control_focused",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 75,
+              "spin": 80,
+              "forgiveness": 90,
+              "durability": 95
+            },
+            "best_for_persona": "Serious table tennis players and coaches seeking ITTF-approved, highly durable, and consistently performing balls for training and competition.",
+            "not_for_persona": "Casual players looking for very soft-feeling balls or those on a strict budget for recreational backyard play.",
+            "learning_curve_hours": 5,
+            "common_complaints": [
+              "Slightly harder feel requires adjustment for some players",
+              "Limited availability in some retail markets"
+            ],
+            "standout_qualities": [
+              "Exceptional durability for prolonged use",
+              "Seamless construction ensures consistent and true bounce",
+              "ITTF-approved for official competition and training"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -2368,7 +4397,59 @@
               "price": 699,
               "url": "https://www.flipkart.com/search?q=joola+team+school+table+tennis"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 90,
+              "speed": 20,
+              "spin": 30,
+              "forgiveness": 85,
+              "durability": 65
+            },
+            "best_for_persona": "Beginners and school students learning fundamental strokes in casual, recreational settings, especially juniors due to its light weight.",
+            "not_for_persona": "Competitive players, advanced juniors, or those aiming to develop aggressive attacking or spin-heavy looping techniques.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Limited potential for aggressive play",
+              "Quickly outgrown by improving players",
+              "Insufficient for competitive use"
+            ],
+            "standout_qualities": [
+              "Exceptional control for beginners",
+              "Very lightweight and suitable for juniors",
+              "Affordable entry from a reputable brand",
+              "Aids in learning proper technique"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm02",
@@ -2441,7 +4522,56 @@
               "price": 999,
               "url": "https://www.flipkart.com/search?q=butterfly+stayer+1200"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college",
+              "garden_backyard"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 85,
+              "speed": 35,
+              "spin": 35,
+              "forgiveness": 90,
+              "durability": 75
+            },
+            "best_for_persona": "Beginners learning basic strokes and control, seeking a reliable, forgiving racket for casual play and fundamental skill development.",
+            "not_for_persona": "Competitive players needing high spin or power for advanced attacking strategies and match winning.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Limited spin potential",
+              "Quickly outgrown by improving players",
+              "Higher price point than some alternatives"
+            ],
+            "standout_qualities": [
+              "Reliable build quality for its price",
+              "Excellent control and forgiving feel",
+              "Consistent ball bounce for practice"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm03",
@@ -2520,7 +4650,58 @@
               "price": 1799,
               "url": "https://www.flipkart.com/search?q=butterfly+timo+boll+1000"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "looper"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 85,
+              "speed": 55,
+              "spin": 65,
+              "forgiveness": 85,
+              "durability": 75
+            },
+            "best_for_persona": "Beginners learning fundamental strokes and developing spin, suitable for school or recreational club play.",
+            "not_for_persona": "Young children or advanced players seeking high-performance, customizable equipment.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Can be heavy for some younger or smaller players.",
+              "Limited options for future rubber customization.",
+              "Performance limitations for advanced play."
+            ],
+            "standout_qualities": [
+              "Facilitates learning and developing spin techniques.",
+              "Brand endorsement adds credibility.",
+              "Offers a balanced performance for skill development.",
+              "Suitable for recreational competition."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm04",
@@ -2595,7 +4776,58 @@
               "price": 2499,
               "url": "https://www.flipkart.com/search?q=dhs+hurricane+wang"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "looper",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 50,
+              "speed": 70,
+              "spin": 90,
+              "forgiveness": 40,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players focused on developing an aggressive, spin-heavy Chinese-style attack.",
+            "not_for_persona": "Beginners or casual players seeking high forgiveness and easy control for recreational play.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Heavy and head-heavy feel can be tiring for some users.",
+              "Low forgiveness for technical mistakes.",
+              "Requires faster swing speed to maximize spin and power.",
+              "Rubber quality is not equivalent to professional standalone sheets."
+            ],
+            "standout_qualities": [
+              "Authentic tacky Hurricane rubber on a ready-made racket.",
+              "Excellent for learning aggressive Chinese-style offensive play.",
+              "Exceptional spin potential for its category.",
+              "Ideal upgrade for players moving beyond entry-level rackets."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm05",
@@ -2674,7 +4906,56 @@
               "price": 3099,
               "url": "https://www.flipkart.com/search?q=stiga+torch+table+tennis"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 78,
+              "control": 70,
+              "speed": 75,
+              "spin": 70,
+              "forgiveness": 65,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players seeking a faster, carbon-enhanced ready-made racket for all-round to offensive club play and skill progression.",
+            "not_for_persona": "Advanced players needing customizability, or those seeking pro-level performance and specific rubber/blade combinations.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Stock rubbers do not fully utilize the blade's potential",
+              "Limited to no customization options for rubbers",
+              "Better custom racket options exist at a similar price point"
+            ],
+            "standout_qualities": [
+              "Rare carbon-blade construction for a ready-made racket",
+              "Offers a crisper and faster feel than all-wood ready-mades",
+              "Comfortable and balanced weight for various players",
+              "Versatile rubbers suitable for all-round and offensive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm06",
@@ -2747,7 +5028,50 @@
               "price": 3699,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=nittaku_shake_1000"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 75,
+              "speed": 50,
+              "spin": 75,
+              "forgiveness": 70,
+              "durability": 35
+            },
+            "best_for_persona": "Intermediate players focusing on developing all-round technique and touch, valuing premium feel over raw speed.",
+            "not_for_persona": "Offensive players who prioritize high speed and power in their game.",
+            "common_complaints": [
+              "Lower speed for aggressive offensive play",
+              "Blade prone to cosmetic damage"
+            ],
+            "standout_qualities": [
+              "Exceptional tactile feel and touch",
+              "High-quality Japanese craftsmanship",
+              "Balanced spin and control for technical development"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm07",
@@ -2835,7 +5159,56 @@
               "price": 2699,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=tibhar_pro_xd"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "academy_training",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 75,
+              "speed": 70,
+              "spin": 75,
+              "forgiveness": 75,
+              "durability": 80
+            },
+            "best_for_persona": "Club players transitioning from beginner rackets, seeking balanced spin and speed to improve their competitive game.",
+            "not_for_persona": "Juniors needing a very light racket or advanced players who require custom rubber setups.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Lack of customization options due to pre-glued setup",
+              "Heavier feel can be sluggish for some users",
+              "Availability can be an issue in certain regions"
+            ],
+            "standout_qualities": [
+              "Superior spin performance from quality 1Q rubbers",
+              "Well-balanced speed, spin, and control for progression",
+              "Good value for genuine Tibhar brand quality"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm08",
@@ -2922,7 +5295,55 @@
               "price": 3999,
               "url": "https://www.megaspin.net/store/?cPath=63&products_id=donic_waldner_3000"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "looper",
+              "spin_focused",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "office_casual",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 80,
+              "control": 70,
+              "speed": 75,
+              "spin": 80,
+              "forgiveness": 55,
+              "durability": 50
+            },
+            "best_for_persona": "Intermediate to advanced players seeking an offensive, spin-focused ready-made racket for competitive club play.",
+            "not_for_persona": "Beginners needing maximum control for fundamental skill development or players who prefer custom setups.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 20,
+            "common_complaints": [
+              "Rubbers are not easily replaceable, leading to racket replacement when worn.",
+              "Price point approaches entry-level custom racket costs."
+            ],
+            "standout_qualities": [
+              "Offers strong offensive characteristics and high spin for a ready-made racket.",
+              "High-quality construction and performance for its category."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm09",
@@ -2984,7 +5405,54 @@
               "price": 999,
               "url": "https://www.flipkart.com/search?q=stag+iconic+premium+table+tennis"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "academy_training",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 85,
+              "speed": 40,
+              "spin": 45,
+              "forgiveness": 80,
+              "durability": 30
+            },
+            "best_for_persona": "Beginners and school/college students seeking an affordable, playable racket for casual fun or starting local tournaments.",
+            "not_for_persona": "Intermediate or advanced players needing high speed, spin, or equipment that allows for future upgrades.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Limited performance ceiling for speed and spin",
+              "Rubbers have shorter lifespan compared to premium options",
+              "No upgrade path due to pre-glued components"
+            ],
+            "standout_qualities": [
+              "Excellent value for money with playable sponge thickness",
+              "Widely available and a popular choice for beginners",
+              "Suitable for entry-level competitive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm10",
@@ -3044,7 +5512,60 @@
               "price": 549,
               "url": "https://www.flipkart.com/search?q=stallion+table+tennis+racket"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 90,
+              "speed": 25,
+              "spin": 25,
+              "forgiveness": 85,
+              "durability": 50
+            },
+            "best_for_persona": "Absolute beginners, kids, and casual players seeking an affordable, easy-to-control racket for basic stroke learning.",
+            "not_for_persona": "Intermediate players or those seeking performance, spin, or speed for competitive play.",
+            "learning_curve_hours": 3,
+            "upgrade_after_months": 2,
+            "common_complaints": [
+              "Performance limitations are quickly reached",
+              "Rubbers lack responsiveness and feel",
+              "Inconsistent manufacturing quality"
+            ],
+            "standout_qualities": [
+              "Very affordable entry-level price",
+              "Excellent control for new players",
+              "Lightweight and comfortable for younger users"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tt_rm11",
@@ -3104,7 +5625,60 @@
               "price": 2199,
               "url": "https://www.flipkart.com/search?q=killerspin+jet+200"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 90,
+              "speed": 40,
+              "spin": 50,
+              "forgiveness": 90,
+              "durability": 85
+            },
+            "best_for_persona": "Adult beginners prioritizing control and build quality for recreational play or learning fundamental table tennis skills.",
+            "not_for_persona": "Competitive intermediate or advanced players needing high power, speed, or spin for aggressive play.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Higher price point for its performance level.",
+              "Performance limitations for progressing players."
+            ],
+            "standout_qualities": [
+              "Exceptional build quality and aesthetic appeal.",
+              "Outstanding control for precise shot placement.",
+              "Attractive design, suitable as a gift."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     }
