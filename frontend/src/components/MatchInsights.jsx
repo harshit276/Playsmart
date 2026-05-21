@@ -620,6 +620,11 @@ export default function MatchInsights({
             </div>
           )}
 
+          {/* Coach-style metrics — tempo, aggression, variety, recovery,
+              side balance, and a quality-over-time sparkline. Pure math
+              on perShot[], no AI calls, no curation dependency. */}
+          <MatchMetricsPanel perShot={perShot} sport={sport} />
+
           {/* Per-type quality — consistency for n≥2, form score for n=1 */}
           {populatedTypes.length > 0 && (
             <div>
@@ -805,6 +810,266 @@ function _seekToShot(timestamp) {
     }
   } catch {}
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Coach-style match metrics computed from the per-shot data we already
+// have. No AI inference, no external curation — pure math on shot
+// timestamps + types + confidence. Universally applicable across all
+// sports because every coach tracks tempo, aggression, variety and
+// recovery time (the units differ, the concepts don't).
+// ────────────────────────────────────────────────────────────────────
+
+const ATTACK_KEYWORDS = [
+  "smash", "kill", "spike", "winner", "attack", "drive_loop",
+  "forehand_drive", "backhand_drive", "loop", "pull", "hook", "cut",
+  "punch", "hit", "drive", "third_shot_drive",
+];
+const DEFENSE_KEYWORDS = [
+  "clear", "lob", "block", "dink", "push", "chop", "defense", "defensive",
+  "drop", "net_shot", "lift", "dig", "lift_shot",
+];
+
+const PRO_BENCHMARKS = {
+  badminton:    { tempo: 10,  aggression: 35, variety: 5, recovery: 3 },
+  tennis:       { tempo: 4,   aggression: 25, variety: 4, recovery: 5 },
+  table_tennis: { tempo: 30,  aggression: 40, variety: 5, recovery: 1.5 },
+  pickleball:   { tempo: 12,  aggression: 25, variety: 4, recovery: 3 },
+  squash:       { tempo: 15,  aggression: 25, variety: 4, recovery: 2.5 },
+  cricket:      { tempo: 1,   aggression: 40, variety: 4, recovery: 30 },
+  golf:         { tempo: 0.5, aggression: 0,  variety: 3, recovery: 120 },
+  basketball:   { tempo: 6,   aggression: 60, variety: 3, recovery: 10 },
+  volleyball:   { tempo: 8,   aggression: 30, variety: 4, recovery: 4 },
+  baseball:     { tempo: 1,   aggression: 30, variety: 3, recovery: 20 },
+};
+
+function _shotMatchesKeyword(shot, kws) {
+  const t = ((shot.type || shot.label || shot.name || "") + "").toLowerCase();
+  for (const k of kws) if (t.includes(k)) return true;
+  return false;
+}
+
+function computeMatchMetrics(perShot, durationSec, sport) {
+  if (!perShot || perShot.length === 0) return null;
+  const N = perShot.length;
+  // Fall back to (max timestamp + 1s) if caller didn't pass duration.
+  // Good enough for tempo math when video duration isn't plumbed through.
+  let dur = Number(durationSec) || 0;
+  if (!dur) {
+    const tsList = perShot.map((s) => Number(s.timestamp)).filter((t) => Number.isFinite(t));
+    if (tsList.length > 0) dur = Math.max(...tsList) + 1;
+  }
+
+  // 1. Tempo — shots per minute (only meaningful when we know duration)
+  const tempo = dur > 0 ? (N / dur) * 60 : null;
+
+  // 2. Aggression — % of shots that match an offensive keyword
+  let attack = 0, defense = 0;
+  for (const s of perShot) {
+    if (_shotMatchesKeyword(s, ATTACK_KEYWORDS)) attack++;
+    else if (_shotMatchesKeyword(s, DEFENSE_KEYWORDS)) defense++;
+  }
+  const aggressionPct = N > 0 ? (attack / N) * 100 : 0;
+
+  // 3. Variety — distinct shot types in this session
+  const types = new Set(
+    perShot.map((s) => (s.type || s.label || "").toLowerCase()).filter(Boolean),
+  );
+  const varietyCount = types.size;
+
+  // 4. Recovery — avg seconds between consecutive shots
+  const ts = perShot
+    .map((s) => Number(s.timestamp))
+    .filter((t) => Number.isFinite(t))
+    .sort((a, b) => a - b);
+  let recoveryAvg = null;
+  if (ts.length >= 2) {
+    let sum = 0;
+    for (let i = 1; i < ts.length; i++) sum += ts[i] - ts[i - 1];
+    recoveryAvg = sum / (ts.length - 1);
+  }
+
+  // 5. Side balance — FH vs BH
+  let fh = 0, bh = 0;
+  for (const s of perShot) {
+    const t = ((s.type || s.label || s.name || "") + "").toLowerCase();
+    if (t.includes("forehand")) fh++;
+    else if (t.includes("backhand")) bh++;
+  }
+  const sideTotal = fh + bh;
+
+  // 6. Quality curve — confidence over time
+  const trend = perShot
+    .filter((s) => Number.isFinite(s.timestamp) && s.confidence != null)
+    .map((s) => ({ t: s.timestamp, q: Math.round((s.confidence || 0) * 100) }))
+    .sort((a, b) => a.t - b.t);
+
+  // 7. Peak speed (only if speed data exists)
+  const speeds = perShot.map((s) => Number(s.speed) || 0).filter((v) => v > 0);
+  const peakSpeed = speeds.length ? Math.max(...speeds) : null;
+  const avgSpeed = speeds.length ? speeds.reduce((a, b) => a + b, 0) / speeds.length : null;
+
+  return {
+    totalShots: N,
+    durationSec: dur,
+    tempo,
+    aggressionPct, attackCount: attack, defenseCount: defense,
+    varietyCount,
+    recoveryAvg,
+    forehandCount: fh, backhandCount: bh, sideTotal,
+    trend,
+    peakSpeed, avgSpeed,
+  };
+}
+
+function _toneVs(value, benchmark, higherIsBetter = true) {
+  if (value == null || !benchmark) return "text-zinc-300";
+  const ratio = value / benchmark;
+  if (higherIsBetter) {
+    if (ratio >= 0.9) return "text-lime-400";
+    if (ratio >= 0.6) return "text-amber-300";
+    return "text-red-400";
+  }
+  // lower is better (recovery time)
+  if (ratio <= 1.1) return "text-lime-400";
+  if (ratio <= 1.5) return "text-amber-300";
+  return "text-red-400";
+}
+
+function MatchMetricsPanel({ perShot, durationSec, sport }) {
+  const m = useMemo(
+    () => computeMatchMetrics(perShot, durationSec, sport),
+    [perShot, durationSec, sport],
+  );
+  if (!m) return null;
+  const sportLc = (sport || "").toLowerCase();
+  const bench = PRO_BENCHMARKS[sportLc] || PRO_BENCHMARKS.badminton;
+
+  // Quality-curve sparkline geometry — pure SVG, no chart lib.
+  const sparkW = 280, sparkH = 60;
+  let sparkPath = null;
+  if (m.trend.length >= 2) {
+    const minT = m.trend[0].t;
+    const maxT = m.trend[m.trend.length - 1].t || (minT + 1);
+    const xs = (t) => ((t - minT) / Math.max(0.001, maxT - minT)) * sparkW;
+    const ys = (q) => sparkH - (q / 100) * sparkH;
+    sparkPath = m.trend.map((p, i) => `${i === 0 ? "M" : "L"}${xs(p.t).toFixed(1)},${ys(p.q).toFixed(1)}`).join(" ");
+  }
+
+  return (
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1">
+          <TrendingUp className="w-3 h-3 text-lime-400" /> Match metrics
+        </p>
+        <p className="text-[10px] text-zinc-500">vs {sportLc || "pro"} avg</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {/* TEMPO */}
+        <div className="bg-zinc-800/40 rounded-lg p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Tempo</p>
+          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.tempo, bench.tempo, true)}`}>
+            {m.tempo != null ? m.tempo.toFixed(1) : "—"}
+          </p>
+          <p className="text-[10px] text-zinc-500">shots/min · pro ~{bench.tempo}</p>
+        </div>
+
+        {/* AGGRESSION */}
+        <div className="bg-zinc-800/40 rounded-lg p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Aggression</p>
+          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.aggressionPct, bench.aggression, true)}`}>
+            {Math.round(m.aggressionPct)}%
+          </p>
+          <p className="text-[10px] text-zinc-500">attack shots · pro ~{bench.aggression}%</p>
+        </div>
+
+        {/* VARIETY */}
+        <div className="bg-zinc-800/40 rounded-lg p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Variety</p>
+          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.varietyCount, bench.variety, true)}`}>
+            {m.varietyCount}
+          </p>
+          <p className="text-[10px] text-zinc-500">distinct shots · pro ~{bench.variety}+</p>
+        </div>
+
+        {/* RECOVERY */}
+        <div className="bg-zinc-800/40 rounded-lg p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Recovery</p>
+          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.recoveryAvg, bench.recovery, false)}`}>
+            {m.recoveryAvg != null ? m.recoveryAvg.toFixed(1) : "—"}s
+          </p>
+          <p className="text-[10px] text-zinc-500">between shots · pro ~{bench.recovery}s</p>
+        </div>
+      </div>
+
+      {/* Side balance + peak power (only when data is meaningful) */}
+      {(m.sideTotal > 0 || m.peakSpeed) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {m.sideTotal > 0 && (
+            <div className="bg-zinc-800/40 rounded-lg p-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Forehand vs backhand</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-sm font-bold text-white">
+                  {Math.round((m.forehandCount / m.sideTotal) * 100)}% / {Math.round((m.backhandCount / m.sideTotal) * 100)}%
+                </p>
+                <p className="text-[10px] text-zinc-500">{m.forehandCount} FH · {m.backhandCount} BH</p>
+              </div>
+              <div className="h-1.5 mt-1.5 bg-zinc-900 rounded-full overflow-hidden flex">
+                <div className="h-full bg-lime-400" style={{ width: `${(m.forehandCount / m.sideTotal) * 100}%` }} />
+                <div className="h-full bg-sky-400" style={{ width: `${(m.backhandCount / m.sideTotal) * 100}%` }} />
+              </div>
+              <p className="text-[10px] text-zinc-500 mt-1">
+                {Math.abs(m.forehandCount - m.backhandCount) / m.sideTotal > 0.6
+                  ? "One-sided — train the weaker side"
+                  : "Balanced across sides"}
+              </p>
+            </div>
+          )}
+          {m.peakSpeed && (
+            <div className="bg-zinc-800/40 rounded-lg p-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Peak power</p>
+              <p className="text-xl font-bold text-amber-300 mt-0.5">{Math.round(m.peakSpeed)} km/h</p>
+              <p className="text-[10px] text-zinc-500">
+                avg {m.avgSpeed ? Math.round(m.avgSpeed) : "—"} km/h across {m.totalShots} shots
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Quality curve sparkline — fatigue indicator. Shows confidence
+          per shot over the match timeline. Watch for a downward slope. */}
+      {m.trend.length >= 3 && (
+        <div className="bg-zinc-800/40 rounded-lg p-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Quality over time</p>
+            {m.trend.length >= 4 && (() => {
+              const first = m.trend.slice(0, Math.ceil(m.trend.length / 2));
+              const last = m.trend.slice(Math.floor(m.trend.length / 2));
+              const avg = (arr) => arr.reduce((s, p) => s + p.q, 0) / arr.length;
+              const delta = avg(last) - avg(first);
+              const tone = delta >= 3 ? "text-lime-400" : delta <= -3 ? "text-red-400" : "text-zinc-400";
+              const label = delta >= 3 ? "↑ improving" : delta <= -3 ? "↓ fatigue?" : "→ steady";
+              return <p className={`text-[10px] font-bold ${tone}`}>{label} ({delta >= 0 ? "+" : ""}{Math.round(delta)})</p>;
+            })()}
+          </div>
+          <svg viewBox={`0 0 ${sparkW} ${sparkH}`} className="w-full h-12">
+            <defs>
+              <linearGradient id="qFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#84cc16" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#84cc16" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {sparkPath && <path d={`${sparkPath} L${sparkW},${sparkH} L0,${sparkH} Z`} fill="url(#qFill)" />}
+            {sparkPath && <path d={sparkPath} fill="none" stroke="#84cc16" strokeWidth="1.5" />}
+          </svg>
+          <p className="text-[10px] text-zinc-500">Each dot is one shot's quality. Downward slope late = conditioning drop.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 // Side-by-side looped clip viewer: user's shot window vs pro reference.
 // Auto-loops a 2.5-sec window around the contact timestamp from the
@@ -1134,9 +1399,6 @@ function IndividualShotCard({ shot, label, sport }) {
           </div>
         )}
 
-        {/* Looped side-by-side: your clip vs the pro reference for this
-            shot type. Pure JS, no AI, works on any clip quality. */}
-        <InlineShotVsPro shot={shot} sport={sport} shotType={shot.type} />
 
         {proRef && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
@@ -1386,8 +1648,6 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
           </div>
         )}
 
-        {/* Looped side-by-side: hero shot from this group vs pro reference. */}
-        <InlineShotVsPro shot={heroShot || sample} sport={sport} shotType={sample.type} />
 
         {proRef && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
