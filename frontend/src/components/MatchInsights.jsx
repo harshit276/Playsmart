@@ -783,12 +783,10 @@ function _seekToShot(timestamp) {
 function IndividualShotCard({ shot, label, sport }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
-  // Per-shot timestamps + the replay button were removed: Gemini's
-  // timestamps frequently miss the actual contact moment so the replay
-  // showed the wrong instant. The shot type + thumbnail are enough.
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     if (!sport || !shot.type) return;
@@ -797,78 +795,136 @@ function IndividualShotCard({ shot, label, sport }) {
     });
     return () => { cancelled = true; };
   }, [sport, shot.type]);
-  // Show ONLY the shot type, not "Shot at X.Xs" — strip the timestamp
-  // suffix off the label if the caller passed one.
+
   const cleanLabel = String(label || "").replace(/\bShot at [\d.]+s\b/g, "").replace(/^\s*[·•]\s*/, "").trim() || "Shot";
+  const strengths = Array.isArray(ff.strengths) ? ff.strengths.slice(0, 3) : [];
+  const weaknesses = Array.isArray(ff.weaknesses) ? ff.weaknesses.slice(0, 3) : [];
+  const headlineFix = ff.tip || weaknesses[0] || null;
+  const scorePct = conf != null ? conf : 0;
+  const scoreTone = scorePct >= 80 ? "text-lime-400"
+    : scorePct >= 60 ? "text-sky-300"
+    : scorePct >= 40 ? "text-amber-300"
+    : "text-red-400";
+
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-3">
-      <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-        <div className="flex items-center gap-2 min-w-0">
-          {shot.thumbnail && (
-            <img
-              src={shot.thumbnail}
-              alt={cleanLabel}
-              className="shrink-0 rounded-md w-12 h-12 object-cover bg-black border border-zinc-800"
-              loading="lazy"
-            />
-          )}
-          <p className="text-sm font-semibold text-white truncate">{cleanLabel}</p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {conf != null && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-              conf >= 80 ? "bg-lime-400/15 text-lime-300"
-              : conf >= 50 ? "bg-amber-400/15 text-amber-300"
-              : "bg-zinc-800 text-zinc-400"}`}>{conf}%</span>
-          )}
-          {shot.powerLevel && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">
-              {shot.powerLevel}
-            </span>
-          )}
-          {shot.speed != null && shot.speed > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-              {Math.round(shot.speed)} km/h
-            </span>
-          )}
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl overflow-hidden">
+      {/* Compact header: thumbnail + name + quality bar (mirrors
+          ShotGroupCard layout so the UI is consistent regardless
+          of whether we group or list individual shots). */}
+      <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
+        {shot.thumbnail && (
+          <img
+            src={shot.thumbnail}
+            alt={cleanLabel}
+            className="w-20 h-20 rounded-lg object-cover bg-black shrink-0"
+            loading="lazy"
+          />
+        )}
+        <div className="flex-1 min-w-0 flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-base font-semibold text-white capitalize leading-tight">{cleanLabel}</p>
+            <div className="flex items-center gap-1.5">
+              {shot.powerLevel && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">
+                  {shot.powerLevel}
+                </span>
+              )}
+              {shot.speed != null && shot.speed > 0 && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                  {Math.round(shot.speed)} km/h
+                </span>
+              )}
+            </div>
+          </div>
+          {/* Quality bar — same as group card */}
+          <div className="space-y-1">
+            <div className="flex items-baseline justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Shot quality</span>
+              <span className={`text-base font-bold ${scoreTone}`}>{scorePct}</span>
+            </div>
+            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  scorePct >= 80 ? "bg-lime-400"
+                  : scorePct >= 60 ? "bg-sky-400"
+                  : scorePct >= 40 ? "bg-amber-400"
+                  : "bg-red-400"
+                }`}
+                style={{ width: `${Math.min(100, Math.max(2, scorePct))}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
-      {shot.reasoning && (
-        <p className="text-xs text-zinc-300 mb-2">
-          <span className="text-lime-400/80">Coach:</span> {shot.reasoning}
-        </p>
+
+      {/* Top fix callout */}
+      {headlineFix && (
+        <div className="px-3 py-2.5 bg-amber-400/8 border-b border-amber-400/20">
+          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">🎯 Top fix</p>
+          <p className="text-sm text-white leading-snug">{headlineFix}</p>
+        </div>
       )}
-      {ff.tip && (<p className="text-xs text-amber-300 mb-2">💡 {ff.tip}</p>)}
-      {Array.isArray(ff.strengths) && ff.strengths.length > 0 && (
-        <ul className="space-y-0.5 mb-1">
-          {ff.strengths.slice(0, 3).map((x, j) => (
-            <li key={`s-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-lime-400">✓</span><span>{x}</span></li>
-          ))}
-        </ul>
-      )}
-      {Array.isArray(ff.weaknesses) && ff.weaknesses.length > 0 && (
-        <ul className="space-y-0.5">
-          {ff.weaknesses.slice(0, 3).map((x, j) => (
-            <li key={`w-${j}`} className="text-[11px] text-zinc-400 flex gap-1.5"><span className="text-amber-400">⚠</span><span>{x}</span></li>
-          ))}
-        </ul>
-      )}
-      <div className="flex items-center gap-2 mt-2 flex-wrap">
-        {shot.thumbnail && (
-          <button
-            onClick={() => setPoseOpen(true)}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-          >
-            <Activity className="w-3 h-3" /> See your form
-          </button>
+
+      <div className="p-3 space-y-2.5">
+        {/* Compact chips for strengths/weaknesses */}
+        {(strengths.length > 0 || weaknesses.length > 0) && (
+          <div className="flex flex-wrap gap-1.5">
+            {strengths.map((x, j) => (
+              <span key={`s-${j}`}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-lime-300 bg-lime-400/10 border border-lime-400/20 rounded-full px-2 py-1 max-w-full">
+                <span className="text-lime-400">✓</span>
+                <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
+              </span>
+            ))}
+            {weaknesses.map((x, j) => {
+              if (x === headlineFix) return null;
+              return (
+                <span key={`w-${j}`}
+                  className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-1 max-w-full">
+                  <span className="text-amber-400">⚠</span>
+                  <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
+                </span>
+              );
+            })}
+          </div>
         )}
-        {proRef && (
-          <button
-            onClick={() => setCompareOpen(true)}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-          >
-            <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-          </button>
+
+        {/* Action buttons row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {shot.thumbnail && (
+            <button
+              onClick={() => setPoseOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Activity className="w-3 h-3" /> See your form
+            </button>
+          )}
+          {proRef && (
+            <button
+              onClick={() => setCompareOpen(true)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+            </button>
+          )}
+          {shot.reasoning && (
+            <button
+              onClick={() => setDetailsOpen((v) => !v)}
+              className="text-[11px] text-zinc-400 hover:text-white ml-auto"
+            >
+              {detailsOpen ? "Hide details ▲" : "Coach details ▼"}
+            </button>
+          )}
+        </div>
+
+        {/* Expandable coach details — long reasoning lives here so it
+            doesn't dominate the card on first read. */}
+        {detailsOpen && shot.reasoning && (
+          <div className="pt-2 border-t border-zinc-800/60">
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              <span className="text-lime-400/80 font-semibold">Coach: </span>{shot.reasoning}
+            </p>
+          </div>
         )}
       </div>
       <ProComparisonModal

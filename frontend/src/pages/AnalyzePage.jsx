@@ -306,9 +306,16 @@ export default function AnalyzePage() {
   // Accuracy mode: "keyframes" (default, fast, ~$0.001) vs "video"
   // (high-accuracy whole-video Gemini analysis, slower, ~$0.005-0.02).
   // Stored separately from analysisMode so users can compare both paths.
-  const [accuracyMode, setAccuracyMode] = useState(
-    searchParams.get("accuracy") || localStorage.getItem("playsmart_accuracy_mode") || "keyframes"
-  );
+  const [accuracyMode, setAccuracyMode] = useState(() => {
+    // Migrate stale localStorage values from the now-hidden modes
+    // ("video", "universal") to the closest visible tile so the
+    // toggle never reads as nothing-selected. Premium is closer to
+    // both than Standard so users who explicitly picked the upgraded
+    // tier stay on an upgraded tier.
+    const raw = searchParams.get("accuracy") || localStorage.getItem("playsmart_accuracy_mode") || "keyframes";
+    if (raw === "video" || raw === "universal") return "premium";
+    return raw;
+  });
   const [selectedSport, setSelectedSport] = useState(null);
 
   // Set page title
@@ -2054,7 +2061,12 @@ export default function AnalyzePage() {
         </motion.div>
       )}
 
-      {/* Accuracy mode toggle — opt-in whole-video Gemini analysis */}
+      {/* Accuracy mode toggle — opt-in whole-video Gemini analysis.
+          Two tiers only: Standard (Flash, 100 tok) and Premium (Pro,
+          250 tok). The previous "High accuracy" and "Universal" modes
+          are still functional under the hood (premium uses the
+          universal flow with the Pro model) but hidden from the UI
+          per user feedback that 4 tiles was confusing. */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium">Accuracy Mode</p>
@@ -2062,7 +2074,7 @@ export default function AnalyzePage() {
             View plans →
           </Link>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => { setAccuracyMode("keyframes"); try { localStorage.setItem("playsmart_accuracy_mode", "keyframes"); } catch {} }}
@@ -2077,34 +2089,10 @@ export default function AnalyzePage() {
             </div>
             <p className="text-[11px] text-zinc-400">Browser finds shots + measures angles. Fast, low cost.</p>
           </button>
-          <button
-            type="button"
-            onClick={() => { setAccuracyMode("video"); try { localStorage.setItem("playsmart_accuracy_mode", "video"); } catch {} }}
-            className={`text-left rounded-xl border p-3 transition-all ${
-              accuracyMode === "video"
-                ? "border-sky-400/50 bg-sky-400/5"
-                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
-            }`}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-white">High accuracy 🎥</span>
-              <span className="text-[10px] text-zinc-500">~12s · ~$0.01</span>
-            </div>
-            <p className="text-[11px] text-zinc-400">Whole video to AI Coach + measured metrics. Best for racquet sports.</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setAccuracyMode("universal"); try { localStorage.setItem("playsmart_accuracy_mode", "universal"); } catch {} }}
-            className={`text-left rounded-xl border p-3 transition-all ${
-              accuracyMode === "universal"
-                ? "border-purple-400/50 bg-purple-400/5"
-                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
-            }`}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-white">Universal</span>
-              <span className="text-[10px] text-zinc-500">~10s · 100 tok</span>
-            </div>
-            <p className="text-[11px] text-zinc-400">Any sport — swimming, snooker, golf. AI-only, no pose math.</p>
-          </button>
+          {/* "High accuracy" and "Universal" modes hidden per user
+              feedback. Premium covers both (whole-video + any sport).
+              To re-enable, search for accuracyMode === "video" and
+              "universal" — the runtime paths are intact. */}
           <button
             type="button"
             onClick={() => { setAccuracyMode("premium"); try { localStorage.setItem("playsmart_accuracy_mode", "premium"); } catch {} }}
