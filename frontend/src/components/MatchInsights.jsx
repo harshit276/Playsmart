@@ -806,6 +806,122 @@ function _seekToShot(timestamp) {
   } catch {}
 }
 
+// Auto-runs pose detection on a shot's contact-frame thumbnail and
+// renders the annotated skeleton + per-joint angle bars inline. Pure
+// client-side (MoveNet via TFJS), no network cost — safe to fire on
+// every shot card. Falls back to "no curated range" when the sport+
+// shot combo isn't in the IDEAL_ANGLES table.
+function InlinePoseAnalysis({ thumbnail, sport, shotType, onOpenFull }) {
+  const [state, setState] = useState({ phase: "idle", result: null, error: null });
+  const firedRef = useRef(null);
+
+  useEffect(() => {
+    if (!thumbnail) return;
+    const key = `${sport}::${shotType}::${thumbnail.slice(0, 60)}`;
+    if (firedRef.current === key) return;
+    firedRef.current = key;
+    let cancelled = false;
+    setState({ phase: "running", result: null, error: null });
+    (async () => {
+      try {
+        const mod = await import("@/ai/poseOverlay");
+        const r = await mod.analyzePoseOnFrame(thumbnail, sport, shotType, { maxDim: 400 });
+        if (cancelled) return;
+        if (r?.error) setState({ phase: "failed", result: null, error: r.error });
+        else setState({ phase: "done", result: r, error: null });
+      } catch (e) {
+        if (!cancelled) setState({ phase: "failed", result: null, error: e.message || "pose failed" });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [thumbnail, sport, shotType]);
+
+  if (!thumbnail) return null;
+  const { phase, result, error } = state;
+
+  return (
+    <div className="bg-zinc-950/50 border border-zinc-800 rounded-lg overflow-hidden mt-2">
+      <div className="px-2.5 py-1.5 bg-zinc-900/70 border-b border-zinc-800 flex items-center justify-between">
+        <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold flex items-center gap-1">
+          <Activity className="w-3 h-3" /> Pose overlay
+        </p>
+        {result && onOpenFull && (
+          <button onClick={onOpenFull} className="text-[10px] text-zinc-400 hover:text-white">Open full ↗</button>
+        )}
+      </div>
+      {phase === "running" && (
+        <div className="flex items-center gap-2 px-3 py-3">
+          <Loader2 className="w-3.5 h-3.5 text-lime-400 animate-spin" />
+          <p className="text-[11px] text-zinc-500">Reading your skeleton…</p>
+        </div>
+      )}
+      {phase === "failed" && (
+        <p className="text-[11px] text-zinc-500 px-3 py-3 leading-snug">
+          {error === "no-pose-detected"
+            ? "Body wasn't clearly visible at contact — try a side-angle clip."
+            : "Couldn't read pose from this frame."}
+        </p>
+      )}
+      {phase === "done" && result && (
+        <div className="grid grid-cols-[140px_1fr] gap-2 p-2">
+          {/* Annotated thumbnail */}
+          <button
+            onClick={onOpenFull}
+            className="block bg-black rounded overflow-hidden cursor-zoom-in"
+            title="Click for full view"
+          >
+            <img src={result.annotatedDataUrl} alt="Skeleton" className="w-full h-auto block" />
+          </button>
+          {/* Compact angle bars */}
+          <div className="space-y-1.5">
+            {!result.hasIdealRange && (
+              <p className="text-[10px] text-zinc-500 italic leading-tight">
+                No curated angle target for this shot — measurements only.
+              </p>
+            )}
+            {result.measurements.length === 0 ? (
+              <p className="text-[10px] text-zinc-500">No measurable joints.</p>
+            ) : result.measurements.map((m) => {
+              const tone =
+                m.status === "good" ? { dot: "bg-lime-400", text: "text-lime-300", label: "GOOD" } :
+                m.status === "okay" ? { dot: "bg-amber-400", text: "text-amber-300", label: "CLOSE" } :
+                m.status === "off"  ? { dot: "bg-red-400",  text: "text-red-300",  label: "OFF" } :
+                                      { dot: "bg-zinc-500", text: "text-zinc-400", label: "—" };
+              const jointLabel = { elbow: "Elbow", shoulder: "Shoulder", knee: "Knee" }[m.joint] || m.joint;
+              return (
+                <div key={m.joint}>
+                  <div className="flex items-baseline justify-between gap-1">
+                    <span className="text-[10px] text-zinc-400 font-semibold">{jointLabel}</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[11px] font-bold text-white">{m.value}°</span>
+                      {m.ideal && (
+                        <span className="text-[9px] text-zinc-600">/{m.ideal.target}°</span>
+                      )}
+                      <span className={`text-[9px] font-bold ${tone.text} ml-0.5`}>{tone.label}</span>
+                    </div>
+                  </div>
+                  {m.ideal && (
+                    <div className="relative h-1 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="absolute h-full bg-lime-400/30"
+                        style={{
+                          left: `${Math.max(0, Math.min(100, (m.ideal.min / 180) * 100))}%`,
+                          width: `${Math.max(0, Math.min(100, ((m.ideal.max - m.ideal.min) / 180) * 100))}%`,
+                        }} />
+                      <div className={`absolute w-0.5 h-full ${tone.dot}`}
+                        style={{ left: `${Math.max(0, Math.min(100, (m.value / 180) * 100))}%` }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function IndividualShotCard({ shot, label, sport }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
@@ -988,24 +1104,28 @@ function IndividualShotCard({ shot, label, sport }) {
           </div>
         )}
 
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-          {shot.thumbnail && (
-            <button
-              onClick={() => setPoseOpen(true)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Activity className="w-3 h-3" /> See your form
-            </button>
-          )}
-          {proRef && (
+        {/* Auto pose-overlay — runs MoveNet client-side on the contact
+            frame and grades each joint against the sport+shot's ideal
+            range. Click to open full view. */}
+        {shot.thumbnail && (
+          <InlinePoseAnalysis
+            thumbnail={shot.thumbnail}
+            sport={sport}
+            shotType={shot.type}
+            onOpenFull={() => setPoseOpen(true)}
+          />
+        )}
+
+        {proRef && (
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
             <button
               onClick={() => setCompareOpen(true)}
               className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
             >
               <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       <ProComparisonModal
         open={compareOpen}
@@ -1244,24 +1364,27 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
           </div>
         )}
 
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-          {heroShot?.thumbnail && (
-            <button
-              onClick={() => setPoseOpen(true)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Activity className="w-3 h-3" /> See your form
-            </button>
-          )}
-          {proRef && (
+        {/* Auto pose-overlay on the group's hero (highest-confidence)
+            shot — same MoveNet + ideal-angle grading as IndividualShotCard. */}
+        {heroShot?.thumbnail && (
+          <InlinePoseAnalysis
+            thumbnail={heroShot.thumbnail}
+            sport={sport}
+            shotType={sample.type}
+            onOpenFull={() => setPoseOpen(true)}
+          />
+        )}
+
+        {proRef && (
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
             <button
               onClick={() => setCompareOpen(true)}
               className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
             >
               <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       <ProComparisonModal
         open={compareOpen}
@@ -1292,14 +1415,11 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   const [headlineShot, setHeadlineShot] = useState(null);
   const userVideoRef = useRef(null);
   const userVideoUrlRef = useRef(null);
-  // Auto-AI-Correct state: runs ONCE per headline shot when both the
-  // shot + sport + thumbnail are ready. Free tier so we burn the
-  // generation as a default ("here's your corrected smash") rather
-  // than gating behind a click.
-  const [autoGenStatus, setAutoGenStatus] = useState("idle"); // idle | running | done | failed
-  const [autoGenMessage, setAutoGenMessage] = useState("");
-  const [autoGenVideoUrl, setAutoGenVideoUrl] = useState(null);
-  const autoGenFiredRef = useRef(null);
+  // AI Correct generation removed — Replicate motion-transfer models
+  // are too slow + flaky to be a foreground feature right now (60-180s,
+  // sometimes failing even with billing). Keeping the backend endpoint
+  // + /test-ai-gen test bench so we can re-enable later (likely as a
+  // notification-on-completion flow instead of inline auto-fire).
 
   // Build an object URL for the user's video file once — we use it as
   // the src of a <video> element and seek to the shot's window for
@@ -1343,86 +1463,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     return () => { cancelled = true; };
   }, [sport, perShot]);
 
-  // Auto-trigger ONE AI Correct generation for the headline shot when
-  // analysis completes. We're on Replicate's free tier so it's safe to
-  // burn one generation per analysis as the default "here's your
-  // corrected swing" output. Manual per-shot buttons still work for
-  // additional generations.
-  useEffect(() => {
-    if (!headlineShot || !sport) return;
-    if (!headlineShot.thumbnail || typeof headlineShot.timestamp !== "number") return;
-    // Dedupe: only fire once per (shot, sport) combination per mount
-    const fireKey = `${sport}::${headlineShot.type || headlineShot.label}::${headlineShot.timestamp}`;
-    if (autoGenFiredRef.current === fireKey) return;
-    autoGenFiredRef.current = fireKey;
-
-    let cancelled = false;
-    (async () => {
-      setAutoGenStatus("running");
-      setAutoGenMessage("Generating your AI-corrected swing…");
-      setAutoGenVideoUrl(null);
-      try {
-        const api = (await import("@/lib/api")).default;
-        const hsff = headlineShot.formFeedback || {};
-        const hsWeaknesses = Array.isArray(hsff.weaknesses) ? hsff.weaknesses.slice(0, 3) : [];
-        const hsStrengths = Array.isArray(hsff.strengths) ? hsff.strengths.slice(0, 3) : [];
-        const { data } = await api.post("/generate-corrected-shot", {
-          reference_image_b64: headlineShot.thumbnail,
-          timestamp_sec: headlineShot.timestamp,
-          sport,
-          shot_type: headlineShot.type || headlineShot.label || "shot",
-          // Personalize the prompt with the headline shot's coach feedback
-          // so the generated video targets THIS user's actual mistakes.
-          top_fix: hsff.tip || hsWeaknesses[0] || null,
-          weaknesses: hsWeaknesses,
-          strengths: hsStrengths,
-        }, { timeout: 30000 });
-
-        if (cancelled) return;
-        if (data?.status === "feature_unavailable") {
-          setAutoGenStatus("failed");
-          setAutoGenMessage(data.message || "");
-          return;
-        }
-        if (data?.status === "done" && data?.video_url) {
-          setAutoGenStatus("done");
-          setAutoGenVideoUrl(data.video_url);
-          setAutoGenMessage(data.cached ? "Loaded from previous generation." : "Done!");
-          return;
-        }
-        const jobId = data?.job_id;
-        if (!jobId) throw new Error("No job_id returned");
-
-        // Poll up to ~4 minutes
-        for (let i = 0; i < 80; i++) {
-          if (cancelled) return;
-          await new Promise((r) => setTimeout(r, 3000));
-          try {
-            const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
-            if (cancelled) return;
-            if (poll?.status === "done" && poll?.video_url) {
-              setAutoGenStatus("done");
-              setAutoGenVideoUrl(poll.video_url);
-              setAutoGenMessage("Your AI-corrected swing is ready.");
-              return;
-            }
-            if (poll?.status === "failed") {
-              setAutoGenStatus("failed");
-              setAutoGenMessage(poll.error || "Generation failed — tokens refunded.");
-              return;
-            }
-          } catch { /* keep polling */ }
-        }
-        setAutoGenStatus("failed");
-        setAutoGenMessage("Generation taking longer than expected.");
-      } catch (e) {
-        if (cancelled) return;
-        setAutoGenStatus("failed");
-        setAutoGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [headlineShot, sport]);
+  // AI Correct auto-fire removed (see note above).
 
   // Seek the user-video to the shot's contact window (-1s .. +1.5s)
   // and auto-loop. Mirrors the YouTube iframe's behavior on the pro
@@ -1482,7 +1523,6 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
         </p>
         <p className="text-[10px] text-zinc-500 mt-0.5">
           Your clip loops on the left. The pro's segment loops on the right.
-          The AI-corrected version of your swing appears below once it finishes generating.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
@@ -1540,61 +1580,6 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           >
             Open on YouTube ↗
           </a>
-        </div>
-      )}
-      {/* Auto-generated AI Correct clip — fires once per analysis on
-          the headline shot. Free tier so we burn it as a default
-          rather than gating behind a click. */}
-      {autoGenStatus !== "idle" && (
-        <div className="border-t border-amber-400/20">
-          <div className="px-4 py-2 bg-purple-400/5 flex items-center gap-2">
-            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold flex items-center gap-1">
-              ✨ AI-corrected version of your swing
-              {autoGenStatus === "running" && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
-            </p>
-            {autoGenMessage && (
-              <p className="text-[11px] text-zinc-400 ml-auto">{autoGenMessage}</p>
-            )}
-          </div>
-          {autoGenStatus === "running" && (
-            <div className="px-4 py-6 bg-zinc-900/40 flex flex-col items-center gap-2">
-              <Loader2 className="w-6 h-6 text-purple-300 animate-spin" />
-              <p className="text-[11px] text-zinc-400">Generating — usually ~75 seconds…</p>
-            </div>
-          )}
-          {autoGenStatus === "done" && autoGenVideoUrl && (
-            <>
-              <video
-                src={autoGenVideoUrl}
-                controls loop muted autoPlay playsInline
-                className="w-full bg-black"
-                data-playsmart-ai-correct
-              />
-              <div className="px-4 py-2 bg-zinc-900/40">
-                <p className="text-[10px] text-zinc-500 leading-relaxed">
-                  <span className="text-purple-300 font-bold">How to read this:</span> An AI
-                  synthesized this clip from your contact frame to show what the corrected
-                  swing would look like in YOUR body. It's NOT real footage — hands holding
-                  the racket are often distorted (model limitation). Focus on the BODY motion:
-                  torso rotation, hip drive, arm extension at contact.
-                </p>
-                <a
-                  href={autoGenVideoUrl} target="_blank" rel="noopener noreferrer" download
-                  className="text-[10px] text-purple-300 hover:text-purple-200 mt-1 inline-block"
-                >
-                  Open / download full-size ↗
-                </a>
-              </div>
-            </>
-          )}
-          {autoGenStatus === "failed" && (
-            <div className="px-4 py-2 bg-zinc-900/40">
-              <p className="text-[11px] text-zinc-500">
-                {autoGenMessage || "AI Correct isn't available right now."} The pro reference
-                above still works normally.
-              </p>
-            </div>
-          )}
         </div>
       )}
     </div>
