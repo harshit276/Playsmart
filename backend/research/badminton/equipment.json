@@ -70,7 +70,55 @@
               "price": 425,
               "url": "https://www.flipkart.com/cosco-cbx-450-multicolor-strung-badminton-racquet/p/itme53e8fhqgrwxg"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "office_casual"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 35,
+              "speed": 15,
+              "spin": 15,
+              "forgiveness": 85,
+              "durability": 85
+            },
+            "best_for_persona": "Absolute beginners and first-timers seeking an ultra-budget racket for casual backyard or garden play.",
+            "not_for_persona": "Competitive club players or anyone needing crisp response and quick maneuverability.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Heavy frame hinders quick movements",
+              "Low string tension limits shot quality",
+              "Unsuited for competitive or club-level play"
+            ],
+            "standout_qualities": [
+              "Extremely affordable entry price",
+              "Robust aluminum and steel construction for casual use",
+              "Even balance is forgiving for new players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r02",
@@ -136,7 +184,58 @@
               "price": 549,
               "url": "https://www.flipkart.com/cosco-cb-885-multicolor-strung-badminton-racquet/p/itmemh3xewzz3vxy"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "garden_backyard",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 40,
+              "speed": 70,
+              "spin": 30,
+              "forgiveness": 85,
+              "durability": 80
+            },
+            "best_for_persona": "Beginners or school players on a tight budget for casual play, backyard fun, or basic skill development.",
+            "not_for_persona": "Competitive players or those seeking advanced power, precision, and comfort for serious match play.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Excessive frame flex limits power",
+              "Uncomfortable shock on mishits",
+              "Performance limitations compared to entry-level graphite"
+            ],
+            "standout_qualities": [
+              "Lightweight for easy handling",
+              "Affordable price point",
+              "Suitable as a spare or backyard racket"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r03",
@@ -206,7 +305,58 @@
               "price": 749,
               "url": "https://www.decathlon.in/p/yonex-gr-303-badminton-racquet"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 75,
+              "speed": 40,
+              "spin": 50,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "First-time badminton players and students seeking an affordable, forgiving racket to learn fundamental strokes and enjoy casual play.",
+            "not_for_persona": "Intermediate or advanced players needing power for smashes, high string tension, or a racket that supports competitive play.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Lacks power for aggressive shots",
+              "Cannot handle high string tensions",
+              "Becomes sluggish as skill improves"
+            ],
+            "standout_qualities": [
+              "Excellent value for money",
+              "Forgiving and easy to learn with",
+              "Widely available and easy to replace"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r04",
@@ -272,7 +422,55 @@
               "price": 1399,
               "url": "https://www.flipkart.com/yonex-mp-29-lt-strung-badminton-racquet/p/itmfbg7yqe6vpmkk"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 75,
+              "speed": 75,
+              "spin": 60,
+              "forgiveness": 85,
+              "durability": 75
+            },
+            "best_for_persona": "Beginners and early intermediates seeking an all-round racket to improve technique and enjoy recreational play with enhanced power and forgiveness.",
+            "not_for_persona": "Advanced power hitters or competitive players who demand stiff shafts and head-heavy balance for maximum smashing force.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Even balance may not satisfy players seeking extreme smashing power.",
+              "Medium shaft flexibility might feel too soft for advanced players.",
+              "Higher price point for a beginner-level racket."
+            ],
+            "standout_qualities": [
+              "Graphite construction offers a significant upgrade over basic aluminum rackets.",
+              "Frame design provides enhanced shuttle repulsion and power.",
+              "Suitable for early intermediate players due to higher string tension capacity."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r05",
@@ -337,7 +535,56 @@
               "price": 949,
               "url": "https://www.flipkart.com/li-ning-xp-2020-multicolor-strung-badminton-racquet/p/itmfbpf3hhgsvbgu"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 75,
+              "speed": 80,
+              "spin": 55,
+              "forgiveness": 90,
+              "durability": 65
+            },
+            "best_for_persona": "Beginners needing an affordable, lightweight, all-round graphite racket for recreational play and developing fundamental skills without wrist strain.",
+            "not_for_persona": "Advanced players or power hitters who prioritize smash speed and consistent build quality for competitive matches.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Inconsistent build quality across different batches",
+              "Lacks smash power for stronger or advanced players",
+              "Poor resale value compared to other brands"
+            ],
+            "standout_qualities": [
+              "Exceptional value for a full-graphite frame at its price point",
+              "Lightweight design (4U) is easy on the wrist for extended play",
+              "Sufficient string tension capacity for early club-level play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r06",
@@ -408,7 +655,58 @@
               "price": 2199,
               "url": "https://www.decathlon.in/p/yonex-voltric-lite-20i-badminton-racquet"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 75,
+              "speed": 85,
+              "spin": 50,
+              "forgiveness": 90,
+              "durability": 60
+            },
+            "best_for_persona": "Beginners, juniors, or women seeking an affordable, lightweight racket for easy power and control in recreational play.",
+            "not_for_persona": "Advanced players or power hitters who demand strong smashes and stability against heavy shots.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Lacks power for aggressive smashing.",
+              "Can feel unstable against powerful shots.",
+              "Limited availability and resale value outside India."
+            ],
+            "standout_qualities": [
+              "Extremely lightweight and easy to maneuver.",
+              "Allows for higher string tension than typical beginner rackets.",
+              "Good repulsion for its weight class."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r07",
@@ -474,7 +772,59 @@
               "price": 3499,
               "url": "https://www.flipkart.com/yonex-astrox-lite-27i-strung-badminton-racquet/p/itm3f6cwehyzxhpf"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 88,
+              "control": 50,
+              "speed": 75,
+              "spin": 70,
+              "forgiveness": 65,
+              "durability": 60
+            },
+            "best_for_persona": "Intermediate players focused on developing powerful smashes and continuous attacking play without wrist strain.",
+            "not_for_persona": "Advanced players seeking a premium racket with specialized control or extreme power, or those prioritizing value over brand.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 15,
+            "common_complaints": [
+              "Uses lower-grade materials compared to global models",
+              "Shaft flexibility is a compromise for specialized playstyles",
+              "Value for money is questionable compared to competitors"
+            ],
+            "standout_qualities": [
+              "Excellent smash power for its weight class",
+              "Supports continuous attacking play",
+              "Accommodates higher string tensions for intermediate setups"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r08",
@@ -540,7 +890,59 @@
               "price": 10299,
               "url": "https://www.flipkart.com/li-ning-axforce-80-strung-badminton-racquet/p/itm5b7e9xq6gwxks"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 75,
+              "speed": 70,
+              "spin": 50,
+              "forgiveness": 20,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate to advanced players who prioritize explosive power and precision for competitive attacking play.",
+            "not_for_persona": "Beginners or casual players seeking forgiveness, ease of use, or an all-round balanced racket.",
+            "learning_curve_hours": 40,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Low forgiveness for developing technique.",
+              "High price point.",
+              "Limited regional after-sales support."
+            ],
+            "standout_qualities": [
+              "Exceptional power for attacking shots.",
+              "High string tension capacity and frame integrity.",
+              "Proven performance at competitive levels."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r09",
@@ -606,7 +1008,57 @@
               "price": 11299,
               "url": "https://www.flipkart.com/victor-thruster-k-9900-strung-badminton-racquet/p/itm6c8e9hqgrwksx"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 70,
+              "speed": 35,
+              "spin": 50,
+              "forgiveness": 75,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate to advanced attackers with strong technique and powerful smashes, seeking maximum head-heavy power.",
+            "not_for_persona": "Beginners or casual players with developing footwork and insufficient wrist/forearm strength.",
+            "learning_curve_hours": 30,
+            "common_complaints": [
+              "Slow racket recovery due to weight and balance",
+              "Demanding on wrist and forearm strength",
+              "Availability issues in some regions"
+            ],
+            "standout_qualities": [
+              "Exceptional smash power and steep angles",
+              "High torsional stability for consistent hits",
+              "Supports high string tensions for power setups"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r10",
@@ -672,7 +1124,56 @@
               "price": 11999,
               "url": "https://www.flipkart.com/yonex-arcsaber-11-pro-strung-badminton-racquet/p/itm5g6h7ewfqxhpf"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "defender",
+              "counter_attacker"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 95,
+              "speed": 75,
+              "spin": 70,
+              "forgiveness": 85,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate to advanced all-round players prioritizing precise control and versatile performance in competitive club or training settings.",
+            "not_for_persona": "Beginners on a strict budget or power-focused smashers seeking maximum raw power.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 36,
+            "common_complaints": [
+              "Lacks extreme smashing power compared to specialized attack rackets.",
+              "High price point for many players.",
+              "Prevalence of counterfeit products in certain markets."
+            ],
+            "standout_qualities": [
+              "Exceptional shuttle dwell time for superior shot placement.",
+              "Outstanding all-round versatility due to balanced specs.",
+              "Provides excellent stability for defensive play and counter-drives."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r11",
@@ -737,7 +1238,58 @@
               "price": 13999,
               "url": "https://www.flipkart.com/yonex-astrox-88d-pro-strung-badminton-racquet/p/itm6h8j7gqxwfhpr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 75,
+              "speed": 70,
+              "spin": 30,
+              "forgiveness": 25,
+              "durability": 80
+            },
+            "best_for_persona": "Advanced doubles players who dominate from the rear court, delivering powerful smashes and requiring a stiff, head-heavy racket.",
+            "not_for_persona": "Beginner or intermediate singles players needing forgiveness, quick defensive recovery, or those on a tight budget.",
+            "learning_curve_hours": 75,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Lack of forgiveness for off-center hits or defensive play.",
+              "High initial purchase price and ongoing stringing costs."
+            ],
+            "standout_qualities": [
+              "Exceptional power generation, especially from the rear court.",
+              "Optimized for fast, full swings to maximize smash potential.",
+              "Proven performance for competitive doubles attackers."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r12",
@@ -802,7 +1354,61 @@
               "price": 14999,
               "url": "https://www.flipkart.com/yonex-astrox-99-pro-strung-badminton-racquet/p/itm7j8k9gxhwqfpr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 98,
+              "control": 65,
+              "speed": 70,
+              "spin": 85,
+              "forgiveness": 25,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced attackers and power hitters who possess excellent technique, seeking maximum smash power and steep angles for competitive play.",
+            "not_for_persona": "Beginners, intermediate players, or those with developing technique who require a forgiving or easy-to-handle racket.",
+            "learning_curve_hours": 75,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Requires precise technique to avoid injury",
+              "High overall cost due to premium price and frequent restringing",
+              "Vulnerable to counterfeit products in some markets"
+            ],
+            "standout_qualities": [
+              "Delivers unparalleled smash power and steep trajectory",
+              "Utilizes advanced NAMD technology for shuttle deformation",
+              "Trusted and used by top professional players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r13",
@@ -868,7 +1474,56 @@
               "price": 5299,
               "url": "https://www.amazon.in/Perfly-BR-990P-Badminton-Racquet/dp/B086YHDC4K"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 70,
+              "speed": 55,
+              "spin": 60,
+              "forgiveness": 45,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate players seeking a powerful, head-heavy racket for competitive club play and training, prioritizing value over brand prestige.",
+            "not_for_persona": "Beginners needing high forgiveness, or advanced players requiring elite tournament credibility and resale value.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Lacks brand prestige for serious tournaments",
+              "Poor resale value",
+              "Inconsistent store availability"
+            ],
+            "standout_qualities": [
+              "Exceptional value for performance specifications",
+              "Supports high string tension",
+              "Reliable warranty and return policy"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r21",
@@ -934,7 +1589,58 @@
               "price": 1799,
               "url": "https://www.flipkart.com/apacs-ziggler-555-strung-badminton-racquet/p/itm6h7j8gxwfqhpr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 55,
+              "control": 70,
+              "speed": 65,
+              "spin": 60,
+              "forgiveness": 85,
+              "durability": 90
+            },
+            "best_for_persona": "Beginners transitioning from basic rackets seeking a durable, affordable all-rounder for recreational play.",
+            "not_for_persona": "Competitive tournament players needing top-tier performance or brand prestige.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Limited brand recognition.",
+              "Difficulty finding replacement parts in some regions.",
+              "Cosmetic paint chips easily."
+            ],
+            "standout_qualities": [
+              "Exceptional value for a full graphite frame.",
+              "High string tension capacity for its price.",
+              "Balanced feel suitable for developing players."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r22",
@@ -993,7 +1699,58 @@
               "price": 8499,
               "url": "https://www.amazon.in/Apacs-Feather-Weight-55-Badminton/dp/B08L9KQXRG"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 85,
+              "speed": 95,
+              "spin": 60,
+              "forgiveness": 30,
+              "durability": 20
+            },
+            "best_for_persona": "Advanced attackers prioritizing extreme racket speed and precise net control, comfortable adapting to an ultra-light, head-heavy feel.",
+            "not_for_persona": "Beginners, intermediate players, or those who prefer a forgiving racket with standard weight and balance characteristics.",
+            "learning_curve_hours": 40,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Challenging for most players to adapt to its unique feel.",
+              "Reduced frame durability due to the extreme lightweight construction.",
+              "Limited availability in certain markets."
+            ],
+            "standout_qualities": [
+              "World's lightest production badminton racket at 55g.",
+              "Offers exceptional net speed and control with surprising smash power.",
+              "Capable of handling very high string tensions (up to 32 lbs)."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r23",
@@ -1051,7 +1808,55 @@
               "price": 2899,
               "url": "https://www.amazon.in/Apacs-Finapi-201-Badminton-Racquet/dp/B07X4KMGZD"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "defender"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 75,
+              "speed": 65,
+              "spin": 60,
+              "forgiveness": 85,
+              "durability": 65
+            },
+            "best_for_persona": "Intermediate club players seeking a balanced, affordable racket to improve technique and compete effectively.",
+            "not_for_persona": "Elite tournament players needing specialized, top-tier performance or those prioritizing pristine aesthetics.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Cosmetic finish wears quickly.",
+              "Confusing model re-branding.",
+              "Limited after-sales service network."
+            ],
+            "standout_qualities": [
+              "Versatile all-round balance.",
+              "Forgiving yet responsive shaft.",
+              "High string tension capacity for its price."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r24",
@@ -1110,7 +1915,58 @@
               "price": 2399,
               "url": "https://www.amazon.in/Apacs-Nano-Power-900-Badminton/dp/B07T8KMGZD"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 70,
+              "speed": 65,
+              "spin": 50,
+              "forgiveness": 30,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate attackers seeking a budget-friendly, head-heavy racket for powerful smashes and aggressive, fast-swinging play.",
+            "not_for_persona": "Beginners, casual players, or those with wrist issues needing a forgiving, light, and easy-to-maneuver racket.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Can strain weaker wrists during extended play",
+              "Unforgiving for players with developing technique",
+              "Lower resale value compared to premium brands"
+            ],
+            "standout_qualities": [
+              "Exceptional power-to-price ratio for an offensive racket",
+              "Responsive frame and shaft for fast, aggressive swings",
+              "Supports high string tension for competitive setups"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r25",
@@ -1169,7 +2025,59 @@
               "price": 2899,
               "url": "https://www.amazon.in/FZ-Forza-Light-7-1-Badminton/dp/B07VHJ8K9R"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "defender",
+              "control_focused",
+              "speed_focused",
+              "blocker",
+              "counter_attacker"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 75,
+              "speed": 95,
+              "spin": 60,
+              "forgiveness": 70,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate to advanced doubles players prioritizing lightning-fast net play, defensive counters, and quick racket head speed.",
+            "not_for_persona": "Singles players or power hitters who rely on strong rear-court smashes and need an all-round racket.",
+            "common_complaints": [
+              "Lacks power for rear-court smashes",
+              "Limited availability of spares/stringing services in some regions",
+              "Higher price for a specialized racket"
+            ],
+            "standout_qualities": [
+              "Exceptional speed and maneuverability for front-court play",
+              "Good balance of control and repulsion for net interceptions",
+              "Unique Danish engineering and feel"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r26",
@@ -1228,7 +2136,54 @@
               "price": 5499,
               "url": "https://www.amazon.in/FZ-Forza-Power-988-Badminton/dp/B07XJK8L9M"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 75,
+              "speed": 60,
+              "spin": 70,
+              "forgiveness": 20,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced attackers and power hitters seeking a head-heavy, stiff racket for competitive matches and tournaments, offering high power output.",
+            "not_for_persona": "Beginners or intermediate players with developing technique, or those prioritizing forgiveness and arm comfort over raw power.",
+            "common_complaints": [
+              "Demanding frame can cause discomfort with poor technique",
+              "Brand recognition issues in some markets",
+              "Potential delays with warranty claims due to limited dealers"
+            ],
+            "standout_qualities": [
+              "Exceptional power and smash capability for attacking play",
+              "High string tension capacity for professional setups",
+              "Proven performance with competitive players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r27",
@@ -1295,7 +2250,55 @@
               "price": 1399,
               "url": "https://www.flipkart.com/hundred-powertek-1000-strung-badminton-racquet/p/itm5g6h7jxwfqhpr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 70,
+              "speed": 75,
+              "spin": 60,
+              "forgiveness": 85,
+              "durability": 50
+            },
+            "best_for_persona": "Beginner to intermediate school/college players seeking an affordable, balanced racket for casual play and skill development.",
+            "not_for_persona": "Advanced players or power hitters needing high smash speed and string tension for competitive matches.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 12,
+            "common_complaints": [
+              "Limited power for advanced smashes",
+              "Lower maximum string tension",
+              "Prone to paint chipping"
+            ],
+            "standout_qualities": [
+              "Affordable carbon-graphite construction",
+              "Balanced feel for all-round play",
+              "Good availability of stock and replacements"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r28",
@@ -1357,7 +2360,55 @@
               "price": 1999,
               "url": "https://www.flipkart.com/hundred-rock-z-90-strung-badminton-racquet/p/itm6h7j8gxwfqhpx"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 60,
+              "speed": 45,
+              "spin": 50,
+              "forgiveness": 75,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players seeking an affordable, powerful head-heavy racket to transition from beginner frames.",
+            "not_for_persona": "Beginners, players with low arm strength, or elite tournament competitors.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Can be fatiguing for players with lower arm strength.",
+              "Lower resale value compared to premium brands.",
+              "Not suitable for high-level competitive tournaments."
+            ],
+            "standout_qualities": [
+              "Excellent power-to-price ratio for an offensive racket.",
+              "More forgiving shaft than similar budget offensive rackets.",
+              "Supports higher string tensions for its price."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r29",
@@ -1415,7 +2466,56 @@
               "price": 4299,
               "url": "https://www.amazon.in/Mizuno-Fortius-65-Badminton-Racquet/dp/B08LMN2P3Q"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused",
+              "counter_attacker"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 75,
+              "speed": 85,
+              "spin": 65,
+              "forgiveness": 70,
+              "durability": 80
+            },
+            "best_for_persona": "Intermediate players seeking a fast, maneuverable racket with a slight attacking edge and premium build quality for club play.",
+            "not_for_persona": "Power hitters or advanced players who prefer heavy rackets for maximum smash power and a more substantial feel.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Limited availability in some regions",
+              "Lacks heft for power-focused players",
+              "Lower brand recognition compared to competitors"
+            ],
+            "standout_qualities": [
+              "Exceptional maneuverability and speed",
+              "Good balance of attack and defense",
+              "High-quality construction at a competitive price"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r30",
@@ -1473,7 +2573,58 @@
               "price": 8499,
               "url": "https://www.amazon.in/Mizuno-JPX-Limited-Badminton-Racquet/dp/B09MN2P3Q4"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 80,
+              "spin": 60,
+              "forgiveness": 45,
+              "durability": 90
+            },
+            "best_for_persona": "Advanced all-round players seeking a refined, neutral feel for precise, competitive all-court play and high string tensions.",
+            "not_for_persona": "Beginners or intermediate players who require more forgiveness and easier power generation.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 36,
+            "common_complaints": [
+              "Limited availability due to special runs",
+              "Lower resale value compared to top brands",
+              "High price point for the brand"
+            ],
+            "standout_qualities": [
+              "Premium materials provide a refined feel",
+              "Excellent for advanced all-court technique",
+              "Supports high string tensions for competitive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r31",
@@ -1540,7 +2691,59 @@
               "price": 16999,
               "url": "https://www.flipkart.com/yonex-astrox-88d-pro-strung-badminton-racquet/p/itm6h8j7gqxwfhqr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 75,
+              "speed": 65,
+              "spin": 70,
+              "forgiveness": 25,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced doubles rear-court attackers seeking maximum power for smashes and drives, with strong wrist and shoulder conditioning.",
+            "not_for_persona": "Beginner or intermediate players, or those with wrist/shoulder issues, seeking an easy-to-handle, forgiving racket.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Requires significant physical strength and technique",
+              "High cost of entry",
+              "Risk of purchasing non-authentic product"
+            ],
+            "standout_qualities": [
+              "Exceptional power for rear-court play",
+              "Stable frame for powerful smashes",
+              "Endorsed and used by professional athletes"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r32",
@@ -1607,7 +2810,59 @@
               "price": 16899,
               "url": "https://www.flipkart.com/yonex-astrox-88s-pro-strung-badminton-racquet/p/itm6h8j7gqxwfhqs"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "speed_focused",
+              "blocker",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "tournament_elite",
+              "tournament_open",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "office_casual",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 95,
+              "speed": 90,
+              "spin": 70,
+              "forgiveness": 65,
+              "durability": 80
+            },
+            "best_for_persona": "Advanced doubles players who dominate the front court with quick reactions, precise net play, and flat drives.",
+            "not_for_persona": "Beginners or aggressive back-court singles players seeking maximum power for smashes and clears.",
+            "common_complaints": [
+              "Lacks significant power for deep court play",
+              "Shaft flexibility might not suit players preferring very stiff frames",
+              "High cost for casual players"
+            ],
+            "standout_qualities": [
+              "Exceptional racket head speed for quick reactions",
+              "Precise control and crisp feel on flat shots",
+              "Optimized for front-court interceptions and net play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r33",
@@ -1674,7 +2929,58 @@
               "price": 19499,
               "url": "https://www.flipkart.com/yonex-astrox-100-zz-strung-badminton-racquet/p/itm7j8k9gxhwqfps"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 100,
+              "control": 85,
+              "speed": 50,
+              "spin": 90,
+              "forgiveness": 15,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced singles attackers seeking maximum smash power and precision for competitive tournament play.",
+            "not_for_persona": "Beginner or intermediate players seeking an easy-to-use, forgiving racket for casual or recreational play.",
+            "learning_curve_hours": 50,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Very demanding to wield effectively",
+              "High price point",
+              "Risk of counterfeit products"
+            ],
+            "standout_qualities": [
+              "Exceptional smash power and steepness",
+              "Precise shot placement",
+              "Proven performance at elite level"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r34",
@@ -1741,7 +3047,59 @@
               "price": 11999,
               "url": "https://www.flipkart.com/li-ning-lin-dan-pd9000-strung-badminton-racquet/p/itm5b7e9xq6gwxky"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 75,
+              "speed": 80,
+              "spin": 60,
+              "forgiveness": 30,
+              "durability": 70
+            },
+            "best_for_persona": "Advanced attackers seeking maximum power and precision for competitive play, inspired by Lin Dan's aggressive style.",
+            "not_for_persona": "Beginner or intermediate players lacking advanced technique and consistent shot execution.",
+            "common_complaints": [
+              "Unforgiving for players without advanced technique.",
+              "Paint durability is lower than some competitors.",
+              "Inconsistent after-sales support in some regions."
+            ],
+            "standout_qualities": [
+              "Signature model with strong professional pedigree.",
+              "Supports high string tensions for professional setups.",
+              "Offers powerful head-heavy feel in a relatively wrist-friendly 4U weight."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_r35",
@@ -1808,7 +3166,57 @@
               "price": 12499,
               "url": "https://www.flipkart.com/victor-thruster-k-f-strung-badminton-racquet/p/itm6c8e9hqgrwksy"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 75,
+              "speed": 85,
+              "spin": 40,
+              "forgiveness": 25,
+              "durability": 80
+            },
+            "best_for_persona": "Advanced doubles players who prioritize extreme rear-court power and fast, flat attacking shots to dominate competitive matches.",
+            "not_for_persona": "Beginners or intermediate players with developing technique, arm strength, or those prone to elbow strain.",
+            "common_complaints": [
+              "Requires strong technique to avoid strain",
+              "Availability issues in some regions",
+              "Risk of encountering counterfeit products"
+            ],
+            "standout_qualities": [
+              "Exceptional power transfer on fast swings",
+              "Optimized for rear-court doubles attacking",
+              "Supports very high string tension for pros"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -1874,7 +3282,52 @@
               "price": 2299,
               "url": "https://www.amazon.in/Perfly-BS-560-Badminton-Shoes/dp/B084KQXRGT"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "improve_technique",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 10,
+              "control": 60,
+              "speed": 30,
+              "spin": 10,
+              "forgiveness": 80,
+              "durability": 40
+            },
+            "best_for_persona": "Beginners seeking an affordable, comfortable shoe for casual badminton play and basic court movement.",
+            "not_for_persona": "Competitive players needing lightweight shoes with strong lateral support for explosive, agile movements.",
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Heavier than many court shoes.",
+              "Cushioning wears out relatively quickly.",
+              "Lacks robust lateral support for aggressive play."
+            ],
+            "standout_qualities": [
+              "Effective non-marking sole for all indoor courts.",
+              "Offers good shock absorption for its price point.",
+              "Low buying risk due to clear sizing and warranty."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh02",
@@ -1934,7 +3387,51 @@
               "price": 1299,
               "url": "https://www.flipkart.com/nivia-hy-court-2-0-badminton-shoes-men/p/itmfg5h6jxwqfhpr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "garden_backyard"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 30,
+              "speed": 70,
+              "spin": 0,
+              "forgiveness": 40,
+              "durability": 30
+            },
+            "best_for_persona": "Beginners seeking an affordable, lightweight non-marking shoe for casual, recreational badminton play.",
+            "not_for_persona": "Competitive players needing strong support, durable cushioning, and consistent grip for frequent, intense matches.",
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Cushioning degrades quickly with regular use.",
+              "Lacks adequate arch and ankle support.",
+              "Outsole grip wears quickly on dusty courts."
+            ],
+            "standout_qualities": [
+              "Very affordable with a non-marking sole.",
+              "Lightweight for its price category.",
+              "Easily accessible in the market."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh03",
@@ -1994,7 +3491,52 @@
               "price": 3799,
               "url": "https://www.flipkart.com/yonex-power-cushion-shb-37ex-badminton-shoes/p/itm6h7j8gxwfqhpz"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 75,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 65
+            },
+            "best_for_persona": "Beginners seeking a lightweight, cushioned shoe from a trusted brand for recreational play and basic skill development.",
+            "not_for_persona": "Advanced players needing maximum lateral stability and grip for competitive drills and intense multi-shuttle training.",
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Outsole rubber is harder than premium models.",
+              "Lacks advanced lateral stability for intense drills.",
+              "High price point for an entry-level shoe."
+            ],
+            "standout_qualities": [
+              "Superior heel impact absorption due to Power Cushion.",
+              "Lightweight design for comfortable movement.",
+              "Reliable quality from a well-known brand."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh04",
@@ -2054,7 +3596,51 @@
               "price": 4499,
               "url": "https://www.flipkart.com/li-ning-saga-lite-3-badminton-shoes-men/p/itm5g6h7jxwfqhpz"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 70,
+              "speed": 88,
+              "spin": 0,
+              "forgiveness": 68,
+              "durability": 45
+            },
+            "best_for_persona": "Intermediate players prioritizing speed and agility for high-volume daily training sessions and quick court movements.",
+            "not_for_persona": "Players with wide feet, those who drag their toes heavily, or elite tournament players needing maximum impact absorption.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 12,
+            "common_complaints": [
+              "Upper mesh prone to wear at toe-bend",
+              "Cushioning not optimal for extreme impact",
+              "Narrow fit for wider feet"
+            ],
+            "standout_qualities": [
+              "Very lightweight for agile movement",
+              "Good balance of comfort and responsiveness",
+              "Suitable for frequent practice sessions"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh05",
@@ -2114,7 +3700,52 @@
               "price": 6999,
               "url": "https://www.flipkart.com/victor-a960-badminton-shoes-men/p/itm5g6h7jxwfqhpx"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 80,
+              "speed": 75,
+              "spin": 0,
+              "forgiveness": 80,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate players needing balanced speed, stability, and energetic cushioning for dynamic movement in club-level competitive play.",
+            "not_for_persona": "Beginners on a tight budget or players who prioritize widely available spare parts.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Limited brand prestige compared to competitors",
+              "Difficulty finding replacement insoles",
+              "Sparse dealer network"
+            ],
+            "standout_qualities": [
+              "Excellent grip on various court surfaces",
+              "Responsive and energetic cushioning",
+              "Good balance of weight for agility and stability"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh06",
@@ -2174,7 +3805,62 @@
               "price": 9499,
               "url": "https://www.flipkart.com/yonex-power-cushion-65-z3-badminton-shoes/p/itmfg5h6jxwqfhpr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "defender",
+              "power_hitter",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 60,
+              "spin": 50,
+              "forgiveness": 90,
+              "durability": 80
+            },
+            "best_for_persona": "Advanced players prioritizing maximum cushioning, stability, and court grip for competitive matches and intense training sessions.",
+            "not_for_persona": "Budget-conscious beginners or very light, speed-focused players who prefer a more flexible, minimalist shoe.",
+            "common_complaints": [
+              "High price point for non-competitive players.",
+              "Stiffer feel compared to lighter, faster shoe models.",
+              "Risk of encountering counterfeit products online."
+            ],
+            "standout_qualities": [
+              "Industry-leading shock absorption and cushioning system.",
+              "Exceptional court grip optimized for competitive play.",
+              "Proven performance at the professional tournament level."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh07",
@@ -2234,7 +3920,46 @@
               "price": 9999,
               "url": "https://www.flipkart.com/yonex-power-cushion-aerus-z2-badminton-shoes/p/itm6h7j8gxwfqhpx"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "attacker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 80,
+              "speed": 95,
+              "spin": 0,
+              "forgiveness": 60,
+              "durability": 30
+            },
+            "best_for_persona": "Advanced, speed-focused badminton players prioritizing agility and quick court movement in competitive singles or doubles.",
+            "not_for_persona": "Players with wide feet or those seeking maximum durability for heavy hitting.",
+            "upgrade_after_months": 8,
+            "common_complaints": [
+              "Limited durability for heavy use",
+              "Uncomfortable for wider foot shapes",
+              "High cost relative to lifespan"
+            ],
+            "standout_qualities": [
+              "Exceptional lightness for agility",
+              "Effective heel cushioning despite low weight",
+              "Optimized for speed-oriented playstyles"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh08",
@@ -2291,7 +4016,50 @@
               "price": 2499,
               "url": "https://www.amazon.in/Apacs-Cushion-Power-091-Badminton/dp/B07X8K9LMN"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 85,
+              "speed": 45,
+              "spin": 0,
+              "forgiveness": 80,
+              "durability": 55
+            },
+            "best_for_persona": "Beginners needing a budget-friendly court shoe for indoor badminton, focusing on footwork drills and recreational play.",
+            "not_for_persona": "Advanced players requiring lightweight, high-performance shoes or those playing frequently on abrasive outdoor courts.",
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Heavier than some mid-tier alternatives",
+              "Sole wears quickly on abrasive outdoor surfaces",
+              "Plain aesthetic design"
+            ],
+            "standout_qualities": [
+              "Excellent grip on indoor courts",
+              "Adequate cushioning for training",
+              "Affordable entry-level option"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh09",
@@ -2352,7 +4120,56 @@
               "price": 2799,
               "url": "https://www.flipkart.com/hundred-court-pro-badminton-shoes-men/p/itm5g6h7jxwfqhpz"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 80,
+              "speed": 40,
+              "spin": 50,
+              "forgiveness": 85,
+              "durability": 60
+            },
+            "best_for_persona": "Intermediate club players needing reliable ankle support and cushioning for agile, lateral movements during matches.",
+            "not_for_persona": "Elite players or those prioritizing ultra-lightweight shoes for maximum speed and agility.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Heavier than some competing models at the same level",
+              "Cushioning degrades noticeably after 6-9 months of regular use",
+              "Limited aesthetic options"
+            ],
+            "standout_qualities": [
+              "Offers good heel impact protection for its price point",
+              "Provides excellent ankle stability, reducing roll risk during sharp cuts",
+              "Reliable availability and consistent sizing from an Indian brand"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh10",
@@ -2409,7 +4226,58 @@
               "price": 7499,
               "url": "https://www.amazon.in/Mizuno-Wave-Claw-2-Badminton/dp/B09KQXRGT5"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 85,
+              "speed": 90,
+              "spin": 0,
+              "forgiveness": 75,
+              "durability": 80
+            },
+            "best_for_persona": "Advanced players seeking lightweight, aggressive grip, and superior cushioning for competitive matches and intense training sessions.",
+            "not_for_persona": "Beginners or casual players on a budget, or those with wide feet needing a more accommodating fit.",
+            "common_complaints": [
+              "High price point compared to alternatives with better after-sales support.",
+              "Narrow fit may not suit all foot types.",
+              "Limited availability of support and warranty services in some regions."
+            ],
+            "standout_qualities": [
+              "Exceptional cushioning comparable to leading competitors.",
+              "Very lightweight for an advanced performance shoe.",
+              "Superior grip on court surfaces."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sh11",
@@ -2473,7 +4341,54 @@
               "price": 4799,
               "url": "https://www.flipkart.com/yonex-power-cushion-shb-v200i-badminton-shoes/p/itm6h7j8gxwfqhpw"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 70,
+              "speed": 80,
+              "spin": 0,
+              "forgiveness": 75,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate club players seeking a comfortable, lightweight, and high-value shoe for regular badminton sessions.",
+            "not_for_persona": "Advanced or pro players requiring maximum lateral stability and ultimate grip on challenging court surfaces.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Reduced grip on dusty courts compared to premium models",
+              "Lacks advanced lateral stability features"
+            ],
+            "standout_qualities": [
+              "Superior heel cushioning for comfort",
+              "Lightweight design for its price point",
+              "Excellent value for club-level play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -2538,7 +4453,50 @@
               "price": 179,
               "url": "https://www.flipkart.com/cosco-aero-777-nylon-shuttlecock-pack-6/p/itme7g6h8jxwqfhpr"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 30,
+              "speed": 70,
+              "forgiveness": 95,
+              "durability": 95
+            },
+            "best_for_persona": "Beginners and casual players seeking durable, affordable shuttles for practice and recreational games.",
+            "not_for_persona": "Competitive players or those seeking tournament-grade flight performance.",
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Less natural flight compared to feather shuttles.",
+              "Reduced durability in outdoor or hot conditions.",
+              "Unsuitable for competitive tournament use."
+            ],
+            "standout_qualities": [
+              "Exceptional cost-effectiveness per rally.",
+              "High durability against mishits and heavy impacts.",
+              "Consistent medium speed suitable for indoor club play."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sc02",
@@ -2598,7 +4556,53 @@
               "price": 469,
               "url": "https://www.flipkart.com/yonex-mavis-350-nylon-shuttlecock/p/itmf3qfphgggjuhz"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 65,
+              "speed": 50,
+              "spin": 30,
+              "forgiveness": 90,
+              "durability": 95
+            },
+            "best_for_persona": "Beginners and recreational players prioritizing durability and consistent flight for practice sessions and casual games.",
+            "not_for_persona": "Competitive players or advanced athletes requiring the precise flight and feel of feather shuttles for serious matches.",
+            "common_complaints": [
+              "More expensive than some other nylon brands.",
+              "Lacks the lighter feel of premium nylons during fast exchanges.",
+              "Unsuitable for serious competitive play where feather shuttles are standard."
+            ],
+            "standout_qualities": [
+              "Reliable and consistent flight characteristics.",
+              "Exceptional durability, lasting for many hours of play.",
+              "Industry-standard quality for nylon shuttles."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sc03",
@@ -2658,7 +4662,48 @@
               "price": 699,
               "url": "https://www.flipkart.com/yonex-mavis-10-nylon-shuttlecock-pack-6/p/itmfgkphwfgygcnk"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 75,
+              "speed": 75,
+              "spin": 30,
+              "forgiveness": 70,
+              "durability": 90
+            },
+            "best_for_persona": "Players needing durable, consistent, feather-like flight for regular training and advanced drills, prioritizing longevity over tournament-grade feel.",
+            "not_for_persona": "Elite or professional players requiring tournament-legal feather shuttles for competitive matches and ultimate precision.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Plastic feel compared to feather shuttles",
+              "Higher cost than basic nylon alternatives"
+            ],
+            "standout_qualities": [
+              "Excellent durability for a nylon shuttle",
+              "Flight characteristics mimic feather shuttles well",
+              "Cost-effective for frequent training"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sc04",
@@ -2718,7 +4763,45 @@
               "price": 1399,
               "url": "https://www.flipkart.com/li-ning-a-300-feather-shuttlecock-pack-12/p/itmfbpf3hhgsvbgv"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 85,
+              "speed": 70,
+              "spin": 30,
+              "forgiveness": 40,
+              "durability": 45
+            },
+            "best_for_persona": "Intermediate club players seeking consistent flight and good feel for competitive play without breaking the bank.",
+            "not_for_persona": "Elite tournament players needing maximum durability or players in highly humid environments without controlled storage.",
+            "common_complaints": [
+              "Durability is only moderate, leading to frequent replacements.",
+              "Feather quality can be inconsistent between batches.",
+              "Performance degrades in humid conditions if not stored properly."
+            ],
+            "standout_qualities": [
+              "Provides excellent flight consistency suitable for club play.",
+              "Offers a premium feel at a more affordable price point.",
+              "Generally good consistency for its price category."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sc05",
@@ -2778,7 +4861,53 @@
               "price": 1799,
               "url": "https://www.flipkart.com/yonex-as-30-feather-shuttlecock-pack-12/p/itme53e8fhqgrwxh"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 90,
+              "speed": 80,
+              "spin": 85,
+              "forgiveness": 40,
+              "durability": 30
+            },
+            "best_for_persona": "Advanced players and competitive clubs needing consistent, tournament-grade feather shuttles for high-level matches and serious training sessions.",
+            "not_for_persona": "Beginners or casual players seeking highly durable, budget-friendly shuttles for recreational backyard or office play.",
+            "common_complaints": [
+              "High cost per tube for casual use",
+              "Limited durability typical of feather shuttles",
+              "Risk of encountering counterfeit products"
+            ],
+            "standout_qualities": [
+              "Exceptional flight consistency and predictability",
+              "Reliable and uniform speed across tubes",
+              "Widely trusted for competitive tournament play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_sc06",
@@ -2838,7 +4967,53 @@
               "price": 2299,
               "url": "https://www.flipkart.com/yonex-as-50-feather-shuttlecock-pack-12/p/itmemh3xewzz3vxz"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 95,
+              "speed": 50,
+              "spin": 0,
+              "forgiveness": 0,
+              "durability": 20
+            },
+            "best_for_persona": "Advanced and pro players seeking gold-standard flight stability and consistent trajectories for competitive matches and tournaments.",
+            "not_for_persona": "Casual players or those on a budget who prioritize durability over flight consistency.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High cost per tube for non-tournament play",
+              "Poor durability against hard smashes",
+              "Short shelf life once tube is opened"
+            ],
+            "standout_qualities": [
+              "Exceptional flight stability and consistency",
+              "Used in top-tier international competitions",
+              "Premium feel and trajectory"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -2904,7 +5079,52 @@
               "price": 379,
               "url": "https://www.flipkart.com/yonex-bg-65-badminton-string/p/itmf3qfphgggjuhx"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "tournament_open"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 80,
+              "speed": 55,
+              "spin": 60,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Beginner to intermediate all-round players prioritizing durability and consistent, predictable performance for regular practice and casual games.",
+            "not_for_persona": "Advanced attacking players who demand maximum smash power and a thin, highly responsive string feel.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 12,
+            "common_complaints": [
+              "Lacks the raw power of specialized attacking strings",
+              "Thicker gauge can feel unresponsive to experienced players"
+            ],
+            "standout_qualities": [
+              "Exceptional durability and tension retention",
+              "Reliable and predictable all-round performance",
+              "Globally recognized and trusted choice"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st02",
@@ -2965,7 +5185,53 @@
               "price": 329,
               "url": "https://www.flipkart.com/li-ning-no-1-badminton-string/p/itmfbpf3hhgsvbgw"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 70,
+              "speed": 80,
+              "spin": 60,
+              "forgiveness": 80,
+              "durability": 65
+            },
+            "best_for_persona": "Beginners and recreational players seeking an affordable, balanced string with good repulsion for casual play.",
+            "not_for_persona": "Advanced competitive players needing consistent tension, maximum durability, or high brand prestige.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Lower durability compared to thicker strings",
+              "Tension retention is not top-tier"
+            ],
+            "standout_qualities": [
+              "High repulsion at an affordable price",
+              "Balanced all-round performance",
+              "Easy for stringers to work with"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st03",
@@ -3026,7 +5292,57 @@
               "price": 569,
               "url": "https://www.flipkart.com/yonex-bg-80-badminton-string/p/itmfgkphwfgygcnl"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 75,
+              "speed": 90,
+              "spin": 80,
+              "forgiveness": 35,
+              "durability": 55
+            },
+            "best_for_persona": "Intermediate to advanced players prioritizing maximum power and a crisp feel for aggressive, competitive badminton.",
+            "not_for_persona": "Beginners or casual players who need high durability and forgiveness, or those on a strict budget.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Lower than average durability",
+              "Higher cost compared to alternatives",
+              "Reduced forgiveness on off-center hits"
+            ],
+            "standout_qualities": [
+              "Exceptional power and repulsion",
+              "Crisp hitting feel with a distinctive sound",
+              "Good balance of power and moderate durability"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st04",
@@ -3087,7 +5403,51 @@
               "price": 479,
               "url": "https://www.flipkart.com/victor-vbs-68p-badminton-string/p/itmfbpf3hhgsvbgu"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 60,
+              "speed": 85,
+              "spin": 50,
+              "forgiveness": 65,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate attackers and power hitters seeking high repulsion, a crisp sound, and good value for club play.",
+            "not_for_persona": "Advanced players prioritizing pinpoint control or consistent tension hold for elite competitive matches.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Control is not top-tier compared to premium strings",
+              "Tension stability degrades relatively quickly",
+              "Limited availability in some regions"
+            ],
+            "standout_qualities": [
+              "Exceptional repulsion and power output",
+              "Good balance of power and durability for its gauge",
+              "Provides satisfying crisp hitting feedback"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st05",
@@ -3148,7 +5508,56 @@
               "price": 699,
               "url": "https://www.flipkart.com/yonex-aerobite-badminton-string/p/itmfgkphwfgygcnm"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "control_focused",
+              "attacker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 95,
+              "speed": 80,
+              "spin": 95,
+              "forgiveness": 40,
+              "durability": 60
+            },
+            "best_for_persona": "Pro and advanced players seeking maximum spin and control for deceptive, precise shot-making and strategic play.",
+            "not_for_persona": "Beginners or casual players who prioritize durability and ease of stringing over advanced shot-making.",
+            "common_complaints": [
+              "Low durability requiring frequent restringing",
+              "Complex stringing process due to hybrid setup",
+              "Higher cost compared to standard strings"
+            ],
+            "standout_qualities": [
+              "Exceptional control for precise shot placement",
+              "Superior spin generation for deceptive play",
+              "Hybrid gauge design for specialized performance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st06",
@@ -3201,7 +5610,51 @@
               "price": 299,
               "url": "https://www.amazon.in/Apacs-68-Badminton-String/dp/B07R1RZJYW"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "tournament_open"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 70,
+              "speed": 70,
+              "spin": 65,
+              "forgiveness": 75,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players seeking an affordable, balanced upgrade from factory strings for recreational or club play.",
+            "not_for_persona": "Advanced or pro players needing specialized performance, maximum tension stability, or top-tier brand recognition for elite tournaments.",
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Lacks specialized performance in any single attribute.",
+              "Experiences faster tension loss compared to premium alternatives.",
+              "Limited brand recognition and stringer familiarity."
+            ],
+            "standout_qualities": [
+              "Extremely affordable for a performance upgrade.",
+              "Offers a reliable and balanced performance across key attributes.",
+              "Standard, versatile gauge suitable for most rackets."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st07",
@@ -3254,7 +5707,54 @@
               "price": 749,
               "url": "https://www.amazon.in/Ashaway-ZyMax-66F-Badminton-String/dp/B07VHJ8K9S"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 80,
+              "speed": 85,
+              "spin": 85,
+              "forgiveness": 50,
+              "durability": 60
+            },
+            "best_for_persona": "Advanced attackers prioritizing explosive power and precise control for competitive play, accepting frequent restrings.",
+            "not_for_persona": "Beginners or recreational players seeking long-lasting strings and minimal maintenance.",
+            "common_complaints": [
+              "Low durability requiring frequent restringing",
+              "Limited availability in some regions",
+              "Perceived lower brand prestige compared to competitors"
+            ],
+            "standout_qualities": [
+              "Exceptional repulsion for powerful smashes",
+              "High control despite thin gauge",
+              "Consistent manufacturing quality"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st08",
@@ -3307,7 +5807,52 @@
               "price": 549,
               "url": "https://www.amazon.in/Gosen-G-Tone-5-Badminton-String/dp/B07XJK8L9N"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 70,
+              "speed": 35,
+              "spin": 50,
+              "forgiveness": 50,
+              "durability": 95
+            },
+            "best_for_persona": "Intermediate hard hitters who frequently break strings and prioritize string longevity for consistent play.",
+            "not_for_persona": "Attacking players prioritizing maximum smash speed, repulsion, and a light feel.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Lower repulsion compared to thinner strings",
+              "Heavier feel impacting shot speed",
+              "Not ideal for maximizing smash power"
+            ],
+            "standout_qualities": [
+              "Exceptional durability and longevity",
+              "Robust construction for frequent play",
+              "Suitable for players who often break strings"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_st09",
@@ -3368,7 +5913,49 @@
               "price": 469,
               "url": "https://www.flipkart.com/yonex-bg-65-ti-badminton-string/p/itmf3qfphgggjuhw"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "beginner"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 80,
+              "speed": 75,
+              "spin": 60,
+              "forgiveness": 70,
+              "durability": 95
+            },
+            "best_for_persona": "Intermediate all-round players seeking a durable string with improved repulsion and a crisper feel over basic options.",
+            "not_for_persona": "Elite power hitters needing maximum repulsion or budget-conscious beginners who won't notice the difference.",
+            "common_complaints": [
+              "Higher cost compared to standard BG65",
+              "Does not offer the highest repulsion for dedicated power players",
+              "Risk of encountering counterfeit products"
+            ],
+            "standout_qualities": [
+              "Exceptional durability combined with enhanced repulsion",
+              "Offers a balanced performance for all-round play",
+              "Provides a crisper hitting feel"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -3433,7 +6020,60 @@
               "price": 229,
               "url": "https://www.flipkart.com/yonex-super-grap-ac102ex-pack-3-badminton-grip/p/itmf3qfphgggjuhy"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "power_hitter",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "small_hand_grip",
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 70,
+              "spin": 50,
+              "forgiveness": 75,
+              "durability": 40
+            },
+            "best_for_persona": "Players seeking a thin, tacky, sweat-absorbing grip to maintain racket feel and secure hold during regular play.",
+            "not_for_persona": "Players who prefer a cotton/towel feel or require extreme durability for very sweaty, extended matches.",
+            "common_complaints": [
+              "Quick wear under heavy sweat",
+              "Synthetic feel may not suit all preferences",
+              "Prevalence of counterfeit products"
+            ],
+            "standout_qualities": [
+              "Maintains original racket handle feel due to thinness",
+              "Provides high tackiness for secure grip",
+              "Good value in a multi-pack for regular replacement"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_gr02",
@@ -3493,7 +6133,54 @@
               "price": 189,
               "url": "https://www.flipkart.com/victor-gr262-overgrip-pack-3-badminton-grip/p/itmfbpf3hhgsvbgx"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wide_hand_grip"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 10,
+              "control": 50,
+              "speed": 10,
+              "spin": 10,
+              "forgiveness": 85,
+              "durability": 60
+            },
+            "best_for_persona": "Beginners and casual players in hot, humid conditions seeking an economical overgrip with excellent sweat absorption.",
+            "not_for_persona": "Competitive players needing maximum tackiness or those who prefer a very thin grip feel.",
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Lower tackiness compared to premium alternatives",
+              "Slightly increases handle diameter",
+              "Limited brand appeal for non-Victor users"
+            ],
+            "standout_qualities": [
+              "Excellent sweat absorption for humid climates",
+              "Cost-effective bulk purchase option",
+              "Budget-friendly alternative to premium grips"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_gr03",
@@ -3553,7 +6240,54 @@
               "price": 279,
               "url": "https://www.flipkart.com/yonex-ac402ex-towel-grip-badminton/p/itmfgkphwfgygcno"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "wide_hand_grip"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 85,
+              "speed": 50,
+              "spin": 50,
+              "forgiveness": 80,
+              "durability": 20
+            },
+            "best_for_persona": "Players with very sweaty hands in hot, humid climates who need maximum absorption and prefer a thicker, padded handle feel.",
+            "not_for_persona": "Players who prefer thin, tacky grips and dislike frequent replacements due to dust and wear.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Lower inherent tackiness compared to synthetic options",
+              "Requires frequent replacement due to dirt and wear",
+              "Increases overall handle thickness significantly"
+            ],
+            "standout_qualities": [
+              "Exceptional sweat absorption in humid conditions",
+              "Offers a comfortable, padded feel",
+              "Prevents mid-game grip slippage effectively"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_gr04",
@@ -3613,7 +6347,51 @@
               "price": 259,
               "url": "https://www.flipkart.com/li-ning-gp20-overgrip-pack-3-badminton-grip/p/itmfbpf3hhgsvbgy"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "body_fit": [
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 10,
+              "control": 80,
+              "speed": 60,
+              "spin": 10,
+              "forgiveness": 10,
+              "durability": 40
+            },
+            "best_for_persona": "Intermediate players seeking a tacky, thin grip for secure hold during competitive matches, prioritizing feel over maximum sweat absorption.",
+            "not_for_persona": "Players who sweat profusely and require maximum absorption, or those prioritizing extreme durability.",
+            "common_complaints": [
+              "Less effective for heavy sweaters",
+              "Shorter lifespan compared to premium alternatives",
+              "Aesthetic mismatch with non-Li-Ning rackets"
+            ],
+            "standout_qualities": [
+              "Excellent racket feel due to thinness",
+              "Provides a very secure and tacky grip",
+              "Cost-effective alternative to popular brands"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_gr05",
@@ -3673,7 +6451,56 @@
               "price": 299,
               "url": "https://www.flipkart.com/yonex-ac108-wave-grap-badminton-grip/p/itmfgkphwfgygcnp"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 80,
+              "spin": 80,
+              "forgiveness": 70,
+              "durability": 30
+            },
+            "best_for_persona": "Advanced players needing maximum grip security and tackiness for intense, high-tempo rallies, especially with sweaty hands.",
+            "not_for_persona": "Beginners, casual players, or those who prefer a smooth, non-textured grip and prioritize durability over tackiness.",
+            "upgrade_after_months": 1,
+            "common_complaints": [
+              "Wave texture wears down relatively quickly",
+              "Higher price point compared to standard overgrips",
+              "Ribbed texture is a personal preference and not for everyone"
+            ],
+            "standout_qualities": [
+              "Exceptional grip security due to wave texture",
+              "Very high tackiness, ideal for sweaty hands",
+              "Premium feel preferred by experienced players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_g06",
@@ -3726,7 +6553,52 @@
               "price": 119,
               "url": "https://www.amazon.in/Apacs-Cushion-Grip-Badminton/dp/B07R1RZJYX"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "body_fit": [
+              "wide_hand_grip",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 70,
+              "speed": 50,
+              "spin": 50,
+              "forgiveness": 80,
+              "durability": 60
+            },
+            "best_for_persona": "Players seeking an affordable, comfortable, and absorbent replacement grip for sweaty conditions, prioritizing a padded feel.",
+            "not_for_persona": "Players with small hands or those who prefer a very thin handle feel.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "Installation requires removing old grip",
+              "Not available in multi-packs",
+              "Increases handle thickness significantly"
+            ],
+            "standout_qualities": [
+              "Very affordable",
+              "Provides significant handle padding",
+              "Excellent sweat absorption"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "bd_g07",
@@ -3783,7 +6655,57 @@
               "price": 259,
               "url": "https://www.flipkart.com/hundred-overgrip-pack-3-badminton-grip/p/itm5g6h7jxwfqhpz"
             }
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner",
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "body_fit": [
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 85,
+              "speed": 75,
+              "spin": 0,
+              "forgiveness": 0,
+              "durability": 40
+            },
+            "best_for_persona": "Players seeking a cost-effective, tacky, thin overgrip for secure feel without significantly altering handle size, ideal for regular replacement.",
+            "not_for_persona": "Players prioritizing maximum sweat absorption, premium brand appeal, or extreme long-term durability from their overgrip.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Lower sweat absorption compared to premium options",
+              "Adhesive end-strip may lift with heavy use",
+              "Brand lacks aspirational appeal"
+            ],
+            "standout_qualities": [
+              "Excellent value for money in a multi-pack",
+              "High tackiness provides a secure grip",
+              "Thin profile maintains original handle feel"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     }

@@ -12,8 +12,18 @@
           "brand": "Cosco",
           "type": "Beginner Racket",
           "level": "beginner",
-          "specs": {"head_size": "105 sq in", "weight": "280g", "balance": "Head Light", "pattern": "16x18"},
-          "price_ranges": {"INR": {"min": 1500, "max": 3000}},
+          "specs": {
+            "head_size": "105 sq in",
+            "weight": "280g",
+            "balance": "Head Light",
+            "pattern": "16x18"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1500,
+              "max": 3000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+Ace+25+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=cosco+ace+25+tennis+racket"
@@ -32,10 +42,75 @@
             "Outgrown within months once stroke technique improves"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1799, "url": "https://www.amazon.in/s?k=Cosco+Ace+25+tennis+racket", "verified": true},
-            {"platform": "Flipkart", "price": 1599, "url": "https://www.flipkart.com/search?q=cosco+ace+25+tennis+racket"},
-            {"platform": "Decathlon", "price": 2299, "url": "https://www.decathlon.in/search?Ntt=cosco+tennis+racket"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 1799,
+              "url": "https://www.amazon.in/s?k=Cosco+Ace+25+tennis+racket",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1599,
+              "url": "https://www.flipkart.com/search?q=cosco+ace+25+tennis+racket"
+            },
+            {
+              "platform": "Decathlon",
+              "price": 2299,
+              "url": "https://www.decathlon.in/search?Ntt=cosco+tennis+racket"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 70,
+              "speed": 75,
+              "spin": 60,
+              "forgiveness": 90,
+              "durability": 20
+            },
+            "best_for_persona": "Absolute beginners on a tight budget, seeking a very forgiving and arm-friendly racket to learn basic tennis strokes.",
+            "not_for_persona": "Intermediate or advanced players needing power, precise feel, or long-term durability for competitive play.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Lacks the feel and durability of graphite rackets",
+              "Strings wear out quickly due to open pattern",
+              "Quickly outgrown as skill improves"
+            ],
+            "standout_qualities": [
+              "Exceptional forgiveness with an oversized sweet spot",
+              "Very lightweight and easy on the arm",
+              "Extremely affordable entry-level price point"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r02",
@@ -43,8 +118,18 @@
           "brand": "Artengo (Decathlon)",
           "type": "Beginner Racket",
           "level": "beginner",
-          "specs": {"head_size": "105 sq in", "weight": "275g", "balance": "Head Light", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 1800, "max": 3500}},
+          "specs": {
+            "head_size": "105 sq in",
+            "weight": "275g",
+            "balance": "Head Light",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1800,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Artengo+TR100+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=artengo+tr100+tennis+racket"
@@ -63,10 +148,77 @@
             "Cosmetic finish chips quickly with regular court use"
           ],
           "marketplace_prices": [
-            {"platform": "Decathlon", "price": 2499, "url": "https://www.decathlon.in/p/8550832/tennis-rackets/adult-tennis-racket-tr-100", "verified": true},
-            {"platform": "Amazon", "price": 2799, "url": "https://www.amazon.in/s?k=Artengo+TR100+tennis+racket"},
-            {"platform": "Flipkart", "price": 2649, "url": "https://www.flipkart.com/search?q=artengo+tr100+tennis+racket"}
-          ]
+            {
+              "platform": "Decathlon",
+              "price": 2499,
+              "url": "https://www.decathlon.in/p/8550832/tennis-rackets/adult-tennis-racket-tr-100",
+              "verified": true
+            },
+            {
+              "platform": "Amazon",
+              "price": 2799,
+              "url": "https://www.amazon.in/s?k=Artengo+TR100+tennis+racket"
+            },
+            {
+              "platform": "Flipkart",
+              "price": 2649,
+              "url": "https://www.flipkart.com/search?q=artengo+tr100+tennis+racket"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 75,
+              "speed": 90,
+              "spin": 80,
+              "forgiveness": 95,
+              "durability": 35
+            },
+            "best_for_persona": "Juniors and new adult players seeking an affordable, easy-to-swing racket for casual play and learning basics.",
+            "not_for_persona": "Intermediate or advanced players needing power, stability, and feel for competitive matches.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Insufficient power and stability against faster shots",
+              "Excessive frame flex on powerful impacts",
+              "Cosmetic finish is prone to chipping"
+            ],
+            "standout_qualities": [
+              "Extremely lightweight and easy to maneuver",
+              "Offers better spin potential than many beginner rackets",
+              "Comes pre-strung and ready for immediate use",
+              "Backed by a solid warranty"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r03",
@@ -74,8 +226,18 @@
           "brand": "Yonex",
           "type": "Comfort Power",
           "level": "beginner",
-          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 14000, "max": 18000}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "300g",
+            "balance": "Even",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 14000,
+              "max": 18000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+EZONE+100+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=yonex+ezone+100+tennis"
@@ -94,10 +256,74 @@
             "Stock grip wears out fast and needs replacement"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 16999, "url": "https://www.amazon.in/s?k=Yonex+EZONE+100+tennis+racket", "verified": true},
-            {"platform": "Flipkart", "price": 17499, "url": "https://www.flipkart.com/search?q=yonex+ezone+100+tennis"},
-            {"platform": "Khelmart", "price": 16500, "url": "https://www.khelmart.com/search?q=yonex+ezone+100"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 16999,
+              "url": "https://www.amazon.in/s?k=Yonex+EZONE+100+tennis+racket",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 17499,
+              "url": "https://www.flipkart.com/search?q=yonex+ezone+100+tennis"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 16500,
+              "url": "https://www.khelmart.com/search?q=yonex+ezone+100"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 60,
+              "speed": 70,
+              "spin": 75,
+              "forgiveness": 85,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate to advanced players seeking a comfortable, powerful racket with a large sweet spot for aggressive, all-court play.",
+            "not_for_persona": "Budget-conscious true beginners looking for an easy-to-control, inexpensive first racket.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Initial difficulty controlling power",
+              "Stock grip requires frequent replacement"
+            ],
+            "standout_qualities": [
+              "Enlarged sweet spot for forgiveness",
+              "Excellent vibration dampening for arm comfort",
+              "Versatile weight and balance for diverse players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r04",
@@ -105,8 +331,18 @@
           "brand": "Wilson",
           "type": "Control",
           "level": "intermediate",
-          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 16000, "max": 22000}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "300g",
+            "balance": "Even",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 16000,
+              "max": 22000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Wilson+Blade+100+v8+tennis",
             "flipkart": "https://www.flipkart.com/search?q=wilson+blade+100+tennis"
@@ -125,10 +361,72 @@
             "Cosmetic green chrome chips quickly on net-cord clips"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 18999, "url": "https://www.amazon.in/s?k=Wilson+Blade+100+v8+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 19499, "url": "https://www.flipkart.com/search?q=wilson+blade+100+tennis"},
-            {"platform": "Khelmart", "price": 17999, "url": "https://www.khelmart.com/search?q=wilson+blade+100+v8"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 18999,
+              "url": "https://www.amazon.in/s?k=Wilson+Blade+100+v8+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 19499,
+              "url": "https://www.flipkart.com/search?q=wilson+blade+100+tennis"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 17999,
+              "url": "https://www.khelmart.com/search?q=wilson+blade+100+v8"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "spin_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "office_casual"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 90,
+              "speed": 65,
+              "spin": 75,
+              "forgiveness": 40,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate club players with clean technique seeking precision, feel, and a balanced power-control blend.",
+            "not_for_persona": "Beginners or players who rely on easy power and lack consistent, clean stroke mechanics.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 30,
+            "common_complaints": [
+              "Lacks easy power for shorter swings",
+              "Requires consistent technique for optimal performance",
+              "Cosmetic paint chips easily"
+            ],
+            "standout_qualities": [
+              "Exceptional feel and connection to the ball",
+              "Balanced blend of power and control",
+              "Good spin potential with precision"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r05",
@@ -136,8 +434,18 @@
           "brand": "Babolat",
           "type": "All-Round Power",
           "level": "intermediate",
-          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 15000, "max": 20000}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "300g",
+            "balance": "Even",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 15000,
+              "max": 20000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Babolat+Pure+Drive+2024+tennis",
             "flipkart": "https://www.flipkart.com/search?q=babolat+pure+drive+2024"
@@ -156,10 +464,67 @@
             "Demands a polyester string setup to tame the launch angle"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 17999, "url": "https://www.amazon.in/s?k=Babolat+Pure+Drive+2024+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 18499, "url": "https://www.flipkart.com/search?q=babolat+pure+drive+2024"},
-            {"platform": "Khelmart", "price": 16999, "url": "https://www.khelmart.com/search?q=babolat+pure+drive"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 17999,
+              "url": "https://www.amazon.in/s?k=Babolat+Pure+Drive+2024+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 18499,
+              "url": "https://www.flipkart.com/search?q=babolat+pure+drive+2024"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 16999,
+              "url": "https://www.khelmart.com/search?q=babolat+pure+drive"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "power_hitter",
+              "spin_focused",
+              "baseline"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 60,
+              "speed": 75,
+              "spin": 90,
+              "forgiveness": 80,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate to advanced club players seeking easy power and spin to dominate rallies from the baseline.",
+            "not_for_persona": "Players prone to arm or elbow issues seeking a flexible, arm-friendly racket.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 36,
+            "common_complaints": [
+              "Frame stiffness can cause arm discomfort",
+              "Sound feedback is polarizing",
+              "Requires specific string setup for optimal control"
+            ],
+            "standout_qualities": [
+              "Exceptional power and spin generation",
+              "Popular choice for club-level performance",
+              "Comfort-enhancing vibration dampening technology"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r06",
@@ -167,8 +532,18 @@
           "brand": "Wilson",
           "type": "Flexible Control",
           "level": "intermediate",
-          "specs": {"head_size": "100 sq in", "weight": "295g", "balance": "Head Light", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 18000, "max": 24000}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "295g",
+            "balance": "Head Light",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 18000,
+              "max": 24000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Wilson+Clash+100+v2+tennis",
             "flipkart": "https://www.flipkart.com/search?q=wilson+clash+100+v2"
@@ -187,9 +562,68 @@
             "Premium price point above most peers in the category"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 20999, "url": "https://www.amazon.in/s?k=Wilson+Clash+100+v2+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 21499, "url": "https://www.flipkart.com/search?q=wilson+clash+100+v2"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 20999,
+              "url": "https://www.amazon.in/s?k=Wilson+Clash+100+v2+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 21499,
+              "url": "https://www.flipkart.com/search?q=wilson+clash+100+v2"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "baseline",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 90,
+              "speed": 75,
+              "spin": 70,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate baseliners prioritizing arm comfort, precise control, and forgiveness for consistent, strategic play.",
+            "not_for_persona": "Advanced power hitters seeking raw pace or players who prefer a crisp, direct feel from their racket.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Muted feel lacks traditional feedback",
+              "Insufficient power for heavy hitters",
+              "Higher price point than competitors"
+            ],
+            "standout_qualities": [
+              "Exceptional arm-friendliness and comfort",
+              "High stability despite frame flexibility",
+              "Excellent maneuverability for quick reactions",
+              "High forgiveness on off-center shots"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r07",
@@ -197,8 +631,18 @@
           "brand": "Head",
           "type": "Spin & Control",
           "level": "advanced",
-          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 16000, "max": 22000}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "300g",
+            "balance": "Even",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 16000,
+              "max": 22000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Head+Speed+MP+2024+tennis",
             "flipkart": "https://www.flipkart.com/search?q=head+speed+mp+2024"
@@ -217,10 +661,74 @@
             "Slightly less spin friendly than Pure Aero or TFight"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 18499, "url": "https://www.amazon.in/s?k=Head+Speed+MP+2024+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 18999, "url": "https://www.flipkart.com/search?q=head+speed+mp+2024"},
-            {"platform": "Khelmart", "price": 17799, "url": "https://www.khelmart.com/search?q=head+speed+mp"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 18499,
+              "url": "https://www.amazon.in/s?k=Head+Speed+MP+2024+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 18999,
+              "url": "https://www.flipkart.com/search?q=head+speed+mp+2024"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 17799,
+              "url": "https://www.khelmart.com/search?q=head+speed+mp"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "baseline",
+              "control_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 55,
+              "control": 90,
+              "speed": 75,
+              "spin": 85,
+              "forgiveness": 70,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced baseliners and all-courters seeking precise control, spin, and feel to dominate competitive matches.",
+            "not_for_persona": "Beginners or intermediate players needing easy power and a very forgiving frame.",
+            "common_complaints": [
+              "Lacks raw power compared to some rivals",
+              "High price point for its category",
+              "Not the absolute best for extreme spin generation"
+            ],
+            "standout_qualities": [
+              "Exceptional feel and feedback",
+              "Versatile for aggressive all-court play",
+              "Professional player endorsement",
+              "Consistent ball response across the string bed"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r08",
@@ -228,8 +736,18 @@
           "brand": "Babolat",
           "type": "Spin Power",
           "level": "advanced",
-          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Slightly Head Heavy", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 18000, "max": 25000}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "300g",
+            "balance": "Slightly Head Heavy",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 18000,
+              "max": 25000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Babolat+Pure+Aero+2023+tennis",
             "flipkart": "https://www.flipkart.com/search?q=babolat+pure+aero+2023"
@@ -248,10 +766,72 @@
             "Most expensive intermediate-friendly racket on this list"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 20499, "url": "https://www.amazon.in/s?k=Babolat+Pure+Aero+2023+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 21999, "url": "https://www.flipkart.com/search?q=babolat+pure+aero+2023"},
-            {"platform": "Khelmart", "price": 19999, "url": "https://www.khelmart.com/search?q=babolat+pure+aero"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 20499,
+              "url": "https://www.amazon.in/s?k=Babolat+Pure+Aero+2023+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 21999,
+              "url": "https://www.flipkart.com/search?q=babolat+pure+aero+2023"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 19999,
+              "url": "https://www.khelmart.com/search?q=babolat+pure+aero"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "attacker",
+              "looper"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 55,
+              "speed": 90,
+              "spin": 98,
+              "forgiveness": 65,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced topspin players seeking maximum power and spin to dominate from the baseline.",
+            "not_for_persona": "Beginners, players with arm or wrist issues, or those who prioritize flat shots and pinpoint control.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Can be harsh on the arm due to stiffness",
+              "Challenging to hit flat shots or serves",
+              "Higher price point for its category"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation",
+              "High racket head speed",
+              "Good plow-through for powerful shots"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r09",
@@ -260,8 +840,22 @@
           "type": "Control",
           "level": "advanced",
           "recommended_for": "Flat hitters and classic control players",
-          "specs": {"head_size": "100 sq in", "weight": "305g", "balance": "Head Light", "pattern": "18x20"},
-          "price_ranges": {"INR": {"min": 15500, "max": 21000}, "USD": {"min": 199, "max": 269}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "305g",
+            "balance": "Head Light",
+            "pattern": "18x20"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 15500,
+              "max": 21000
+            },
+            "USD": {
+              "min": 199,
+              "max": 269
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Prince+Textreme+Tour+100P+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=prince+textreme+tour+100p",
@@ -285,9 +879,70 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 18999, "url": "https://www.amazon.in/s?k=Prince+Textreme+Tour+100P+tennis+racket", "verified": true},
-            {"platform": "Flipkart", "price": 19499, "url": "https://www.flipkart.com/search?q=prince+textreme+tour+100p"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 18999,
+              "url": "https://www.amazon.in/s?k=Prince+Textreme+Tour+100P+tennis+racket",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 19499,
+              "url": "https://www.flipkart.com/search?q=prince+textreme+tour+100p"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "attacker",
+              "baseline",
+              "blocker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 95,
+              "speed": 75,
+              "spin": 25,
+              "forgiveness": 35,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced flat hitters prioritizing pinpoint control and stability for competitive matches and precise shot-making.",
+            "not_for_persona": "Beginners, players seeking easy power or heavy topspin, or those with inconsistent technique.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Limited topspin potential due to tight string pattern",
+              "Low forgiveness, demanding clean technique for pace"
+            ],
+            "standout_qualities": [
+              "Exceptional precision and control for flat shots",
+              "Stable feel with effective vibration dampening",
+              "Maneuverable head-light balance for quick net play",
+              "Usable sweet spot for a dense 18x20 pattern"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r10",
@@ -296,8 +951,22 @@
           "type": "Power",
           "level": "intermediate",
           "recommended_for": "Baseliners seeking heavy power and plow-through",
-          "specs": {"head_size": "100 sq in", "weight": "310g", "balance": "Slightly Head Heavy", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 14500, "max": 19500}, "USD": {"min": 186, "max": 250}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "310g",
+            "balance": "Slightly Head Heavy",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 14500,
+              "max": 19500
+            },
+            "USD": {
+              "min": 186,
+              "max": 250
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Prince+Beast+Pro+100+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=prince+beast+pro+100",
@@ -321,9 +990,69 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 17499, "url": "https://www.amazon.in/s?k=Prince+Beast+Pro+100+tennis+racket", "verified": true},
-            {"platform": "Flipkart", "price": 18499, "url": "https://www.flipkart.com/search?q=prince+beast+pro+100"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 17499,
+              "url": "https://www.amazon.in/s?k=Prince+Beast+Pro+100+tennis+racket",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 18499,
+              "url": "https://www.flipkart.com/search?q=prince+beast+pro+100"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "power_hitter",
+              "baseline",
+              "attacker",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "serve_volley"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 65,
+              "speed": 40,
+              "spin": 75,
+              "forgiveness": 70,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate to advanced baseliners who generate their own power and seek heavy, stable groundstrokes and powerful serves.",
+            "not_for_persona": "Beginners, players with slow swings, or those prioritizing quick net play and extreme maneuverability.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Can be tiring in long matches due to high swing weight",
+              "Lacks maneuverability for quick net exchanges"
+            ],
+            "standout_qualities": [
+              "Exceptional plow-through power and stability",
+              "Arm-friendly power delivery",
+              "Good spin potential for its weight"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r11",
@@ -332,8 +1061,22 @@
           "type": "Control",
           "level": "advanced",
           "recommended_for": "Advanced players who prize feel and comfort",
-          "specs": {"head_size": "98 sq in", "weight": "325g", "balance": "Head Light", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 17500, "max": 23500}, "USD": {"min": 224, "max": 301}},
+          "specs": {
+            "head_size": "98 sq in",
+            "weight": "325g",
+            "balance": "Head Light",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 17500,
+              "max": 23500
+            },
+            "USD": {
+              "min": 224,
+              "max": 301
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Volkl+V-Sense+10+Tour+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=volkl+v-sense+10+tour",
@@ -357,9 +1100,72 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 21499, "url": "https://www.amazon.in/s?k=Volkl+V-Sense+10+Tour+tennis+racket", "verified": true},
-            {"platform": "Flipkart", "price": 22499, "url": "https://www.flipkart.com/search?q=volkl+v-sense+10+tour"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 21499,
+              "url": "https://www.amazon.in/s?k=Volkl+V-Sense+10+Tour+tennis+racket",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 22499,
+              "url": "https://www.flipkart.com/search?q=volkl+v-sense+10+tour"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 90,
+              "speed": 70,
+              "spin": 65,
+              "forgiveness": 30,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced all-court players prioritizing pinpoint control, stability against hard hitters, and arm comfort from a nimble, heavy frame.",
+            "not_for_persona": "Beginners, junior players, or those with low swing speeds who need high forgiveness.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Heavy static weight can be taxing for some users",
+              "Limited brand presence and dealer network in certain regions",
+              "Small head size offers low forgiveness on mis-hits"
+            ],
+            "standout_qualities": [
+              "Exceptional stability against powerful shots",
+              "Superior control and precision for advanced play",
+              "Comfortable, arm-friendly feel due to shock absorption",
+              "Good maneuverability for its weight due to head-light balance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r12",
@@ -368,8 +1174,22 @@
           "type": "Comfort Power",
           "level": "intermediate",
           "recommended_for": "Club players seeking comfort and easy power",
-          "specs": {"head_size": "102 sq in", "weight": "290g", "balance": "Even", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 12500, "max": 17000}, "USD": {"min": 160, "max": 218}},
+          "specs": {
+            "head_size": "102 sq in",
+            "weight": "290g",
+            "balance": "Even",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 12500,
+              "max": 17000
+            },
+            "USD": {
+              "min": 160,
+              "max": 218
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Volkl+V-Feel+7+tennis+racket",
             "flipkart": "https://www.flipkart.com/search?q=volkl+v-feel+7",
@@ -393,9 +1213,68 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 14999, "url": "https://www.amazon.in/s?k=Volkl+V-Feel+7+tennis+racket", "verified": true},
-            {"platform": "Flipkart", "price": 15499, "url": "https://www.flipkart.com/search?q=volkl+v-feel+7"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 14999,
+              "url": "https://www.amazon.in/s?k=Volkl+V-Feel+7+tennis+racket",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 15499,
+              "url": "https://www.flipkart.com/search?q=volkl+v-feel+7"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "looper",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 80,
+              "speed": 75,
+              "spin": 75,
+              "forgiveness": 90,
+              "durability": 65
+            },
+            "best_for_persona": "Intermediate players prioritizing arm comfort and forgiveness, especially those with tennis elbow, developing an all-court game.",
+            "not_for_persona": "Aggressive advanced players needing maximum stability and power to counter heavy hitters in competitive matches.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Lacks stability against powerful opponents",
+              "Limited local availability for demoing"
+            ],
+            "standout_qualities": [
+              "Exceptional arm comfort and vibration dampening",
+              "Generous sweet spot for developing technique",
+              "Good spin potential for its weight class"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r13",
@@ -404,8 +1283,22 @@
           "type": "Comfort Control",
           "level": "advanced",
           "recommended_for": "Players with arm injuries seeking comfort plus control",
-          "specs": {"head_size": "97 sq in", "weight": "325g", "balance": "Head Light", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 19000, "max": 25000}, "USD": {"min": 244, "max": 320}},
+          "specs": {
+            "head_size": "97 sq in",
+            "weight": "325g",
+            "balance": "Head Light",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 19000,
+              "max": 25000
+            },
+            "USD": {
+              "min": 244,
+              "max": 320
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=ProKennex+Ki+Q%2B+Tour+Pro+tennis",
             "flipkart": "https://www.flipkart.com/search?q=prokennex+ki+q+tour+pro",
@@ -429,9 +1322,68 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 22999, "url": "https://www.amazon.in/s?k=ProKennex+Ki+Q%2B+Tour+Pro+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 23999, "url": "https://www.flipkart.com/search?q=prokennex+ki+q+tour+pro"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 22999,
+              "url": "https://www.amazon.in/s?k=ProKennex+Ki+Q%2B+Tour+Pro+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 23999,
+              "url": "https://www.flipkart.com/search?q=prokennex+ki+q+tour+pro"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "all_round",
+              "looper"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 90,
+              "speed": 70,
+              "spin": 80,
+              "forgiveness": 60,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced players seeking comfort and control, especially those with tennis elbow, who value stability and spin.",
+            "not_for_persona": "Beginners or intermediate players seeking immediate feedback or a budget-friendly option.",
+            "learning_curve_hours": 50,
+            "common_complaints": [
+              "Muted feel requires adjustment period",
+              "Limited brand support and availability"
+            ],
+            "standout_qualities": [
+              "Exceptional shock absorption for arm comfort",
+              "High stability and control for advanced play",
+              "Good maneuverability despite heavy frame",
+              "Effective for generating topspin"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r14",
@@ -440,8 +1392,22 @@
           "type": "Control",
           "level": "advanced",
           "recommended_for": "Serve-and-volley and flat-hitting baseliners",
-          "specs": {"head_size": "98 sq in", "weight": "315g", "balance": "Head Light", "pattern": "18x20"},
-          "price_ranges": {"INR": {"min": 18000, "max": 24000}, "USD": {"min": 231, "max": 308}},
+          "specs": {
+            "head_size": "98 sq in",
+            "weight": "315g",
+            "balance": "Head Light",
+            "pattern": "18x20"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 18000,
+              "max": 24000
+            },
+            "USD": {
+              "min": 231,
+              "max": 308
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=ProKennex+Black+Ace+Pro+tennis",
             "flipkart": "https://www.flipkart.com/search?q=prokennex+black+ace+pro",
@@ -465,9 +1431,70 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 21999, "url": "https://www.amazon.in/s?k=ProKennex+Black+Ace+Pro+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 22999, "url": "https://www.flipkart.com/search?q=prokennex+black+ace+pro"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 21999,
+              "url": "https://www.amazon.in/s?k=ProKennex+Black+Ace+Pro+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 22999,
+              "url": "https://www.flipkart.com/search?q=prokennex+black+ace+pro"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "serve_volley",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 95,
+              "speed": 75,
+              "spin": 25,
+              "forgiveness": 35,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced players with classic flat strokes or serve-and-volley game, seeking surgical control, crisp feel, and arm comfort.",
+            "not_for_persona": "Beginners, intermediate players, or those who rely heavily on topspin for power and depth.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Limited topspin potential due to dense string pattern",
+              "Requires advanced technique to generate pace"
+            ],
+            "standout_qualities": [
+              "Exceptional precision and control for flat shots",
+              "Arm-friendly comfort system",
+              "Stable and maneuverable for all-court play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r15",
@@ -476,8 +1503,22 @@
           "type": "Spin & Control",
           "level": "advanced",
           "recommended_for": "Tour-level baseliners needing spin, control and stability",
-          "specs": {"head_size": "98 sq in", "weight": "305g", "balance": "Head Light", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 17500, "max": 23000}, "USD": {"min": 224, "max": 295}},
+          "specs": {
+            "head_size": "98 sq in",
+            "weight": "305g",
+            "balance": "Head Light",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 17500,
+              "max": 23000
+            },
+            "USD": {
+              "min": 224,
+              "max": 295
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tecnifibre+TFight+305+Isoflex+tennis",
             "flipkart": "https://www.flipkart.com/search?q=tecnifibre+tfight+305",
@@ -501,9 +1542,71 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 19999, "url": "https://www.amazon.in/s?k=Tecnifibre+TFight+305+Isoflex+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 21499, "url": "https://www.flipkart.com/search?q=tecnifibre+tfight+305"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 19999,
+              "url": "https://www.amazon.in/s?k=Tecnifibre+TFight+305+Isoflex+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 21499,
+              "url": "https://www.flipkart.com/search?q=tecnifibre+tfight+305"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "spin_focused",
+              "baseline",
+              "counter_attacker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "club_recreational",
+              "school_college",
+              "garden_backyard",
+              "office_casual"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 90,
+              "speed": 75,
+              "spin": 85,
+              "forgiveness": 75,
+              "durability": 80
+            },
+            "best_for_persona": "Advanced players seeking precise control, spin, and stability for competitive match play and aggressive baseline rallies.",
+            "not_for_persona": "Beginners or intermediate players seeking arm comfort or a budget-friendly, easy-to-use option.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 36,
+            "common_complaints": [
+              "Can feel stiff and less comfortable for some players",
+              "High price point may not justify value for casual play"
+            ],
+            "standout_qualities": [
+              "Excellent stability on off-center hits due to Isoflex technology",
+              "Combines classic control with enhanced spin potential",
+              "Offers tour-level performance and feel for competitive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r16",
@@ -512,8 +1615,22 @@
           "type": "Tour Control",
           "level": "advanced",
           "recommended_for": "Federer fans and pure single-handed-backhand control players",
-          "specs": {"head_size": "97 sq in", "weight": "340g", "balance": "Head Light (9 pts)", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 22000, "max": 28000}, "USD": {"min": 280, "max": 360}},
+          "specs": {
+            "head_size": "97 sq in",
+            "weight": "340g",
+            "balance": "Head Light (9 pts)",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 22000,
+              "max": 28000
+            },
+            "USD": {
+              "min": 280,
+              "max": 360
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Wilson+Pro+Staff+RF97+v14",
             "flipkart": "https://www.flipkart.com/search?q=wilson+pro+staff+rf97+v14"
@@ -533,10 +1650,78 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 24999, "url": "https://www.amazon.in/s?k=Wilson+Pro+Staff+RF97+v14", "verified": true},
-            {"platform": "Flipkart", "price": 25999, "url": "https://www.flipkart.com/search?q=wilson+pro+staff+rf97+v14"},
-            {"platform": "Khelmart", "price": 23999, "url": "https://www.khelmart.com/search?q=wilson+pro+staff+rf97"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 24999,
+              "url": "https://www.amazon.in/s?k=Wilson+Pro+Staff+RF97+v14",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 25999,
+              "url": "https://www.flipkart.com/search?q=wilson+pro+staff+rf97+v14"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 23999,
+              "url": "https://www.khelmart.com/search?q=wilson+pro+staff+rf97"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 95,
+              "speed": 65,
+              "spin": 70,
+              "forgiveness": 20,
+              "durability": 85
+            },
+            "best_for_persona": "Strong, advanced players seeking ultimate control, stability, and feel for competitive match play and precise shot-making.",
+            "not_for_persona": "Beginners or intermediate players, those who lack strength, or players needing high forgiveness.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Demanding weight and swing weight requires significant strength",
+              "Small head size offers very low forgiveness on off-center hits",
+              "High premium price point is a barrier for many players"
+            ],
+            "standout_qualities": [
+              "Exceptional stability and plow-through for powerful shots",
+              "Superior feel and connection to the ball due to braided layup",
+              "Surprisingly maneuverable for its heavy static weight",
+              "Iconic design with strong brand prestige and resale value"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_r17",
@@ -545,8 +1730,22 @@
           "type": "Spin Power",
           "level": "intermediate",
           "recommended_for": "Spin-heavy baseliners wanting an aggressive tweener",
-          "specs": {"head_size": "100 sq in", "weight": "300g", "balance": "Even", "pattern": "16x19"},
-          "price_ranges": {"INR": {"min": 15500, "max": 21500}, "USD": {"min": 199, "max": 275}},
+          "specs": {
+            "head_size": "100 sq in",
+            "weight": "300g",
+            "balance": "Even",
+            "pattern": "16x19"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 15500,
+              "max": 21500
+            },
+            "USD": {
+              "min": 199,
+              "max": 275
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+VCORE+100+2023+tennis",
             "flipkart": "https://www.flipkart.com/search?q=yonex+vcore+100+2023"
@@ -565,10 +1764,72 @@
             "Costlier in India than Pure Drive comparables"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 18499, "url": "https://www.amazon.in/s?k=Yonex+VCORE+100+2023+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 19499, "url": "https://www.flipkart.com/search?q=yonex+vcore+100+2023"},
-            {"platform": "Khelmart", "price": 17999, "url": "https://www.khelmart.com/search?q=yonex+vcore+100"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 18499,
+              "url": "https://www.amazon.in/s?k=Yonex+VCORE+100+2023+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 19499,
+              "url": "https://www.flipkart.com/search?q=yonex+vcore+100+2023"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 17999,
+              "url": "https://www.khelmart.com/search?q=yonex+vcore+100"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "power_hitter",
+              "attacker",
+              "looper"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "tournament_open"
+            ],
+            "body_fit": [
+              "average_adult",
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 65,
+              "speed": 85,
+              "spin": 95,
+              "forgiveness": 80,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate club players seeking significant topspin and racket-head speed to dominate rallies.",
+            "not_for_persona": "Beginners needing maximum comfort or players with arm/wrist issues.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Stiff feel can be uncomfortable",
+              "Thin stock grip requires customization",
+              "Higher price point compared to alternatives"
+            ],
+            "standout_qualities": [
+              "Enhanced sweet spot for spin",
+              "Excellent racket-head speed",
+              "Accessible weight and balance for intermediates",
+              "Pro player endorsement"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -581,8 +1842,17 @@
           "brand": "Artengo (Decathlon)",
           "type": "Multi Court",
           "level": "beginner",
-          "specs": {"surface": "Multi Court", "cushion": "EVA", "weight": "320g"},
-          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "specs": {
+            "surface": "Multi Court",
+            "cushion": "EVA",
+            "weight": "320g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Decathlon+TS160+tennis+shoes",
             "flipkart": "https://www.flipkart.com/search?q=artengo+ts160+tennis+shoes"
@@ -601,10 +1871,75 @@
             "Upper mesh tears at the toe drag area for aggressive movers"
           ],
           "marketplace_prices": [
-            {"platform": "Decathlon", "price": 2499, "url": "https://www.decathlon.in/p/8540323/tennis-shoes/men-multicourt-tennis-shoes-ts160", "verified": true},
-            {"platform": "Amazon", "price": 2999, "url": "https://www.amazon.in/s?k=Decathlon+TS160+tennis+shoes"},
-            {"platform": "Flipkart", "price": 2899, "url": "https://www.flipkart.com/search?q=artengo+ts160+tennis+shoes"}
-          ]
+            {
+              "platform": "Decathlon",
+              "price": 2499,
+              "url": "https://www.decathlon.in/p/8540323/tennis-shoes/men-multicourt-tennis-shoes-ts160",
+              "verified": true
+            },
+            {
+              "platform": "Amazon",
+              "price": 2999,
+              "url": "https://www.amazon.in/s?k=Decathlon+TS160+tennis+shoes"
+            },
+            {
+              "platform": "Flipkart",
+              "price": 2899,
+              "url": "https://www.flipkart.com/search?q=artengo+ts160+tennis+shoes"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 20,
+              "control": 60,
+              "speed": 70,
+              "spin": 0,
+              "forgiveness": 80,
+              "durability": 40
+            },
+            "best_for_persona": "Beginner players seeking an affordable, multi-court shoe for casual play and basic technique development.",
+            "not_for_persona": "Competitive players who demand high lateral support and durability for aggressive court movements.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Cushioning degrades quickly",
+              "Insufficient lateral support",
+              "Upper material prone to tearing"
+            ],
+            "standout_qualities": [
+              "Exceptional value for money",
+              "Versatile multi-court outsole",
+              "Lightweight design for agility",
+              "Outsole durability guarantee"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_s02",
@@ -612,8 +1947,17 @@
           "brand": "Nivia",
           "type": "All Court",
           "level": "beginner",
-          "specs": {"surface": "All Court", "cushion": "EVA", "weight": "340g"},
-          "price_ranges": {"INR": {"min": 1500, "max": 2500}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "EVA",
+            "weight": "340g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1500,
+              "max": 2500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+tennis+shoes",
             "flipkart": "https://www.flipkart.com/search?q=nivia+tennis+shoes"
@@ -632,10 +1976,72 @@
             "Lacks reinforced toe cap so wears through quickly with toe drag"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1799, "url": "https://www.amazon.in/s?k=Nivia+tennis+shoes", "verified": true},
-            {"platform": "Flipkart", "price": 1699, "url": "https://www.flipkart.com/search?q=nivia+tennis+shoes"},
-            {"platform": "Myntra", "price": 1899, "url": "https://www.myntra.com/sports-shoes?f=Brand%3ANivia"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 1799,
+              "url": "https://www.amazon.in/s?k=Nivia+tennis+shoes",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1699,
+              "url": "https://www.flipkart.com/search?q=nivia+tennis+shoes"
+            },
+            {
+              "platform": "Myntra",
+              "price": 1899,
+              "url": "https://www.myntra.com/sports-shoes?f=Brand%3ANivia"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 10,
+              "control": 55,
+              "speed": 25,
+              "spin": 0,
+              "forgiveness": 40,
+              "durability": 45
+            },
+            "best_for_persona": "Beginner tennis players on a budget needing a basic, sturdy shoe for school, college, or academy training sessions.",
+            "not_for_persona": "Competitive players requiring high performance, advanced cushioning, or toe drag protection for intense matches.",
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Limited shock absorption on hard courts",
+              "Perceived as heavy compared to premium options",
+              "Toe cap wears quickly with dragging"
+            ],
+            "standout_qualities": [
+              "Highly affordable entry-level option",
+              "Non-marking sole suitable for indoor courts",
+              "Generally sturdy construction for basic use",
+              "Easy local warranty and replacement"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_s03",
@@ -643,8 +2049,17 @@
           "brand": "Asics",
           "type": "All Court",
           "level": "intermediate",
-          "specs": {"surface": "All Court", "cushion": "Gel", "weight": "340g"},
-          "price_ranges": {"INR": {"min": 5000, "max": 7500}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "Gel",
+            "weight": "340g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5000,
+              "max": 7500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Asics+Gel+Dedicate+8+tennis",
             "flipkart": "https://www.flipkart.com/search?q=asics+gel+dedicate+8+tennis"
@@ -663,10 +2078,73 @@
             "Cosmetic colourways are conservative and limited"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 6299, "url": "https://www.amazon.in/s?k=Asics+Gel+Dedicate+8+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 6499, "url": "https://www.flipkart.com/search?q=asics+gel+dedicate+8+tennis"},
-            {"platform": "Myntra", "price": 5999, "url": "https://www.myntra.com/sports-shoes?f=Brand%3AASICS"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 6299,
+              "url": "https://www.amazon.in/s?k=Asics+Gel+Dedicate+8+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 6499,
+              "url": "https://www.flipkart.com/search?q=asics+gel+dedicate+8+tennis"
+            },
+            {
+              "platform": "Myntra",
+              "price": 5999,
+              "url": "https://www.myntra.com/sports-shoes?f=Brand%3AASICS"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "defender",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wide_hand_grip"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 80,
+              "speed": 35,
+              "spin": 50,
+              "forgiveness": 75,
+              "durability": 90
+            },
+            "best_for_persona": "Intermediate club players seeking durable, stable all-court shoes with good rearfoot cushioning and a wide toe box for regular play.",
+            "not_for_persona": "Advanced players prioritizing lightweight speed and maximum forefoot cushioning for competitive tournaments.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Can feel heavy, hindering quick acceleration.",
+              "Forefoot cushioning is less advanced than premium models.",
+              "Limited and conservative color options."
+            ],
+            "standout_qualities": [
+              "Effective rearfoot Gel cushioning for impact absorption.",
+              "Reliable Asics fit and excellent midfoot stability.",
+              "Spacious toe box, suitable for wider feet.",
+              "High durability for frequent club-level play."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_s04",
@@ -674,8 +2152,17 @@
           "brand": "Asics",
           "type": "All Court",
           "level": "intermediate",
-          "specs": {"surface": "All Court", "cushion": "Gel + FlyteFoam", "weight": "360g"},
-          "price_ranges": {"INR": {"min": 8000, "max": 12000}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "Gel + FlyteFoam",
+            "weight": "360g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 8000,
+              "max": 12000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Asics+Gel+Resolution+9+tennis",
             "flipkart": "https://www.flipkart.com/search?q=asics+gel+resolution+9+tennis"
@@ -694,10 +2181,75 @@
             "Snug last runs narrow for wider Indian feet"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 9999, "url": "https://www.amazon.in/s?k=Asics+Gel+Resolution+9+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 10499, "url": "https://www.flipkart.com/search?q=asics+gel+resolution+9+tennis"},
-            {"platform": "Myntra", "price": 9499, "url": "https://www.myntra.com/sports-shoes/asics/asics-men-gel-resolution"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 9999,
+              "url": "https://www.amazon.in/s?k=Asics+Gel+Resolution+9+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 10499,
+              "url": "https://www.flipkart.com/search?q=asics+gel+resolution+9+tennis"
+            },
+            {
+              "platform": "Myntra",
+              "price": 9499,
+              "url": "https://www.myntra.com/sports-shoes/asics/asics-men-gel-resolution"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "defender",
+              "counter_attacker",
+              "baseline",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [],
+            "body_fit": [],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 90,
+              "speed": 30,
+              "spin": 50,
+              "forgiveness": 80,
+              "durability": 95
+            },
+            "best_for_persona": "Intermediate to advanced players needing maximum stability and durability for aggressive sliding on hard courts.",
+            "not_for_persona": "Players prioritizing lightweight speed or those with wide feet.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Heavy feel for agile players",
+              "Requires significant break-in",
+              "Narrow fit for some foot shapes"
+            ],
+            "standout_qualities": [
+              "Exceptional lateral stability",
+              "Superior shock absorption and cushioning",
+              "Outstanding outsole durability",
+              "Trusted by professional tour players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_s05",
@@ -705,8 +2257,17 @@
           "brand": "Nike",
           "type": "All Court",
           "level": "advanced",
-          "specs": {"surface": "All Court", "cushion": "Air Zoom", "weight": "340g"},
-          "price_ranges": {"INR": {"min": 10000, "max": 14000}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "Air Zoom",
+            "weight": "340g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 10000,
+              "max": 14000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Vapor+Pro+2+tennis+shoes",
             "flipkart": "https://www.flipkart.com/search?q=nike+vapor+pro+2+tennis"
@@ -725,10 +2286,69 @@
             "14000 INR ceiling is steep for a shoe with limited cushion stack"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 12499, "url": "https://www.amazon.in/s?k=Nike+Vapor+Pro+2+tennis+shoes", "verified": true},
-            {"platform": "Nike India", "price": 12995, "url": "https://www.nike.com/in/w/tennis-shoes-tennis-az5e0"},
-            {"platform": "Flipkart", "price": 12999, "url": "https://www.flipkart.com/search?q=nike+vapor+pro+2+tennis"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 12499,
+              "url": "https://www.amazon.in/s?k=Nike+Vapor+Pro+2+tennis+shoes",
+              "verified": true
+            },
+            {
+              "platform": "Nike India",
+              "price": 12995,
+              "url": "https://www.nike.com/in/w/tennis-shoes-tennis-az5e0"
+            },
+            {
+              "platform": "Flipkart",
+              "price": 12999,
+              "url": "https://www.flipkart.com/search?q=nike+vapor+pro+2+tennis"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "attacker",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 90,
+              "speed": 95,
+              "spin": 10,
+              "forgiveness": 45,
+              "durability": 40
+            },
+            "best_for_persona": "Advanced players prioritizing explosive speed and agile court movement for competitive matches on all surfaces.",
+            "not_for_persona": "Players with wide feet, or those seeking maximum cushioning and long-lasting outsole durability for casual play.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Outsole durability may be shorter than rivals",
+              "Narrow fit can be uncomfortable for wider feet",
+              "High price for moderate cushioning"
+            ],
+            "standout_qualities": [
+              "Exceptional responsiveness for quick push-offs",
+              "Lightweight design enhances agility",
+              "Low-to-the-ground feel for precise court connection",
+              "Popular choice among professional tour players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_s06",
@@ -736,8 +2356,17 @@
           "brand": "Adidas",
           "type": "All Court",
           "level": "advanced",
-          "specs": {"surface": "All Court", "cushion": "Bounce Pro", "weight": "380g"},
-          "price_ranges": {"INR": {"min": 9000, "max": 13000}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "Bounce Pro",
+            "weight": "380g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 9000,
+              "max": 13000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Adidas+Barricade+13+tennis",
             "flipkart": "https://www.flipkart.com/search?q=adidas+barricade+13+tennis"
@@ -756,10 +2385,76 @@
             "Break-in stiffness can blister the heel during the first week"
           ],
           "marketplace_prices": [
-            {"platform": "Adidas India", "price": 11999, "url": "https://www.adidas.co.in/tennis-shoes", "verified": true},
-            {"platform": "Amazon", "price": 11499, "url": "https://www.amazon.in/s?k=Adidas+Barricade+13+tennis"},
-            {"platform": "Flipkart", "price": 11899, "url": "https://www.flipkart.com/search?q=adidas+barricade+13+tennis"}
-          ]
+            {
+              "platform": "Adidas India",
+              "price": 11999,
+              "url": "https://www.adidas.co.in/tennis-shoes",
+              "verified": true
+            },
+            {
+              "platform": "Amazon",
+              "price": 11499,
+              "url": "https://www.amazon.in/s?k=Adidas+Barricade+13+tennis"
+            },
+            {
+              "platform": "Flipkart",
+              "price": 11899,
+              "url": "https://www.flipkart.com/search?q=adidas+barricade+13+tennis"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "control_focused",
+              "baseline"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 90,
+              "speed": 20,
+              "spin": 50,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Advanced, aggressive baseliners needing maximum stability and durability for long, intense matches.",
+            "not_for_persona": "Players prioritizing lightweight speed and quick, agile court coverage.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 15,
+            "common_complaints": [
+              "Heavy feel on court",
+              "Can feel clunky for agile players",
+              "Requires a break-in period"
+            ],
+            "standout_qualities": [
+              "Exceptional lateral stability and heel lock",
+              "Unmatched durability, especially in the toe and outsole",
+              "High energy return cushioning for long matches"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_sh07",
@@ -768,8 +2463,21 @@
           "type": "All Court",
           "level": "advanced",
           "recommended_for": "Fast-paced baseliners valuing Italian craftsmanship",
-          "specs": {"surface": "All Court", "cushion": "Blushield DD Anima", "weight": "355g"},
-          "price_ranges": {"INR": {"min": 11000, "max": 15500}, "USD": {"min": 141, "max": 199}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "Blushield DD Anima",
+            "weight": "355g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 11000,
+              "max": 15500
+            },
+            "USD": {
+              "min": 141,
+              "max": 199
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Diadora+Speed+Blushield+6+tennis",
             "flipkart": "https://www.flipkart.com/search?q=diadora+speed+blushield+tennis",
@@ -793,9 +2501,60 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 13499, "url": "https://www.amazon.in/s?k=Diadora+Speed+Blushield+6+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 13999, "url": "https://www.flipkart.com/search?q=diadora+speed+blushield+tennis"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 13499,
+              "url": "https://www.amazon.in/s?k=Diadora+Speed+Blushield+6+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 13999,
+              "url": "https://www.flipkart.com/search?q=diadora+speed+blushield+tennis"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "attacker",
+              "counter_attacker"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 90,
+              "speed": 95,
+              "spin": 20,
+              "forgiveness": 65,
+              "durability": 85
+            },
+            "best_for_persona": "Advanced players seeking a premium, fast shoe with elite lateral support for quick, aggressive court movement.",
+            "not_for_persona": "Players with wide feet seeking a plush, forgiving fit or those on a strict budget.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High price point",
+              "Limited warranty support in some regions",
+              "Tight fit for wider feet"
+            ],
+            "standout_qualities": [
+              "Excellent energy return and cushioning",
+              "Superior lateral stability and lockdown",
+              "High-quality, premium construction",
+              "Distinctive aesthetic design"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_sh08",
@@ -804,8 +2563,21 @@
           "type": "All Court",
           "level": "intermediate",
           "recommended_for": "Club players wanting comfort and durability at a fair price",
-          "specs": {"surface": "All Court", "cushion": "EVA + Aosta 7.0 Rubber", "weight": "365g"},
-          "price_ranges": {"INR": {"min": 6500, "max": 9500}, "USD": {"min": 83, "max": 122}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "EVA + Aosta 7.0 Rubber",
+            "weight": "365g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6500,
+              "max": 9500
+            },
+            "USD": {
+              "min": 83,
+              "max": 122
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=K-Swiss+Hypercourt+Express+2+tennis",
             "flipkart": "https://www.flipkart.com/search?q=k-swiss+hypercourt+express+2",
@@ -829,9 +2601,69 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 7999, "url": "https://www.amazon.in/s?k=K-Swiss+Hypercourt+Express+2+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 8499, "url": "https://www.flipkart.com/search?q=k-swiss+hypercourt+express+2"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 7999,
+              "url": "https://www.amazon.in/s?k=K-Swiss+Hypercourt+Express+2+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 8499,
+              "url": "https://www.flipkart.com/search?q=k-swiss+hypercourt+express+2"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "baseline",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wide_hand_grip"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 75,
+              "speed": 30,
+              "spin": 0,
+              "forgiveness": 70,
+              "durability": 90
+            },
+            "best_for_persona": "Intermediate players needing a durable, stable, wide-fitting shoe for club play and training, especially on hard courts.",
+            "not_for_persona": "Players seeking lightweight, highly responsive speed shoes for elite-level tournament play.",
+            "upgrade_after_months": 15,
+            "common_complaints": [
+              "Heavier than modern speed-focused shoes",
+              "Midsole lacks advanced cushioning responsiveness",
+              "Limited color options in some regions"
+            ],
+            "standout_qualities": [
+              "Exceptional outsole durability with guarantee",
+              "Excellent value for money",
+              "Comfortable wide fit",
+              "Robust upper for toe drag"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_sh09",
@@ -840,8 +2672,21 @@
           "type": "All Court",
           "level": "intermediate",
           "recommended_for": "Players seeking lightweight comfort with stability",
-          "specs": {"surface": "All Court", "cushion": "Ortholite EVA", "weight": "325g"},
-          "price_ranges": {"INR": {"min": 7000, "max": 10000}, "USD": {"min": 90, "max": 128}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "Ortholite EVA",
+            "weight": "325g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7000,
+              "max": 10000
+            },
+            "USD": {
+              "min": 90,
+              "max": 128
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=K-Swiss+Bigshot+Light+4+tennis",
             "flipkart": "https://www.flipkart.com/search?q=k-swiss+bigshot+light+4",
@@ -865,9 +2710,67 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 8499, "url": "https://www.amazon.in/s?k=K-Swiss+Bigshot+Light+4+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 8999, "url": "https://www.flipkart.com/search?q=k-swiss+bigshot+light+4"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 8499,
+              "url": "https://www.amazon.in/s?k=K-Swiss+Bigshot+Light+4+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 8999,
+              "url": "https://www.flipkart.com/search?q=k-swiss+bigshot+light+4"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "tournament_open"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 80,
+              "speed": 90,
+              "spin": 50,
+              "forgiveness": 85,
+              "durability": 30
+            },
+            "best_for_persona": "Intermediate all-court players seeking a lightweight, stable shoe with a roomy toe box for comfort and quick movement during club play.",
+            "not_for_persona": "Advanced players needing maximum outsole durability or cushioning for intense, frequent tournament matches.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "Outsole rubber wears faster than some alternatives.",
+              "Lateral support is softer compared to heavier models.",
+              "Cushioning degrades relatively quickly with heavy use."
+            ],
+            "standout_qualities": [
+              "Extremely lightweight for a stability-class shoe.",
+              "Offers a plush step-in feel and odor control.",
+              "Provides ample space for wider feet or orthotics.",
+              "Good value in its mid-price segment."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_s10",
@@ -876,8 +2779,21 @@
           "type": "All Court Speed",
           "level": "advanced",
           "recommended_for": "Quick movers who want Resolution stability in a lighter package",
-          "specs": {"surface": "All Court", "cushion": "FlyteFoam Blast+", "weight": "335g"},
-          "price_ranges": {"INR": {"min": 11000, "max": 15500}, "USD": {"min": 141, "max": 199}},
+          "specs": {
+            "surface": "All Court",
+            "cushion": "FlyteFoam Blast+",
+            "weight": "335g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 11000,
+              "max": 15500
+            },
+            "USD": {
+              "min": 141,
+              "max": 199
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Asics+Court+FF+3+tennis",
             "flipkart": "https://www.flipkart.com/search?q=asics+court+ff+3+tennis"
@@ -896,10 +2812,70 @@
             "Outsole shows wear faster than the Resolution 9"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 13499, "url": "https://www.amazon.in/s?k=Asics+Court+FF+3+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 13999, "url": "https://www.flipkart.com/search?q=asics+court+ff+3+tennis"},
-            {"platform": "Myntra", "price": 12999, "url": "https://www.myntra.com/sports-shoes/asics/asics-court-ff"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 13499,
+              "url": "https://www.amazon.in/s?k=Asics+Court+FF+3+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 13999,
+              "url": "https://www.flipkart.com/search?q=asics+court+ff+3+tennis"
+            },
+            {
+              "platform": "Myntra",
+              "price": 12999,
+              "url": "https://www.myntra.com/sports-shoes/asics/asics-court-ff"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 85,
+              "speed": 90,
+              "spin": 50,
+              "forgiveness": 80,
+              "durability": 55
+            },
+            "best_for_persona": "Advanced players prioritizing explosive speed and responsive cushioning for competitive matches on all court surfaces.",
+            "not_for_persona": "Beginners, casual players, or those with wide feet seeking maximum outsole durability or a budget-friendly option.",
+            "common_complaints": [
+              "High price point",
+              "Tight fit for wider feet",
+              "Outsole wears relatively quickly"
+            ],
+            "standout_qualities": [
+              "Lightweight for its class",
+              "Excellent responsive cushioning",
+              "Durable toe protection",
+              "Endorsed by top professional players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -912,8 +2888,17 @@
           "brand": "Cosco",
           "type": "Synthetic Gut",
           "level": "beginner",
-          "specs": {"gauge": "1.30mm (16g)", "material": "Nylon", "tension_range": "45-60 lbs"},
-          "price_ranges": {"INR": {"min": 200, "max": 400}},
+          "specs": {
+            "gauge": "1.30mm (16g)",
+            "material": "Nylon",
+            "tension_range": "45-60 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 200,
+              "max": 400
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=cosco+tennis+string"
@@ -932,9 +2917,71 @@
             "Inconsistent quality between batches reported by stringers"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 249, "url": "https://www.amazon.in/s?k=Cosco+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 299, "url": "https://www.flipkart.com/search?q=cosco+tennis+string"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 249,
+              "url": "https://www.amazon.in/s?k=Cosco+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 299,
+              "url": "https://www.flipkart.com/search?q=cosco+tennis+string"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 30,
+              "speed": 60,
+              "spin": 20,
+              "forgiveness": 85,
+              "durability": 75
+            },
+            "best_for_persona": "Budget-conscious beginners and recreational players prioritizing arm comfort and affordability for casual, non-competitive play.",
+            "not_for_persona": "Competitive players requiring consistent tension, high spin potential, or advanced performance for match play.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "Rapid tension loss during play",
+              "Poor spin generation",
+              "Inconsistent manufacturing quality"
+            ],
+            "standout_qualities": [
+              "Extremely affordable stringing option",
+              "Good arm comfort and shock absorption",
+              "Reliable durability for casual use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st02",
@@ -942,8 +2989,17 @@
           "brand": "Yonex",
           "type": "Multifilament",
           "level": "beginner",
-          "specs": {"gauge": "1.30mm (16g)", "material": "Nylon multifilament", "tension_range": "45-60 lbs"},
-          "price_ranges": {"INR": {"min": 500, "max": 800}},
+          "specs": {
+            "gauge": "1.30mm (16g)",
+            "material": "Nylon multifilament",
+            "tension_range": "45-60 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Dynawire+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=yonex+dynawire+tennis"
@@ -962,10 +3018,69 @@
             "Not ideal for chronic string breakers above NTRP 4.0"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 649, "url": "https://www.amazon.in/s?k=Yonex+Dynawire+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 699, "url": "https://www.flipkart.com/search?q=yonex+dynawire+tennis"},
-            {"platform": "Khelmart", "price": 599, "url": "https://www.khelmart.com/search?q=yonex+dynawire"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 649,
+              "url": "https://www.amazon.in/s?k=Yonex+Dynawire+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 699,
+              "url": "https://www.flipkart.com/search?q=yonex+dynawire+tennis"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 599,
+              "url": "https://www.khelmart.com/search?q=yonex+dynawire"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 65,
+              "speed": 50,
+              "spin": 20,
+              "forgiveness": 85,
+              "durability": 70
+            },
+            "best_for_persona": "Beginner players seeking comfortable power and good durability for recreational play without breaking the bank.",
+            "not_for_persona": "Advanced players or chronic string breakers seeking high spin or extreme durability.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "Limited spin generation",
+              "Visible fraying after moderate use"
+            ],
+            "standout_qualities": [
+              "Excellent comfort and feel",
+              "Good balance of durability for beginners",
+              "Consistent quality"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st03",
@@ -973,8 +3088,17 @@
           "brand": "Babolat",
           "type": "Synthetic Gut",
           "level": "intermediate",
-          "specs": {"gauge": "1.30mm (16g)", "material": "Nylon with polyurethane", "tension_range": "50-60 lbs"},
-          "price_ranges": {"INR": {"min": 600, "max": 1000}},
+          "specs": {
+            "gauge": "1.30mm (16g)",
+            "material": "Nylon with polyurethane",
+            "tension_range": "50-60 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 1000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Babolat+Syn+Gut+Force+tennis",
             "flipkart": "https://www.flipkart.com/search?q=babolat+syn+gut+force"
@@ -993,10 +3117,70 @@
             "Not recommended for chronic string breakers"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 799, "url": "https://www.amazon.in/s?k=Babolat+Syn+Gut+Force+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 849, "url": "https://www.flipkart.com/search?q=babolat+syn+gut+force"},
-            {"platform": "Khelmart", "price": 749, "url": "https://www.khelmart.com/search?q=babolat+syn+gut+force"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 799,
+              "url": "https://www.amazon.in/s?k=Babolat+Syn+Gut+Force+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 849,
+              "url": "https://www.flipkart.com/search?q=babolat+syn+gut+force"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 749,
+              "url": "https://www.khelmart.com/search?q=babolat+syn+gut+force"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "stay_fit",
+              "casual_fun"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 50,
+              "speed": 65,
+              "spin": 60,
+              "forgiveness": 80,
+              "durability": 55
+            },
+            "best_for_persona": "Intermediate players seeking a balanced, comfortable, and affordable string for recreational play or hybrid setups.",
+            "not_for_persona": "Chronic string breakers or advanced players needing maximum spin and tension stability for competitive matches.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Limited spin and control compared to polyester",
+              "Noticeable tension loss after moderate play",
+              "Not suitable for frequent string breakers"
+            ],
+            "standout_qualities": [
+              "Enhanced comfort with good ball bite",
+              "Improved tension retention over basic synthetic guts",
+              "Versatile for hybrid stringing configurations",
+              "Reliable and affordable option"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st04",
@@ -1004,8 +3188,17 @@
           "brand": "Yonex",
           "type": "Polyester",
           "level": "intermediate",
-          "specs": {"gauge": "1.25mm (17g)", "material": "Co-polyester", "tension_range": "45-60 lbs"},
-          "price_ranges": {"INR": {"min": 800, "max": 1200}},
+          "specs": {
+            "gauge": "1.25mm (17g)",
+            "material": "Co-polyester",
+            "tension_range": "45-60 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 800,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Yonex+Poly+Tour+Pro+tennis",
             "flipkart": "https://www.flipkart.com/search?q=yonex+poly+tour+pro"
@@ -1024,10 +3217,71 @@
             "Premium pricing for a single set under Indian retail"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 999, "url": "https://www.amazon.in/s?k=Yonex+Poly+Tour+Pro+tennis", "verified": true},
-            {"platform": "Flipkart", "price": 1099, "url": "https://www.flipkart.com/search?q=yonex+poly+tour+pro"},
-            {"platform": "Khelmart", "price": 949, "url": "https://www.khelmart.com/search?q=yonex+poly+tour+pro"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 999,
+              "url": "https://www.amazon.in/s?k=Yonex+Poly+Tour+Pro+tennis",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1099,
+              "url": "https://www.flipkart.com/search?q=yonex+poly+tour+pro"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 949,
+              "url": "https://www.khelmart.com/search?q=yonex+poly+tour+pro"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [],
+            "body_fit": [
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 90,
+              "speed": 65,
+              "spin": 85,
+              "forgiveness": 75,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate to advanced players prioritizing arm comfort, control, and spin in a polyester string.",
+            "not_for_persona": "Players with severe arm injuries needing maximum comfort or those seeking extreme power/spin from a very stiff poly.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Not suitable for players with severe arm injuries requiring maximum comfort.",
+              "Spin potential is not as extreme as some stiffer polyester strings.",
+              "Higher price point compared to some alternatives."
+            ],
+            "standout_qualities": [
+              "Offers exceptional comfort and arm-friendliness for a polyester string.",
+              "Provides excellent spin generation and feel.",
+              "Demonstrates superior tension maintenance compared to other premium polyesters."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st05",
@@ -1035,8 +3289,17 @@
           "brand": "Babolat",
           "type": "Polyester",
           "level": "advanced",
-          "specs": {"gauge": "1.25mm (17g)", "material": "Co-polyester", "tension_range": "48-55 lbs"},
-          "price_ranges": {"INR": {"min": 1000, "max": 1500}},
+          "specs": {
+            "gauge": "1.25mm (17g)",
+            "material": "Co-polyester",
+            "tension_range": "48-55 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1000,
+              "max": 1500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Babolat+RPM+Blast+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=babolat+rpm+blast"
@@ -1055,10 +3318,76 @@
             "Premium 1500 INR price per set adds up over the season"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1299, "url": "https://www.amazon.in/s?k=Babolat+RPM+Blast+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 1399, "url": "https://www.flipkart.com/search?q=babolat+rpm+blast"},
-            {"platform": "Khelmart", "price": 1199, "url": "https://www.khelmart.com/search?q=babolat+rpm+blast"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 1299,
+              "url": "https://www.amazon.in/s?k=Babolat+RPM+Blast+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1399,
+              "url": "https://www.flipkart.com/search?q=babolat+rpm+blast"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 1199,
+              "url": "https://www.khelmart.com/search?q=babolat+rpm+blast"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "control_focused",
+              "attacker",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 95,
+              "speed": 45,
+              "spin": 98,
+              "forgiveness": 30,
+              "durability": 75
+            },
+            "best_for_persona": "Aggressive, advanced players seeking maximum spin and precise control for competitive match play and tournament success.",
+            "not_for_persona": "Beginners, casual players, or those with arm or wrist pain due to its very stiff feel.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 1,
+            "common_complaints": [
+              "Stiff feel can cause arm discomfort",
+              "Tension loss can be noticeable for powerful players",
+              "Higher cost compared to other options"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation",
+              "Provides precise ball control",
+              "Favored by top professional players",
+              "Good durability for an aggressive polyester"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st06",
@@ -1066,8 +3395,17 @@
           "brand": "Luxilon (Wilson)",
           "type": "Polyester",
           "level": "advanced",
-          "specs": {"gauge": "1.25mm (16L)", "material": "Co-polyester", "tension_range": "46-55 lbs"},
-          "price_ranges": {"INR": {"min": 1200, "max": 1800}},
+          "specs": {
+            "gauge": "1.25mm (16L)",
+            "material": "Co-polyester",
+            "tension_range": "46-55 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 1800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Luxilon+ALU+Power+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=luxilon+alu+power"
@@ -1086,10 +3424,75 @@
             "Less spin bite than shaped polys like RPM or Hyper-G"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1499, "url": "https://www.amazon.in/s?k=Luxilon+ALU+Power+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 1599, "url": "https://www.flipkart.com/search?q=luxilon+alu+power"},
-            {"platform": "Khelmart", "price": 1399, "url": "https://www.khelmart.com/search?q=luxilon+alu+power"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 1499,
+              "url": "https://www.amazon.in/s?k=Luxilon+ALU+Power+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1599,
+              "url": "https://www.flipkart.com/search?q=luxilon+alu+power"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 1399,
+              "url": "https://www.khelmart.com/search?q=luxilon+alu+power"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "baseline",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 65,
+              "control": 95,
+              "speed": 75,
+              "spin": 45,
+              "forgiveness": 30,
+              "durability": 90
+            },
+            "best_for_persona": "Advanced and pro players seeking exceptional control, tension stability, and a crisp feel for competitive match play.",
+            "not_for_persona": "Beginners, casual players, or those with arm/shoulder sensitivity due to its stiff, unforgiving feel.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Stiff feel can cause arm discomfort",
+              "Higher cost compared to other polyesters",
+              "Limited spin generation compared to textured strings"
+            ],
+            "standout_qualities": [
+              "Exceptional control and predictable response",
+              "Excellent tension maintenance",
+              "Widely adopted by professional players",
+              "Good balance of control and power"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st07",
@@ -1098,8 +3501,21 @@
           "type": "Polyester",
           "level": "advanced",
           "recommended_for": "Spin-heavy aggressive baseliners",
-          "specs": {"gauge": "1.25mm (16L)", "material": "Square-profile co-polyester", "tension_range": "48-55 lbs"},
-          "price_ranges": {"INR": {"min": 1100, "max": 1600}, "USD": {"min": 14, "max": 21}},
+          "specs": {
+            "gauge": "1.25mm (16L)",
+            "material": "Square-profile co-polyester",
+            "tension_range": "48-55 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1100,
+              "max": 1600
+            },
+            "USD": {
+              "min": 14,
+              "max": 21
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Solinco+Hyper-G+16L+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=solinco+hyper-g+16l",
@@ -1123,9 +3539,64 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1299, "url": "https://www.amazon.in/s?k=Solinco+Hyper-G+16L+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 1399, "url": "https://www.flipkart.com/search?q=solinco+hyper-g+16l"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 1299,
+              "url": "https://www.amazon.in/s?k=Solinco+Hyper-G+16L+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1399,
+              "url": "https://www.flipkart.com/search?q=solinco+hyper-g+16l"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "looper",
+              "attacker",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "body_fit": [],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 90,
+              "speed": 40,
+              "spin": 95,
+              "forgiveness": 30,
+              "durability": 55
+            },
+            "best_for_persona": "Advanced players seeking elite topspin and precise control for competitive play, especially on the junior and college circuit.",
+            "not_for_persona": "Players prioritizing arm comfort or seeking a forgiving string with excellent tension maintenance.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Can cause arm discomfort due to stiffness.",
+              "Experiences noticeable tension loss over its lifespan."
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation from its square profile.",
+              "Provides a crisp, predictable feel for precise shots.",
+              "A popular choice among competitive junior and college players.",
+              "Offers premium performance at a more accessible price point."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st08",
@@ -1134,8 +3605,21 @@
           "type": "Multifilament",
           "level": "intermediate",
           "recommended_for": "Players wanting gut-like feel without the gut price",
-          "specs": {"gauge": "1.24mm (17g)", "material": "Polyamide multifilament", "tension_range": "48-57 lbs"},
-          "price_ranges": {"INR": {"min": 1600, "max": 2200}, "USD": {"min": 21, "max": 28}},
+          "specs": {
+            "gauge": "1.24mm (17g)",
+            "material": "Polyamide multifilament",
+            "tension_range": "48-57 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1600,
+              "max": 2200
+            },
+            "USD": {
+              "min": 21,
+              "max": 28
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tecnifibre+X-One+Biphase+17+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=tecnifibre+x-one+biphase+17",
@@ -1159,9 +3643,66 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1899, "url": "https://www.amazon.in/s?k=Tecnifibre+X-One+Biphase+17+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 1999, "url": "https://www.flipkart.com/search?q=tecnifibre+x-one+biphase+17"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 1899,
+              "url": "https://www.amazon.in/s?k=Tecnifibre+X-One+Biphase+17+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1999,
+              "url": "https://www.flipkart.com/search?q=tecnifibre+x-one+biphase+17"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 75,
+              "speed": 70,
+              "spin": 40,
+              "forgiveness": 90,
+              "durability": 25
+            },
+            "best_for_persona": "Intermediate players seeking arm comfort, natural gut feel, and easy power without heavy spin.",
+            "not_for_persona": "Aggressive advanced players with heavy topspin who frequently break strings.",
+            "common_complaints": [
+              "Low durability for heavy spin players",
+              "Higher cost compared to polyester strings"
+            ],
+            "standout_qualities": [
+              "Exceptional arm comfort and shock absorption",
+              "Natural gut-like feel and playability",
+              "Good power generation for moderate swings"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st09",
@@ -1170,8 +3711,21 @@
           "type": "Synthetic Gut",
           "level": "intermediate",
           "recommended_for": "Recreational and club players seeking durability and comfort",
-          "specs": {"gauge": "1.24mm (17g)", "material": "Nylon with titanium wraps", "tension_range": "50-60 lbs"},
-          "price_ranges": {"INR": {"min": 700, "max": 1100}, "USD": {"min": 9, "max": 14}},
+          "specs": {
+            "gauge": "1.24mm (17g)",
+            "material": "Nylon with titanium wraps",
+            "tension_range": "50-60 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 700,
+              "max": 1100
+            },
+            "USD": {
+              "min": 9,
+              "max": 14
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Gamma+Professional+17+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=gamma+professional+17+string",
@@ -1195,9 +3749,60 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 899, "url": "https://www.amazon.in/s?k=Gamma+Professional+17+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 949, "url": "https://www.flipkart.com/search?q=gamma+professional+17+string"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 899,
+              "url": "https://www.amazon.in/s?k=Gamma+Professional+17+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 949,
+              "url": "https://www.flipkart.com/search?q=gamma+professional+17+string"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 60,
+              "speed": 70,
+              "spin": 70,
+              "forgiveness": 85,
+              "durability": 50
+            },
+            "best_for_persona": "Intermediate club players seeking a comfortable, reliable string with good power and spin for its type, offering great value.",
+            "not_for_persona": "Aggressive big hitters needing extreme durability or flat hitters who struggle with string launch control.",
+            "common_complaints": [
+              "Can be too powerful for flat hitters",
+              "Lower durability for aggressive players"
+            ],
+            "standout_qualities": [
+              "Excellent snap-back and spin for a synthetic gut",
+              "Comfortable feel with good ball bite",
+              "Consistent quality",
+              "High value for money"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_st10",
@@ -1206,8 +3811,21 @@
           "type": "Multifilament",
           "level": "intermediate",
           "recommended_for": "Arm-conscious club players upgrading from synthetic gut",
-          "specs": {"gauge": "1.30mm (16g)", "material": "Polyamide multifilament", "tension_range": "50-60 lbs"},
-          "price_ranges": {"INR": {"min": 1400, "max": 2000}, "USD": {"min": 18, "max": 26}},
+          "specs": {
+            "gauge": "1.30mm (16g)",
+            "material": "Polyamide multifilament",
+            "tension_range": "50-60 lbs"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1400,
+              "max": 2000
+            },
+            "USD": {
+              "min": 18,
+              "max": 26
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Wilson+NXT+16+tennis+string",
             "flipkart": "https://www.flipkart.com/search?q=wilson+nxt+16+tennis+string"
@@ -1226,10 +3844,68 @@
             "Pricier than synthetic guts at the same gauge"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1699, "url": "https://www.amazon.in/s?k=Wilson+NXT+16+tennis+string", "verified": true},
-            {"platform": "Flipkart", "price": 1799, "url": "https://www.flipkart.com/search?q=wilson+nxt+16+tennis+string"},
-            {"platform": "Khelmart", "price": 1599, "url": "https://www.khelmart.com/search?q=wilson+nxt"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 1699,
+              "url": "https://www.amazon.in/s?k=Wilson+NXT+16+tennis+string",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1799,
+              "url": "https://www.flipkart.com/search?q=wilson+nxt+16+tennis+string"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 1599,
+              "url": "https://www.khelmart.com/search?q=wilson+nxt"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite",
+              "academy_training"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 70,
+              "spin": 45,
+              "forgiveness": 90,
+              "durability": 30
+            },
+            "best_for_persona": "Intermediate club players prioritizing arm comfort, excellent feel, and consistent play, especially in hybrid setups.",
+            "not_for_persona": "Advanced, aggressive players who hit with heavy topspin and frequently break strings.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Durability is low for heavy topspin hitters",
+              "Higher price point than basic synthetic guts"
+            ],
+            "standout_qualities": [
+              "Exceptional comfort and feel, akin to natural gut",
+              "Maintains tension well for a multifilament",
+              "Excellent choice for hybrid stringing configurations"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -1242,8 +3918,17 @@
           "brand": "Cosco",
           "type": "Pressureless Practice",
           "level": "beginner",
-          "specs": {"type": "Pressureless", "felt": "Light duty", "use": "Practice/Recreational"},
-          "price_ranges": {"INR": {"min": 100, "max": 250}},
+          "specs": {
+            "type": "Pressureless",
+            "felt": "Light duty",
+            "use": "Practice/Recreational"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 100,
+              "max": 250
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+tennis+ball",
             "flipkart": "https://www.flipkart.com/search?q=cosco+tennis+ball"
@@ -1262,9 +3947,64 @@
             "Not ITF-approved so cannot be used in tournaments"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 149, "url": "https://www.amazon.in/s?k=Cosco+tennis+ball", "verified": true},
-            {"platform": "Flipkart", "price": 169, "url": "https://www.flipkart.com/search?q=cosco+tennis+ball"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 149,
+              "url": "https://www.amazon.in/s?k=Cosco+tennis+ball",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 169,
+              "url": "https://www.flipkart.com/search?q=cosco+tennis+ball"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 15,
+              "speed": 25,
+              "spin": 15,
+              "forgiveness": 85,
+              "durability": 35
+            },
+            "best_for_persona": "Beginners or casual players seeking very affordable, long-lasting practice balls for backyard fun or casual cricket.",
+            "not_for_persona": "Competitive tennis players or those training for matches who require consistent bounce and felt performance.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 3,
+            "common_complaints": [
+              "Felt wears out quickly on hard courts",
+              "Inconsistent bounce makes it unsuitable for real matches",
+              "Not approved for official tournaments"
+            ],
+            "standout_qualities": [
+              "Extremely affordable",
+              "Bounce never dies due to pressureless design",
+              "Versatile for casual cricket play",
+              "Widely available in local markets"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b02",
@@ -1272,8 +4012,17 @@
           "brand": "Nivia",
           "type": "Pressureless Practice",
           "level": "beginner",
-          "specs": {"type": "Pressureless", "felt": "Standard duty", "use": "Practice/Training"},
-          "price_ranges": {"INR": {"min": 300, "max": 550}},
+          "specs": {
+            "type": "Pressureless",
+            "felt": "Standard duty",
+            "use": "Practice/Training"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 300,
+              "max": 550
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Heavy+Weight+Tennis+Ball",
             "flipkart": "https://www.flipkart.com/search?q=nivia+heavy+tennis+ball"
@@ -1292,10 +4041,67 @@
             "Slower court response can hurt timing if used long-term"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 399, "url": "https://www.amazon.in/s?k=Nivia+Heavy+Weight+Tennis+Ball", "verified": true},
-            {"platform": "Flipkart", "price": 429, "url": "https://www.flipkart.com/search?q=nivia+heavy+tennis+ball"},
-            {"platform": "Decathlon", "price": 449, "url": "https://www.decathlon.in/search?Ntt=tennis+balls"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 399,
+              "url": "https://www.amazon.in/s?k=Nivia+Heavy+Weight+Tennis+Ball",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 429,
+              "url": "https://www.flipkart.com/search?q=nivia+heavy+tennis+ball"
+            },
+            {
+              "platform": "Decathlon",
+              "price": 449,
+              "url": "https://www.decathlon.in/search?Ntt=tennis+balls"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 25,
+              "control": 75,
+              "speed": 25,
+              "spin": 30,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Beginners and recreational players needing durable, consistent balls for wall drills, ball machine practice, or basic groundstroke repetition.",
+            "not_for_persona": "Competitive players seeking match-grade feel, or those prone to arm fatigue during extended hitting sessions.",
+            "common_complaints": [
+              "Can cause arm fatigue during extended use",
+              "Unsuitable for competitive match play",
+              "May negatively impact timing for match balls"
+            ],
+            "standout_qualities": [
+              "Exceptional durability for practice",
+              "Consistent bounce for repetitive drills",
+              "Good value for bulk training",
+              "Suitable for ball machines and wall practice"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b03",
@@ -1303,8 +4109,18 @@
           "brand": "Wilson",
           "type": "Pressurized Match Ball",
           "level": "intermediate",
-          "specs": {"type": "Pressurized", "felt": "Regular duty", "use": "Match/Practice", "ITF_approved": true},
-          "price_ranges": {"INR": {"min": 400, "max": 650}},
+          "specs": {
+            "type": "Pressurized",
+            "felt": "Regular duty",
+            "use": "Match/Practice",
+            "ITF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 400,
+              "max": 650
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Wilson+Championship+Tennis+Balls",
             "flipkart": "https://www.flipkart.com/search?q=wilson+championship+tennis+balls"
@@ -1323,10 +4139,62 @@
             "Not as durable as Wilson US Open Extra Duty"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 449, "url": "https://www.amazon.in/s?k=Wilson+Championship+Tennis+Balls", "verified": true},
-            {"platform": "Flipkart", "price": 499, "url": "https://www.flipkart.com/search?q=wilson+championship+tennis+balls"},
-            {"platform": "Khelmart", "price": 429, "url": "https://www.khelmart.com/search?q=wilson+championship+tennis+balls"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 449,
+              "url": "https://www.amazon.in/s?k=Wilson+Championship+Tennis+Balls",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 499,
+              "url": "https://www.flipkart.com/search?q=wilson+championship+tennis+balls"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 429,
+              "url": "https://www.khelmart.com/search?q=wilson+championship+tennis+balls"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 75,
+              "speed": 70,
+              "spin": 65,
+              "forgiveness": 70,
+              "durability": 45
+            },
+            "best_for_persona": "Intermediate players needing ITF-approved, consistent match balls for club or tournament play on softer court surfaces.",
+            "not_for_persona": "Players who prioritize extreme durability on abrasive courts or need balls to retain pressure for extended periods.",
+            "common_complaints": [
+              "Felt wears quickly on abrasive court surfaces.",
+              "Pressure retention is limited after opening."
+            ],
+            "standout_qualities": [
+              "ITF-approved for sanctioned competitive play.",
+              "Offers consistent and predictable bounce.",
+              "Affordable and widely available match-quality option."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b04",
@@ -1334,8 +4202,18 @@
           "brand": "Head",
           "type": "Pressurized Match Ball",
           "level": "intermediate",
-          "specs": {"type": "Pressurized", "felt": "Regular duty", "use": "Match/Tournament", "ITF_approved": true},
-          "price_ranges": {"INR": {"min": 450, "max": 700}},
+          "specs": {
+            "type": "Pressurized",
+            "felt": "Regular duty",
+            "use": "Match/Tournament",
+            "ITF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 450,
+              "max": 700
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Head+Tour+Tennis+Balls",
             "flipkart": "https://www.flipkart.com/search?q=head+tour+tennis+balls"
@@ -1354,10 +4232,67 @@
             "Pressure drops within 7-10 days of opening the can"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 549, "url": "https://www.amazon.in/s?k=Head+Tour+Tennis+Balls", "verified": true},
-            {"platform": "Flipkart", "price": 599, "url": "https://www.flipkart.com/search?q=head+tour+tennis+balls"},
-            {"platform": "Khelmart", "price": 519, "url": "https://www.khelmart.com/search?q=head+tour+tennis+balls"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 549,
+              "url": "https://www.amazon.in/s?k=Head+Tour+Tennis+Balls",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 599,
+              "url": "https://www.flipkart.com/search?q=head+tour+tennis+balls"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 519,
+              "url": "https://www.khelmart.com/search?q=head+tour+tennis+balls"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 85,
+              "speed": 75,
+              "spin": 70,
+              "forgiveness": 70,
+              "durability": 65
+            },
+            "best_for_persona": "Intermediate to advanced players seeking an official, consistent match ball for competitive play on standard courts.",
+            "not_for_persona": "Budget-conscious casual players or those playing exclusively on very abrasive hard courts.",
+            "common_complaints": [
+              "Higher cost compared to some alternatives",
+              "Felt wears quickly on abrasive hard courts",
+              "Pressure loss after opening can"
+            ],
+            "standout_qualities": [
+              "Official ATP/WTA tour ball status",
+              "ITF approved with reliable flight and bounce",
+              "Excellent visibility with long-lasting felt color",
+              "Good durability compared to some competitors"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b05",
@@ -1365,8 +4300,18 @@
           "brand": "Dunlop",
           "type": "Pressurized Match Ball",
           "level": "advanced",
-          "specs": {"type": "Pressurized", "felt": "Extra duty", "use": "Tournament", "ITF_approved": true},
-          "price_ranges": {"INR": {"min": 500, "max": 800}},
+          "specs": {
+            "type": "Pressurized",
+            "felt": "Extra duty",
+            "use": "Tournament",
+            "ITF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Dunlop+Australian+Open+Tennis+Balls",
             "flipkart": "https://www.flipkart.com/search?q=dunlop+australian+open+tennis+balls"
@@ -1385,10 +4330,74 @@
             "Limited stock availability outside metro retail"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 649, "url": "https://www.amazon.in/s?k=Dunlop+Australian+Open+Tennis+Balls", "verified": true},
-            {"platform": "Flipkart", "price": 699, "url": "https://www.flipkart.com/search?q=dunlop+australian+open+tennis+balls"},
-            {"platform": "Khelmart", "price": 619, "url": "https://www.khelmart.com/search?q=dunlop+australian+open"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 649,
+              "url": "https://www.amazon.in/s?k=Dunlop+Australian+Open+Tennis+Balls",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 699,
+              "url": "https://www.flipkart.com/search?q=dunlop+australian+open+tennis+balls"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 619,
+              "url": "https://www.khelmart.com/search?q=dunlop+australian+open"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "power_hitter",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 90,
+              "speed": 75,
+              "spin": 85,
+              "forgiveness": 80,
+              "durability": 90
+            },
+            "best_for_persona": "Advanced and pro players needing consistent, durable, ITF-approved balls for competitive matches and serious training on hard courts.",
+            "not_for_persona": "Beginners or casual players seeking inexpensive balls for recreational backyard or light practice sessions.",
+            "common_complaints": [
+              "Premium price point",
+              "Can feel heavier initially",
+              "Limited availability in some regions"
+            ],
+            "standout_qualities": [
+              "Official Grand Slam tournament ball",
+              "Exceptional durability on hard courts",
+              "Consistent and predictable flight",
+              "ITF approved for competitive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b06",
@@ -1396,8 +4405,18 @@
           "brand": "Babolat",
           "type": "Pressurized Match Ball",
           "level": "advanced",
-          "specs": {"type": "Pressurized", "felt": "Clay court", "use": "Tournament", "ITF_approved": true},
-          "price_ranges": {"INR": {"min": 550, "max": 850}},
+          "specs": {
+            "type": "Pressurized",
+            "felt": "Clay court",
+            "use": "Tournament",
+            "ITF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 550,
+              "max": 850
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Babolat+French+Open+Tennis+Balls",
             "flipkart": "https://www.flipkart.com/search?q=babolat+french+open+tennis+balls"
@@ -1416,10 +4435,70 @@
             "Erratic stock availability outside major Indian cities"
           ],
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 699, "url": "https://www.amazon.in/s?k=Babolat+French+Open+Tennis+Balls", "verified": true},
-            {"platform": "Flipkart", "price": 749, "url": "https://www.flipkart.com/search?q=babolat+french+open+tennis+balls"},
-            {"platform": "Khelmart", "price": 679, "url": "https://www.khelmart.com/search?q=babolat+french+open"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 699,
+              "url": "https://www.amazon.in/s?k=Babolat+French+Open+Tennis+Balls",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 749,
+              "url": "https://www.flipkart.com/search?q=babolat+french+open+tennis+balls"
+            },
+            {
+              "platform": "Khelmart",
+              "price": 679,
+              "url": "https://www.khelmart.com/search?q=babolat+french+open"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 80,
+              "speed": 70,
+              "spin": 75,
+              "forgiveness": 70,
+              "durability": 50
+            },
+            "best_for_persona": "Advanced players and coaches seeking official tournament-grade balls for competitive matches on clay or hard courts.",
+            "not_for_persona": "Casual players on a budget or those requiring maximum durability for prolonged hard-court training sessions.",
+            "common_complaints": [
+              "High cost per can",
+              "Reduced durability on hard courts",
+              "Inconsistent availability in some regions"
+            ],
+            "standout_qualities": [
+              "Official Grand Slam match ball",
+              "Optimized felt for clay court play",
+              "Consistent and reliable performance"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b07",
@@ -1428,8 +4507,22 @@
           "type": "Pressurized Match Ball",
           "level": "advanced",
           "recommended_for": "Club tournaments and serious practice on hard courts",
-          "specs": {"type": "Pressurized", "felt": "Extra duty", "use": "Match/Tournament", "ITF_approved": true},
-          "price_ranges": {"INR": {"min": 600, "max": 900}, "USD": {"min": 8, "max": 12}},
+          "specs": {
+            "type": "Pressurized",
+            "felt": "Extra duty",
+            "use": "Match/Tournament",
+            "ITF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 900
+            },
+            "USD": {
+              "min": 8,
+              "max": 12
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Tecnifibre+X-One+Tennis+Balls",
             "flipkart": "https://www.flipkart.com/search?q=tecnifibre+x-one+tennis+balls",
@@ -1453,9 +4546,61 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 749, "url": "https://www.amazon.in/s?k=Tecnifibre+X-One+Tennis+Balls", "verified": true},
-            {"platform": "Flipkart", "price": 799, "url": "https://www.flipkart.com/search?q=tecnifibre+x-one+tennis+balls"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 749,
+              "url": "https://www.amazon.in/s?k=Tecnifibre+X-One+Tennis+Balls",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 799,
+              "url": "https://www.flipkart.com/search?q=tecnifibre+x-one+tennis+balls"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 80,
+              "speed": 70,
+              "spin": 70,
+              "forgiveness": 75,
+              "durability": 90
+            },
+            "best_for_persona": "Competitive players seeking durable, consistent, tournament-grade balls for serious match play.",
+            "not_for_persona": "Casual players or beginners looking for budget-friendly balls for recreational hitting.",
+            "common_complaints": [
+              "High price point for non-competitive use",
+              "Can be difficult to find in some regions",
+              "Felt may feel stiffer compared to some alternatives"
+            ],
+            "standout_qualities": [
+              "Exceptional durability for extended play",
+              "Consistent and predictable bounce",
+              "Official tournament-grade quality",
+              "Good value in a 4-ball can"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b08",
@@ -1464,8 +4609,22 @@
           "type": "Pressurized Match Ball",
           "level": "intermediate",
           "recommended_for": "Club match play and coaching sessions",
-          "specs": {"type": "Pressurized", "felt": "Regular duty", "use": "Match/Practice", "ITF_approved": true},
-          "price_ranges": {"INR": {"min": 420, "max": 680}, "USD": {"min": 5, "max": 9}},
+          "specs": {
+            "type": "Pressurized",
+            "felt": "Regular duty",
+            "use": "Match/Practice",
+            "ITF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 420,
+              "max": 680
+            },
+            "USD": {
+              "min": 5,
+              "max": 9
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Prince+Tour+Pro+Tennis+Balls",
             "flipkart": "https://www.flipkart.com/search?q=prince+tour+pro+tennis+balls",
@@ -1489,9 +4648,57 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 519, "url": "https://www.amazon.in/s?k=Prince+Tour+Pro+Tennis+Balls", "verified": true},
-            {"platform": "Flipkart", "price": 569, "url": "https://www.flipkart.com/search?q=prince+tour+pro+tennis+balls"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 519,
+              "url": "https://www.amazon.in/s?k=Prince+Tour+Pro+Tennis+Balls",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 569,
+              "url": "https://www.flipkart.com/search?q=prince+tour+pro+tennis+balls"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 85,
+              "speed": 50,
+              "spin": 50,
+              "forgiveness": 80,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players needing reliable, ITF-approved match balls with consistent bounce and good durability for league play and practice, at a competitive price.",
+            "not_for_persona": "Elite players seeking premium brand recognition or those who exclusively play on highly abrasive outdoor courts.",
+            "common_complaints": [
+              "Perceived lower brand prestige compared to competitors.",
+              "Reduced felt durability on very abrasive court surfaces.",
+              "Inconsistent retail availability in some regions."
+            ],
+            "standout_qualities": [
+              "ITF approved at a highly competitive price point.",
+              "Reliable and consistent bounce for match play.",
+              "Good durability for regular-duty use over multiple sets.",
+              "Excellent value alternative in its category."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "tn_b09",
@@ -1500,8 +4707,22 @@
           "type": "Pressurized Match Ball",
           "level": "advanced",
           "recommended_for": "Club tournaments and serious league matches on hard courts",
-          "specs": {"type": "Pressurized", "felt": "Extra duty", "use": "Tournament", "ITF_approved": true},
-          "price_ranges": {"INR": {"min": 600, "max": 900}, "USD": {"min": 8, "max": 12}},
+          "specs": {
+            "type": "Pressurized",
+            "felt": "Extra duty",
+            "use": "Tournament",
+            "ITF_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 600,
+              "max": 900
+            },
+            "USD": {
+              "min": 8,
+              "max": 12
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Dunlop+Fort+All+Court+Tournament+Select",
             "flipkart": "https://www.flipkart.com/search?q=dunlop+fort+all+court+tournament+select"
@@ -1521,9 +4742,65 @@
           ],
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 749, "url": "https://www.amazon.in/s?k=Dunlop+Fort+All+Court+Tournament+Select", "verified": true},
-            {"platform": "Flipkart", "price": 799, "url": "https://www.flipkart.com/search?q=dunlop+fort+all+court+tournament+select"}
-          ]
+            {
+              "platform": "Amazon",
+              "price": 749,
+              "url": "https://www.amazon.in/s?k=Dunlop+Fort+All+Court+Tournament+Select",
+              "verified": true
+            },
+            {
+              "platform": "Flipkart",
+              "price": 799,
+              "url": "https://www.flipkart.com/search?q=dunlop+fort+all+court+tournament+select"
+            }
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 75,
+              "spin": 70,
+              "forgiveness": 80,
+              "durability": 95
+            },
+            "best_for_persona": "Advanced players and competitive club members seeking durable, consistent balls for serious matches and tournaments.",
+            "not_for_persona": "Beginners or casual players looking for budget-friendly options for recreational backyard play.",
+            "common_complaints": [
+              "Higher price point compared to some championship balls",
+              "Limited retail availability in certain regions",
+              "Slightly heavier feel than some other tour balls"
+            ],
+            "standout_qualities": [
+              "Exceptional durability with premium felt",
+              "Consistent and predictable bounce for match play",
+              "Official ball for professional tournaments",
+              "Convenient 4-ball can for extended use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     }

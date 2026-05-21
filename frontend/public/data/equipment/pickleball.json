@@ -12,8 +12,19 @@
           "brand": "Nivia",
           "type": "Beginner Paddle",
           "level": "beginner",
-          "specs": {"weight": "200-220g", "face_material": "Fiberglass", "core": "Polymer honeycomb (13mm)", "grip_size": "4.0 inch", "shape": "Standard"},
-          "price_ranges": {"INR": {"min": 1200, "max": 2500}},
+          "specs": {
+            "weight": "200-220g",
+            "face_material": "Fiberglass",
+            "core": "Polymer honeycomb (13mm)",
+            "grip_size": "4.0 inch",
+            "shape": "Standard"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 2500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Pickleball+Paddle",
             "flipkart": "https://www.flipkart.com/search?q=nivia+pickleball+paddle"
@@ -21,9 +32,24 @@
           "image": "https://www.nivia.com/cdn/shop/files/PB-572_1.jpg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1799, "url": "https://www.amazon.in/s?k=Nivia+Pickleball+Paddle", "verified": false},
-            {"platform": "Flipkart", "price": 1699, "url": "https://www.flipkart.com/search?q=nivia+pickleball+paddle", "verified": false},
-            {"platform": "Nivia Official", "price": 1899, "url": "https://www.nivia.com/collections/pickleball", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 1799,
+              "url": "https://www.amazon.in/s?k=Nivia+Pickleball+Paddle",
+              "verified": false
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1699,
+              "url": "https://www.flipkart.com/search?q=nivia+pickleball+paddle",
+              "verified": false
+            },
+            {
+              "platform": "Nivia Official",
+              "price": 1899,
+              "url": "https://www.nivia.com/collections/pickleball",
+              "verified": false
+            }
           ],
           "description": "Affordable Indian brand paddle for beginners. Lightweight and forgiving.",
           "pros": [
@@ -37,7 +63,59 @@
             "Standard shape limits reach for taller players",
             "Not USAPA-listed for sanctioned tournaments",
             "Edge guard quality is basic and prone to scuffing"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "wrist_problem_friendly"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 35,
+              "speed": 75,
+              "spin": 30,
+              "forgiveness": 90,
+              "durability": 40
+            },
+            "best_for_persona": "New players seeking an affordable, lightweight, and forgiving paddle for casual play and learning the basics.",
+            "not_for_persona": "Competitive players needing USAPA approval, advanced control for dinks, or extended reach.",
+            "learning_curve_hours": 3,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Less control for precise short game",
+              "Not approved for sanctioned tournaments",
+              "Edge guard wears quickly",
+              "Limited reach for taller players"
+            ],
+            "standout_qualities": [
+              "Very lightweight and easy on the wrist",
+              "High forgiveness on mishits",
+              "Excellent value and accessibility"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_pad02",
@@ -45,8 +123,19 @@
           "brand": "Cosco",
           "type": "Beginner Paddle",
           "level": "beginner",
-          "specs": {"weight": "210-230g", "face_material": "Fiberglass", "core": "Polymer honeycomb (13mm)", "grip_size": "4.0 inch", "shape": "Standard"},
-          "price_ranges": {"INR": {"min": 1000, "max": 2200}},
+          "specs": {
+            "weight": "210-230g",
+            "face_material": "Fiberglass",
+            "core": "Polymer honeycomb (13mm)",
+            "grip_size": "4.0 inch",
+            "shape": "Standard"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1000,
+              "max": 2200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Cosco+Pickleball+Paddle",
             "flipkart": "https://www.flipkart.com/search?q=cosco+pickleball+paddle"
@@ -54,9 +143,24 @@
           "image": "https://rukminim2.flixcart.com/image/832/832/xif0q/pickleball-paddle/p/d/k/-original-imah4z8mzhhgmgwq.jpeg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1499, "url": "https://www.amazon.in/s?k=Cosco+Pickleball+Paddle", "verified": false},
-            {"platform": "Flipkart", "price": 1399, "url": "https://www.flipkart.com/search?q=cosco+pickleball+paddle", "verified": false},
-            {"platform": "Cosco India", "price": 1599, "url": "https://coscoindia.com/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 1499,
+              "url": "https://www.amazon.in/s?k=Cosco+Pickleball+Paddle",
+              "verified": false
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1399,
+              "url": "https://www.flipkart.com/search?q=cosco+pickleball+paddle",
+              "verified": false
+            },
+            {
+              "platform": "Cosco India",
+              "price": 1599,
+              "url": "https://coscoindia.com/",
+              "verified": false
+            }
           ],
           "description": "Budget-friendly Indian sports brand. Widely available across India.",
           "pros": [
@@ -70,7 +174,59 @@
             "No textured face means weak spin generation",
             "Cushioned grip wears smooth within a few months of regular play",
             "No tournament approval certification"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "power_hitter"
+            ],
+            "playing_contexts": [
+              "school_college",
+              "club_recreational",
+              "garden_backyard"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite",
+              "club_competitive"
+            ],
+            "body_fit": [
+              "average_adult",
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 30,
+              "speed": 60,
+              "spin": 15,
+              "forgiveness": 40,
+              "durability": 50
+            },
+            "best_for_persona": "Beginners and casual players seeking an affordable, accessible paddle for recreational play or school programs.",
+            "not_for_persona": "Competitive players, advanced users, or those requiring high spin, precise control, or tournament approval.",
+            "learning_curve_hours": 2,
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Small sweet spot affecting shot consistency.",
+              "Poor spin generation due to lack of textured face.",
+              "Grip wears out quickly with regular use."
+            ],
+            "standout_qualities": [
+              "Extremely budget-friendly and widely accessible.",
+              "Provides good power for beginner drives.",
+              "Balanced weight for stability and swing speed."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_pad03",
@@ -78,8 +234,19 @@
           "brand": "Vector X",
           "type": "Beginner Paddle",
           "level": "beginner",
-          "specs": {"weight": "205-225g", "face_material": "Fiberglass", "core": "Polymer (13mm)", "grip_size": "4.0 inch", "shape": "Standard"},
-          "price_ranges": {"INR": {"min": 1100, "max": 2000}},
+          "specs": {
+            "weight": "205-225g",
+            "face_material": "Fiberglass",
+            "core": "Polymer (13mm)",
+            "grip_size": "4.0 inch",
+            "shape": "Standard"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1100,
+              "max": 2000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Vector+X+Pickleball+Paddle",
             "flipkart": "https://www.flipkart.com/search?q=vector+x+pickleball+paddle"
@@ -87,8 +254,18 @@
           "image": "https://rukminim2.flixcart.com/image/832/832/xif0q/pickleball-paddle/9/v/i/-original-imahf6yyzgg4hn4f.jpeg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1299, "url": "https://www.amazon.in/s?k=Vector+X+Pickleball+Paddle", "verified": false},
-            {"platform": "Flipkart", "price": 1199, "url": "https://www.flipkart.com/search?q=vector+x+pickleball+paddle", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 1299,
+              "url": "https://www.amazon.in/s?k=Vector+X+Pickleball+Paddle",
+              "verified": false
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1199,
+              "url": "https://www.flipkart.com/search?q=vector+x+pickleball+paddle",
+              "verified": false
+            }
           ],
           "description": "Indian brand paddle at an attractive price point. Good for casual recreational play.",
           "pros": [
@@ -102,7 +279,60 @@
             "13mm core lacks the plush dwell of premium paddles",
             "Grip circumference runs slightly small for larger hands",
             "Limited spin due to a smooth fiberglass face"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 70,
+              "speed": 85,
+              "spin": 25,
+              "forgiveness": 80,
+              "durability": 40
+            },
+            "best_for_persona": "Beginners and casual players seeking an affordable, lightweight paddle for recreational fun and quick exchanges.",
+            "not_for_persona": "Competitive players needing advanced spin, power, and consistent build quality for tournament play.",
+            "learning_curve_hours": 0,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Inconsistent manufacturing quality",
+              "Limited spin potential",
+              "Sub-optimal feel for advanced shots",
+              "Small grip for larger hands"
+            ],
+            "standout_qualities": [
+              "Lightweight for quick maneuverability",
+              "Good vibration dampening",
+              "Budget-friendly option",
+              "Often bundled with balls"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_pad04",
@@ -110,8 +340,19 @@
           "brand": "Head",
           "type": "Intermediate Paddle",
           "level": "intermediate",
-          "specs": {"weight": "215-230g", "face_material": "Fiberglass/Carbon", "core": "Polymer honeycomb (14mm)", "grip_size": "4.25 inch", "shape": "Wide"},
-          "price_ranges": {"INR": {"min": 5000, "max": 8000}},
+          "specs": {
+            "weight": "215-230g",
+            "face_material": "Fiberglass/Carbon",
+            "core": "Polymer honeycomb (14mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Wide"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5000,
+              "max": 8000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Head+Radical+Elite+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=head+radical+elite+pickleball"
@@ -119,9 +360,24 @@
           "image": "https://www.head.com/dw/image/v2/BCXT_PRD/on/demandware.static/-/Sites-master-catalog/default/dw5d1e1f1c/products/pickleball/RadicalElite/200124-200124_p.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 6499, "url": "https://www.amazon.in/s?k=Head+Radical+Elite+Pickleball", "verified": false},
-            {"platform": "Flipkart", "price": 6999, "url": "https://www.flipkart.com/search?q=head+radical+elite+pickleball", "verified": false},
-            {"platform": "Head Official", "price": 7499, "url": "https://www.head.com/en_IN/pickleball/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 6499,
+              "url": "https://www.amazon.in/s?k=Head+Radical+Elite+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Flipkart",
+              "price": 6999,
+              "url": "https://www.flipkart.com/search?q=head+radical+elite+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Head Official",
+              "price": 7499,
+              "url": "https://www.head.com/en_IN/pickleball/",
+              "verified": false
+            }
           ],
           "description": "Well-known tennis brand's entry into pickleball. Good balance of power and control.",
           "pros": [
@@ -135,7 +391,56 @@
             "Wide shape sacrifices reach compared to elongated paddles",
             "Pricey for a non-pro paddle vs. CRBN/Selkirk competitors",
             "Less spin than dedicated raw-carbon faces"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 60,
+              "speed": 45,
+              "spin": 35,
+              "forgiveness": 85,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate players seeking a balanced paddle with a large sweet spot for consistent, all-round play.",
+            "not_for_persona": "Advanced players needing maximum spin or reach, or budget-conscious beginners.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 24,
+            "common_complaints": [
+              "Lacks extreme power or control specialization.",
+              "Reduced reach compared to elongated paddles.",
+              "Higher price point for its performance tier.",
+              "Limited spin generation compared to specialized paddles."
+            ],
+            "standout_qualities": [
+              "Generous sweet spot for consistent contact.",
+              "Balanced feel with good pop and touch.",
+              "Reputable brand quality and warranty support.",
+              "Standard grip size suitable for most adults."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_pad05",
@@ -143,8 +448,19 @@
           "brand": "Selkirk",
           "type": "Intermediate Paddle",
           "level": "intermediate",
-          "specs": {"weight": "220-235g", "face_material": "FiberFlex Fiberglass", "core": "Polymer X5 (16mm)", "grip_size": "4.25 inch", "shape": "Elongated"},
-          "price_ranges": {"INR": {"min": 8000, "max": 12000}},
+          "specs": {
+            "weight": "220-235g",
+            "face_material": "FiberFlex Fiberglass",
+            "core": "Polymer X5 (16mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Elongated"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 8000,
+              "max": 12000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Selkirk+AMPED+S2+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=selkirk+amped+s2+pickleball"
@@ -152,8 +468,18 @@
           "image": "https://www.selkirk.com/cdn/shop/files/AmpedS2_LightBlue_FaceFront.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 9999, "url": "https://www.amazon.in/s?k=Selkirk+AMPED+S2+Pickleball", "verified": false},
-            {"platform": "Selkirk Official", "price": 11500, "url": "https://www.selkirk.com/products/amped-s2", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 9999,
+              "url": "https://www.amazon.in/s?k=Selkirk+AMPED+S2+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Selkirk Official",
+              "price": 11500,
+              "url": "https://www.selkirk.com/products/amped-s2",
+              "verified": false
+            }
           ],
           "description": "Premium intermediate paddle with excellent sweet spot and control.",
           "pros": [
@@ -167,7 +493,55 @@
             "Smooth face limits spin compared to textured carbon paddles",
             "Premium price tag for an intermediate-tier paddle",
             "Edge guard adds weight at the tip, slowing reaction speed"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 95,
+              "speed": 40,
+              "spin": 35,
+              "forgiveness": 90,
+              "durability": 75
+            },
+            "best_for_persona": "Intermediate players prioritizing control and a large sweet spot for competitive play, willing to manage a heavier paddle.",
+            "not_for_persona": "Beginners seeking a lightweight, easy-to-swing paddle or advanced players needing maximum spin and quick reactions.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Can feel heavy during extended play.",
+              "Lacks significant spin generation.",
+              "Higher price point for its category.",
+              "Slightly slower reaction speed due to tip weight."
+            ],
+            "standout_qualities": [
+              "Exceptional control and soft feel.",
+              "Good balance of power and touch.",
+              "Extended reach with an elongated shape.",
+              "Tournament-approved for competitive play."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_pad06",
@@ -175,8 +549,19 @@
           "brand": "JOOLA",
           "type": "Advanced Paddle",
           "level": "advanced",
-          "specs": {"weight": "220-240g", "face_material": "Carbon Friction Surface", "core": "Reactive Polymer (16mm)", "grip_size": "4.25 inch", "shape": "Elongated"},
-          "price_ranges": {"INR": {"min": 14000, "max": 20000}},
+          "specs": {
+            "weight": "220-240g",
+            "face_material": "Carbon Friction Surface",
+            "core": "Reactive Polymer (16mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Elongated"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 14000,
+              "max": 20000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Hyperion+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=joola+ben+johns+hyperion+pickleball"
@@ -184,8 +569,18 @@
           "image": "https://joolausa.com/cdn/shop/files/Hyperion-CFS-16-Front.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 17500, "url": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Hyperion+Pickleball", "verified": false},
-            {"platform": "JOOLA Official", "price": 18999, "url": "https://joolausa.com/products/ben-johns-hyperion-cfs-16-pickleball-paddle/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 17500,
+              "url": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Hyperion+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "JOOLA Official",
+              "price": 18999,
+              "url": "https://joolausa.com/products/ben-johns-hyperion-cfs-16-pickleball-paddle/",
+              "verified": false
+            }
           ],
           "description": "Ben Johns' signature paddle. Maximum spin and power for competitive play.",
           "pros": [
@@ -199,7 +594,61 @@
             "Higher swingweight increases arm fatigue in long matches",
             "Elongated shape has a smaller sweet spot than wide-body designs",
             "CFS face wears down within 6-12 months of heavy use"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 80,
+              "speed": 65,
+              "spin": 95,
+              "forgiveness": 55,
+              "durability": 45
+            },
+            "best_for_persona": "Advanced players seeking maximum spin and power for competitive singles or doubles play, willing to manage a smaller sweet spot.",
+            "not_for_persona": "Beginners or casual players seeking an easy-to-use, forgiving paddle for recreational play.",
+            "learning_curve_hours": 15,
+            "common_complaints": [
+              "High cost for non-competitive players.",
+              "Can cause arm fatigue during extended play.",
+              "Smaller sweet spot compared to wider paddles.",
+              "Spin-generating surface has limited durability."
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation capabilities.",
+              "Excellent feel and control for soft shots.",
+              "Extended reach for improved court coverage.",
+              "Professional-grade and tour-proven performance."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_pad07",
@@ -207,8 +656,19 @@
           "brand": "Selkirk",
           "type": "Advanced Paddle",
           "level": "advanced",
-          "specs": {"weight": "220-240g", "face_material": "ProSpin+ Micro Air", "core": "Polymer X5 (14mm)", "grip_size": "4.25 inch", "shape": "Elongated"},
-          "price_ranges": {"INR": {"min": 18000, "max": 25000}},
+          "specs": {
+            "weight": "220-240g",
+            "face_material": "ProSpin+ Micro Air",
+            "core": "Polymer X5 (14mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Elongated"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 18000,
+              "max": 25000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Selkirk+Vanguard+Power+Air+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=selkirk+vanguard+power+air+pickleball"
@@ -216,8 +676,18 @@
           "image": "https://www.selkirk.com/cdn/shop/files/PowerAirInvikta_Black_FaceFront.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 21500, "url": "https://www.amazon.in/s?k=Selkirk+Vanguard+Power+Air+Pickleball", "verified": false},
-            {"platform": "Selkirk Official", "price": 22999, "url": "https://www.selkirk.com/products/vanguard-power-air-invikta", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 21500,
+              "url": "https://www.amazon.in/s?k=Selkirk+Vanguard+Power+Air+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Selkirk Official",
+              "price": 22999,
+              "url": "https://www.selkirk.com/products/vanguard-power-air-invikta",
+              "verified": false
+            }
           ],
           "description": "Top-tier professional paddle. Air Dynamic Throat for maximum power and spin.",
           "pros": [
@@ -231,7 +701,64 @@
             "14mm core is less forgiving than 16mm options on resets",
             "Edgeless cap design exposes the core to chip damage",
             "Heavy swingweight makes hand battles harder at the kitchen"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "power_hitter",
+              "spin_focused",
+              "attacker",
+              "baseline"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 95,
+              "control": 45,
+              "speed": 85,
+              "spin": 95,
+              "forgiveness": 35,
+              "durability": 65
+            },
+            "best_for_persona": "Advanced power singles players prioritizing maximum spin and speed for competitive tournament play.",
+            "not_for_persona": "Beginners or intermediate players needing forgiveness, or those who prefer light, quick paddles for kitchen play.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "High price point",
+              "Less forgiving on delicate shots and resets",
+              "Vulnerable to edge chip damage due to edgeless design",
+              "Challenging for quick net exchanges due to heavy swingweight"
+            ],
+            "standout_qualities": [
+              "Exceptional power generation",
+              "Superior spin capabilities",
+              "Fast swing speed due to aerodynamic throat design",
+              "Elongated shape for extended reach and power",
+              "Backed by a strong manufacturer's warranty"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p08",
@@ -240,8 +767,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Control-oriented players seeking premium touch and finesse",
-          "specs": {"weight": "215-225g (7.6-7.9 oz)", "face_material": "Graphite", "core": "Polymer honeycomb (13mm)", "grip_size": "4.125 inch", "shape": "Standard", "surface": "Smooth"},
-          "price_ranges": {"INR": {"min": 10000, "max": 14000}, "USD": {"min": 130, "max": 180}},
+          "specs": {
+            "weight": "215-225g (7.6-7.9 oz)",
+            "face_material": "Graphite",
+            "core": "Polymer honeycomb (13mm)",
+            "grip_size": "4.125 inch",
+            "shape": "Standard",
+            "surface": "Smooth"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 10000,
+              "max": 14000
+            },
+            "USD": {
+              "min": 130,
+              "max": 180
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Paddletek+Tempest+Wave+Pro",
             "flipkart": "https://www.flipkart.com/search?q=paddletek+tempest+wave+pro",
@@ -253,8 +796,18 @@
           "image": "https://paddletek.com/cdn/shop/files/TempestWavePro-Front-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 12500, "url": "https://www.amazon.in/s?k=Paddletek+Tempest+Wave+Pro", "verified": false},
-            {"platform": "Paddletek Official", "price": 13499, "url": "https://paddletek.com/products/tempest-wave-pro/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 12500,
+              "url": "https://www.amazon.in/s?k=Paddletek+Tempest+Wave+Pro",
+              "verified": false
+            },
+            {
+              "platform": "Paddletek Official",
+              "price": 13499,
+              "url": "https://paddletek.com/products/tempest-wave-pro/",
+              "verified": false
+            }
           ],
           "description": "Paddletek's flagship control paddle. Beloved for its soft feel and pinpoint placement at the kitchen line.",
           "pros": [
@@ -268,7 +821,53 @@
             "13mm core lacks the dwell time of modern 16mm builds",
             "Less power than carbon-faced rivals at the same price",
             "Smaller 4.125 inch grip needs an overgrip for larger hands"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "blocker",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open"
+            ],
+            "body_fit": [
+              "small_hand_grip",
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 95,
+              "speed": 85,
+              "spin": 25,
+              "forgiveness": 80,
+              "durability": 90
+            },
+            "best_for_persona": "Advanced players prioritizing soft game, precise dinks, and quick hands at the kitchen line for competitive play.",
+            "not_for_persona": "Power-focused players or those who rely heavily on generating extreme spin for their game.",
+            "common_complaints": [
+              "Lower spin generation compared to textured paddles",
+              "Less power than some carbon-faced rivals",
+              "Thinner core offers less dwell time",
+              "Grip may be too small for larger hands"
+            ],
+            "standout_qualities": [
+              "Exceptional control and feel for dinks",
+              "Fast maneuverability for quick hand battles",
+              "Wide and forgiving sweet spot",
+              "Backed by a strong lifetime warranty"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p09",
@@ -277,8 +876,24 @@
           "type": "Intermediate Paddle",
           "level": "intermediate",
           "recommended_for": "Players wanting added power with a forgiving sweet spot",
-          "specs": {"weight": "225-240g (7.9-8.5 oz)", "face_material": "Fiberglass composite", "core": "Bantam polymer honeycomb (15mm)", "grip_size": "4.25 inch", "shape": "Standard", "surface": "Textured"},
-          "price_ranges": {"INR": {"min": 7500, "max": 10500}, "USD": {"min": 95, "max": 135}},
+          "specs": {
+            "weight": "225-240g (7.9-8.5 oz)",
+            "face_material": "Fiberglass composite",
+            "core": "Bantam polymer honeycomb (15mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Standard",
+            "surface": "Textured"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7500,
+              "max": 10500
+            },
+            "USD": {
+              "min": 95,
+              "max": 135
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Paddletek+Bantam+EX-L",
             "flipkart": "https://www.flipkart.com/search?q=paddletek+bantam+ex-l",
@@ -290,8 +905,18 @@
           "image": "https://paddletek.com/cdn/shop/files/BantamEXL-Front-Blue.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 8999, "url": "https://www.amazon.in/s?k=Paddletek+Bantam+EX-L", "verified": false},
-            {"platform": "Paddletek Official", "price": 9999, "url": "https://paddletek.com/products/bantam-ex-l/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 8999,
+              "url": "https://www.amazon.in/s?k=Paddletek+Bantam+EX-L",
+              "verified": false
+            },
+            {
+              "platform": "Paddletek Official",
+              "price": 9999,
+              "url": "https://paddletek.com/products/bantam-ex-l/",
+              "verified": false
+            }
           ],
           "description": "Power-oriented Bantam series paddle with a larger sweet spot. Popular intermediate upgrade.",
           "pros": [
@@ -305,7 +930,56 @@
             "Power orientation makes touch shots harder to control",
             "Textured fiberglass loses bite faster than raw carbon",
             "Standard shape limits reach versus elongated paddles"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "power_hitter",
+              "baseline"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 88,
+              "control": 45,
+              "speed": 35,
+              "spin": 55,
+              "forgiveness": 82,
+              "durability": 90
+            },
+            "best_for_persona": "Intermediate players prioritizing powerful drives and a forgiving sweet spot for aggressive baseline play.",
+            "not_for_persona": "Advanced players requiring quick net reflexes, precise touch, or maximum spin for dinks and drops.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Heavier weight can hinder quick net play.",
+              "Challenging to execute delicate touch shots.",
+              "Spin generation may decrease with paddle wear.",
+              "Standard shape offers less court reach."
+            ],
+            "standout_qualities": [
+              "Delivers significant power on drives and smashes.",
+              "Features a large, forgiving sweet spot.",
+              "Offers a comfortable and sweat-resistant grip.",
+              "Known for its robust and long-lasting construction."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p10",
@@ -314,8 +988,24 @@
           "type": "Intermediate Paddle",
           "level": "intermediate",
           "recommended_for": "All-court players seeking balanced control and spin",
-          "specs": {"weight": "220-232g (7.8-8.2 oz)", "face_material": "Textured graphite", "core": "NeuCore polymer (16mm)", "grip_size": "4.125 inch", "shape": "Standard", "surface": "Textured for spin"},
-          "price_ranges": {"INR": {"min": 6500, "max": 9000}, "USD": {"min": 85, "max": 115}},
+          "specs": {
+            "weight": "220-232g (7.8-8.2 oz)",
+            "face_material": "Textured graphite",
+            "core": "NeuCore polymer (16mm)",
+            "grip_size": "4.125 inch",
+            "shape": "Standard",
+            "surface": "Textured for spin"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6500,
+              "max": 9000
+            },
+            "USD": {
+              "min": 85,
+              "max": 115
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Gamma+Compass+NeuCore+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=gamma+compass+neucore+pickleball",
@@ -327,8 +1017,18 @@
           "image": "https://www.gammasports.com/cdn/shop/files/Compass-NeuCore-Front.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 7799, "url": "https://www.amazon.in/s?k=Gamma+Compass+NeuCore+Pickleball", "verified": false},
-            {"platform": "Gamma Sports", "price": 8499, "url": "https://www.gammasports.com/collections/compass-neucore", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 7799,
+              "url": "https://www.amazon.in/s?k=Gamma+Compass+NeuCore+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Gamma Sports",
+              "price": 8499,
+              "url": "https://www.gammasports.com/collections/compass-neucore",
+              "verified": false
+            }
           ],
           "description": "Thicker 16mm NeuCore polymer core for soft touch on dinks and added control on drives.",
           "pros": [
@@ -342,7 +1042,52 @@
             "Less raw power than fiberglass-faced peers",
             "Textured graphite wears smoother in 4-6 months of heavy play",
             "Niche brand recognition vs. Selkirk/JOOLA in India"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "body_fit": [
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 45,
+              "control": 90,
+              "speed": 65,
+              "spin": 85,
+              "forgiveness": 80,
+              "durability": 40
+            },
+            "best_for_persona": "Intermediate players prioritizing control, soft dinks, and spin for all-court play, especially those with smaller hands.",
+            "not_for_persona": "Power-focused players seeking maximum raw force, or adults who prefer a naturally wider grip.",
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Grip size may be too small for many adults",
+              "Lacks raw power compared to some competitors",
+              "Spin texture wears down over time"
+            ],
+            "standout_qualities": [
+              "Excellent control and soft touch for dinks",
+              "Above-average spin generation",
+              "Good vibration dampening for comfort",
+              "Balanced sweet spot for all-court play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p11",
@@ -351,8 +1096,24 @@
           "type": "Beginner Paddle",
           "level": "beginner",
           "recommended_for": "New players and juniors seeking a lightweight, maneuverable paddle",
-          "specs": {"weight": "200-215g (7.1-7.6 oz)", "face_material": "Textured graphite", "core": "Aramid honeycomb (11mm)", "grip_size": "4.0 inch", "shape": "Standard", "surface": "Smooth"},
-          "price_ranges": {"INR": {"min": 3200, "max": 5000}, "USD": {"min": 42, "max": 65}},
+          "specs": {
+            "weight": "200-215g (7.1-7.6 oz)",
+            "face_material": "Textured graphite",
+            "core": "Aramid honeycomb (11mm)",
+            "grip_size": "4.0 inch",
+            "shape": "Standard",
+            "surface": "Smooth"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 3200,
+              "max": 5000
+            },
+            "USD": {
+              "min": 42,
+              "max": 65
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Gamma+Micron+5.0+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=gamma+micron+5.0+pickleball",
@@ -364,8 +1125,18 @@
           "image": "https://www.gammasports.com/cdn/shop/files/Micron-5-Front.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 3999, "url": "https://www.amazon.in/s?k=Gamma+Micron+5.0+Pickleball", "verified": false},
-            {"platform": "Gamma Sports", "price": 4499, "url": "https://www.gammasports.com/products/micron-5-0", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 3999,
+              "url": "https://www.amazon.in/s?k=Gamma+Micron+5.0+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Gamma Sports",
+              "price": 4499,
+              "url": "https://www.gammasports.com/products/micron-5-0",
+              "verified": false
+            }
           ],
           "description": "Classic entry-level Gamma paddle. Lightweight design makes it ideal for smaller players and learners.",
           "pros": [
@@ -379,7 +1150,61 @@
             "Smooth surface produces minimal spin",
             "Light head sacrifices power on drives",
             "Outgrown quickly once players hit 3.5+ skill"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light",
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 85,
+              "speed": 80,
+              "spin": 25,
+              "forgiveness": 80,
+              "durability": 75
+            },
+            "best_for_persona": "Smaller players or new learners seeking an easy-to-handle paddle for developing basic control and dinking skills.",
+            "not_for_persona": "Competitive players (3.5+ skill level) needing power, spin, or advanced feel.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Lacks power for strong drives",
+              "Limited spin generation",
+              "Thin core offers poor ball dwell time for resets",
+              "Players quickly outgrow its capabilities"
+            ],
+            "standout_qualities": [
+              "Very lightweight and maneuverable",
+              "Durable aramid honeycomb core",
+              "Excellent control for dinks and soft shots",
+              "Comfortable, smaller grip size"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p12",
@@ -388,8 +1213,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Tournament players prioritising spin and control",
-          "specs": {"weight": "218-232g (7.7-8.2 oz)", "face_material": "Liquid Graphite skin over fiberglass", "core": "ControlPro Black polymer (16mm)", "grip_size": "4.25 inch", "shape": "Elongated", "surface": "Textured for spin"},
-          "price_ranges": {"INR": {"min": 11500, "max": 15500}, "USD": {"min": 150, "max": 200}},
+          "specs": {
+            "weight": "218-232g (7.7-8.2 oz)",
+            "face_material": "Liquid Graphite skin over fiberglass",
+            "core": "ControlPro Black polymer (16mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Elongated",
+            "surface": "Textured for spin"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 11500,
+              "max": 15500
+            },
+            "USD": {
+              "min": 150,
+              "max": 200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Engage+Pursuit+Pro+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=engage+pursuit+pro+pickleball",
@@ -401,8 +1242,18 @@
           "image": "https://engagepickleball.com/cdn/shop/files/PursuitPro6-Front-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 13500, "url": "https://www.amazon.in/s?k=Engage+Pursuit+Pro+Pickleball", "verified": false},
-            {"platform": "Engage Official", "price": 14999, "url": "https://engagepickleball.com/products/pursuit-pro1-6-0", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 13500,
+              "url": "https://www.amazon.in/s?k=Engage+Pursuit+Pro+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Engage Official",
+              "price": 14999,
+              "url": "https://engagepickleball.com/products/pursuit-pro1-6-0",
+              "verified": false
+            }
           ],
           "description": "Engage's flagship Pursuit Pro 6.0 delivers elite-level spin and pinpoint control. USAPA approved for tournament use.",
           "pros": [
@@ -416,7 +1267,60 @@
             "Elongated head shape is less forgiving on off-center hits",
             "Slightly muted feel compared to raw carbon paddles",
             "Limited offline availability in India"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "control_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 95,
+              "speed": 65,
+              "spin": 95,
+              "forgiveness": 45,
+              "durability": 70
+            },
+            "best_for_persona": "Advanced players prioritizing elite spin, pinpoint control, and extended reach for competitive tournament play.",
+            "not_for_persona": "Beginners or intermediate players needing high forgiveness, a larger sweet spot, or a budget-friendly option.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Premium price point",
+              "Less forgiving on off-center hits",
+              "Slightly muted feel compared to some paddles"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation",
+              "Pinpoint control and consistent ball dwell",
+              "Extended reach for powerful serves and drives",
+              "USAPA approved for competitive play"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p13",
@@ -425,8 +1329,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Players seeking maximum spin via raw carbon face",
-          "specs": {"weight": "220-232g (7.8-8.2 oz)", "face_material": "Raw T700 carbon fiber", "core": "Polypropylene honeycomb (16mm)", "grip_size": "4.125 inch", "shape": "Standard", "surface": "Textured raw carbon for maximum spin"},
-          "price_ranges": {"INR": {"min": 12000, "max": 16000}, "USD": {"min": 155, "max": 210}},
+          "specs": {
+            "weight": "220-232g (7.8-8.2 oz)",
+            "face_material": "Raw T700 carbon fiber",
+            "core": "Polypropylene honeycomb (16mm)",
+            "grip_size": "4.125 inch",
+            "shape": "Standard",
+            "surface": "Textured raw carbon for maximum spin"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 12000,
+              "max": 16000
+            },
+            "USD": {
+              "min": 155,
+              "max": 210
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=CRBN+1+16mm+pickleball+paddle",
             "flipkart": "https://www.flipkart.com/search?q=crbn+1+16mm+pickleball",
@@ -438,8 +1358,18 @@
           "image": "https://crbnpickleball.com/cdn/shop/files/CRBN1-16mm-Front-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 14500, "url": "https://www.amazon.in/s?k=CRBN+1+16mm+pickleball+paddle", "verified": false},
-            {"platform": "CRBN Official", "price": 15500, "url": "https://crbnpickleball.com/products/crbn-1-16mm", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 14500,
+              "url": "https://www.amazon.in/s?k=CRBN+1+16mm+pickleball+paddle",
+              "verified": false
+            },
+            {
+              "platform": "CRBN Official",
+              "price": 15500,
+              "url": "https://crbnpickleball.com/products/crbn-1-16mm",
+              "verified": false
+            }
           ],
           "description": "Standard-shape raw carbon paddle popular among competitive players. Unmatched spin and a consistent feel.",
           "pros": [
@@ -453,7 +1383,59 @@
             "4.125 inch grip is small and usually needs an overgrip",
             "No edge guard means chips at the rim are common",
             "Limited Indian distribution; mostly imported via resellers"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "control_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult",
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 90,
+              "speed": 60,
+              "spin": 95,
+              "forgiveness": 85,
+              "durability": 30
+            },
+            "best_for_persona": "Competitive players seeking maximum spin and control for precise shot-making and resets, willing to manage grip size and surface wear.",
+            "not_for_persona": "Beginner players needing high durability or those who prefer a larger grip without modification.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Surface texture wears off relatively quickly with heavy play",
+              "Small grip size often requires an overgrip",
+              "Prone to chipping due to lack of edge guard"
+            ],
+            "standout_qualities": [
+              "Exceptional spin generation from raw carbon face",
+              "Excellent control and soft feel for resets",
+              "Wide, forgiving sweet spot",
+              "Popular choice among professional players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p14",
@@ -462,8 +1444,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Singles players and power hitters wanting extra reach",
-          "specs": {"weight": "220-235g (7.8-8.3 oz)", "face_material": "Raw T700 carbon fiber", "core": "Polypropylene honeycomb (16mm)", "grip_size": "4.125 inch", "shape": "Elongated", "surface": "Textured raw carbon"},
-          "price_ranges": {"INR": {"min": 12500, "max": 16500}, "USD": {"min": 160, "max": 215}},
+          "specs": {
+            "weight": "220-235g (7.8-8.3 oz)",
+            "face_material": "Raw T700 carbon fiber",
+            "core": "Polypropylene honeycomb (16mm)",
+            "grip_size": "4.125 inch",
+            "shape": "Elongated",
+            "surface": "Textured raw carbon"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 12500,
+              "max": 16500
+            },
+            "USD": {
+              "min": 160,
+              "max": 215
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=CRBN+2+Elongated+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=crbn+2+elongated+pickleball",
@@ -475,8 +1473,18 @@
           "image": "https://crbnpickleball.com/cdn/shop/files/CRBN2-16mm-Front-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 14999, "url": "https://www.amazon.in/s?k=CRBN+2+Elongated+pickleball", "verified": false},
-            {"platform": "CRBN Official", "price": 15999, "url": "https://crbnpickleball.com/products/crbn-2-16mm", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 14999,
+              "url": "https://www.amazon.in/s?k=CRBN+2+Elongated+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "CRBN Official",
+              "price": 15999,
+              "url": "https://crbnpickleball.com/products/crbn-2-16mm",
+              "verified": false
+            }
           ],
           "description": "Elongated shape for added reach and leverage. Ideal for singles and drive-heavy playstyles.",
           "pros": [
@@ -490,7 +1498,62 @@
             "Higher swingweight tires the wrist in fast hands battles",
             "No edge guard exposes the elongated tip to chipping",
             "Premium import price in India"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused",
+              "control_focused",
+              "baseline"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 75,
+              "speed": 45,
+              "spin": 95,
+              "forgiveness": 40,
+              "durability": 55
+            },
+            "best_for_persona": "Advanced singles players prioritizing reach, powerful drives, and high spin for competitive matches and strategic play.",
+            "not_for_persona": "Beginners, players with wrist fatigue issues, or those needing a large sweet spot for consistent play.",
+            "learning_curve_hours": 30,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Smaller sweet spot compared to other paddles",
+              "Higher swingweight can cause wrist fatigue in fast exchanges",
+              "Lack of edge guard makes the tip vulnerable to chipping"
+            ],
+            "standout_qualities": [
+              "Exceptional reach and leverage from elongated shape",
+              "Delivers tour-level spin with raw carbon face",
+              "16mm core effectively absorbs pace for resets and counters",
+              "Increased polar moment contributes to powerful drives"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p15",
@@ -499,8 +1562,24 @@
           "type": "Intermediate Paddle",
           "level": "intermediate",
           "recommended_for": "Transitioning tennis players who value control and feel",
-          "specs": {"weight": "220-235g (7.8-8.3 oz)", "face_material": "Carbon fiber", "core": "Polymer honeycomb (16mm)", "grip_size": "4.25 inch", "shape": "Standard", "surface": "Textured"},
-          "price_ranges": {"INR": {"min": 7000, "max": 10000}, "USD": {"min": 90, "max": 130}},
+          "specs": {
+            "weight": "220-235g (7.8-8.3 oz)",
+            "face_material": "Carbon fiber",
+            "core": "Polymer honeycomb (16mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Standard",
+            "surface": "Textured"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7000,
+              "max": 10000
+            },
+            "USD": {
+              "min": 90,
+              "max": 130
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Babolat+RNGD+Touch+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=babolat+rngd+touch+pickleball",
@@ -512,8 +1591,18 @@
           "image": "https://www.babolat.com/cdn/shop/files/RNGD-Touch-Front-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 8499, "url": "https://www.amazon.in/s?k=Babolat+RNGD+Touch+pickleball", "verified": false},
-            {"platform": "Babolat India", "price": 8999, "url": "https://www.babolat.com/in/pickleball/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 8499,
+              "url": "https://www.amazon.in/s?k=Babolat+RNGD+Touch+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Babolat India",
+              "price": 8999,
+              "url": "https://www.babolat.com/in/pickleball/",
+              "verified": false
+            }
           ],
           "description": "Babolat entered pickleball in 2023; the RNGD Touch brings their tennis heritage to a controlled, feel-first paddle.",
           "pros": [
@@ -527,7 +1616,56 @@
             "Spin output trails raw-carbon competitors",
             "Limited width compared to Bantam-style power paddles",
             "Indian availability is mainly through tennis specialty stores"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 85,
+              "speed": 60,
+              "spin": 35,
+              "forgiveness": 80,
+              "durability": 85
+            },
+            "best_for_persona": "Intermediate players prioritizing touch, control, and placement, especially those transitioning from tennis.",
+            "not_for_persona": "Power hitters or advanced players who rely heavily on raw spin and aggressive drives.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 15,
+            "common_complaints": [
+              "Brand is newer to pickleball market.",
+              "Lower spin generation compared to some competitors.",
+              "Lacks raw power for aggressive play.",
+              "Limited availability in some regions."
+            ],
+            "standout_qualities": [
+              "Excellent touch and control due to core and face.",
+              "Familiar grip feel for tennis players.",
+              "High build quality and durability.",
+              "Forgiving sweet spot for consistent play."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p16",
@@ -536,8 +1674,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Competitive players looking for a well-rounded power/control blend",
-          "specs": {"weight": "225-238g (7.9-8.4 oz)", "face_material": "Carbon fiber", "core": "Polymer honeycomb (16mm)", "grip_size": "4.25 inch", "shape": "Elongated", "surface": "Textured for spin"},
-          "price_ranges": {"INR": {"min": 9500, "max": 13500}, "USD": {"min": 120, "max": 175}},
+          "specs": {
+            "weight": "225-238g (7.9-8.4 oz)",
+            "face_material": "Carbon fiber",
+            "core": "Polymer honeycomb (16mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Elongated",
+            "surface": "Textured for spin"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 9500,
+              "max": 13500
+            },
+            "USD": {
+              "min": 120,
+              "max": 175
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Wilson+Juice+Pro+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=wilson+juice+pro+pickleball",
@@ -549,8 +1703,18 @@
           "image": "https://www.wilson.com/en-us/cdn/shop/files/JuicePro-Front-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 10999, "url": "https://www.amazon.in/s?k=Wilson+Juice+Pro+pickleball", "verified": false},
-            {"platform": "Wilson Official", "price": 11999, "url": "https://www.wilson.com/en-us/pickleball/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 10999,
+              "url": "https://www.amazon.in/s?k=Wilson+Juice+Pro+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Wilson Official",
+              "price": 11999,
+              "url": "https://www.wilson.com/en-us/pickleball/",
+              "verified": false
+            }
           ],
           "description": "Wilson's pickleball line flagship. Elongated body with textured carbon face for confident drives and reliable touch.",
           "pros": [
@@ -564,7 +1728,60 @@
             "Elongated shape narrows the sweet spot",
             "Spin trails specialist raw-carbon paddles",
             "Premium price for what is effectively a rebadged OEM build"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "spin_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 80,
+              "speed": 45,
+              "spin": 70,
+              "forgiveness": 55,
+              "durability": 70
+            },
+            "best_for_persona": "Advanced players seeking a balanced paddle for powerful drives, reliable touch, and extended reach in competitive play.",
+            "not_for_persona": "Beginners, players prioritizing extreme maneuverability in quick exchanges, or those needing a very large sweet spot.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Heavier weight can hinder quick hand speed in fast exchanges.",
+              "Elongated shape results in a smaller, less forgiving sweet spot.",
+              "Spin generation is good but not on par with specialist raw-carbon paddles."
+            ],
+            "standout_qualities": [
+              "Excellent balance of spin and power from the textured carbon face.",
+              "Thick polymer core provides good touch and forgiveness on soft shots.",
+              "Elongated design offers extended reach for serves and overheads."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p17",
@@ -573,8 +1790,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Players who prefer a solid, one-piece construction feel",
-          "specs": {"weight": "220-238g (7.8-8.4 oz)", "face_material": "3K carbon fiber", "core": "Solid span core (carbon tube construction)", "grip_size": "3.625 inch (small)", "shape": "Elongated", "surface": "Textured"},
-          "price_ranges": {"INR": {"min": 11000, "max": 15000}, "USD": {"min": 145, "max": 195}},
+          "specs": {
+            "weight": "220-238g (7.8-8.4 oz)",
+            "face_material": "3K carbon fiber",
+            "core": "Solid span core (carbon tube construction)",
+            "grip_size": "3.625 inch (small)",
+            "shape": "Elongated",
+            "surface": "Textured"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 11000,
+              "max": 15000
+            },
+            "USD": {
+              "min": 145,
+              "max": 195
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Gearbox+CX11Q+Elongated",
             "flipkart": "https://www.flipkart.com/search?q=gearbox+cx11q+elongated",
@@ -586,8 +1819,18 @@
           "image": "https://gearboxsports.com/cdn/shop/files/CX11Q-Elongated-Front.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 12999, "url": "https://www.amazon.in/s?k=Gearbox+CX11Q+Elongated", "verified": false},
-            {"platform": "Gearbox Official", "price": 13999, "url": "https://gearboxsports.com/products/cx11q-elongated", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 12999,
+              "url": "https://www.amazon.in/s?k=Gearbox+CX11Q+Elongated",
+              "verified": false
+            },
+            {
+              "platform": "Gearbox Official",
+              "price": 13999,
+              "url": "https://gearboxsports.com/products/cx11q-elongated",
+              "verified": false
+            }
           ],
           "description": "Gearbox's signature Solid Span Technology delivers a uniquely consistent feel. Elongated shape with small-grip option.",
           "pros": [
@@ -601,7 +1844,58 @@
             "Small grip needs build-up for medium/large hands",
             "Heavier static weight loads the wrist in fast exchanges",
             "Niche brand with limited Indian distribution"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "spin_focused",
+              "power_hitter",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "small_hand_grip"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 90,
+              "speed": 45,
+              "spin": 85,
+              "forgiveness": 70,
+              "durability": 95
+            },
+            "best_for_persona": "Advanced players prioritizing consistent feel, high spin, and power, especially those with smaller hands or who build up grips.",
+            "not_for_persona": "Beginners needing maximum forgiveness or players with wrist issues sensitive to heavier paddles.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Stiffer feel on soft shots compared to polymer cores",
+              "Grip too small for average to large hands without modification",
+              "Heavier static weight can load the wrist in fast exchanges"
+            ],
+            "standout_qualities": [
+              "Exceptional consistency and feel across the paddle face",
+              "Excellent spin and pop from the 3K carbon face",
+              "Superior durability with no honeycomb crush failure mode",
+              "Small grip size ideal for wrist-snap play or overgrip stacking"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p18",
@@ -610,8 +1904,24 @@
           "type": "Beginner Paddle",
           "level": "beginner",
           "recommended_for": "New and recreational players moving up from cheap composite paddles",
-          "specs": {"weight": "220-235g (7.8-8.3 oz)", "face_material": "Graphite", "core": "Nomex honeycomb (12mm)", "grip_size": "4.25 inch", "shape": "Widebody", "surface": "Smooth"},
-          "price_ranges": {"INR": {"min": 5500, "max": 8000}, "USD": {"min": 70, "max": 100}},
+          "specs": {
+            "weight": "220-235g (7.8-8.3 oz)",
+            "face_material": "Graphite",
+            "core": "Nomex honeycomb (12mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Widebody",
+            "surface": "Smooth"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5500,
+              "max": 8000
+            },
+            "USD": {
+              "min": 70,
+              "max": 100
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Onix+Z5+Graphite+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=onix+z5+graphite+pickleball",
@@ -623,8 +1933,18 @@
           "image": "https://www.onixpickleball.com/cdn/shop/files/Z5-Graphite-Front-Blue.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 6499, "url": "https://www.amazon.in/s?k=Onix+Z5+Graphite+Pickleball", "verified": false},
-            {"platform": "Onix Official", "price": 6999, "url": "https://www.onixpickleball.com/products/z5-graphite-pickleball-paddle", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 6499,
+              "url": "https://www.amazon.in/s?k=Onix+Z5+Graphite+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Onix Official",
+              "price": 6999,
+              "url": "https://www.onixpickleball.com/products/z5-graphite-pickleball-paddle",
+              "verified": false
+            }
           ],
           "description": "The Onix Z5 is the most popular intro graphite paddle in the world. Widebody design and Nomex core give a balanced power/control feel and a generous sweet spot.",
           "pros": [
@@ -638,7 +1958,59 @@
             "12mm core is thinner than modern 16mm builds",
             "Smooth face limits topspin generation",
             "Stock grip wears smooth quickly"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "garden_backyard",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 75,
+              "speed": 55,
+              "spin": 25,
+              "forgiveness": 95,
+              "durability": 80
+            },
+            "best_for_persona": "Beginners prioritizing a large sweet spot and balanced feel for consistent, recreational play and skill development.",
+            "not_for_persona": "Advanced players requiring maximum spin, power, or a quiet paddle for competitive tournament play.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Loud sound on impact due to Nomex core",
+              "Limited spin generation from smooth face",
+              "Thinner core compared to modern paddles",
+              "Stock grip wears out quickly"
+            ],
+            "standout_qualities": [
+              "Exceptionally large and forgiving sweet spot",
+              "Balanced feel of power and control",
+              "Durable graphite face construction",
+              "High global popularity and resale value"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p19",
@@ -647,8 +2019,24 @@
           "type": "Beginner Paddle",
           "level": "beginner",
           "recommended_for": "First-time pickleball players in India looking for an in-store, try-before-you-buy option",
-          "specs": {"weight": "215-225g", "face_material": "Fiberglass composite", "core": "Polymer honeycomb (12mm)", "grip_size": "4.0 inch", "shape": "Standard", "surface": "Smooth"},
-          "price_ranges": {"INR": {"min": 999, "max": 1499}, "USD": {"min": 13, "max": 19}},
+          "specs": {
+            "weight": "215-225g",
+            "face_material": "Fiberglass composite",
+            "core": "Polymer honeycomb (12mm)",
+            "grip_size": "4.0 inch",
+            "shape": "Standard",
+            "surface": "Smooth"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 999,
+              "max": 1499
+            },
+            "USD": {
+              "min": 13,
+              "max": 19
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Decathlon+Perfly+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=decathlon+perfly+pickleball",
@@ -661,8 +2049,18 @@
           "image": "https://contents.mediadecathlon.com/p2486890/k$1f6d1e8c8a99e1c0c6b8f1c9c7e3f2/sq/perfly-pb-100-pickleball-paddle.jpg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Decathlon", "price": 1299, "url": "https://www.decathlon.in/c/pickleball", "verified": false},
-            {"platform": "Amazon", "price": 1399, "url": "https://www.amazon.in/s?k=Decathlon+Perfly+Pickleball", "verified": false}
+            {
+              "platform": "Decathlon",
+              "price": 1299,
+              "url": "https://www.decathlon.in/c/pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Amazon",
+              "price": 1399,
+              "url": "https://www.amazon.in/s?k=Decathlon+Perfly+Pickleball",
+              "verified": false
+            }
           ],
           "description": "Decathlon's house brand pickleball paddle. Cheapest in-store option in India and easy to return/exchange under Decathlon's policy.",
           "pros": [
@@ -676,7 +2074,60 @@
             "Smooth face produces almost no spin",
             "Not USAPA approved",
             "Outgrown within 3-6 months of regular play"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "kids_starter",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 70,
+              "speed": 75,
+              "spin": 10,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "First-time pickleball players seeking an affordable, lightweight paddle for casual play and learning basic strokes.",
+            "not_for_persona": "Experienced players needing spin, power, or USAPA approval for competitive matches or rapid skill progression.",
+            "learning_curve_hours": 3,
+            "upgrade_after_months": 6,
+            "common_complaints": [
+              "Lacks advanced touch and feel",
+              "Minimal spin generation",
+              "Not suitable for sanctioned play",
+              "Rapidly outgrown by improving players"
+            ],
+            "standout_qualities": [
+              "Easily accessible for purchase and try-out",
+              "Excellent warranty and return policy",
+              "Extremely budget-friendly entry point",
+              "Very lightweight and easy to handle"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p20",
@@ -685,8 +2136,24 @@
           "type": "Intermediate Paddle",
           "level": "intermediate",
           "recommended_for": "Recreational and club players who want a budget-friendly upgrade with carbon face",
-          "specs": {"weight": "220-235g", "face_material": "Carbon fiber composite", "core": "Polymer honeycomb (16mm)", "grip_size": "4.125 inch", "shape": "Standard", "surface": "Textured"},
-          "price_ranges": {"INR": {"min": 2999, "max": 3999}, "USD": {"min": 38, "max": 50}},
+          "specs": {
+            "weight": "220-235g",
+            "face_material": "Carbon fiber composite",
+            "core": "Polymer honeycomb (16mm)",
+            "grip_size": "4.125 inch",
+            "shape": "Standard",
+            "surface": "Textured"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2999,
+              "max": 3999
+            },
+            "USD": {
+              "min": 38,
+              "max": 50
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Decathlon+Perfly+PB+500",
             "flipkart": "https://www.flipkart.com/search?q=decathlon+perfly+pb+500",
@@ -699,8 +2166,18 @@
           "image": "https://contents.mediadecathlon.com/p2486895/k$2f7d2e8c8a99e1c0c6b8f1c9c7e3f3/sq/perfly-pb-500-pickleball-paddle.jpg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Decathlon", "price": 3499, "url": "https://www.decathlon.in/c/pickleball", "verified": false},
-            {"platform": "Amazon", "price": 3699, "url": "https://www.amazon.in/s?k=Decathlon+Perfly+PB+500", "verified": false}
+            {
+              "platform": "Decathlon",
+              "price": 3499,
+              "url": "https://www.decathlon.in/c/pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Amazon",
+              "price": 3699,
+              "url": "https://www.amazon.in/s?k=Decathlon+Perfly+PB+500",
+              "verified": false
+            }
           ],
           "description": "Decathlon's mid-tier pickleball paddle. Carbon face plus 16mm polymer core delivers a noticeable upgrade over the PB 100 at a fraction of the imported brand price.",
           "pros": [
@@ -714,7 +2191,58 @@
             "Limited shape options (standard only)",
             "Spin trails premium raw-carbon imports",
             "Newer model, fewer long-term durability data points"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 55,
+              "control": 85,
+              "speed": 60,
+              "spin": 75,
+              "forgiveness": 80,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players seeking an affordable upgrade with good spin and control for recreational club play.",
+            "not_for_persona": "Advanced tournament players who demand maximum spin, power, and proven top-tier build quality.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Not suitable for elite tournament play.",
+              "Lack of diverse paddle shapes.",
+              "Spin performance is not top-tier compared to premium paddles.",
+              "Uncertain long-term durability data."
+            ],
+            "standout_qualities": [
+              "Excellent spin for its price point.",
+              "Soft, controlled feel for precise shots.",
+              "Availability for in-store testing.",
+              "Generous warranty period."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p21",
@@ -723,8 +2251,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Aggressive doubles players seeking faster swing speed and added pop",
-          "specs": {"weight": "215-228g (7.6-8.0 oz)", "face_material": "Carbon Friction Surface", "core": "Reactive Polymer (14mm)", "grip_size": "4.25 inch", "shape": "Elongated", "surface": "Textured CFS"},
-          "price_ranges": {"INR": {"min": 14500, "max": 19500}, "USD": {"min": 180, "max": 250}},
+          "specs": {
+            "weight": "215-228g (7.6-8.0 oz)",
+            "face_material": "Carbon Friction Surface",
+            "core": "Reactive Polymer (14mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Elongated",
+            "surface": "Textured CFS"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 14500,
+              "max": 19500
+            },
+            "USD": {
+              "min": 180,
+              "max": 250
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=JOOLA+Hyperion+C2+14mm",
             "flipkart": "https://www.flipkart.com/search?q=joola+hyperion+c2+14mm",
@@ -736,8 +2280,18 @@
           "image": "https://joolausa.com/cdn/shop/files/Hyperion-C2-14mm-Front.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 16500, "url": "https://www.amazon.in/s?k=JOOLA+Hyperion+C2+14mm", "verified": false},
-            {"platform": "JOOLA Official", "price": 17999, "url": "https://joolausa.com/products/hyperion-c2-14mm", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 16500,
+              "url": "https://www.amazon.in/s?k=JOOLA+Hyperion+C2+14mm",
+              "verified": false
+            },
+            {
+              "platform": "JOOLA Official",
+              "price": 17999,
+              "url": "https://joolausa.com/products/hyperion-c2-14mm",
+              "verified": false
+            }
           ],
           "description": "Faster, lighter, and punchier sibling to the CFS 16. Trades a bit of dwell for hand-speed and counter-punching ability at the kitchen.",
           "pros": [
@@ -751,7 +2305,62 @@
             "Premium imported price",
             "Limited Indian retail; mostly grey-market resellers",
             "Sweet spot is narrower than the 16mm version"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "attacker",
+              "counter_attacker",
+              "speed_focused",
+              "spin_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 85,
+              "control": 60,
+              "speed": 90,
+              "spin": 95,
+              "forgiveness": 35,
+              "durability": 70
+            },
+            "best_for_persona": "Advanced players prioritizing quick hands, aggressive counter-attacks, and high spin for competitive tournament play.",
+            "not_for_persona": "Beginner or intermediate players seeking maximum forgiveness, a large sweet spot, or consistent soft game resets.",
+            "learning_curve_hours": 15,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Reduced forgiveness on off-center hits",
+              "Smaller sweet spot compared to thicker paddles",
+              "High price point",
+              "Limited availability in some regions"
+            ],
+            "standout_qualities": [
+              "Exceptional hand speed and quick reactions",
+              "Generates top-tier spin on shots",
+              "Lively and responsive feel for aggressive play",
+              "Approved for competitive tournament use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_p22",
@@ -760,8 +2369,24 @@
           "type": "Advanced Paddle",
           "level": "advanced",
           "recommended_for": "Tour-level players seeking premium control with shape-shifting feel",
-          "specs": {"weight": "220-235g (7.8-8.3 oz)", "face_material": "Florek Carbon Fiber", "core": "Polymer X8 (19mm)", "grip_size": "4.25 inch", "shape": "Elongated", "surface": "Textured carbon"},
-          "price_ranges": {"INR": {"min": 22000, "max": 28000}, "USD": {"min": 280, "max": 360}},
+          "specs": {
+            "weight": "220-235g (7.8-8.3 oz)",
+            "face_material": "Florek Carbon Fiber",
+            "core": "Polymer X8 (19mm)",
+            "grip_size": "4.25 inch",
+            "shape": "Elongated",
+            "surface": "Textured carbon"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 22000,
+              "max": 28000
+            },
+            "USD": {
+              "min": 280,
+              "max": 360
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Selkirk+LUXX+Control+Air+Invikta",
             "selkirk": "https://www.selkirk.com/collections/luxx-control-air",
@@ -772,8 +2397,18 @@
           "image": "https://www.selkirk.com/cdn/shop/files/LUXXControlAirInvikta-Front-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 24999, "url": "https://www.amazon.in/s?k=Selkirk+LUXX+Control+Air+Invikta", "verified": false},
-            {"platform": "Selkirk Official", "price": 26500, "url": "https://www.selkirk.com/products/luxx-control-air-invikta", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 24999,
+              "url": "https://www.amazon.in/s?k=Selkirk+LUXX+Control+Air+Invikta",
+              "verified": false
+            },
+            {
+              "platform": "Selkirk Official",
+              "price": 26500,
+              "url": "https://www.selkirk.com/products/luxx-control-air-invikta",
+              "verified": false
+            }
           ],
           "description": "Selkirk's flagship control paddle with thermoformed unibody build, 19mm thick X8 core and Florek carbon face. Used by Tyson McGuffin on tour.",
           "pros": [
@@ -787,7 +2422,61 @@
             "Heavy swingweight may slow doubles hand speed",
             "Limited stock in India (US-imported)",
             "Thermoformed builds are vulnerable to edge cracking"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "control_focused",
+              "spin_focused",
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult",
+              "heavy_player"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 95,
+              "speed": 65,
+              "spin": 95,
+              "forgiveness": 95,
+              "durability": 75
+            },
+            "best_for_persona": "Advanced players prioritizing maximum control, spin, and forgiveness for competitive play, who can handle a heavier paddle.",
+            "not_for_persona": "Beginners, casual players, or those needing a very light, fast-handling paddle for quick exchanges.",
+            "common_complaints": [
+              "High price point",
+              "Heavy swingweight impacts quickness",
+              "Availability issues in some regions",
+              "Potential for edge cracking"
+            ],
+            "standout_qualities": [
+              "Exceptional control and ball dwell",
+              "Superior spin generation",
+              "Enhanced swing speed design",
+              "Manufacturer's warranty support"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -800,8 +2489,18 @@
           "brand": "Nivia",
           "type": "Indoor Ball",
           "level": "beginner",
-          "specs": {"holes": 26, "material": "Plastic", "diameter": "74mm", "weight": "22-24g"},
-          "price_ranges": {"INR": {"min": 300, "max": 600}},
+          "specs": {
+            "holes": 26,
+            "material": "Plastic",
+            "diameter": "74mm",
+            "weight": "22-24g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 300,
+              "max": 600
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+Pickleball+balls",
             "flipkart": "https://www.flipkart.com/search?q=nivia+pickleball+balls"
@@ -809,9 +2508,24 @@
           "image": "https://www.nivia.com/cdn/shop/files/PB-572-balls.jpg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 449, "url": "https://www.amazon.in/s?k=Nivia+Pickleball+balls", "verified": false},
-            {"platform": "Flipkart", "price": 399, "url": "https://www.flipkart.com/search?q=nivia+pickleball+balls", "verified": false},
-            {"platform": "Nivia Official", "price": 499, "url": "https://www.nivia.com/collections/pickleball", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 449,
+              "url": "https://www.amazon.in/s?k=Nivia+Pickleball+balls",
+              "verified": false
+            },
+            {
+              "platform": "Flipkart",
+              "price": 399,
+              "url": "https://www.flipkart.com/search?q=nivia+pickleball+balls",
+              "verified": false
+            },
+            {
+              "platform": "Nivia Official",
+              "price": 499,
+              "url": "https://www.nivia.com/collections/pickleball",
+              "verified": false
+            }
           ],
           "description": "Budget Indian brand pickleball for indoor play. Good for practice and recreation.",
           "pros": [
@@ -825,7 +2539,57 @@
             "Plastic seams can split within 5-10 hours of play",
             "Flight quality is inconsistent batch-to-batch",
             "Indoor-only use; cracks quickly outdoors"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "tournament_open",
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "improve_technique",
+              "casual_fun",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 30,
+              "control": 70,
+              "speed": 40,
+              "spin": 40,
+              "forgiveness": 90,
+              "durability": 20
+            },
+            "best_for_persona": "Beginners and recreational players seeking an affordable indoor ball for practice and casual games.",
+            "not_for_persona": "Competitive players or those needing consistent flight for sanctioned tournaments.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 1,
+            "common_complaints": [
+              "Low durability with seams splitting quickly",
+              "Inconsistent flight performance",
+              "Not suitable for outdoor play or tournaments"
+            ],
+            "standout_qualities": [
+              "Very affordable price point",
+              "Soft feel suitable for indoor courts",
+              "Good forgiveness for new players"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_ba02",
@@ -833,8 +2597,19 @@
           "brand": "Onix",
           "type": "Indoor Ball",
           "level": "intermediate",
-          "specs": {"holes": 26, "material": "Premium Plastic", "diameter": "74mm", "weight": "22.5g", "USAPA_approved": true},
-          "price_ranges": {"INR": {"min": 800, "max": 1200}},
+          "specs": {
+            "holes": 26,
+            "material": "Premium Plastic",
+            "diameter": "74mm",
+            "weight": "22.5g",
+            "USAPA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 800,
+              "max": 1200
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Onix+Fuse+Indoor+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=onix+fuse+indoor+pickleball"
@@ -842,8 +2617,18 @@
           "image": "https://www.onixpickleball.com/cdn/shop/files/Fuse-Indoor-Orange.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 999, "url": "https://www.amazon.in/s?k=Onix+Fuse+Indoor+Pickleball", "verified": false},
-            {"platform": "Onix Official", "price": 1099, "url": "https://www.onixpickleball.com/products/fuse-indoor", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 999,
+              "url": "https://www.amazon.in/s?k=Onix+Fuse+Indoor+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Onix Official",
+              "price": 1099,
+              "url": "https://www.onixpickleball.com/products/fuse-indoor",
+              "verified": false
+            }
           ],
           "description": "USAPA approved indoor ball. Consistent flight and bounce for competitive play.",
           "pros": [
@@ -857,7 +2642,54 @@
             "Soft seams flatten after 6-10 hours of league play",
             "Higher price than competing indoor balls",
             "Limited Indian stock; often back-ordered"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 35,
+              "control": 90,
+              "speed": 35,
+              "spin": 65,
+              "forgiveness": 85,
+              "durability": 25
+            },
+            "best_for_persona": "Intermediate players seeking consistent, USAPA-approved indoor balls for competitive matches and training.",
+            "not_for_persona": "Players who primarily play pickleball outdoors or prioritize extreme ball durability.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Poor outdoor durability",
+              "Limited lifespan in competitive play",
+              "Higher cost compared to alternatives"
+            ],
+            "standout_qualities": [
+              "USAPA approved for indoor competition",
+              "Highly consistent flight and bounce",
+              "Gentle on paddle surfaces",
+              "Promotes longer indoor rallies"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_ba03",
@@ -865,8 +2697,19 @@
           "brand": "Franklin",
           "type": "Outdoor Ball",
           "level": "intermediate",
-          "specs": {"holes": 40, "material": "Hard Plastic", "diameter": "74mm", "weight": "25.5g", "USAPA_approved": true},
-          "price_ranges": {"INR": {"min": 900, "max": 1400}},
+          "specs": {
+            "holes": 40,
+            "material": "Hard Plastic",
+            "diameter": "74mm",
+            "weight": "25.5g",
+            "USAPA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 900,
+              "max": 1400
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Franklin+X-40+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=franklin+x-40+pickleball"
@@ -874,8 +2717,18 @@
           "image": "https://www.franklinsports.com/cdn/shop/files/X-40-Outdoor-Optic-Yellow.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1099, "url": "https://www.amazon.in/s?k=Franklin+X-40+Pickleball", "verified": false},
-            {"platform": "Franklin Official", "price": 1199, "url": "https://www.franklinsports.com/x-40-pickleballs-3-pack", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 1099,
+              "url": "https://www.amazon.in/s?k=Franklin+X-40+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Franklin Official",
+              "price": 1199,
+              "url": "https://www.franklinsports.com/x-40-pickleballs-3-pack",
+              "verified": false
+            }
           ],
           "description": "Official outdoor tournament ball. Durable and wind-resistant for outdoor courts.",
           "pros": [
@@ -889,7 +2742,58 @@
             "Cracks in cold weather (sub 10C) more easily",
             "Faster pace can intimidate beginners",
             "Some packs ship with off-round balls that wobble"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate",
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "power_hitter",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 80,
+              "control": 75,
+              "speed": 85,
+              "spin": 50,
+              "forgiveness": 60,
+              "durability": 70
+            },
+            "best_for_persona": "Competitive outdoor players seeking a USAPA-approved, wind-resistant ball for tournaments and fast-paced, consistent play.",
+            "not_for_persona": "Beginners seeking a slower, more forgiving ball, or players in cold climates concerned about ball cracking.",
+            "common_complaints": [
+              "Increased paddle wear due to hard surface",
+              "Prone to cracking in cold temperatures",
+              "Inconsistent quality with some off-round balls"
+            ],
+            "standout_qualities": [
+              "Official USAPA tournament approval",
+              "Excellent wind resistance for outdoor play",
+              "High durability on rough outdoor courts",
+              "Good visibility with bright colors"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_ba04",
@@ -897,8 +2801,19 @@
           "brand": "Onix",
           "type": "Outdoor Ball",
           "level": "advanced",
-          "specs": {"holes": 40, "material": "Hard Plastic", "diameter": "74mm", "weight": "26g", "USAPA_approved": true},
-          "price_ranges": {"INR": {"min": 1000, "max": 1600}},
+          "specs": {
+            "holes": 40,
+            "material": "Hard Plastic",
+            "diameter": "74mm",
+            "weight": "26g",
+            "USAPA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1000,
+              "max": 1600
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Dura+Fast+40+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=dura+fast+40+pickleball"
@@ -906,8 +2821,18 @@
           "image": "https://www.onixpickleball.com/cdn/shop/files/Dura-Fast-40-Yellow.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1299, "url": "https://www.amazon.in/s?k=Dura+Fast+40+Pickleball", "verified": false},
-            {"platform": "Onix Official", "price": 1399, "url": "https://www.onixpickleball.com/products/dura-fast-40-pickleballs", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 1299,
+              "url": "https://www.amazon.in/s?k=Dura+Fast+40+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Onix Official",
+              "price": 1399,
+              "url": "https://www.onixpickleball.com/products/dura-fast-40-pickleballs",
+              "verified": false
+            }
           ],
           "description": "The standard tournament ball. Fast, consistent, and used in most professional events.",
           "pros": [
@@ -921,7 +2846,58 @@
             "Hard surface is rougher on paddle face wear",
             "Very fast pace makes resets harder for beginners",
             "Often ships with slight imbalance from the seam"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced",
+              "pro"
+            ],
+            "playing_styles": [
+              "attacker",
+              "power_hitter",
+              "spin_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 90,
+              "control": 60,
+              "speed": 95,
+              "spin": 75,
+              "forgiveness": 30,
+              "durability": 50
+            },
+            "best_for_persona": "Advanced players and pros needing a fast, consistent, USAPA-approved outdoor tournament ball for competitive play.",
+            "not_for_persona": "Beginners or intermediate players prioritizing control and forgiveness for casual play.",
+            "common_complaints": [
+              "Prone to cracking faster in cooler temperatures.",
+              "Hard surface may increase paddle face wear.",
+              "High speed makes defensive resets challenging for less experienced players.",
+              "Occasional slight imbalance reported upon delivery."
+            ],
+            "standout_qualities": [
+              "Tournament standard with predictable flight characteristics.",
+              "Single-piece construction ensures true flight and spin.",
+              "Widely used in professional outdoor tournaments.",
+              "USAPA approved for sanctioned competition."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_ba05",
@@ -929,8 +2905,19 @@
           "brand": "JOOLA",
           "type": "Outdoor Ball",
           "level": "advanced",
-          "specs": {"holes": 40, "material": "Hard Plastic", "diameter": "74mm", "weight": "26g", "USAPA_approved": true},
-          "price_ranges": {"INR": {"min": 1200, "max": 1800}},
+          "specs": {
+            "holes": 40,
+            "material": "Hard Plastic",
+            "diameter": "74mm",
+            "weight": "26g",
+            "USAPA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 1800
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Tour+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=joola+ben+johns+tour+pickleball"
@@ -938,8 +2925,18 @@
           "image": "https://joolausa.com/cdn/shop/files/Primo-Outdoor-Yellow.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1499, "url": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Tour+Pickleball", "verified": false},
-            {"platform": "JOOLA Official", "price": 1699, "url": "https://joolausa.com/products/primo-outdoor-pickleballs", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 1499,
+              "url": "https://www.amazon.in/s?k=JOOLA+Ben+Johns+Tour+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "JOOLA Official",
+              "price": 1699,
+              "url": "https://joolausa.com/products/primo-outdoor-pickleballs",
+              "verified": false
+            }
           ],
           "description": "Ben Johns' signature tournament ball. Excellent flight characteristics.",
           "pros": [
@@ -953,7 +2950,50 @@
             "Still cracks in cold weather like other 40-hole balls",
             "Limited stock in India outside specialist retailers",
             "Marginal performance gain over cheaper Franklin/Dura options"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 75,
+              "control": 90,
+              "speed": 80,
+              "spin": 75,
+              "forgiveness": 85,
+              "durability": 55
+            },
+            "best_for_persona": "Advanced players and competitive club members seeking USAPA-approved, consistent outdoor balls for tournament play and serious matches.",
+            "not_for_persona": "Beginners or casual players looking for budget-friendly, highly durable balls for backyard or recreational use.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Higher price point than many alternatives",
+              "Prone to cracking in cold temperatures",
+              "Limited availability in certain markets"
+            ],
+            "standout_qualities": [
+              "Exceptional consistency in flight and bounce",
+              "Meets professional tournament standards",
+              "USAPA approved for outdoor competition"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_b06",
@@ -962,8 +3002,23 @@
           "type": "Outdoor Ball",
           "level": "intermediate",
           "recommended_for": "Outdoor recreational and club play",
-          "specs": {"holes": 40, "material": "Seamless hard plastic", "diameter": "74mm", "weight": "26g", "USAPA_approved": true},
-          "price_ranges": {"INR": {"min": 700, "max": 1100}, "USD": {"min": 9, "max": 14}},
+          "specs": {
+            "holes": 40,
+            "material": "Seamless hard plastic",
+            "diameter": "74mm",
+            "weight": "26g",
+            "USAPA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 700,
+              "max": 1100
+            },
+            "USD": {
+              "min": 9,
+              "max": 14
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Gamma+Photon+outdoor+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=gamma+photon+outdoor+pickleball",
@@ -975,8 +3030,18 @@
           "image": "https://www.gammasports.com/cdn/shop/files/Photon-Outdoor-Optic.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 899, "url": "https://www.amazon.in/s?k=Gamma+Photon+outdoor+pickleball", "verified": false},
-            {"platform": "Gamma Sports", "price": 999, "url": "https://www.gammasports.com/products/photon-outdoor-pickleball", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 899,
+              "url": "https://www.amazon.in/s?k=Gamma+Photon+outdoor+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Gamma Sports",
+              "price": 999,
+              "url": "https://www.gammasports.com/products/photon-outdoor-pickleball",
+              "verified": false
+            }
           ],
           "description": "Seamless construction for true flight and added durability. A solid value-focused outdoor ball.",
           "pros": [
@@ -990,7 +3055,51 @@
             "Slightly softer feel than Dura/Franklin",
             "Brand recognition trails Onix/Franklin in India",
             "Loses bounce after extended hot-weather play"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "school_college",
+              "club_recreational",
+              "academy_training"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "casual_fun",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 55,
+              "control": 75,
+              "speed": 50,
+              "spin": 50,
+              "forgiveness": 70,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate outdoor players seeking a USAPA-approved, durable ball with consistent flight for competitive or recreational play.",
+            "not_for_persona": "Advanced players who prefer a harder, faster ball, or those playing exclusively indoors.",
+            "common_complaints": [
+              "Smaller pack size than competitors",
+              "Softer feel compared to premium brands",
+              "Reduced bounce in extreme heat"
+            ],
+            "standout_qualities": [
+              "Excellent seam durability",
+              "Tournament-approved for outdoor play",
+              "Consistent and balanced flight",
+              "Good value for money"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_b07",
@@ -999,8 +3108,23 @@
           "type": "Indoor Ball",
           "level": "intermediate",
           "recommended_for": "Indoor club and tournament play",
-          "specs": {"holes": 26, "material": "Soft plastic", "diameter": "74mm", "weight": "23g", "USAPA_approved": true},
-          "price_ranges": {"INR": {"min": 500, "max": 900}, "USD": {"min": 6, "max": 11}},
+          "specs": {
+            "holes": 26,
+            "material": "Soft plastic",
+            "diameter": "74mm",
+            "weight": "23g",
+            "USAPA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 500,
+              "max": 900
+            },
+            "USD": {
+              "min": 6,
+              "max": 11
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Franklin+X-26+indoor+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=franklin+x-26+indoor+pickleball",
@@ -1012,8 +3136,18 @@
           "image": "https://www.franklinsports.com/cdn/shop/files/X-26-Indoor-Yellow.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 749, "url": "https://www.amazon.in/s?k=Franklin+X-26+indoor+pickleball", "verified": false},
-            {"platform": "Franklin Official", "price": 849, "url": "https://www.franklinsports.com/x-26-indoor-pickleballs-3-pack", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 749,
+              "url": "https://www.amazon.in/s?k=Franklin+X-26+indoor+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Franklin Official",
+              "price": 849,
+              "url": "https://www.franklinsports.com/x-26-indoor-pickleballs-3-pack",
+              "verified": false
+            }
           ],
           "description": "Franklin's dedicated indoor 26-hole ball. USAPA approved, consistent bounce on wooden and synthetic floors.",
           "pros": [
@@ -1027,7 +3161,55 @@
             "Indoor-only design cracks fast outdoors",
             "Soft seams deform after extended league play",
             "Less wind stability if used in airy indoor halls"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "tournament_open"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 40,
+              "control": 85,
+              "speed": 45,
+              "spin": 60,
+              "forgiveness": 80,
+              "durability": 50
+            },
+            "best_for_persona": "Intermediate players seeking consistent, slower indoor rallies for competitive club or tournament play.",
+            "not_for_persona": "Players needing a durable outdoor ball or those who prefer fast-paced, high-power play.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Higher cost per ball compared to larger packs.",
+              "Poor durability when used outdoors.",
+              "Seams can deform with intensive league play.",
+              "Lacks stability in windy indoor environments."
+            ],
+            "standout_qualities": [
+              "USAPA approved for indoor tournament play.",
+              "Offers a consistent and predictable bounce.",
+              "Soft material is gentle on paddle faces.",
+              "Designed for slower, more controlled rallies."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_b08",
@@ -1036,8 +3218,23 @@
           "type": "Outdoor Ball",
           "level": "intermediate",
           "recommended_for": "Outdoor club and recreational players seeking improved durability over Dura Fast 40",
-          "specs": {"holes": 40, "material": "Two-piece welded plastic", "diameter": "74mm", "weight": "25.8g", "USAPA_approved": true},
-          "price_ranges": {"INR": {"min": 700, "max": 1100}, "USD": {"min": 9, "max": 14}},
+          "specs": {
+            "holes": 40,
+            "material": "Two-piece welded plastic",
+            "diameter": "74mm",
+            "weight": "25.8g",
+            "USAPA_approved": true
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 700,
+              "max": 1100
+            },
+            "USD": {
+              "min": 9,
+              "max": 14
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Onix+Pure+2+Outdoor+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=onix+pure+2+outdoor+pickleball",
@@ -1050,8 +3247,18 @@
           "image": "https://www.onixpickleball.com/cdn/shop/files/Pure-2-Outdoor-Yellow.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 899, "url": "https://www.amazon.in/s?k=Onix+Pure+2+Outdoor+Pickleball", "verified": false},
-            {"platform": "Onix Official", "price": 999, "url": "https://www.onixpickleball.com/products/pure-2-outdoor", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 899,
+              "url": "https://www.amazon.in/s?k=Onix+Pure+2+Outdoor+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Onix Official",
+              "price": 999,
+              "url": "https://www.onixpickleball.com/products/pure-2-outdoor",
+              "verified": false
+            }
           ],
           "description": "Onix's improved outdoor ball with reinforced two-piece weld for better roundness and crack resistance compared with Dura Fast 40.",
           "pros": [
@@ -1065,7 +3272,53 @@
             "Pack of 3 means higher upfront cost",
             "Still cracks in cold (<10C) outdoor conditions",
             "Limited Indian stock; usually US-imported"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "club_recreational",
+              "academy_training"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 80,
+              "speed": 65,
+              "spin": 70,
+              "forgiveness": 85,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate players seeking a USAPA-approved, durable outdoor ball with consistent bounce for competitive club or tournament play.",
+            "not_for_persona": "Beginners on a tight budget or players exclusively playing indoors or in very cold conditions.",
+            "common_complaints": [
+              "Higher cost per ball compared to some alternatives",
+              "Prone to cracking in cold weather",
+              "Requires buying in packs, increasing initial expense"
+            ],
+            "standout_qualities": [
+              "Excellent roundness and bounce consistency",
+              "Approved for sanctioned competitive play",
+              "Improved crack resistance over previous models",
+              "High visibility for outdoor use"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_b09",
@@ -1074,8 +3327,22 @@
           "type": "Outdoor Ball",
           "level": "beginner",
           "recommended_for": "Beginner and recreational players in India needing affordable, in-store balls",
-          "specs": {"holes": 40, "material": "Hard plastic", "diameter": "74mm", "weight": "25g"},
-          "price_ranges": {"INR": {"min": 499, "max": 799}, "USD": {"min": 6, "max": 10}},
+          "specs": {
+            "holes": 40,
+            "material": "Hard plastic",
+            "diameter": "74mm",
+            "weight": "25g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 499,
+              "max": 799
+            },
+            "USD": {
+              "min": 6,
+              "max": 10
+            }
+          },
           "buy_links": {
             "decathlon": "https://www.decathlon.in/c/pickleball",
             "amazon": "https://www.amazon.in/s?k=Decathlon+Perfly+Pickleball+balls",
@@ -1086,8 +3353,18 @@
           "image": "https://contents.mediadecathlon.com/p2486892/k$3f8d3e8c8a99e1c0c6b8f1c9c7e3f4/sq/perfly-pickleball-balls-pack6.jpg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Decathlon", "price": 599, "url": "https://www.decathlon.in/c/pickleball", "verified": false},
-            {"platform": "Amazon", "price": 699, "url": "https://www.amazon.in/s?k=Decathlon+Perfly+Pickleball+balls", "verified": false}
+            {
+              "platform": "Decathlon",
+              "price": 599,
+              "url": "https://www.decathlon.in/c/pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Amazon",
+              "price": 699,
+              "url": "https://www.amazon.in/s?k=Decathlon+Perfly+Pickleball+balls",
+              "verified": false
+            }
           ],
           "description": "Decathlon's house-brand pickleball balls for outdoor practice. Cheapest in-store outdoor ball pack in India.",
           "pros": [
@@ -1101,7 +3378,50 @@
             "Cracks faster than Dura Fast 40 on rough courts",
             "Roundness varies between units",
             "Newer product with limited long-term durability data"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "garden_backyard",
+              "school_college",
+              "club_recreational",
+              "beach_outdoor"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "improve_technique",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 60,
+              "control": 30,
+              "speed": 50,
+              "spin": 50,
+              "forgiveness": 40,
+              "durability": 20
+            },
+            "best_for_persona": "Beginners and casual players seeking an affordable, visible outdoor ball pack for practice and recreational games.",
+            "not_for_persona": "Competitive players requiring USAPA-approved balls or those needing maximum durability on rough, high-intensity courts.",
+            "common_complaints": [
+              "Inconsistent roundness and bounce",
+              "Lower durability compared to premium balls",
+              "Not approved for official tournaments"
+            ],
+            "standout_qualities": [
+              "Exceptional value for money",
+              "High visibility in outdoor settings",
+              "Widely available with convenient returns"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     },
@@ -1114,8 +3434,17 @@
           "brand": "Nivia",
           "type": "Court Shoes",
           "level": "beginner",
-          "specs": {"sole": "Non-marking rubber", "cushion": "EVA", "weight": "330g"},
-          "price_ranges": {"INR": {"min": 1200, "max": 2000}},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "EVA",
+            "weight": "330g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 1200,
+              "max": 2000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nivia+court+shoes+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=nivia+court+shoes"
@@ -1123,9 +3452,24 @@
           "image": "https://www.nivia.com/cdn/shop/files/court-shoes-white.jpg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 1599, "url": "https://www.amazon.in/s?k=Nivia+court+shoes+pickleball", "verified": false},
-            {"platform": "Flipkart", "price": 1499, "url": "https://www.flipkart.com/search?q=nivia+court+shoes", "verified": false},
-            {"platform": "Nivia Official", "price": 1699, "url": "https://www.nivia.com/collections/court-shoes", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 1599,
+              "url": "https://www.amazon.in/s?k=Nivia+court+shoes+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Flipkart",
+              "price": 1499,
+              "url": "https://www.flipkart.com/search?q=nivia+court+shoes",
+              "verified": false
+            },
+            {
+              "platform": "Nivia Official",
+              "price": 1699,
+              "url": "https://www.nivia.com/collections/court-shoes",
+              "verified": false
+            }
           ],
           "description": "Budget Indian court shoe. Non-marking sole for indoor courts.",
           "pros": [
@@ -1139,7 +3483,52 @@
             "EVA cushioning compresses within a few months",
             "Limited toe-drag reinforcement for serves",
             "No specialised herringbone outdoor pattern"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college"
+            ],
+            "anti_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 0,
+              "speed": 0,
+              "spin": 0,
+              "forgiveness": 40,
+              "durability": 25
+            },
+            "best_for_persona": "Beginner pickleball players on a tight budget needing a basic indoor shoe for casual, recreational play.",
+            "not_for_persona": "Advanced players requiring specialized lateral support, durable cushioning, or outdoor court performance.",
+            "upgrade_after_months": 4,
+            "common_complaints": [
+              "Lacks specialized support for lateral movements",
+              "Cushioning degrades quickly with regular use",
+              "Insufficient toe-drag protection",
+              "Unsuitable for outdoor courts"
+            ],
+            "standout_qualities": [
+              "Extremely budget-friendly price point",
+              "Non-marking sole suitable for indoor courts",
+              "Widely available across India"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_sh02",
@@ -1147,8 +3536,17 @@
           "brand": "Artengo (Decathlon)",
           "type": "Court Shoes",
           "level": "beginner",
-          "specs": {"sole": "Non-marking rubber", "cushion": "EVA", "weight": "320g"},
-          "price_ranges": {"INR": {"min": 2000, "max": 3500}},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "EVA",
+            "weight": "320g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 2000,
+              "max": 3500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Decathlon+court+shoes+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=artengo+court+shoes"
@@ -1156,8 +3554,18 @@
           "image": "https://contents.mediadecathlon.com/p1849756/k$f7d3a2/sq/artengo-ts160-court-shoes.jpg",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Decathlon", "price": 2499, "url": "https://www.decathlon.in/p/8504770/court-shoes/men-s-tennis-multicourt-shoes-ts160-white", "verified": false},
-            {"platform": "Amazon", "price": 2799, "url": "https://www.amazon.in/s?k=Decathlon+court+shoes+pickleball", "verified": false}
+            {
+              "platform": "Decathlon",
+              "price": 2499,
+              "url": "https://www.decathlon.in/p/8504770/court-shoes/men-s-tennis-multicourt-shoes-ts160-white",
+              "verified": false
+            },
+            {
+              "platform": "Amazon",
+              "price": 2799,
+              "url": "https://www.amazon.in/s?k=Decathlon+court+shoes+pickleball",
+              "verified": false
+            }
           ],
           "description": "Affordable Decathlon court shoe suitable for pickleball.",
           "pros": [
@@ -1171,7 +3579,59 @@
             "EVA midsole lacks responsiveness of premium gels",
             "Limited stability for heavier players",
             "Outsole wears quickly on abrasive outdoor courts"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "beginner"
+            ],
+            "playing_styles": [
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "school_college",
+              "garden_backyard"
+            ],
+            "anti_contexts": [
+              "beach_outdoor",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "body_fit": [
+              "junior_or_light"
+            ],
+            "goal_fit": [
+              "casual_fun",
+              "stay_fit",
+              "kids_starter"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 60,
+              "speed": 80,
+              "spin": 0,
+              "forgiveness": 75,
+              "durability": 50
+            },
+            "best_for_persona": "Beginner pickleball players seeking an affordable, lightweight shoe for casual indoor play and basic court movement.",
+            "not_for_persona": "Heavy players needing maximum stability or those playing frequently on abrasive outdoor courts.",
+            "upgrade_after_months": 9,
+            "common_complaints": [
+              "Outsole durability on abrasive outdoor courts",
+              "Midsole lacks premium cushioning responsiveness",
+              "Limited stability for heavier users",
+              "Not specifically designed for pickleball demands"
+            ],
+            "standout_qualities": [
+              "Lightweight design for agility",
+              "Backed by a 2-year warranty",
+              "Good lateral support for its price point",
+              "Easily accessible for in-store fitting"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_sh03",
@@ -1179,8 +3639,17 @@
           "brand": "Asics",
           "type": "Court Shoes",
           "level": "intermediate",
-          "specs": {"sole": "Non-marking rubber", "cushion": "Gel", "weight": "330g"},
-          "price_ranges": {"INR": {"min": 5000, "max": 7500}},
+          "specs": {
+            "sole": "Non-marking rubber",
+            "cushion": "Gel",
+            "weight": "330g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 5000,
+              "max": 7500
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Asics+Gel+Renma+pickleball",
             "flipkart": "https://www.flipkart.com/search?q=asics+gel+renma"
@@ -1188,8 +3657,18 @@
           "image": "https://images.asics.com/is/image/asics/1071A067_001_SR_RT_GLB-gel-renma.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 5999, "url": "https://www.amazon.in/s?k=Asics+Gel+Renma+pickleball", "verified": false},
-            {"platform": "Asics India", "price": 6499, "url": "https://www.asics.com/in/en-in/gel-renma/p/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 5999,
+              "url": "https://www.amazon.in/s?k=Asics+Gel+Renma+pickleball",
+              "verified": false
+            },
+            {
+              "platform": "Asics India",
+              "price": 6499,
+              "url": "https://www.asics.com/in/en-in/gel-renma/p/",
+              "verified": false
+            }
           ],
           "description": "Asics' pickleball-specific shoe. Gel cushioning for lateral movements.",
           "pros": [
@@ -1203,7 +3682,55 @@
             "Mid-range price gets undercut by tennis K-Swiss alternatives",
             "Outsole is geared mostly to indoor/cushion court surfaces",
             "Limited size availability in India"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 85,
+              "speed": 40,
+              "spin": 10,
+              "forgiveness": 90,
+              "durability": 70
+            },
+            "best_for_persona": "Intermediate pickleball players seeking stable, cushioned support for quick lateral movements on indoor courts, especially those with wider feet.",
+            "not_for_persona": "Competitive players prioritizing lightweight speed or those who primarily play on outdoor, hard court surfaces.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": null,
+            "common_complaints": [
+              "Heavier than some rival court shoes.",
+              "Outsole not ideal for outdoor or hard court surfaces.",
+              "Higher price point compared to some tennis shoe alternatives."
+            ],
+            "standout_qualities": [
+              "Superior GEL cushioning for lateral impacts.",
+              "Outsole specifically designed for pickleball court grip.",
+              "Excellent torsional stability for quick cuts and pivots.",
+              "Accommodates wider foot shapes with a spacious toe box."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_sh04",
@@ -1211,8 +3738,17 @@
           "brand": "K-Swiss",
           "type": "Court Shoes",
           "level": "intermediate",
-          "specs": {"sole": "Aosta rubber", "cushion": "Surge 7.0 midsole", "weight": "340g"},
-          "price_ranges": {"INR": {"min": 6000, "max": 9000}},
+          "specs": {
+            "sole": "Aosta rubber",
+            "cushion": "Surge 7.0 midsole",
+            "weight": "340g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 6000,
+              "max": 9000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=K-Swiss+Express+Light+Pickleball",
             "flipkart": "https://www.flipkart.com/search?q=k-swiss+express+light+pickleball"
@@ -1220,8 +3756,18 @@
           "image": "https://www.kswiss.com/cdn/shop/files/Express-Light-Pickleball-White.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 7499, "url": "https://www.amazon.in/s?k=K-Swiss+Express+Light+Pickleball", "verified": false},
-            {"platform": "K-Swiss Official", "price": 7999, "url": "https://www.kswiss.com/products/express-light-pickleball", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 7499,
+              "url": "https://www.amazon.in/s?k=K-Swiss+Express+Light+Pickleball",
+              "verified": false
+            },
+            {
+              "platform": "K-Swiss Official",
+              "price": 7999,
+              "url": "https://www.kswiss.com/products/express-light-pickleball",
+              "verified": false
+            }
           ],
           "description": "Pickleball-specific shoe from K-Swiss. Good lateral support and comfort.",
           "pros": [
@@ -1235,7 +3781,53 @@
             "Narrower fit than Asics, may pinch wide feet",
             "Indian sizing is limited; many sizes are import-only",
             "Premium price approaches Nike Air Zoom NXT range"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "tournament_open",
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 80,
+              "speed": 40,
+              "spin": 0,
+              "forgiveness": 75,
+              "durability": 90
+            },
+            "best_for_persona": "Intermediate pickleball players needing excellent lateral support and outsole durability for demanding outdoor courts.",
+            "not_for_persona": "Players with wide feet seeking the absolute lightest shoes for maximum agility and quickness.",
+            "learning_curve_hours": null,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Heavier than some competitors, potentially hindering extreme agility.",
+              "Narrow fit may cause discomfort for players with wider feet.",
+              "Limited availability of certain sizes in some regions.",
+              "Higher price point compared to budget options."
+            ],
+            "standout_qualities": [
+              "Exceptional lateral stability and toe protection for pickleball movements.",
+              "Highly durable outsole designed for demanding outdoor court surfaces.",
+              "Responsive cushioning provides comfort during extended play.",
+              "Manufacturer's outsole guarantee offers peace of mind."
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pk_sh05",
@@ -1243,8 +3835,17 @@
           "brand": "Nike",
           "type": "Court Shoes",
           "level": "advanced",
-          "specs": {"sole": "Modified herringbone", "cushion": "Air Zoom", "weight": "350g"},
-          "price_ranges": {"INR": {"min": 9000, "max": 13000}},
+          "specs": {
+            "sole": "Modified herringbone",
+            "cushion": "Air Zoom",
+            "weight": "350g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 9000,
+              "max": 13000
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Nike+Court+Air+Zoom+NXT",
             "flipkart": "https://www.flipkart.com/search?q=nike+court+air+zoom+nxt"
@@ -1252,9 +3853,24 @@
           "image": "https://static.nike.com/a/images/t_default/court-air-zoom-nxt-white.png",
           "availability": "widely_available_india",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 10999, "url": "https://www.amazon.in/s?k=Nike+Court+Air+Zoom+NXT", "verified": false},
-            {"platform": "Nike India", "price": 11995, "url": "https://www.nike.com/in/w/tennis-shoes-fhqj1zy7ok", "verified": false},
-            {"platform": "Flipkart", "price": 11499, "url": "https://www.flipkart.com/search?q=nike+court+air+zoom+nxt", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 10999,
+              "url": "https://www.amazon.in/s?k=Nike+Court+Air+Zoom+NXT",
+              "verified": false
+            },
+            {
+              "platform": "Nike India",
+              "price": 11995,
+              "url": "https://www.nike.com/in/w/tennis-shoes-fhqj1zy7ok",
+              "verified": false
+            },
+            {
+              "platform": "Flipkart",
+              "price": 11499,
+              "url": "https://www.flipkart.com/search?q=nike+court+air+zoom+nxt",
+              "verified": false
+            }
           ],
           "description": "Premium Nike court shoe. Responsive Air Zoom cushioning for competitive play.",
           "pros": [
@@ -1268,7 +3884,56 @@
             "Highest price point in the shoes section",
             "Designed for tennis primarily; less pickleball-tuned than K-Swiss",
             "Air Zoom unit can feel firm in cold weather"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "control_focused",
+              "speed_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "academy_training",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "office_casual",
+              "garden_backyard",
+              "school_college"
+            ],
+            "goal_fit": [
+              "win_matches"
+            ],
+            "attributes": {
+              "power": 0,
+              "control": 90,
+              "speed": 65,
+              "spin": 0,
+              "forgiveness": 85,
+              "durability": 95
+            },
+            "best_for_persona": "Advanced players needing durable, stable shoes with responsive cushioning and versatile grip for competitive indoor/outdoor play.",
+            "not_for_persona": "Budget-conscious beginners or players prioritizing ultra-lightweight footwear for casual, non-competitive use.",
+            "common_complaints": [
+              "Heavier than some alternative court shoes",
+              "Higher price point compared to other options",
+              "Less optimized for pickleball than dedicated shoes",
+              "Cushioning can feel firm in cold weather"
+            ],
+            "standout_qualities": [
+              "Excellent responsive and springy cushioning",
+              "Versatile grip for both indoor and outdoor courts",
+              "High-quality, durable construction with stitched overlays",
+              "Manufacturer's six-month outsole warranty"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_sh06",
@@ -1277,8 +3942,22 @@
           "type": "Court Shoes",
           "level": "advanced",
           "recommended_for": "Fast, agile players transitioning from tennis",
-          "specs": {"sole": "Michelin non-marking rubber", "cushion": "Kompressor Pro", "weight": "335g", "upper": "Matryx woven"},
-          "price_ranges": {"INR": {"min": 10500, "max": 14500}, "USD": {"min": 135, "max": 185}},
+          "specs": {
+            "sole": "Michelin non-marking rubber",
+            "cushion": "Kompressor Pro",
+            "weight": "335g",
+            "upper": "Matryx woven"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 10500,
+              "max": 14500
+            },
+            "USD": {
+              "min": 135,
+              "max": 185
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Babolat+Jet+Mach+3+All+Court",
             "flipkart": "https://www.flipkart.com/search?q=babolat+jet+mach+3+all+court",
@@ -1290,8 +3969,18 @@
           "image": "https://www.babolat.com/cdn/shop/files/JetMach3-AllCourt-Black.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 11999, "url": "https://www.amazon.in/s?k=Babolat+Jet+Mach+3+All+Court", "verified": false},
-            {"platform": "Babolat India", "price": 12999, "url": "https://www.babolat.com/in/shoes/", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 11999,
+              "url": "https://www.amazon.in/s?k=Babolat+Jet+Mach+3+All+Court",
+              "verified": false
+            },
+            {
+              "platform": "Babolat India",
+              "price": 12999,
+              "url": "https://www.babolat.com/in/shoes/",
+              "verified": false
+            }
           ],
           "description": "Lightweight and breathable Matryx upper with Michelin rubber outsole. Favoured by players moving from tennis to pickleball.",
           "pros": [
@@ -1305,7 +3994,60 @@
             "Narrow tennis-style fit can pinch wide feet",
             "Stiff break-in period of several sessions",
             "All-court outsole wears faster on rough Indian outdoor courts"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "advanced"
+            ],
+            "playing_styles": [
+              "all_round",
+              "attacker",
+              "speed_focused",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_competitive",
+              "tournament_open",
+              "tournament_elite"
+            ],
+            "anti_contexts": [
+              "garden_backyard",
+              "office_casual"
+            ],
+            "body_fit": [
+              "average_adult"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "improve_technique"
+            ],
+            "attributes": {
+              "power": 70,
+              "control": 90,
+              "speed": 95,
+              "spin": 50,
+              "forgiveness": 75,
+              "durability": 80
+            },
+            "best_for_persona": "Advanced pickleball players seeking lightweight, nimble shoes with exceptional grip and stability for competitive play.",
+            "not_for_persona": "Players with wide feet, beginners, or those on a strict budget.",
+            "learning_curve_hours": 5,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "High price point",
+              "Narrow fit for some foot types",
+              "Requires a break-in period",
+              "Reduced outsole durability on very abrasive courts"
+            ],
+            "standout_qualities": [
+              "Excellent grip and outsole durability",
+              "Lightweight and breathable upper",
+              "Superior foot lockdown and lateral stability",
+              "Effective impact absorption"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         },
         {
           "id": "pb_sh07",
@@ -1314,8 +4056,21 @@
           "type": "Court Shoes",
           "level": "intermediate",
           "recommended_for": "All-court players seeking durability and stability",
-          "specs": {"sole": "Duralast rubber (non-marking)", "cushion": "Pro Torque Chassis 2.0", "weight": "345g"},
-          "price_ranges": {"INR": {"min": 7500, "max": 10500}, "USD": {"min": 95, "max": 135}},
+          "specs": {
+            "sole": "Duralast rubber (non-marking)",
+            "cushion": "Pro Torque Chassis 2.0",
+            "weight": "345g"
+          },
+          "price_ranges": {
+            "INR": {
+              "min": 7500,
+              "max": 10500
+            },
+            "USD": {
+              "min": 95,
+              "max": 135
+            }
+          },
           "buy_links": {
             "amazon": "https://www.amazon.in/s?k=Wilson+Rush+Pro+4.0",
             "flipkart": "https://www.flipkart.com/search?q=wilson+rush+pro+4.0",
@@ -1327,8 +4082,18 @@
           "image": "https://www.wilson.com/en-us/cdn/shop/files/RushPro4-White.png",
           "availability": "limited_online",
           "marketplace_prices": [
-            {"platform": "Amazon", "price": 8999, "url": "https://www.amazon.in/s?k=Wilson+Rush+Pro+4.0", "verified": false},
-            {"platform": "Wilson Official", "price": 9499, "url": "https://www.wilson.com/en-us/product/rush-pro-4-0", "verified": false}
+            {
+              "platform": "Amazon",
+              "price": 8999,
+              "url": "https://www.amazon.in/s?k=Wilson+Rush+Pro+4.0",
+              "verified": false
+            },
+            {
+              "platform": "Wilson Official",
+              "price": 9499,
+              "url": "https://www.wilson.com/en-us/product/rush-pro-4-0",
+              "verified": false
+            }
           ],
           "description": "Wilson's durable mid-tier court shoe with a reinforced Pro Torque Chassis for lateral stability on pickleball courts.",
           "pros": [
@@ -1342,7 +4107,52 @@
             "Stiff midfoot needs break-in time",
             "Cushioning is firmer than Asics GEL alternatives",
             "Indian retail stock favors tennis colors only"
-          ]
+          ],
+          "fit_profile": {
+            "skill_levels": [
+              "intermediate"
+            ],
+            "playing_styles": [
+              "all_round",
+              "control_focused"
+            ],
+            "playing_contexts": [
+              "club_recreational",
+              "club_competitive",
+              "academy_training"
+            ],
+            "anti_contexts": [
+              "beach_outdoor"
+            ],
+            "goal_fit": [
+              "win_matches",
+              "stay_fit"
+            ],
+            "attributes": {
+              "power": 50,
+              "control": 85,
+              "speed": 30,
+              "forgiveness": 40,
+              "durability": 90
+            },
+            "best_for_persona": "Intermediate players needing maximum stability and durability for aggressive court movement and hard cuts.",
+            "not_for_persona": "Players prioritizing lightweight speed or plush cushioning over stability and long-term wear.",
+            "learning_curve_hours": 8,
+            "upgrade_after_months": 18,
+            "common_complaints": [
+              "Heavy for quick footwork",
+              "Requires break-in period",
+              "Firmer cushioning"
+            ],
+            "standout_qualities": [
+              "Exceptional lateral stability",
+              "High outsole durability with warranty",
+              "Reinforced toe for drag protection",
+              "Available in multiple widths"
+            ],
+            "confidence": "medium",
+            "source": "llm_derived"
+          }
         }
       ]
     }
