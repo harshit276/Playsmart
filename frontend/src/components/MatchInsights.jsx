@@ -20,7 +20,6 @@ import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity } fr
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 import PoseOverlayModal from "@/components/PoseOverlayModal";
-import FormCoachReplay from "@/components/FormCoachReplay";
 
 
 // In-flight cache so we don't refetch the same reference video for
@@ -1085,19 +1084,26 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     .filter(Boolean)
     .sort((a, b) => b.length - a.length)[0] || "";
 
-  // One representative thumbnail per group — picks the highest-confidence
-  // shot's frame as the "best example" of this shot type.
-  const heroShot = groupShots
-    .slice()
-    .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-    .find((s) => s.thumbnail);
+  // One representative shot per group — prefer one with a thumbnail
+  // (so the header preview + AI-gen reference have visual data), then
+  // fall back to plain highest-confidence so the card still renders
+  // when no shot in the group carries a thumbnail.
+  const sortedByConf = groupShots.slice().sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+  const heroShot = sortedByConf.find((s) => s.thumbnail) || sortedByConf[0];
+  // Best shot for AI generation — needs BOTH thumbnail and timestamp.
+  const aiSourceShot = sortedByConf.find((s) => s.thumbnail && typeof s.timestamp === "number");
 
   // Compare-to-Pro reference for this shot type (sport-aware).
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
-  const [aiGenStatus, setAiGenStatus] = useState(null);    // null | "loading" | "unavailable" | "ready"
+  // AI Correct auto-generation state. Fires once when we have a
+  // thumbnail + timestamp; dedupe ref prevents re-fires on rerender.
+  const [aiGenStatus, setAiGenStatus] = useState("idle"); // idle | running | done | failed
   const [aiGenMessage, setAiGenMessage] = useState("");
+  const [aiGenVideoUrl, setAiGenVideoUrl] = useState(null);
+  const aiGenFiredRef = useRef(null);
+
   useEffect(() => {
     let cancelled = false;
     if (!sport || !sample.type) return;
@@ -1107,79 +1113,73 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     return () => { cancelled = true; };
   }, [sport, sample.type]);
 
-  // AI Generate handler — kicks off a backend job and polls until the
-  // generated clip URL lands (or we get a clear failure). Backend
-  // returns status="feature_unavailable" when REPLICATE_API_TOKEN
-  // isn't configured, "queued"/"running"/"done"/"failed" otherwise.
-  const [aiGenVideoUrl, setAiGenVideoUrl] = useState(null);
-  const handleGenerateCorrected = async () => {
-    setAiGenStatus("loading");
-    setAiGenMessage("");
-    setAiGenVideoUrl(null);
-    try {
-      const ts = sample.timestamp;
-      if (typeof ts !== "number") throw new Error("No timestamp on this shot");
-      // Send the group's hero thumbnail (highest-confidence shot's
-      // pre-extracted contact frame) as the reference image. Skips
-      // re-uploading the full video AND avoids the cv2 dependency
-      // that breaks on Vercel.
-      const thumb = heroShot?.thumbnail || sample.thumbnail;
-      if (!thumb) {
-        throw new Error("No contact-frame thumbnail for this shot. Re-analyze the video and try again.");
-      }
-      const api = (await import("@/lib/api")).default;
-      const { data } = await api.post("/generate-corrected-shot", {
-        reference_image_b64: thumb,
-        timestamp_sec: ts,
-        sport: sport || "badminton",
-        shot_type: sample.type || "shot",
-      }, { timeout: 30000 });
+  // Auto-fire AI generation once per (sport, shot type, timestamp)
+  // when the group has a usable source frame. Free tier so we burn a
+  // generation per shot group; backend caches identical inputs.
+  useEffect(() => {
+    if (!aiSourceShot || !sport) return;
+    const ts = aiSourceShot.timestamp;
+    const thumb = aiSourceShot.thumbnail;
+    const fireKey = `${sport}::${sample.type || "shot"}::${ts}`;
+    if (aiGenFiredRef.current === fireKey) return;
+    aiGenFiredRef.current = fireKey;
 
-      if (data?.status === "feature_unavailable") {
-        setAiGenStatus("unavailable");
-        setAiGenMessage(data.message || "Coming soon.");
-        return;
+    let cancelled = false;
+    (async () => {
+      setAiGenStatus("running");
+      setAiGenMessage("Generating AI-corrected clip…");
+      try {
+        const api = (await import("@/lib/api")).default;
+        const { data } = await api.post("/generate-corrected-shot", {
+          reference_image_b64: thumb,
+          timestamp_sec: ts,
+          sport,
+          shot_type: sample.type || "shot",
+        }, { timeout: 30000 });
+        if (cancelled) return;
+        if (data?.status === "feature_unavailable") {
+          setAiGenStatus("failed");
+          setAiGenMessage(data.message || "");
+          return;
+        }
+        if (data?.status === "done" && data?.video_url) {
+          setAiGenStatus("done");
+          setAiGenVideoUrl(data.video_url);
+          setAiGenMessage(data.cached ? "Loaded from cache." : "");
+          return;
+        }
+        const jobId = data?.job_id;
+        if (!jobId) throw new Error("No job_id returned");
+        for (let i = 0; i < 80; i++) {
+          if (cancelled) return;
+          await new Promise((r) => setTimeout(r, 3000));
+          try {
+            const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
+            if (cancelled) return;
+            if (poll?.status === "done" && poll?.video_url) {
+              setAiGenStatus("done");
+              setAiGenVideoUrl(poll.video_url);
+              setAiGenMessage("");
+              return;
+            }
+            if (poll?.status === "failed") {
+              setAiGenStatus("failed");
+              setAiGenMessage(poll.error || "Generation failed.");
+              return;
+            }
+          } catch { /* keep polling */ }
+        }
+        setAiGenStatus("failed");
+        setAiGenMessage("Taking longer than expected.");
+      } catch (e) {
+        if (cancelled) return;
+        setAiGenStatus("failed");
+        setAiGenMessage(e.response?.data?.detail || e.message || "Generation failed.");
       }
-      if (data?.status === "done" && data?.video_url) {
-        // Cache hit — generation was already done on a previous request.
-        setAiGenStatus("done");
-        setAiGenVideoUrl(data.video_url);
-        setAiGenMessage(data.cached ? "Loaded from your previous generation." : "Done!");
-        return;
-      }
+    })();
+    return () => { cancelled = true; };
+  }, [aiSourceShot?.thumbnail, aiSourceShot?.timestamp, sample.type, sport]);
 
-      // Queued / running — poll the job until it settles.
-      const jobId = data?.job_id;
-      if (!jobId) throw new Error(data?.error || "No job_id returned");
-      setAiGenMessage("Generating — usually ~75 seconds…");
-      const POLL_MS = 3000;
-      const MAX_POLLS = 60;
-      for (let i = 0; i < MAX_POLLS; i++) {
-        await new Promise((r) => setTimeout(r, POLL_MS));
-        try {
-          const { data: poll } = await api.get(`/generate-corrected-shot/${jobId}`, { timeout: 8000 });
-          if (poll?.status === "done" && poll?.video_url) {
-            setAiGenStatus("done");
-            setAiGenVideoUrl(poll.video_url);
-            setAiGenMessage("Your AI-corrected clip is ready.");
-            return;
-          }
-          if (poll?.status === "failed") {
-            setAiGenStatus("unavailable");
-            setAiGenMessage(poll.error || "Generation failed. Your tokens were refunded.");
-            return;
-          }
-        } catch { /* poll error — keep trying */ }
-      }
-      setAiGenStatus("unavailable");
-      setAiGenMessage("Generation taking longer than expected. Check back later — your tokens are held.");
-    } catch (e) {
-      setAiGenStatus("unavailable");
-      setAiGenMessage(e.response?.data?.detail || e.message || "Try again later.");
-    }
-  };
-
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const headlineFix = tips[0] || weaknesses[0] || null;
   const scorePct = Math.round(avgConf * 100);
   const scoreTone = scorePct >= 80 ? "text-lime-400"
@@ -1225,145 +1225,118 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         </div>
       </div>
 
-      {/* TOP FIX — promoted to a highlighted callout so it actually
-          gets read instead of being a bullet point in a long list. */}
-      {headlineFix && (
-        <div className="px-3 py-2.5 bg-amber-400/8 border-b border-amber-400/20">
-          <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">🎯 Top fix</p>
-          <p className="text-sm text-white leading-snug">{headlineFix}</p>
-        </div>
-      )}
-
-      <div className="p-3 space-y-2.5">
-        {/* Strengths + weaknesses as compact chips, NOT bullet lists */}
-        {(strengths.length > 0 || weaknesses.length > 0) && (
-          <div className="flex flex-wrap gap-1.5">
-            {strengths.slice(0, 3).map((x, j) => (
-              <span key={`s-${j}`}
-                className="inline-flex items-center gap-1 text-[10px] font-medium text-lime-300 bg-lime-400/10 border border-lime-400/20 rounded-full px-2 py-1 max-w-full">
-                <span className="text-lime-400">✓</span>
-                <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
-              </span>
-            ))}
-            {weaknesses.slice(0, 3).map((x, j) => {
-              const isHeadline = x === headlineFix;
-              if (isHeadline) return null;  // already shown in Top fix above
-              return (
-                <span key={`w-${j}`}
-                  className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-1 max-w-full">
-                  <span className="text-amber-400">⚠</span>
-                  <span className="truncate" title={x}>{x.length > 60 ? x.slice(0, 57) + "…" : x}</span>
-                </span>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {heroShot?.thumbnail && (
-            <button
-              onClick={() => setPoseOpen(true)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Activity className="w-3 h-3" /> See your form
-            </button>
-          )}
-          {proRef && (
-            <button
-              onClick={() => setCompareOpen(true)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-            </button>
-          )}
-          {/* AI-corrected video (premium beta) — backend currently
-              returns "feature_unavailable" while we calibrate the
-              generator pipeline. Surfaces the wait-list message. */}
-          <button
-            onClick={handleGenerateCorrected}
-            disabled={aiGenStatus === "loading"}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-300 hover:text-purple-200 bg-purple-400/10 border border-purple-400/30 rounded-full px-2.5 py-1 transition-colors disabled:opacity-50"
-            title="Generate an AI clip of you with corrected form (beta)"
-          >
-            ✨ AI Correct {aiGenStatus === "loading" ? "…" : <span className="text-[9px] text-amber-300">Beta</span>}
-          </button>
-          {(reasoning || tips.length > 1) && (
-            <button
-              onClick={() => setDetailsOpen((v) => !v)}
-              className="text-[11px] text-zinc-400 hover:text-white ml-auto"
-            >
-              {detailsOpen ? "Hide details ▲" : "Coach details ▼"}
-            </button>
-          )}
-        </div>
-        {aiGenStatus === "unavailable" && aiGenMessage && (
-          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-1.5 mt-2">
-            <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">AI Correct · beta</p>
-            <p className="text-[11px] text-zinc-300 mt-0.5">{aiGenMessage}</p>
-          </div>
-        )}
-        {aiGenStatus === "loading" && (
-          <div className="bg-purple-400/5 border border-purple-400/30 rounded-lg px-2.5 py-2 mt-2 flex items-center gap-2">
-            <Loader2 className="w-4 h-4 text-purple-300 animate-spin shrink-0" />
-            <p className="text-[11px] text-zinc-300">{aiGenMessage || "Generating your AI-corrected clip…"}</p>
-          </div>
-        )}
-        {aiGenStatus === "done" && aiGenVideoUrl && (
-          <div className="mt-2 bg-zinc-900/80 border border-purple-400/30 rounded-xl overflow-hidden">
-            <div className="px-3 py-2 bg-purple-400/5 border-b border-purple-400/20">
-              <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold flex items-center gap-1">
-                ✨ AI-corrected coaching visualization
-              </p>
-              <p className="text-[11px] text-zinc-400 mt-0.5">{aiGenMessage}</p>
+      {/* TWO-COLUMN BODY: bullet feedback on the left, AI-generated
+          video on the right. Stacks vertically on mobile. */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-0">
+        {/* LEFT COLUMN — bullet-pointed feedback */}
+        <div className="p-3 space-y-3">
+          {headlineFix && (
+            <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
+              <p className="text-sm text-white leading-snug">{headlineFix}</p>
             </div>
-            <video
-              src={aiGenVideoUrl}
-              controls
-              loop
-              muted
-              autoPlay
-              playsInline
-              className="w-full bg-black"
-              data-playsmart-ai-correct
-            />
-            <div className="px-3 py-2 bg-zinc-900/60 border-t border-zinc-800">
-              <p className="text-[10px] text-zinc-500 leading-relaxed">
-                <span className="text-purple-300 font-bold">How to read this:</span> An AI synthesized
-                this clip by applying the pro's motion to your image. It's NOT real footage of you — use
-                it to learn what the corrected swing looks like in your body. Hands holding the racket
-                are often distorted (model limitation). Focus on the BODY motion: torso rotation,
-                hip drive, arm extension at contact.
+          )}
+
+          {strengths.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">What's working</p>
+              <ul className="space-y-1">
+                {strengths.map((x, j) => (
+                  <li key={`s-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                    <span className="text-lime-400 shrink-0 mt-[2px]">✓</span>
+                    <span>{x}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {weaknesses.filter((x) => x !== headlineFix).length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1.5">Areas to improve</p>
+              <ul className="space-y-1">
+                {weaknesses.filter((x) => x !== headlineFix).map((x, j) => (
+                  <li key={`w-${j}`} className="text-[12px] text-zinc-200 flex gap-2 leading-snug">
+                    <span className="text-amber-400 shrink-0 mt-[2px]">⚠</span>
+                    <span>{x}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {reasoning && (
+            <div className="pt-2 border-t border-zinc-800/60">
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
+              <p className="text-[12px] text-zinc-300 leading-relaxed">{reasoning}</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
+            {heroShot?.thumbnail && (
+              <button
+                onClick={() => setPoseOpen(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-400 hover:text-lime-300 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Activity className="w-3 h-3" /> See your form
+              </button>
+            )}
+            {proRef && (
+              <button
+                onClick={() => setCompareOpen(true)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN — AI-generated corrected swing */}
+        <div className="bg-zinc-950/40 border-t md:border-t-0 md:border-l border-zinc-800 p-3 flex flex-col">
+          <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-2 flex items-center gap-1">
+            ✨ AI-corrected swing
+          </p>
+          {aiGenStatus === "running" && (
+            <div className="flex-1 bg-zinc-900/60 border border-purple-400/20 rounded-lg flex flex-col items-center justify-center p-4 min-h-[160px]">
+              <Loader2 className="w-5 h-5 text-purple-300 animate-spin mb-2" />
+              <p className="text-[11px] text-zinc-400 text-center">{aiGenMessage || "Generating…"}</p>
+              <p className="text-[9px] text-zinc-600 mt-1">~75 seconds typically</p>
+            </div>
+          )}
+          {aiGenStatus === "done" && aiGenVideoUrl && (
+            <>
+              <video
+                src={aiGenVideoUrl}
+                controls loop muted autoPlay playsInline
+                className="w-full bg-black rounded-lg"
+                data-playsmart-ai-correct
+              />
+              <p className="text-[9px] text-zinc-500 leading-tight mt-1.5">
+                AI synthesized — focus on body motion, not the racket (model limitation).
               </p>
               <a
-                href={aiGenVideoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-                className="text-[10px] text-purple-300 hover:text-purple-200 mt-1 inline-block"
+                href={aiGenVideoUrl} target="_blank" rel="noopener noreferrer" download
+                className="text-[9px] text-purple-300 hover:text-purple-200 mt-0.5 inline-block"
               >
-                Open / download full-size ↗
+                Download ↗
               </a>
+            </>
+          )}
+          {aiGenStatus === "failed" && (
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px]">
+              <p className="text-[11px] text-zinc-400 leading-relaxed">{aiGenMessage || "Not available right now."}</p>
             </div>
-          </div>
-        )}
-
-        {/* Expandable coach details — long reasoning + extra tips live
-            here so they don't dominate the card on first read. */}
-        {detailsOpen && (
-          <div className="space-y-1.5 pt-2 border-t border-zinc-800/60">
-            {reasoning && (
-              <p className="text-xs text-zinc-300 leading-relaxed">
-                <span className="text-lime-400/80 font-semibold">Coach: </span>{reasoning}
+          )}
+          {aiGenStatus === "idle" && (
+            <div className="flex-1 bg-zinc-900/60 border border-zinc-800 rounded-lg p-3 min-h-[160px] flex items-center justify-center">
+              <p className="text-[11px] text-zinc-600 text-center">
+                {aiSourceShot ? "Waiting for shot data…" : "No reference frame available for this group."}
               </p>
-            )}
-            {tips.slice(1).map((t, i) => (
-              <p key={`extra-tip-${i}`} className="text-xs text-amber-300 leading-relaxed">
-                💡 {t}
-              </p>
-            ))}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
       <ProComparisonModal
         open={compareOpen}
@@ -1561,15 +1534,9 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     };
   }, [headlineShot, userVideoUrlRef.current]);
 
-  // YOU side has a toggle between "Raw clip" and "Form coach replay"
-  // (the new annotated canvas with skeleton + ideal-ghost). Default to
-  // form coach since that's the differentiator; user can flip to raw.
-  const [showCoach, setShowCoach] = useState(true);
-
   if (!proRef || !headlineShot) return null;
   const ytSrc = `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}?start=${proRef.start_sec || 0}&end=${proRef.end_sec || (proRef.start_sec || 0) + 6}&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}&controls=1&modestbranding=1&rel=0`;
   const canShowVideo = !!userVideoUrlRef.current && typeof headlineShot.timestamp === "number";
-  const canShowCoach = !!videoFile && typeof headlineShot.timestamp === "number";
 
   return (
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl overflow-hidden">
@@ -1581,22 +1548,14 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           Your {headlineShot._name} vs {proRef.player}
         </p>
         <p className="text-[10px] text-zinc-500 mt-0.5">
-          Both clips loop side-by-side. The YOU panel marks where your
-          joints SHOULD be in green at the contact frame.
+          Your clip loops on the left. The pro's segment loops on the right.
+          The AI-corrected version of your swing appears below once it finishes generating.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-        {/* USER side — Form Coach Replay (skeleton + ghost) OR raw loop */}
+        {/* USER side — raw user clip looping the shot window */}
         <div className="bg-black aspect-video relative">
-          {showCoach && canShowCoach ? (
-            <FormCoachReplay
-              videoFile={videoFile}
-              timestamp={headlineShot.timestamp}
-              sport={sport}
-              shotType={headlineShot.type || headlineShot.label}
-              className="absolute inset-0"
-            />
-          ) : canShowVideo ? (
+          {canShowVideo ? (
             <video
               ref={userVideoRef}
               src={userVideoUrlRef.current}
@@ -1614,28 +1573,12 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             </div>
           )}
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
-            <p className="text-[10px] uppercase tracking-wider text-white font-bold">
-              You {showCoach && canShowCoach ? "· Form coach" : ""}
-            </p>
+            <p className="text-[10px] uppercase tracking-wider text-white font-bold">You</p>
           </div>
-          {/* Toggle in the top-right corner */}
-          {canShowCoach && (
-            <button
-              onClick={() => setShowCoach((v) => !v)}
-              className="absolute top-2 right-2 bg-black/70 hover:bg-black/85 backdrop-blur-sm rounded px-2 py-1 text-[10px] uppercase tracking-wider text-zinc-300 hover:text-white font-bold transition-colors"
-              title={showCoach ? "Switch to raw video" : "Switch to form coach replay"}
-            >
-              {showCoach ? "Raw" : "Coach"}
-            </button>
-          )}
         </div>
-        {/* PRO side — YouTube embed restricted to the curated segment.
-            Even though the backend pre-validates the YouTube ID via
-            oEmbed, an embed CAN still fail (region-block, owner
-            disabling embed without removing the video, network glitch).
-            We always render the iframe + a small "Open on YouTube"
-            fallback link below the panel so users have an escape hatch
-            when "This video is unavailable" pops up inside the iframe. */}
+        {/* PRO side — curated YouTube segment. Embed CAN fail (region
+            block, owner disabled embed without removing video, etc),
+            so we always offer "Open on YouTube" fallback below. */}
         <div className="bg-black aspect-video relative">
           <iframe
             src={ytSrc}
@@ -1644,6 +1587,9 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             allowFullScreen
             className="w-full h-full"
           />
+          <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
+            <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold">{proRef.player}</p>
+          </div>
         </div>
       </div>
       {proRef.description && (
@@ -1665,20 +1611,24 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       )}
       {/* Auto-generated AI Correct clip — fires once per analysis on
           the headline shot. Free tier so we burn it as a default
-          rather than gating behind a click. Renders inside the same
-          panel as the Pro Reference so the user gets the full
-          "you / pro / corrected you" comparison in one place. */}
+          rather than gating behind a click. */}
       {autoGenStatus !== "idle" && (
         <div className="border-t border-amber-400/20">
-          <div className="px-4 py-2 bg-purple-400/5">
+          <div className="px-4 py-2 bg-purple-400/5 flex items-center gap-2">
             <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold flex items-center gap-1">
-              ✨ AI-corrected swing
+              ✨ AI-corrected version of your swing
               {autoGenStatus === "running" && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
             </p>
             {autoGenMessage && (
-              <p className="text-[11px] text-zinc-400 mt-0.5">{autoGenMessage}</p>
+              <p className="text-[11px] text-zinc-400 ml-auto">{autoGenMessage}</p>
             )}
           </div>
+          {autoGenStatus === "running" && (
+            <div className="px-4 py-6 bg-zinc-900/40 flex flex-col items-center gap-2">
+              <Loader2 className="w-6 h-6 text-purple-300 animate-spin" />
+              <p className="text-[11px] text-zinc-400">Generating — usually ~75 seconds…</p>
+            </div>
+          )}
           {autoGenStatus === "done" && autoGenVideoUrl && (
             <>
               <video
@@ -1691,9 +1641,9 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
                 <p className="text-[10px] text-zinc-500 leading-relaxed">
                   <span className="text-purple-300 font-bold">How to read this:</span> An AI
                   synthesized this clip from your contact frame to show what the corrected
-                  swing would look like in YOUR body. It's NOT real footage of you — hands
-                  holding the racket are often distorted (model limitation). Focus on the
-                  BODY motion: torso rotation, hip drive, arm extension at contact.
+                  swing would look like in YOUR body. It's NOT real footage — hands holding
+                  the racket are often distorted (model limitation). Focus on the BODY motion:
+                  torso rotation, hip drive, arm extension at contact.
                 </p>
                 <a
                   href={autoGenVideoUrl} target="_blank" rel="noopener noreferrer" download
@@ -1707,9 +1657,8 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           {autoGenStatus === "failed" && (
             <div className="px-4 py-2 bg-zinc-900/40">
               <p className="text-[11px] text-zinc-500">
-                AI Correct isn't available right now. The free-tier quota may be exhausted —
-                check Replicate billing or try later. The "See your form" + "Compare to Pro"
-                features still work normally.
+                {autoGenMessage || "AI Correct isn't available right now."} The pro reference
+                above still works normally.
               </p>
             </div>
           )}
