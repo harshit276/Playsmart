@@ -15,8 +15,9 @@
  * doesn't already show: per-type technique consistency + the coaching
  * narrative. No duplicated counts.
  */
-import { useState, useMemo, useEffect, useRef } from "react";
-import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity } from "lucide-react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity, Award, AlertTriangle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 import PoseOverlayModal from "@/components/PoseOverlayModal";
@@ -229,8 +230,15 @@ export default function MatchInsights({
       // perShot directly from the saved shotsProp so the UI renders.
       if (isHistorical) {
         const merged = shotsProp.map((s) => ({
-          label: s.type || s.shot_type || "unknown",
-          name: s.name || s.shot_name || s.type || "unknown",
+          // Prefer the free-text shot_label ("Diving backhand block") over
+          // the canonical category ("block") for the visible display name.
+          // Category still drives drill/reference lookups internally.
+          label: s.shot_label || s.type || s.shot_type || "unknown",
+          category: s.shot_category || s.type || s.shot_type || "unknown",
+          intent: s.intent || null,
+          outcome: s.outcome || null,
+          qualityObservation: s.quality_observation || null,
+          name: s.shot_label || s.name || s.shot_name || s.type || "unknown",
           pose: null,  // no live pose for historical
           reasoning: s.reasoning || null,
           formFeedback: s.formFeedback || s.form_feedback || null,
@@ -372,8 +380,13 @@ export default function MatchInsights({
         }
 
         merged.push({
-          label: shot.type || "unknown",
-          name: shot.name || shot.type || "unknown",
+          // Free-text shot_label is the primary display; category drives lookups.
+          label: shot.shot_label || shot.type || "unknown",
+          category: shot.shot_category || shot.type || "unknown",
+          intent: shot.intent || null,
+          outcome: shot.outcome || null,
+          qualityObservation: shot.quality_observation || null,
+          name: shot.shot_label || shot.name || shot.type || "unknown",
           pose,
           // Carry through VLM extras so the per-shot card can surface them.
           reasoning: shot.reasoning || null,
@@ -479,15 +492,13 @@ export default function MatchInsights({
         )}
       </div>
 
-      {/* Embedded clip player. Per-shot card click uses
-          data-playsmart-clip to find this <video> and seek to the moment. */}
+      {/* Embedded clip player with chapter markers + speed + jump shortcuts.
+          Per-shot card click uses data-playsmart-clip to find the <video>
+          and seek to the moment. */}
       {playerUrl && (
-        <video
-          src={playerUrl}
-          data-playsmart-clip
-          controls
-          playsInline
-          className="w-full rounded-lg bg-black mb-4 max-h-72 object-contain"
+        <VideoPlayerWithMarkers
+          playerUrl={playerUrl}
+          perShot={perShot}
         />
       )}
 
@@ -872,6 +883,303 @@ function _seekToShot(timestamp) {
       });
     }
   } catch {}
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Quality-score helper for chapter markers + active-shot detection.
+// `score` is 0–100 (Math.round(confidence * 100)). Mirrors the same
+// thresholds used in IndividualShotCard / ShotGroupCard.
+// ────────────────────────────────────────────────────────────────────
+function _shotScore(s) {
+  if (s == null) return 0;
+  const c = typeof s.confidence === "number" ? s.confidence : 0;
+  return Math.round(c * 100);
+}
+function _scoreTier(score) {
+  if (score >= 80) return { dot: "bg-lime-400", ring: "ring-lime-400/60", text: "text-lime-300" };
+  if (score >= 60) return { dot: "bg-sky-400",  ring: "ring-sky-400/60",  text: "text-sky-300"  };
+  if (score >= 40) return { dot: "bg-amber-400",ring: "ring-amber-400/60",text: "text-amber-300"};
+  return            { dot: "bg-rose-400",ring: "ring-rose-400/60",text: "text-rose-300" };
+}
+
+// VideoPlayerWithMarkers — wraps the page's <video data-playsmart-clip>
+// element with: shortcut buttons (best/worst), a chapter-marker overlay
+// pinned above the native progress bar, and a speed-control row. Keeps
+// the underlying <video> identical so existing `_seekToShot` /
+// `playsmart:seek` consumers continue to work — they query the same
+// `video[data-playsmart-clip]` selector.
+function VideoPlayerWithMarkers({ playerUrl, perShot }) {
+  const videoRef = useRef(null);
+  const [duration, setDuration] = useState(0);
+  const [speed, setSpeed] = useState(1);
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const [activeShotId, setActiveShotId] = useState(null);
+  const lastEmittedRef = useRef(null);
+
+  // Indexed shots with a stable id matching the per-shot cards. We use
+  // the perShot array index because PerShotCoachSection / IndividualShotCard
+  // already use that index as their `key`.
+  const indexedShots = useMemo(
+    () => (perShot || []).map((s, i) => ({ ...s, _id: i })),
+    [perShot],
+  );
+
+  // Only shots that have a usable timestamp + can be replayed — drives
+  // the markers AND the best/worst shortcut buttons. Cards without a
+  // timestamp are still listed below; we just skip their marker.
+  const markableShots = useMemo(
+    () => indexedShots.filter((s) => typeof s.timestamp === "number" && Number.isFinite(s.timestamp)),
+    [indexedShots],
+  );
+
+  // Best / worst by shot quality score. Fall back to highest/lowest
+  // confidence when scores are tied / all zero.
+  const { bestShot, worstShot } = useMemo(() => {
+    if (markableShots.length === 0) return { bestShot: null, worstShot: null };
+    const sorted = [...markableShots].sort((a, b) => _shotScore(b) - _shotScore(a));
+    return { bestShot: sorted[0], worstShot: sorted[sorted.length - 1] };
+  }, [markableShots]);
+
+  // Pull duration from the <video> once metadata loads.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const onMeta = () => {
+      if (Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
+    };
+    const onTime = () => {
+      const t = v.currentTime;
+      // Find the most-recent shot whose timestamp is <= currentTime.
+      // Window: only flag a shot as "active" within 2s of its contact
+      // moment so the card pulse fires once per pass, not the whole video.
+      let candidate = null;
+      for (const s of markableShots) {
+        const ts = s.timestamp;
+        if (ts <= t && t - ts <= 2.0) {
+          if (!candidate || s.timestamp > candidate.timestamp) candidate = s;
+        }
+      }
+      const newId = candidate ? candidate._id : null;
+      if (newId !== lastEmittedRef.current) {
+        lastEmittedRef.current = newId;
+        setActiveShotId(newId);
+        if (newId != null) {
+          // Notify the cards to pulse. Cards subscribe by their _id.
+          window.dispatchEvent(new CustomEvent("playsmart:active-shot", {
+            detail: { id: newId, source: "video" },
+          }));
+        }
+      }
+    };
+    const onRate = () => setSpeed(v.playbackRate || 1);
+    if (v.readyState >= 1) onMeta();
+    v.addEventListener("loadedmetadata", onMeta);
+    v.addEventListener("durationchange", onMeta);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("ratechange", onRate);
+    return () => {
+      v.removeEventListener("loadedmetadata", onMeta);
+      v.removeEventListener("durationchange", onMeta);
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("ratechange", onRate);
+    };
+  }, [markableShots]);
+
+  // Listen for card→video seek requests. Cards dispatch this so the
+  // video jumps + plays from that shot's timestamp.
+  useEffect(() => {
+    const onSeek = (e) => {
+      const t = e?.detail?.time;
+      const v = videoRef.current;
+      if (!v || typeof t !== "number" || !Number.isFinite(t)) return;
+      try {
+        v.currentTime = Math.max(0, t - 0.5);
+        v.muted = true;
+        const p = v.play?.();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch {}
+    };
+    // When a card / shortcut emits its own active-shot event, sync our
+    // last-emitted ref so the subsequent timeupdate-driven detection
+    // doesn't re-fire and cause a double-pulse on the same card.
+    const onActive = (e) => {
+      const d = e?.detail || {};
+      if (d.source && d.source !== "video") {
+        lastEmittedRef.current = d.id;
+        setActiveShotId(d.id);
+      }
+    };
+    window.addEventListener("playsmart:seek", onSeek);
+    window.addEventListener("playsmart:active-shot", onActive);
+    return () => {
+      window.removeEventListener("playsmart:seek", onSeek);
+      window.removeEventListener("playsmart:active-shot", onActive);
+    };
+  }, []);
+
+  const applySpeed = (rate) => {
+    const v = videoRef.current;
+    if (!v) return;
+    try { v.playbackRate = rate; } catch {}
+    setSpeed(rate);
+  };
+
+  const jumpToShot = (shot) => {
+    if (!shot || typeof shot.timestamp !== "number") return;
+    window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: shot.timestamp } }));
+    // Also fire active-shot so the matching card pulses + scrolls. The
+    // timeupdate handler dedupes via lastEmittedRef so we won't double-pulse.
+    lastEmittedRef.current = shot._id;
+    setActiveShotId(shot._id);
+    window.dispatchEvent(new CustomEvent("playsmart:active-shot", {
+      detail: { id: shot._id, source: "shortcut", scroll: true },
+    }));
+  };
+
+  const SPEEDS = [0.5, 1, 2];
+  const hasShortcuts = bestShot != null || worstShot != null;
+  const sameBestWorst = bestShot && worstShot && bestShot._id === worstShot._id;
+
+  return (
+    <div className="mb-4">
+      {/* Jump-to-best / Jump-to-worst shortcuts */}
+      {hasShortcuts && (
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {bestShot && (
+            <button
+              type="button"
+              onClick={() => jumpToShot(bestShot)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-lime-400/10 hover:bg-lime-400/20 text-lime-300 border border-lime-400/30 transition-colors"
+              title={`Jump to your best shot · score ${_shotScore(bestShot)}`}
+            >
+              <Award className="w-3 h-3" /> Jump to best
+              <span className="text-lime-400/80 font-mono ml-0.5">{_shotScore(bestShot)}</span>
+            </button>
+          )}
+          {worstShot && !sameBestWorst && (
+            <button
+              type="button"
+              onClick={() => jumpToShot(worstShot)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-full bg-rose-400/10 hover:bg-rose-400/20 text-rose-300 border border-rose-400/30 transition-colors"
+              title={`Jump to your weakest shot · score ${_shotScore(worstShot)}`}
+            >
+              <AlertTriangle className="w-3 h-3" /> Jump to worst
+              <span className="text-rose-400/80 font-mono ml-0.5">{_shotScore(worstShot)}</span>
+            </button>
+          )}
+          <span className="text-[10px] text-zinc-600 ml-1">· tap a marker on the timeline to jump</span>
+        </div>
+      )}
+
+      {/* The <video> itself — keep data-playsmart-clip so all existing
+          _seekToShot callers (Compare modal, group cards, etc.) still
+          find it via querySelector. */}
+      <div className="relative">
+        <video
+          ref={videoRef}
+          src={playerUrl}
+          data-playsmart-clip
+          controls
+          playsInline
+          className="w-full rounded-lg bg-black max-h-72 object-contain"
+        />
+
+        {/* Chapter markers overlay — pinned to the bottom of the video
+            box so they sit just above the native controls' progress bar.
+            Native controls heights vary by browser (~40px Chrome,
+            ~50px Safari iOS); positioning at bottom: 38px keeps the
+            markers visually above the progress bar on the common cases
+            without intercepting clicks on the play/volume buttons.
+            pointer-events-none on the wrapper, pointer-events-auto on
+            the buttons themselves so the rest of the video stays
+            clickable. */}
+        {duration > 0 && markableShots.length > 0 && (
+          <div
+            className="absolute left-0 right-0 pointer-events-none"
+            style={{ bottom: "38px", height: "10px" }}
+            aria-hidden="false"
+          >
+            <div className="relative w-full h-full mx-auto">
+              {markableShots.map((s) => {
+                const pct = Math.min(100, Math.max(0, (s.timestamp / duration) * 100));
+                const score = _shotScore(s);
+                const tier = _scoreTier(score);
+                const name = (s.name || s.label || s.type || "Shot").replace(/_/g, " ");
+                const isActive = activeShotId === s._id;
+                const isHover = hoverIdx === s._id;
+                return (
+                  <button
+                    key={s._id}
+                    type="button"
+                    onMouseEnter={() => setHoverIdx(s._id)}
+                    onMouseLeave={() => setHoverIdx((cur) => (cur === s._id ? null : cur))}
+                    onFocus={() => setHoverIdx(s._id)}
+                    onBlur={() => setHoverIdx((cur) => (cur === s._id ? null : cur))}
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      jumpToShot(s);
+                    }}
+                    aria-label={`Jump to ${name} at ${s.timestamp.toFixed(1)} seconds, score ${score}`}
+                    className={`absolute pointer-events-auto -translate-x-1/2 rounded-full ${tier.dot} ${isActive ? `ring-2 ${tier.ring}` : ""} hover:scale-150 focus:scale-150 focus:outline-none transition-transform`}
+                    style={{
+                      left: `${pct}%`,
+                      top: "50%",
+                      marginTop: "-5px",
+                      width: "10px",
+                      height: "10px",
+                      boxShadow: "0 0 0 1px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    <AnimatePresence>
+                      {isHover && (
+                        <motion.span
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }}
+                          transition={{ duration: 0.12 }}
+                          className={`absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-zinc-950/95 border border-zinc-700 px-2 py-1 text-[10px] font-semibold ${tier.text} pointer-events-none shadow-lg`}
+                          style={{ zIndex: 20 }}
+                        >
+                          <span className="capitalize">{name}</span>
+                          <span className="text-zinc-500"> · </span>
+                          <span className="font-mono">{score}</span>
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Speed controls — slo-mo / normal / fast for self-review. */}
+      <div className="flex items-center gap-2 mt-2">
+        <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Speed</span>
+        <div className="inline-flex rounded-md overflow-hidden border border-zinc-800 bg-zinc-900">
+          {SPEEDS.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => applySpeed(r)}
+              aria-pressed={speed === r}
+              className={`px-2.5 py-1 text-[11px] font-bold transition-colors ${
+                speed === r
+                  ? "bg-lime-400 text-black"
+                  : "text-zinc-300 hover:bg-zinc-800"
+              }`}
+            >
+              {r === 1 ? "1x" : `${r}x`}
+            </button>
+          ))}
+        </div>
+        {markableShots.length === 0 && (
+          <span className="text-[10px] text-zinc-600">No timestamped shots in this session.</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -1383,12 +1691,57 @@ function InlineShotVsPro({ shot, sport, shotType }) {
 }
 
 
-function IndividualShotCard({ shot, label, sport }) {
+function IndividualShotCard({ shot, label, sport, shotId = null }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
+  // Bidirectional link: card highlights briefly when video plays past
+  // this shot's timestamp OR when the user clicks a marker / shortcut.
+  const [pulsing, setPulsing] = useState(false);
+  const cardRef = useRef(null);
+  const pulseTimerRef = useRef(null);
+  // Avoid scroll-loops: only scroll the card into view when the trigger
+  // was a marker / shortcut click. Natural video playback shouldn't
+  // hijack the user's scroll position.
+  useEffect(() => {
+    if (shotId == null) return;
+    const onActive = (e) => {
+      const d = e?.detail || {};
+      if (d.id !== shotId) return;
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+      setPulsing(true);
+      pulseTimerRef.current = setTimeout(() => setPulsing(false), 1400);
+      if (d.scroll && cardRef.current) {
+        try { cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {}
+      }
+    };
+    window.addEventListener("playsmart:active-shot", onActive);
+    return () => {
+      window.removeEventListener("playsmart:active-shot", onActive);
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, [shotId]);
+
+  // Card click → seek the video to this shot. We emit BOTH the seek
+  // (so the video plays) AND the active-shot pulse (so this card
+  // highlights immediately, in case the timeupdate hasn't fired yet).
+  // The video listener guards against echo via lastEmittedRef, so
+  // clicking the card → video timeupdate → re-emit won't double-pulse.
+  const jumpHere = useCallback(() => {
+    const ts = shot?.timestamp;
+    if (typeof ts !== "number" || !Number.isFinite(ts)) return;
+    window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: ts } }));
+    if (shotId != null) {
+      window.dispatchEvent(new CustomEvent("playsmart:active-shot", {
+        detail: { id: shotId, source: "card", scroll: false },
+      }));
+    }
+    // Scroll the video into view so the player is visible after click.
+    const v = document.querySelector("video[data-playsmart-clip]");
+    if (v) { try { v.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {} }
+  }, [shot?.timestamp, shotId]);
   // AI Correct auto-generation state (per card). Fires on mount if
   // we have a thumbnail + timestamp; dedupe ref prevents re-fires on
   // re-renders.
@@ -1399,12 +1752,16 @@ function IndividualShotCard({ shot, label, sport }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!sport || !shot.type) return;
-    fetchProReference(sport, shot.type).then((ref) => {
+    // Pro reference is keyed on the canonical category, not the free-text
+    // label. A 'Defensive lift (short)' label and a 'Crisp clear to back court'
+    // label both map to category=lift/clear and share a pro reference.
+    const refKey = shot.category || shot.type;
+    if (!sport || !refKey) return;
+    fetchProReference(sport, refKey).then((ref) => {
       if (!cancelled && ref) setProRef(ref);
     });
     return () => { cancelled = true; };
-  }, [sport, shot.type]);
+  }, [sport, shot.category, shot.type]);
 
   // MANUAL generation — user clicks "Generate" on each card. We used to
   // auto-fire but Replicate's free tier is 6 req/min with burst=1, so
@@ -1479,8 +1836,22 @@ function IndividualShotCard({ shot, label, sport }) {
     : scorePct >= 40 ? "text-amber-300"
     : "text-red-400";
 
+  const hasTimestamp = typeof shot?.timestamp === "number" && Number.isFinite(shot.timestamp);
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl overflow-hidden">
+    <motion.div
+      ref={cardRef}
+      data-shot-id={shotId ?? undefined}
+      onClick={hasTimestamp ? jumpHere : undefined}
+      role={hasTimestamp ? "button" : undefined}
+      tabIndex={hasTimestamp ? 0 : undefined}
+      onKeyDown={hasTimestamp ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); jumpHere(); } } : undefined}
+      animate={pulsing
+        ? { boxShadow: ["0 0 0 0 rgba(163,230,53,0)", "0 0 0 3px rgba(163,230,53,0.55)", "0 0 0 0 rgba(163,230,53,0)"] }
+        : { boxShadow: "0 0 0 0 rgba(163,230,53,0)" }}
+      transition={pulsing ? { duration: 1.4, ease: "easeOut" } : { duration: 0.2 }}
+      className={`bg-zinc-900/60 border ${pulsing ? "border-lime-400/60" : "border-zinc-800"} rounded-xl overflow-hidden transition-colors ${hasTimestamp ? "cursor-pointer hover:border-zinc-700" : ""}`}
+      title={hasTimestamp ? `Click to jump to ${shot.timestamp.toFixed(1)}s` : undefined}
+    >
       {/* Compact header: thumbnail + name + quality bar */}
       <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
         {shot.thumbnail && (
@@ -1491,6 +1862,9 @@ function IndividualShotCard({ shot, label, sport }) {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-base font-semibold text-white capitalize leading-tight">{cleanLabel}</p>
             <div className="flex items-center gap-1.5">
+              {hasTimestamp && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">@{shot.timestamp.toFixed(1)}s</span>
+              )}
               {shot.powerLevel && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-400/15 text-sky-300 capitalize">{shot.powerLevel}</span>
               )}
@@ -1569,7 +1943,7 @@ function IndividualShotCard({ shot, label, sport }) {
         {proRef && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
             <button
-              onClick={() => setCompareOpen(true)}
+              onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
               className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
             >
               <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
@@ -1592,7 +1966,7 @@ function IndividualShotCard({ shot, label, sport }) {
         shotType={shot.type}
         shotName={cleanLabel}
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -1640,6 +2014,49 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   const heroShot = sortedByConf.find((s) => s.thumbnail) || sortedByConf[0];
   // Best shot for AI generation — needs BOTH thumbnail and timestamp.
   const aiSourceShot = sortedByConf.find((s) => s.thumbnail && typeof s.timestamp === "number");
+
+  // Group bidirectional link: pulse when ANY shot in this group fires
+  // an active-shot event; clicking the card jumps the video to the
+  // highest-confidence shot in the group that has a timestamp.
+  const groupShotIds = useMemo(
+    () => new Set(groupShots.map((s) => s._shotId).filter((id) => id != null)),
+    [groupShots],
+  );
+  const jumpTarget = useMemo(
+    () => sortedByConf.find((s) => typeof s.timestamp === "number" && Number.isFinite(s.timestamp)) || null,
+    [sortedByConf],
+  );
+  const [pulsing, setPulsing] = useState(false);
+  const cardRef = useRef(null);
+  const pulseTimerRef = useRef(null);
+  useEffect(() => {
+    const onActive = (e) => {
+      const d = e?.detail || {};
+      if (!groupShotIds.has(d.id)) return;
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+      setPulsing(true);
+      pulseTimerRef.current = setTimeout(() => setPulsing(false), 1400);
+      if (d.scroll && cardRef.current) {
+        try { cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {}
+      }
+    };
+    window.addEventListener("playsmart:active-shot", onActive);
+    return () => {
+      window.removeEventListener("playsmart:active-shot", onActive);
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, [groupShotIds]);
+  const jumpHere = useCallback(() => {
+    if (!jumpTarget) return;
+    window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: jumpTarget.timestamp } }));
+    if (jumpTarget._shotId != null) {
+      window.dispatchEvent(new CustomEvent("playsmart:active-shot", {
+        detail: { id: jumpTarget._shotId, source: "card", scroll: false },
+      }));
+    }
+    const v = document.querySelector("video[data-playsmart-clip]");
+    if (v) { try { v.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {} }
+  }, [jumpTarget]);
 
   // Compare-to-Pro reference for this shot type (sport-aware).
   const [proRef, setProRef] = useState(null);
@@ -1730,8 +2147,21 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
     : scorePct >= 40 ? "text-amber-300"
     : "text-red-400";
 
+  const hasJump = jumpTarget != null;
   return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl overflow-hidden">
+    <motion.div
+      ref={cardRef}
+      onClick={hasJump ? jumpHere : undefined}
+      role={hasJump ? "button" : undefined}
+      tabIndex={hasJump ? 0 : undefined}
+      onKeyDown={hasJump ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); jumpHere(); } } : undefined}
+      animate={pulsing
+        ? { boxShadow: ["0 0 0 0 rgba(163,230,53,0)", "0 0 0 3px rgba(163,230,53,0.55)", "0 0 0 0 rgba(163,230,53,0)"] }
+        : { boxShadow: "0 0 0 0 rgba(163,230,53,0)" }}
+      transition={pulsing ? { duration: 1.4, ease: "easeOut" } : { duration: 0.2 }}
+      className={`bg-zinc-900/60 border ${pulsing ? "border-lime-400/60" : "border-zinc-800"} rounded-xl overflow-hidden transition-colors ${hasJump ? "cursor-pointer hover:border-zinc-700" : ""}`}
+      title={hasJump ? `Click to jump to the best ${name} (${jumpTarget.timestamp.toFixed(1)}s)` : undefined}
+    >
       {/* Compact header: thumbnail + shot name + quality bar */}
       <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
         {heroShot?.thumbnail && (
@@ -1818,7 +2248,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         {proRef && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
             <button
-              onClick={() => setCompareOpen(true)}
+              onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
               className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
             >
               <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
@@ -1841,7 +2271,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         shotType={sample.type}
         shotName={name}
       />
-    </div>
+    </motion.div>
   );
 }
 
@@ -2027,8 +2457,12 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
 }
 
 function PerShotCoachSection({ perShot, sport }) {
-  // Filter to shots with VLM data
-  const usable = perShot.filter((s) => s.reasoning || s.formFeedback);
+  // Filter to shots with VLM data — but keep each shot's ORIGINAL
+  // index into perShot so card clicks map to the same _id the
+  // VideoPlayerWithMarkers uses for active-shot tracking.
+  const usable = perShot
+    .map((s, originalIdx) => ({ shot: s, originalIdx }))
+    .filter(({ shot }) => shot.reasoning || shot.formFeedback);
   if (usable.length === 0) return null;
 
   // Group when there are too many to list cleanly
@@ -2037,10 +2471,10 @@ function PerShotCoachSection({ perShot, sport }) {
   let groupedEntries = null;
   if (shouldGroup) {
     const groups = {};
-    usable.forEach((s) => {
-      const key = s.label || s.name || "unknown";
+    usable.forEach(({ shot, originalIdx }) => {
+      const key = shot.label || shot.name || "unknown";
       if (!groups[key]) groups[key] = [];
-      groups[key].push(s);
+      groups[key].push({ ...shot, _shotId: originalIdx });
     });
     groupedEntries = Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
   }
@@ -2056,10 +2490,13 @@ function PerShotCoachSection({ perShot, sport }) {
           ? groupedEntries.map(([key, group]) => (
               <ShotGroupCard key={key} groupKey={key} shots={group} sport={sport} />
             ))
-          : usable.map((s, i) => (
+          : usable.map(({ shot, originalIdx }, i) => (
               <IndividualShotCard
-                key={i} shot={s} sport={sport}
-                label={`Shot ${i + 1} · ${s.name?.replace(/_/g, " ") || "Unknown"}`}
+                key={originalIdx}
+                shot={shot}
+                shotId={originalIdx}
+                sport={sport}
+                label={`Shot ${i + 1} · ${shot.name?.replace(/_/g, " ") || "Unknown"}`}
               />
             ))}
       </div>

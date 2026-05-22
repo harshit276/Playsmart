@@ -5372,6 +5372,93 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
             logger.warning(f"VLM coaching skipped: {exc.__class__.__name__}: {exc}")
             vlm_coaching = {"_error": f"{exc.__class__.__name__}: {str(exc)[:200]}"}
 
+    # ─── Per-shot pro_reference enrichment ─────────────────────────────
+    # For each shot type the player produced, look up the curated pro
+    # reference (REFERENCE_VIDEOS in reference_videos.py) and attach it
+    # to every shot of that type. Cache lookups by shot_type so we don't
+    # re-fetch (oEmbed check is the slow part — 4s timeout each).
+    #
+    # We also stitch in the per-shot-type `biomechanical_comparison`
+    # produced by the VLM coaching call above (see pro_comparisons in
+    # coaching.py) — this is the specific sentence the per-shot VS PRO
+    # card renders below the side-by-side videos.
+    enriched_shots = list(body.get("shots") or [])
+    if enriched_shots:
+        try:
+            from reference_videos import get_reference
+
+            # Build {shot_type_lower: comparison_text} from VLM output
+            comp_map: dict[str, str] = {}
+            for c in (vlm_coaching.get("pro_comparisons") or []):
+                if isinstance(c, dict):
+                    st = (c.get("shot_type") or "").strip().lower()
+                    txt = (c.get("comparison") or "").strip()
+                    if st and txt:
+                        comp_map[st] = txt
+
+            ref_cache: dict[str, dict | None] = {}
+            loop2 = asyncio.get_event_loop()
+
+            async def _lookup_ref(st: str) -> dict | None:
+                if st in ref_cache:
+                    return ref_cache[st]
+                try:
+                    ref = await asyncio.wait_for(
+                        loop2.run_in_executor(None, lambda: get_reference(sport, st)),
+                        timeout=5.0,
+                    )
+                except (Exception, asyncio.TimeoutError):
+                    ref = None
+                ref_cache[st] = ref
+                return ref
+
+            for s in enriched_shots:
+                st_raw = (s.get("type") or s.get("shot_type") or "").strip()
+                if not st_raw:
+                    continue
+                st = st_raw.lower()
+                ref = await _lookup_ref(st)
+                if not ref:
+                    continue
+                # Look up the biomechanical_comparison by either the raw
+                # shot type OR the canonical type the curated ref matched
+                # (so "forehand_smash" → "smash" fallback still hits).
+                comp = comp_map.get(st) or comp_map.get(
+                    (ref.get("shot_type") or "").lower()
+                )
+                pro_ref_payload = {
+                    "sport": ref.get("sport") or sport,
+                    "shot_type": ref.get("shot_type") or st,
+                    "youtube_id": ref.get("youtube_id"),
+                    "start_sec": ref.get("start_sec", 0),
+                    "end_sec": ref.get("end_sec", (ref.get("start_sec", 0) or 0) + 6),
+                    "player": ref.get("player"),
+                    "title": ref.get("description") or "",
+                    "description": ref.get("description") or "",
+                    "thumbnail_url": (
+                        f"https://i.ytimg.com/vi/{ref['youtube_id']}/hqdefault.jpg"
+                        if ref.get("youtube_id") else None
+                    ),
+                    # Specific, evidence-grounded comparison sentence from
+                    # the same VLM call that produced the coaching plan
+                    # (no extra Gemini round-trip). None when the VLM
+                    # couldn't produce a non-generic statement for this
+                    # shot type — frontend should hide the sentence block.
+                    "biomechanical_comparison": comp or None,
+                }
+                s["pro_reference"] = pro_ref_payload
+            logger.info(
+                f"[pro-ref] enriched {sum(1 for s in enriched_shots if s.get('pro_reference'))}/{len(enriched_shots)} "
+                f"shots, comparisons attached: {sum(1 for s in enriched_shots if (s.get('pro_reference') or {}).get('biomechanical_comparison'))}"
+            )
+        except Exception as exc:
+            # Never fail the analysis because the pro-ref lookup glitched.
+            logger.warning(f"[pro-ref] enrichment skipped: {exc.__class__.__name__}: {exc}")
+
+    # Mirror the enriched per-shot list back onto ai_result so the
+    # returned `shots` field carries the pro_reference data through.
+    ai_result["shots"] = enriched_shots
+
     analysis_record = {
         "id": file_id,
         "user_id": user["id"],
@@ -5400,7 +5487,9 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
         "training_plan_7day": training_plan_7day,
         # Per-shot list with VLM reasoning/form_feedback text — this is the
         # metadata the AI Coach uses later when comparing two sessions.
-        "shots": body.get("shots") or [],
+        # `enriched_shots` adds a `pro_reference` field per shot when a
+        # curated reference exists for that shot type (see above).
+        "shots": enriched_shots,
     }
     # Skip DB save for guests (no user_id to attach it to anyway).
     saved_ok = False
@@ -6977,6 +7066,296 @@ def _days_between(date_str1: str, date_str2: str) -> int:
         return abs((d2 - d1).days)
     except Exception:
         return 0
+
+
+# ─── Session-to-session Progress Trend Route ───
+
+def _derive_trend_metrics(analysis: dict) -> dict:
+    """
+    Pull the per-session headline numbers used by the trend panel.
+    All fields are best-effort: when the underlying data isn't saved
+    we return None and the caller filters it out instead of fudging.
+
+    Returns:
+      {
+        "consistency": float|None,   # 0-100, stdev-based across shots
+        "tempo": float|None,         # shots per minute
+        "best_shot_quality": float|None,  # max shot score in this session
+        "score": float|None,         # primary shot_analysis score
+        "primary_shot": str|None,    # dominant shot type for the session
+        "shot_count": int,
+      }
+    """
+    shots = analysis.get("shots") or []
+    shot_count = len(shots)
+
+    # Per-shot scores — try several common field names used by the
+    # client pipeline + Gemini per-shot output.
+    shot_scores: list = []
+    for s in shots:
+        if not isinstance(s, dict):
+            continue
+        for key in ("score", "shot_score", "quality", "quality_score", "vlmScore", "vlm_score"):
+            v = s.get(key)
+            if isinstance(v, (int, float)):
+                shot_scores.append(float(v))
+                break
+
+    # ── Consistency: prefer performance_scores.dimension if present
+    consistency = None
+    ps = analysis.get("performance_scores") or {}
+    for dim in (ps.get("dimension_list") or []):
+        key = (dim.get("key") or "").lower()
+        if key in ("consistency", "consistency_score"):
+            try:
+                consistency = float(dim.get("score"))
+                break
+            except (TypeError, ValueError):
+                pass
+    # Fallback: derive from stdev of per-shot scores (lower stdev = higher consistency).
+    if consistency is None and len(shot_scores) >= 2:
+        mean = sum(shot_scores) / len(shot_scores)
+        var = sum((x - mean) ** 2 for x in shot_scores) / len(shot_scores)
+        stdev = var ** 0.5
+        # Map stdev 0→100, stdev 30→0 (clamped).
+        consistency = max(0.0, min(100.0, 100.0 - (stdev * (100.0 / 30.0))))
+    # Fallback 2: single-shot session — use the overall shot score as a
+    # proxy (one data point can't show variance, but it's honest signal).
+    if consistency is None and len(shot_scores) == 1:
+        consistency = float(shot_scores[0])
+
+    # ── Tempo: shots / minute. video_info.duration_sec or .duration is
+    # the most reliable source; fall back to segments_summary if present.
+    tempo = None
+    vi = analysis.get("video_info") or {}
+    duration_sec = None
+    for k in ("duration_sec", "duration", "video_duration_sec"):
+        v = vi.get(k)
+        if isinstance(v, (int, float)) and v > 0:
+            duration_sec = float(v)
+            break
+    if duration_sec and shot_count > 0:
+        tempo = round((shot_count / duration_sec) * 60.0, 1)
+
+    # ── Best shot quality
+    best_shot_quality = max(shot_scores) if shot_scores else None
+
+    # ── Primary shot type (dominant in this session)
+    primary_shot = None
+    sa = analysis.get("shot_analysis") or {}
+    if sa.get("shot_type"):
+        primary_shot = sa.get("shot_type")
+    elif shots:
+        from collections import Counter as _Cn
+        types = [(s.get("type") or s.get("shot_type")) for s in shots if isinstance(s, dict)]
+        types = [t for t in types if t]
+        if types:
+            primary_shot = _Cn(types).most_common(1)[0][0]
+
+    # ── Overall score
+    score = _extract_score(analysis)
+
+    return {
+        "consistency": round(consistency, 1) if consistency is not None else None,
+        "tempo": tempo,
+        "best_shot_quality": round(float(best_shot_quality), 1) if best_shot_quality is not None else None,
+        "score": round(float(score), 1) if score is not None else None,
+        "primary_shot": primary_shot,
+        "shot_count": shot_count,
+    }
+
+
+def _build_trend_takeaway(deltas: dict, history_len: int) -> str:
+    """Rule-based 1-sentence takeaway for the trend panel."""
+    if history_len <= 1:
+        return "First analysis — keep going to unlock trend tracking."
+
+    consistency = deltas.get("consistency_delta") or {}
+    tempo = deltas.get("tempo_delta") or {}
+    score = deltas.get("score_delta") or {}
+    skill = deltas.get("skill_progression") or {}
+
+    # Skill promotion wins — biggest, most motivating signal.
+    if skill.get("improved") and skill.get("first") != skill.get("latest"):
+        return f"You leveled up from {skill['first']} to {skill['latest']} — keep that momentum going."
+
+    deltas_count_up = sum(1 for d in (consistency, tempo, score) if (d.get("delta") or 0) > 1)
+    deltas_count_down = sum(1 for d in (consistency, tempo, score) if (d.get("delta") or 0) < -1)
+    primary = consistency.get("delta") or score.get("delta") or 0
+
+    if deltas_count_up >= 2 and deltas_count_down == 0:
+        return "You're improving steadily across the board — keep drilling what's working."
+    if deltas_count_up >= 1 and deltas_count_down == 0:
+        return "Solid uptrend — one more session and the gain becomes a habit."
+    if deltas_count_down >= 2 and deltas_count_up == 0:
+        return "Numbers dipped this session — review last session's drills before your next clip."
+    if deltas_count_up == 0 and deltas_count_down == 0:
+        return "Plateau detected — try a new shot type or play against a stronger opponent."
+    if primary > 0:
+        return "Mixed session, but the headline metric ticked up — stay patient."
+    return "Mixed session — focus on one weakness at a time and the trend will sort itself."
+
+
+@api_router.get("/analyses/trend")
+async def get_analyses_trend(
+    sport: str = Query(..., description="Sport key, e.g. table_tennis"),
+    shot_type: Optional[str] = Query(None, description="Optional filter to a specific shot type"),
+    limit: int = Query(10, ge=1, le=20),
+    authorization: str = Header(None),
+):
+    """
+    Session-to-session progress trend for the current user. Used by the
+    YOUR PROGRESS panel on the analysis result page.
+
+    Returns deltas vs the previous N sessions for the same sport (and
+    optionally same shot_type) plus a rule-based takeaway. Designed to
+    return <1s — only reads up to `limit` docs, no LLM calls.
+
+    Graceful behaviour:
+      - Not signed in / Mongo down / no history → empty history + first-time takeaway.
+      - Only one session → baseline mode (history=[that one], deltas omitted).
+    """
+    user = await get_current_user_or_none(authorization)
+    if not user or user.get("id") == "guest":
+        return {
+            "user_id": None,
+            "sport": sport,
+            "shot_type": shot_type,
+            "current_analysis_id": None,
+            "history": [],
+            "deltas": {},
+            "takeaway": "First analysis — keep going to unlock trend tracking.",
+        }
+
+    query = {"user_id": user["id"], "sport": sport}
+    if shot_type:
+        # Match either the top-level shot_analysis.shot_type or any per-shot type.
+        query["$or"] = [
+            {"shot_analysis.shot_type": shot_type},
+            {"shots.type": shot_type},
+            {"shots.shot_type": shot_type},
+        ]
+
+    try:
+        cursor = db.video_analyses.find(
+            query,
+            {
+                "_id": 0,
+                "id": 1, "date": 1, "sport": 1, "skill_level": 1,
+                "shot_analysis": 1, "performance_scores": 1,
+                "speed_analysis": 1, "detailed_metrics": 1,
+                "video_info": 1, "shots": 1,
+            },
+        ).sort("date", -1).limit(limit)
+        raw = await asyncio.wait_for(cursor.to_list(length=limit), timeout=4.0)
+    except (Exception, asyncio.TimeoutError) as exc:
+        logger.warning(f"[trend] Mongo read failed for user {user['id'][:8]}: {exc}")
+        return {
+            "user_id": user["id"],
+            "sport": sport,
+            "shot_type": shot_type,
+            "current_analysis_id": None,
+            "history": [],
+            "deltas": {},
+            "takeaway": "Couldn't load your trend right now — we'll try again on your next analysis.",
+        }
+
+    if not raw:
+        return {
+            "user_id": user["id"],
+            "sport": sport,
+            "shot_type": shot_type,
+            "current_analysis_id": None,
+            "history": [],
+            "deltas": {},
+            "takeaway": "First analysis — keep going to unlock trend tracking.",
+        }
+
+    # raw is newest-first; build history newest-first for the response.
+    history = []
+    for a in raw:
+        metrics = _derive_trend_metrics(a)
+        history.append({
+            "analysis_id": a.get("id"),
+            "created_at": a.get("date"),
+            "skill_level": a.get("skill_level"),
+            "shot_count": metrics["shot_count"],
+            "primary_shot": metrics["primary_shot"],
+            "metrics": {
+                "consistency": metrics["consistency"],
+                "tempo": metrics["tempo"],
+                "best_shot_quality": metrics["best_shot_quality"],
+                "score": metrics["score"],
+            },
+        })
+
+    current = history[0]
+    prior = history[1:]
+    deltas: dict = {}
+
+    def _avg(values: list) -> Optional[float]:
+        vals = [v for v in values if isinstance(v, (int, float))]
+        if not vals:
+            return None
+        return round(sum(vals) / len(vals), 1)
+
+    def _delta_block(metric_key: str):
+        cur = current["metrics"].get(metric_key)
+        prev_vals = [h["metrics"].get(metric_key) for h in prior]
+        prev_avg = _avg(prev_vals)
+        if cur is None or prev_avg is None:
+            return None
+        delta = round(cur - prev_avg, 1)
+        trend = "up" if delta > 0.5 else ("down" if delta < -0.5 else "flat")
+        return {
+            "current": cur,
+            "prev_avg": prev_avg,
+            "delta": delta,
+            "trend": trend,
+            "over_sessions": len([v for v in prev_vals if isinstance(v, (int, float))]),
+        }
+
+    if prior:
+        consistency_block = _delta_block("consistency")
+        if consistency_block:
+            deltas["consistency_delta"] = consistency_block
+        tempo_block = _delta_block("tempo")
+        if tempo_block:
+            deltas["tempo_delta"] = tempo_block
+        score_block = _delta_block("score")
+        if score_block:
+            deltas["score_delta"] = score_block
+        best_block = _delta_block("best_shot_quality")
+        if best_block:
+            deltas["best_shot_quality_delta"] = best_block
+
+        # Skill progression — compare oldest session in window to current.
+        # history is newest-first so the oldest is history[-1].
+        first_skill = history[-1].get("skill_level")
+        latest_skill = current.get("skill_level")
+        skill_order = {"Beginner": 0, "Beginner+": 1, "Intermediate": 2, "Advanced": 3, "Pro": 4, "Expert": 5}
+        if first_skill and latest_skill:
+            improved = skill_order.get(latest_skill, -1) > skill_order.get(first_skill, -1)
+            regressed = skill_order.get(latest_skill, -1) < skill_order.get(first_skill, -1)
+            deltas["skill_progression"] = {
+                "first": first_skill,
+                "latest": latest_skill,
+                "improved": improved,
+                "regressed": regressed,
+                "over_sessions": len(history),
+            }
+
+    takeaway = _build_trend_takeaway(deltas, len(history))
+
+    return {
+        "user_id": user["id"],
+        "sport": sport,
+        "shot_type": shot_type,
+        "current_analysis_id": current.get("analysis_id"),
+        "history": history,
+        "deltas": deltas,
+        "takeaway": takeaway,
+    }
 
 
 # ─── Sport Skills Route (Research Data) ───

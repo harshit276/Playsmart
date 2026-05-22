@@ -22,8 +22,10 @@ import ShareModal from "@/components/ShareModal";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import { NewBadgeOverlay } from "@/components/BadgeDisplay";
 import MatchInsights from "@/components/MatchInsights";
+import ProReferencePanel from "@/components/ProReferencePanel";
 import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
+import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -307,13 +309,11 @@ export default function AnalyzePage() {
   // (high-accuracy whole-video Gemini analysis, slower, ~$0.005-0.02).
   // Stored separately from analysisMode so users can compare both paths.
   const [accuracyMode, setAccuracyMode] = useState(() => {
-    // Migrate stale localStorage values from the now-hidden modes
-    // ("video", "universal") to the closest visible tile so the
-    // toggle never reads as nothing-selected. Premium is closer to
-    // both than Standard so users who explicitly picked the upgraded
-    // tier stay on an upgraded tier.
-    const raw = searchParams.get("accuracy") || localStorage.getItem("playsmart_accuracy_mode") || "keyframes";
-    if (raw === "video" || raw === "universal") return "premium";
+    // Default to "premium" (whole-video deep analysis) so every user gets
+    // the best shot identification by default. Old localStorage values for
+    // hidden modes ("video", "universal") also map to premium.
+    const raw = searchParams.get("accuracy") || localStorage.getItem("playsmart_accuracy_mode") || "premium";
+    if (raw === "video" || raw === "universal" || raw === "keyframes") return "premium";
     return raw;
   });
   const [selectedSport, setSelectedSport] = useState(null);
@@ -2114,7 +2114,7 @@ export default function AnalyzePage() {
               <span className="text-sm font-semibold text-white">Premium</span>
               <span className="text-[10px] text-zinc-500">~15s · 250 tok</span>
             </div>
-            <p className="text-[11px] text-zinc-400">Gemini 2.5 Pro — catches every shot on tough phone-recorded clips.</p>
+            <p className="text-[11px] text-zinc-400">AthlyticAI Pro engine — catches every shot on tough phone-recorded clips.</p>
           </button>
         </div>
       </div>
@@ -2336,6 +2336,19 @@ export default function AnalyzePage() {
     // FRESH analyses where no VLM coaching is available.
     const showStaticTemplates = !vlmCoachingActive && staticTemplatesSupported && !viewingHistorical;
 
+    // Dominant shot type for the trend lookup — prefer top-level
+    // shot_analysis.shot_type, fall back to most common in shots[].
+    const trendSport = result.sport || selectedSport || profile?.active_sport || "";
+    const dominantShotType = (() => {
+      if (shot.shot_type) return shot.shot_type;
+      const types = (result.shots || [])
+        .map((s) => s?.type || s?.shot_type)
+        .filter(Boolean);
+      if (!types.length) return null;
+      const counts = types.reduce((a, t) => { a[t] = (a[t] || 0) + 1; return a; }, {});
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    })();
+
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
 
@@ -2522,6 +2535,18 @@ export default function AnalyzePage() {
             </motion.div>
           );
         })()}
+
+        {/* YOUR PROGRESS — session-to-session trend tracking. Sits ABOVE
+            the per-shot AI coach cards so users see their multi-session
+            improvement before the single-clip breakdown. Hidden silently
+            on auth-less / network-error / no-history cases. */}
+        {trendSport && !viewingHistorical && (
+          <ProgressTrendPanel
+            sport={trendSport}
+            shotType={dominantShotType}
+            currentId={result.analysis_id}
+          />
+        )}
 
         {/* AI coach plan — VLM-personalized drills + equipment + 7-day plan,
             grounded in this analysis's actual weaknesses and per-shot reasoning. */}
@@ -2831,6 +2856,20 @@ export default function AnalyzePage() {
             sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
             playerPosition={targetPlayer || "auto"}
             fallbackSkillLevel={aiSkillLevel}
+          />
+        )}
+
+        {/* VS PRO REFERENCE — one collapsible card per distinct shot
+            type. Data (pro_reference + biomechanical_comparison) is
+            attached per-shot by the backend (/api/analyze-client-results
+            → per-shot enrichment block + vlm_coaching.pro_comparisons),
+            so this component does no network calls of its own. Renders
+            below the existing Match Insights so per-shot detail comes
+            BEFORE the coaching plan downstream. */}
+        {result?.shots?.length > 0 && (
+          <ProReferencePanel
+            shots={result.shots}
+            sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
           />
         )}
 

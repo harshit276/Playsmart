@@ -481,12 +481,39 @@ def analyze_video_full(
         f"Identify EVERY shot played in the video, in chronological order. "
         f"For each shot, provide the timestamp (in seconds from video start) "
         f"and a full coach-quality analysis.\n\n"
-        f"Use these shot types ONLY:\n{defs}\n\n"
-        f"Do NOT invent shot types. If a moment isn't clearly a shot (player "
-        f"is walking, recovering, or just preparing), DON'T list it. Only "
-        f"include moments where the player makes contact with the "
-        f"ball/shuttle. Order shots by timestamp.\n\n"
-        f"CRITICAL — DO NOT DEFAULT TO 'SERVE' FOR RALLY-STARTING SHOTS:\n"
+        # ── SHOT LABELING — describe FIRST, categorise SECOND ────────────
+        # The old prompt forced every shot into a small enum, which made
+        # the model collapse "defensive lift that fell short" + "diving
+        # block" + "textbook clear" all into the same label. We now ask
+        # for a free-text descriptor (what the coach would actually call
+        # it on the sideline) AND a canonical category from a controlled
+        # list (used downstream for trend tracking, drill matching, and
+        # pro-reference lookup). Both fields are required.
+        f"For each shot you must produce TWO labels:\n\n"
+        f"1. shot_label — a natural, concrete description of the shot a "
+        f"coach would say out loud. 2-5 words. Include the INTENT or "
+        f"OUTCOME when visible. Examples:\n"
+        f"   • 'Defensive lift (short)' — when a lift falls mid-court\n"
+        f"   • 'Cross-court smash'\n"
+        f"   • 'Diving backhand block'\n"
+        f"   • 'Net kill — winner'\n"
+        f"   • 'Forehand drive — neutral rally'\n"
+        f"   Do NOT use the canonical category as the label (no plain 'Clear').\n\n"
+        f"2. shot_category — a single keyword from this controlled list "
+        f"(used internally for matching to drills and references):\n{defs}\n\n"
+        f"If a shot doesn't fit any category cleanly, pick the CLOSEST one "
+        f"and set confidence < 0.6 — never invent a new category.\n\n"
+        f"Also classify each shot's INTENT and OUTCOME:\n"
+        f"   • intent: 'attacking' | 'defensive' | 'neutral'\n"
+        f"   • outcome: 'winner' | 'forced_error' | 'continued_rally' | 'lost_point' | 'unknown'\n"
+        f"   • quality_observation: one short sentence on whether this shot was "
+        f"     well-executed for its intent (NOT for every shot — be concrete; "
+        f"     e.g. 'Lift was short, gave opponent the smash angle' or "
+        f"     'Clean contact, smash landed deep and unreturnable')\n\n"
+        f"If a moment isn't clearly a shot (player is walking, recovering, or "
+        f"just preparing), DON'T list it. Only include moments where the player "
+        f"makes contact with the ball/shuttle. Order shots by timestamp.\n\n"
+        f"CRITICAL — DO NOT DEFAULT TO 'serve' FOR RALLY-STARTING SHOTS:\n"
         f"A serve requires ALL of these: (1) ball/shuttle starts stationary "
         f"in the non-racket hand, (2) a visible toss or drop by that hand "
         f"just before contact, (3) NO incoming ball from the opponent at "
@@ -502,8 +529,8 @@ def analyze_video_full(
         f"using the timestamp of the CONTACT moment. Do NOT emit multiple "
         f"entries for the same swing (e.g. one for windup, one for contact, "
         f"one for follow-through). If two consecutive timestamps are within "
-        f"~1.5 seconds AND the same shot_type, they are almost certainly the "
-        f"same physical shot — merge them into one entry at the contact "
+        f"~1.5 seconds AND the same shot_category, they are almost certainly "
+        f"the same physical shot — merge them into one entry at the contact "
         f"moment. Count carefully: if the player physically swung the racket "
         f"3 times, the array must have 3 entries, not 9.{box_hint}\n\n"
         f"Respond with valid JSON ONLY (no markdown):\n"
@@ -511,7 +538,11 @@ def analyze_video_full(
         '  "shots": [\n'
         '    {\n'
         f'      "timestamp_sec": <float, when contact happens>,\n'
-        f'      "shot_type": "<one of: {", ".join(vocab)}>",\n'
+        f'      "shot_label": "<natural 2-5 word description>",\n'
+        f'      "shot_category": "<one of: {", ".join(vocab)}>",\n'
+        '      "intent": "<attacking|defensive|neutral>",\n'
+        '      "outcome": "<winner|forced_error|continued_rally|lost_point|unknown>",\n'
+        '      "quality_observation": "<one specific sentence>",\n'
         '      "confidence": <0-1>,\n'
         '      "reasoning": "<one sentence — what you saw>",\n'
         '      "alternatives": [{"shot": "<...>", "confidence": <0-1>}],\n'
@@ -524,7 +555,11 @@ def analyze_video_full(
         '      "power_level": "<soft|medium|hard|max>"\n'
         '    }\n'
         '  ]\n'
-        '}'
+        '}\n\n'
+        # Backward-compat: many downstream consumers still read `shot_type`.
+        # Always set shot_type = shot_category so old code keeps working.
+        'IMPORTANT: ALSO include `shot_type` set to the same value as `shot_category` '
+        'in every shot object (for backward compatibility with existing UI code).'
     )
     user_msg = (
         f"Watch this {sport} video. Identify every shot the player made, "
@@ -1042,16 +1077,59 @@ def personalized_coaching(
         "list is acceptable if nothing in the catalog matches the weaknesses.\n\n"
     )
 
+    # Build the list of distinct shot types the player produced — used to
+    # ask Gemini for a one-sentence biomechanical compare-to-pro per shot
+    # type. We piggy-back on this VLM call (no extra Gemini round-trip,
+    # latency unchanged) instead of firing a second call.
+    shot_types_seen: list[str] = []
+    _seen_types: set[str] = set()
+    for _s in (summary.get("shots") or []):
+        t = (_s.get("type") or "").strip()
+        if t and t not in _seen_types:
+            _seen_types.add(t)
+            shot_types_seen.append(t)
+    shot_types_seen = shot_types_seen[:6]  # cap so prompt doesn't bloat
+
+    pro_compare_rule = (
+        "\nPRO COMPARISON RULES:\n"
+        "1. For EACH distinct shot type the player produced (listed below), "
+        "write ONE concise sentence comparing this player's mechanics to a "
+        "pro at the same biomechanical moment (contact / release / impact). "
+        "Cite a SPECIFIC measurable difference: an angle, a body part "
+        "position, a timing element, a sequencing flaw. Example: "
+        "\"Hip rotation at contact ~25° vs Ma Long ~60° — that delta is "
+        "where most of his extra topspin comes from.\"\n"
+        "2. If you cannot make a specific, evidence-grounded statement for "
+        "a given shot type (because the per-shot reasoning is too sparse), "
+        "OMIT that shot type. Do NOT write generic filler like \"the pro is "
+        "smoother\" or \"work on form.\"\n"
+        f"3. Shot types to consider: {shot_types_seen}\n\n"
+        if shot_types_seen else ""
+    )
+
+    pro_compare_schema = (
+        '  "pro_comparisons": [\n'
+        '    {\n'
+        '      "shot_type": "<one of the shot types listed above>",\n'
+        '      "comparison": "<one sentence with a SPECIFIC biomechanical '
+        'difference vs a pro, citing an angle / body part / timing>"\n'
+        '    }\n'
+        '  ],\n'
+        if shot_types_seen else ""
+    )
+
     sys_prompt = (
         f"You are an expert {sport} coach building a personalized practice plan. "
         f"Use ONLY the player's actual weaknesses and per-shot reasoning below. "
         f"Never recommend generic advice — every recommendation must trace "
         f"back to a specific observed weakness.\n\n"
         f"{drill_rule}"
+        f"{pro_compare_rule}"
         f"Respond with valid JSON ONLY:\n"
         '{\n'
         '  "weaknesses_observed": ["<verbatim weakness from analysis>", "<...>"],\n'
         '  "key_focus_areas": ["<short tag>", "<short tag>", "<short tag>"],\n'
+        + pro_compare_schema +
         '  "priority_drills": [\n'
         '    {\n'
         '      "name": "<drill name>",\n'
@@ -1191,6 +1269,57 @@ def personalized_coaching(
         day["drills_detailed"] = day_drills
         hydrated_plan.append(day)
 
+    # Pro comparisons: clean + reject fluff. We pre-built `shot_types_seen`
+    # so we can drop entries Gemini hallucinates outside the actual shot
+    # set, and reject sentences that smell like generic praise instead of
+    # a specific biomechanical observation.
+    raw_compares = [c for c in (data.get("pro_comparisons") or []) if isinstance(c, dict)]
+    valid_types = set((t or "").lower() for t in shot_types_seen)
+    GENERIC_COMPARE_BAD = (
+        "the pro is better", "pros are smoother", "needs work",
+        "work on your form", "keep practicing", "needs improvement",
+        "pro is more consistent", "improve your technique",
+    )
+
+    def _looks_specific(text: str) -> bool:
+        """Heuristic: a real biomechanical comparison contains either a
+        numeric/angle reference OR names a specific body part / phase.
+        Otherwise it's filler and we drop it."""
+        if not text or len(text) < 30:
+            return False
+        tl = text.lower()
+        if any(g in tl for g in GENERIC_COMPARE_BAD):
+            return False
+        body_words = (
+            "hip", "shoulder", "elbow", "wrist", "knee", "ankle", "foot",
+            "stance", "rotation", "contact", "follow-through", "back-swing",
+            "backswing", "extension", "racket face", "racquet face", "paddle",
+            "bat", "trophy", "loading", "drop", "swing path", "angle",
+            "degree", "°", "tempo", "timing", "weight transfer",
+        )
+        has_body_term = any(w in tl for w in body_words)
+        has_number = any(ch.isdigit() for ch in text)
+        return has_body_term or has_number
+
+    pro_comparisons: list[dict] = []
+    for c in raw_compares:
+        st = str(c.get("shot_type") or "").strip().lower()
+        cmp_text = str(c.get("comparison") or "").strip()
+        if not st or not cmp_text:
+            continue
+        # If we have a known shot-type allowlist, enforce it; otherwise
+        # accept any (small catalogs may not surface a complete list).
+        if valid_types and st not in valid_types:
+            # Allow substring fuzzy match — e.g. "smash" against "forehand_smash"
+            if not any(st in vt or vt in st for vt in valid_types):
+                continue
+        if not _looks_specific(cmp_text):
+            continue
+        # Trim to a tight 1-2 sentence ceiling for the UI card.
+        if len(cmp_text) > 240:
+            cmp_text = cmp_text[:240].rsplit(".", 1)[0] + "."
+        pro_comparisons.append({"shot_type": st, "comparison": cmp_text})
+
     return {
         "weaknesses_observed": weaknesses_observed,
         "key_focus_areas": [str(x) for x in (data.get("key_focus_areas") or [])][:5],
@@ -1198,6 +1327,12 @@ def personalized_coaching(
         "equipment_recommendations": filtered_equip,
         "seven_day_plan": hydrated_plan,
         "motivational_message": str(data.get("motivational_message", "")),
+        # Per-shot-type biomechanical comparisons used by the per-shot
+        # "VS PRO" panel on the analysis result. Filtered to only specific,
+        # evidence-grounded sentences — generic fluff is dropped (see
+        # _looks_specific above). Empty list when Gemini can't produce
+        # anything specific.
+        "pro_comparisons": pro_comparisons,
         "_meta": {
             "backend": backend_obj.name,
             "model": backend_obj.model_name,
@@ -1205,5 +1340,7 @@ def personalized_coaching(
             "drills_picked": len(hydrated_drills),
             "drills_dropped": len(raw_drills) - len(hydrated_drills),
             "drills_drop_reasons": drills_dropped_reasons[:8],
+            "pro_comparisons_picked": len(pro_comparisons),
+            "pro_comparisons_raw": len(raw_compares),
         },
     }

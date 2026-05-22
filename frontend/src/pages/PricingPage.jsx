@@ -119,7 +119,7 @@ export default function PricingPage() {
                 <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px] ml-auto">{standardCost} tokens</Badge>
               </div>
               <p className="text-3xl font-heading font-black text-white">₹{flashRupees}<span className="text-xs text-zinc-500 ml-1">/ analysis</span></p>
-              <p className="text-[11px] text-zinc-500 mt-1">Gemini Flash — fast (~6s), good for most clips</p>
+              <p className="text-[11px] text-zinc-500 mt-1">AthlyticAI Coach — fast (~6s), good for most clips</p>
             </div>
             <div className="bg-amber-400/5 border border-amber-400/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-1">
@@ -128,7 +128,7 @@ export default function PricingPage() {
                 <Badge className="bg-amber-400/15 text-amber-300 border-amber-400/30 text-[10px] ml-auto">{premiumCost} tokens</Badge>
               </div>
               <p className="text-3xl font-heading font-black text-white">₹{premiumRupees}<span className="text-xs text-zinc-500 ml-1">/ analysis</span></p>
-              <p className="text-[11px] text-zinc-500 mt-1">Gemini 2.5 Pro — catches every shot on tough clips</p>
+              <p className="text-[11px] text-zinc-500 mt-1">AthlyticAI Pro engine — catches every shot on tough clips</p>
             </div>
           </div>
         </motion.div>
@@ -274,7 +274,7 @@ export default function PricingPage() {
             },
             {
               q: "What's the difference between Standard and Premium?",
-              a: "Standard (Gemini Flash) is fast and works great on clear, well-lit clips. Premium (Gemini 2.5 Pro) is slower but catches every shot on noisy phone-recorded footage. Try Standard first — only upgrade to Premium if your video is hard to read.",
+              a: "Standard is fast and works great on clear, well-lit clips. Premium runs our deeper analysis engine — slower but catches every shot on noisy phone-recorded footage. Try Standard first — only upgrade to Premium if your video is hard to read.",
             },
             {
               q: "What if my analysis fails?",
