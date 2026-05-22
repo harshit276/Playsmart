@@ -1,0 +1,37 @@
+name: Warm Vercel functions
+
+# Vercel serverless functions hibernate after ~5 min idle. A cold start
+# adds 5-15s to the first request. We ping /api/health on a schedule
+# during active hours (IST 9 AM - 11 PM = UTC 03:30 - 17:30) to keep the
+# Python lambda warm so real users never see the cold-start spike.
+#
+# Cost: 0 (GitHub Actions cron is free for public repos / generous quota
+# for private). Wall-clock cost on Vercel: 0 (health endpoint is cheap).
+
+on:
+  schedule:
+    # Every 5 minutes between 03:30 and 17:30 UTC (9 AM - 11 PM IST).
+    # GitHub Actions cron is UTC-only and uses standard cron syntax.
+    - cron: '*/5 3-17 * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping /api/health
+        run: |
+          # Single ping with a 30s timeout. If health returns 5xx, log and
+          # continue — a flaky single call shouldn't fail the workflow.
+          STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" \
+                        --max-time 30 \
+                        https://athlyticai.com/api/health || echo "000")
+          echo "Status: $STATUS"
+          if [ "$STATUS" = "200" ]; then
+            # Pretty-print env state for the run log so we can audit which
+            # secrets are missing without leaving the repo.
+            cat /tmp/health.json | python3 -c "import sys,json; d=json.load(sys.stdin); print('Mongo:', d['mongo']['reachable'], '| writeable:', d['mongo']['writeable'])"
+          else
+            echo "Non-200 response; not failing the workflow (cold ping is best-effort)."
+          fi

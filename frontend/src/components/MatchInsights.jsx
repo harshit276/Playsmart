@@ -1026,13 +1026,26 @@ function VideoPlayerWithMarkers({ playerUrl, perShot }) {
 
   const jumpToShot = (shot) => {
     if (!shot || typeof shot.timestamp !== "number") return;
+    // Scroll the VIDEO into view first so the seek is visible. Previous
+    // behavior dispatched scroll:true on active-shot which made the
+    // matching card scroll itself into view INSTEAD — taking the video
+    // off-screen and making the seek invisible. Users perceived the
+    // buttons as "just jumping to the analysis" because they couldn't
+    // see the video actually move.
+    const v = videoRef.current;
+    if (v) {
+      try { v.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {}
+    }
+    // Seek + play. Small delay lets the scroll start before play so the
+    // user perceives the seek as part of the same gesture.
     window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: shot.timestamp } }));
-    // Also fire active-shot so the matching card pulses + scrolls. The
-    // timeupdate handler dedupes via lastEmittedRef so we won't double-pulse.
+    // Fire active-shot WITHOUT scroll:true so the matching card pulses
+    // (visual confirmation of which shot was picked) but doesn't snatch
+    // the page scroll away from the video.
     lastEmittedRef.current = shot._id;
     setActiveShotId(shot._id);
     window.dispatchEvent(new CustomEvent("playsmart:active-shot", {
-      detail: { id: shot._id, source: "shortcut", scroll: true },
+      detail: { id: shot._id, source: "shortcut", scroll: false },
     }));
   };
 
