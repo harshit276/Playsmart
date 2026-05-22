@@ -650,13 +650,43 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
     """Build the (sys_prompt, user_msg) for the universal sport-agnostic
     analysis call. Extracted so the streaming variant can reuse it without
     duplicating ~150 lines of prompt text."""
-    box_hint = ""
-    if target_player_description:
-        box_hint = (
-            f"\n\nTARGET PERSON: focus on '{target_player_description}'. "
-            f"Only include events performed by that person. Skip events "
-            f"by anyone else in the frame."
-        )
+    # If no target description, default to "the player closest to the
+    # camera / in the foreground" — gives Gemini a deterministic anchor
+    # in 2-player clips so it doesn't randomly mix shots from both sides.
+    described = target_player_description or "the player closest to the camera (foreground)"
+    box_hint = (
+        f"\n\n━━━ TARGET PERSON (STRICT) ━━━\n"
+        f"You are analyzing ONLY this person: {described}.\n"
+        f"\n"
+        f"HARD RULES — these override every other instruction in this prompt:\n"
+        f"\n"
+        f"1. ONLY include events performed by the target person. Skip every "
+        f"   event performed by anyone else in the frame (opponent, doubles "
+        f"   partner, coach, feeder, bystander). Quality > quantity. It is "
+        f"   better to return 2 confirmed target-person events than 8 "
+        f"   events of mixed provenance.\n"
+        f"\n"
+        f"2. In EVERY event's `reasoning` field, you must explicitly reference "
+        f"   the target person and what makes you confident this event was "
+        f"   theirs (e.g. 'Target player in red shirt swings the racket and "
+        f"   makes contact at 0:04'). If your reasoning cannot name the target "
+        f"   in this way, DROP that event from the array.\n"
+        f"\n"
+        f"3. In rally / two-player sports (badminton, tennis, TT, pickleball, "
+        f"   squash), opponents will hit shots too. NEVER attribute opponent "
+        f"   shots to the target person. If an attacking shot (smash, kill, "
+        f"   winner) is hit AT the target person, it belongs to the opponent — "
+        f"   skip it. The target's response (block, return, lift) is what "
+        f"   counts as the target's event.\n"
+        f"\n"
+        f"4. If a moment is ambiguous (camera angle hides the contact, multiple "
+        f"   players in frame, motion blur), SKIP it. Do not guess.\n"
+        f"\n"
+        f"5. After producing the events array, re-read each one and ask 'am I "
+        f"   100% sure this was the target person?' — if no, delete it. The "
+        f"   final array should contain ONLY events you would defend to a coach.\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    )
 
     sys_prompt = (
         "You are an expert sports coach. The video may be from ANY sport — "
@@ -768,11 +798,62 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
     return sys_prompt, user_msg
 
 
-def _normalize_universal_event(e: dict, sport_vocab: list) -> dict | None:
+def _belongs_to_target(e: dict, target_player_description: str | None) -> bool:
+    """Belt-and-suspenders filter — even with strict prompt rules, Gemini
+    sometimes ignores them and emits opponent shots in 2-player clips. We
+    look at reasoning + description and require it to mention the target
+    person OR a self-referential cue ('the player', 'they', 'their racket').
+    If we have a target description with concrete tokens (colors, names,
+    positions), require at least one of those tokens to appear too.
+
+    Returns True when the event is plausibly the target's. Permissive on
+    purpose — only the most-obvious "opponent attacks target" wording gets
+    filtered out.
+    """
+    if not target_player_description:
+        return True  # No filter active
+    text = " ".join([
+        str(e.get("reasoning", "")),
+        str(e.get("description", "")),
+    ]).lower()
+    if not text:
+        return True  # nothing to filter against, give benefit of the doubt
+    # Drop obvious opponent-shot phrasings
+    opponent_markers = [
+        "opponent hits", "opponent's smash", "opponent smash",
+        "opponent kills", "opponent's kill", "from the opponent",
+        "the other player hits", "other player smashes", "other player kills",
+        "received by the target", "hit at the target", "shot at the player",
+        "incoming smash", "incoming attack",
+    ]
+    for marker in opponent_markers:
+        if marker in text:
+            return False
+    # Look for affirmative target tokens (color/name/position words from the
+    # target description). E.g. "the player in the blue shirt" → ["blue", "shirt"].
+    tokens = [t for t in target_player_description.lower().split() if len(t) >= 4]
+    # Filter out generic English filler words that don't disambiguate
+    skip = {"the", "player", "person", "with", "who", "wearing", "shirt",
+            "shorts", "near", "court", "side", "center", "foreground",
+            "background", "closest", "camera", "court", "patterned"}
+    tokens = [t for t in tokens if t not in skip]
+    if not tokens:
+        return True  # description was all generic — no concrete anchor
+    # If we have anchor tokens (colors, names), require at least one to
+    # appear in the reasoning/description.
+    return any(tok in text for tok in tokens)
+
+
+def _normalize_universal_event(e: dict, sport_vocab: list, target_player_description: str | None = None) -> dict | None:
     """Normalize one raw event dict from Gemini into the stable output
-    schema. Returns None if `e` isn't usable. Extracted so the streaming
-    variant can normalize per-event as objects stream in."""
+    schema. Returns None if `e` isn't usable OR if the strict target-player
+    filter says this event belongs to someone else. Extracted so the
+    streaming variant can normalize per-event as objects stream in."""
     if not isinstance(e, dict):
+        return None
+    # Strict filter — drop events the target person clearly didn't perform.
+    # Permissive when no target description: returns True.
+    if not _belongs_to_target(e, target_player_description):
         return None
     try:
         ts = float(e.get("timestamp_sec") or 0.0)
@@ -898,6 +979,11 @@ def analyze_video_universal(
 
     for e in (data.get("events") or [])[:20]:
         if not isinstance(e, dict):
+            continue
+        # Strict target-player filter — drop events the target person clearly
+        # didn't perform. Belt-and-suspenders for when Gemini ignores the
+        # prompt-level rules in 2-player rally clips.
+        if not _belongs_to_target(e, target_player_description):
             continue
         try:
             ts = float(e.get("timestamp_sec") or 0.0)
@@ -1110,7 +1196,7 @@ def stream_analyze_video_universal(
                     parsed = json.loads(raw_obj)
                 except Exception:
                     continue
-                norm = _normalize_universal_event(parsed, sport_vocab)
+                norm = _normalize_universal_event(parsed, sport_vocab, target_player_description)
                 if not norm:
                     continue
                 emitted_indices.append(len(emitted_indices))
@@ -1132,7 +1218,7 @@ def stream_analyze_video_universal(
         sport_vocab = _get_sport_vocab(str(data.get("sport_detected", "")))
     events_out: list = []
     for e in (data.get("events") or [])[:20]:
-        norm = _normalize_universal_event(e, sport_vocab)
+        norm = _normalize_universal_event(e, sport_vocab, target_player_description)
         if norm:
             events_out.append(norm)
 

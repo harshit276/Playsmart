@@ -2963,6 +2963,75 @@ async def get_drill(drill_id: str):
     return {"drill": drill, "videos": videos}
 
 
+# ─── Personalized drill picker ───
+# Takes the per-shot `top_fixes` collected by the frontend (one entry per
+# analyzed shot, e.g. "Engage your core and hips more actively") and ranks
+# the sport's video catalog so the "Drills For You" cards converge on the
+# user's actual weakness — not generic warm-ups.
+#
+# Pure keyword matching (no LLM): runs in <10ms even on the full catalog,
+# so it's safe to invoke right after every analysis. Falls back to a level-
+# matched top-N when `top_fixes` is empty so existing callers / empty
+# states aren't regressed.
+class DrillRecommendRequest(BaseModel):
+    sport: str = Field(..., max_length=32)
+    top_fixes: Optional[list[str]] = Field(
+        None,
+        description=(
+            "Per-shot 'top fix' strings collected from the VLM form_feedback. "
+            "Drives the keyword matcher. Omit / pass [] for generic top-N."
+        ),
+    )
+    level: Optional[str] = Field(
+        None, max_length=20,
+        description="beginner/intermediate/advanced — used for level affinity tie-breaks.",
+    )
+    limit: int = Field(5, ge=1, le=12)
+
+
+@api_router.post("/recommendations/drills")
+async def recommend_drills(req: DrillRecommendRequest):
+    """Rank the sport's drill catalog by relevance to `req.top_fixes`.
+
+    Response shape:
+      {
+        "drills":        [ ...catalog video dicts each with `why_recommended`,
+                            `matched_focus_areas` ],
+        "personalized":  bool — true iff fixes drove ranking,
+        "focus_areas":   [str]  — focus-area tags extracted from the fixes,
+        "sport":         str,
+      }
+    """
+    try:
+        from research_loader import get_all_videos
+        from drill_matcher import pick_drills, extract_focus_areas
+    except Exception as e:
+        logger.error(f"drill modules import failed: {e}")
+        raise HTTPException(status_code=500, detail="Drill catalog unavailable")
+
+    sport = (req.sport or "").lower().strip()
+    videos = get_all_videos(sport) or []
+    if not videos:
+        # No catalog for this sport — return empty so the UI hides the card.
+        return {
+            "drills": [],
+            "personalized": False,
+            "focus_areas": [],
+            "sport": sport,
+        }
+
+    fixes = [f for f in (req.top_fixes or []) if f and str(f).strip()]
+    drills, personalized = pick_drills(
+        videos, fixes, level=req.level, limit=req.limit,
+    )
+    return {
+        "drills": drills,
+        "personalized": personalized,
+        "focus_areas": extract_focus_areas(fixes),
+        "sport": sport,
+    }
+
+
 # ─── Training Plan Routes ───
 
 @api_router.get("/training-plans/{level}")

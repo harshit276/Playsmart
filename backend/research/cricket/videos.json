@@ -9,11 +9,20 @@
       "url": "https://www.youtube.com/results?search_query=cricket+with+snehal+batting+basics+grip+stance+backlift+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["cr_batting_basics"],
+      "skill_areas": [
+        "cr_batting_basics"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Hindi batting tutorial covering correct grip, balanced stance, backlift position, and basic batting drills for beginners."
+      "description": "Hindi batting tutorial covering correct grip, balanced stance, backlift position, and basic batting drills for beginners.",
+      "focus_areas": [
+        "grip",
+        "wrist",
+        "timing",
+        "control",
+        "balance"
+      ]
     },
     {
       "id": "cr_v02",
@@ -22,11 +31,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+front+foot+shots+cover+drive+straight+drive",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["cr_front_foot_shots"],
+      "skill_areas": [
+        "cr_front_foot_shots"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Front foot batting technique including cover drive, straight drive, on drive, and weight transfer onto the front foot."
+      "description": "Front foot batting technique including cover drive, straight drive, on drive, and weight transfer onto the front foot.",
+      "focus_areas": [
+        "drive",
+        "wrist",
+        "contact"
+      ]
     },
     {
       "id": "cr_v03",
@@ -35,7 +51,9 @@
       "url": "https://www.youtube.com/results?search_query=cricketmashup+back+foot+shots+pull+cut+punch+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_back_foot_shots"],
+      "skill_areas": [
+        "cr_back_foot_shots"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "tutorial",
@@ -48,11 +66,19 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+power+hitting+six+hitting+T20+batting",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_power_hitting", "cr_t20_batting"],
+      "skill_areas": [
+        "cr_power_hitting",
+        "cr_t20_batting"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "How to hit sixes and fours with power hitting technique, bat speed, clearing the boundary, and modern T20 batting shots."
+      "description": "How to hit sixes and fours with power hitting technique, bat speed, clearing the boundary, and modern T20 batting shots.",
+      "focus_areas": [
+        "timing",
+        "control",
+        "balance"
+      ]
     },
     {
       "id": "cr_v05",
@@ -61,11 +87,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+with+snehal+playing+spin+bowling+read+attack+spinners+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_playing_spin"],
+      "skill_areas": [
+        "cr_playing_spin"
+      ],
       "language": "Hindi",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Hindi guide to playing spin bowling - reading the bowler's hand, footwork to spinners, sweep shot, and using your feet."
+      "description": "Hindi guide to playing spin bowling - reading the bowler's hand, footwork to spinners, sweep shot, and using your feet.",
+      "focus_areas": [
+        "rotation",
+        "power",
+        "consistency"
+      ]
     },
     {
       "id": "cr_v06",
@@ -74,11 +107,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+playing+fast+bowling+pace+bounce+technique",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_playing_pace"],
+      "skill_areas": [
+        "cr_playing_pace"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "How to handle fast bowling including watch the ball techniques, playing late, handling short balls, and back foot defense."
+      "description": "How to handle fast bowling including watch the ball techniques, playing late, handling short balls, and back foot defense.",
+      "focus_areas": [
+        "rotation",
+        "power",
+        "consistency"
+      ]
     },
     {
       "id": "cr_v07",
@@ -87,11 +127,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+fast+bowling+tutorial+run+up+action+pace",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["cr_fast_bowling"],
+      "skill_areas": [
+        "cr_fast_bowling"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Fast bowling fundamentals including smooth run-up, bowling action, release point, and how to generate pace with body action."
+      "description": "Fast bowling fundamentals including smooth run-up, bowling action, release point, and how to generate pace with body action.",
+      "focus_areas": [
+        "rotation",
+        "power",
+        "consistency"
+      ]
     },
     {
       "id": "cr_v08",
@@ -100,11 +147,18 @@
       "url": "https://www.youtube.com/results?search_query=cricketmashup+swing+bowling+inswing+outswing+tutorial+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_swing_bowling"],
+      "skill_areas": [
+        "cr_swing_bowling"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Hindi tutorial on conventional and reverse swing bowling, seam position, wrist angle, and conditions for swing."
+      "description": "Hindi tutorial on conventional and reverse swing bowling, seam position, wrist angle, and conditions for swing.",
+      "focus_areas": [
+        "rotation",
+        "power",
+        "consistency"
+      ]
     },
     {
       "id": "cr_v09",
@@ -113,11 +167,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+seam+bowling+line+length+control+tutorial",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["cr_seam_bowling"],
+      "skill_areas": [
+        "cr_seam_bowling"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "How to bowl with an upright seam, hit a consistent good length, and use the crease to change angles for seam movement."
+      "description": "How to bowl with an upright seam, hit a consistent good length, and use the crease to change angles for seam movement.",
+      "focus_areas": [
+        "rotation",
+        "power",
+        "consistency"
+      ]
     },
     {
       "id": "cr_v10",
@@ -126,11 +187,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+with+snehal+death+bowling+yorkers+slower+balls+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["cr_death_bowling"],
+      "skill_areas": [
+        "cr_death_bowling"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Hindi guide to death bowling including yorker technique, slower ball variations, wide yorkers, and bowling under pressure in the last overs."
+      "description": "Hindi guide to death bowling including yorker technique, slower ball variations, wide yorkers, and bowling under pressure in the last overs.",
+      "focus_areas": [
+        "rotation",
+        "power",
+        "consistency"
+      ]
     },
     {
       "id": "cr_v11",
@@ -139,11 +207,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+spin+bowling+leg+spin+off+spin+tutorial",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_spin_bowling"],
+      "skill_areas": [
+        "cr_spin_bowling"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Spin bowling fundamentals covering leg spin grip and release, off spin technique, flight, and setting up batsmen."
+      "description": "Spin bowling fundamentals covering leg spin grip and release, off spin technique, flight, and setting up batsmen.",
+      "focus_areas": [
+        "rotation",
+        "power",
+        "consistency"
+      ]
     },
     {
       "id": "cr_v12",
@@ -152,11 +227,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+fielding+drills+catching+diving+ground+fielding",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["cr_fielding", "cr_catching"],
+      "skill_areas": [
+        "cr_fielding",
+        "cr_catching"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "drill",
-      "description": "Fielding practice drills including ground fielding technique, high catches, close catching, and dive-and-recover drills."
+      "description": "Fielding practice drills including ground fielding technique, high catches, close catching, and dive-and-recover drills.",
+      "focus_areas": [
+        "agility",
+        "preparation"
+      ]
     },
     {
       "id": "cr_v13",
@@ -165,7 +247,9 @@
       "url": "https://www.youtube.com/results?search_query=cricketmashup+wicketkeeping+skills+stance+glovework+stumping+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_wicketkeeping"],
+      "skill_areas": [
+        "cr_wicketkeeping"
+      ],
       "language": "Hindi",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -178,11 +262,19 @@
       "url": "https://www.youtube.com/results?search_query=cricket+with+snehal+building+innings+bat+long+score+runs+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_building_innings", "cr_running"],
+      "skill_areas": [
+        "cr_building_innings",
+        "cr_running"
+      ],
       "language": "Hindi",
       "has_shorts": false,
       "content_type": "analysis",
-      "description": "Hindi tutorial on batting temperament, rotating strike, building partnerships, and converting starts into big scores."
+      "description": "Hindi tutorial on batting temperament, rotating strike, building partnerships, and converting starts into big scores.",
+      "focus_areas": [
+        "timing",
+        "control",
+        "balance"
+      ]
     },
     {
       "id": "cr_v15",
@@ -191,11 +283,20 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+T20+batting+masterclass+powerplay+middle+overs",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["cr_t20_batting", "cr_powerplay_batting", "cr_middle_overs_strategy"],
+      "skill_areas": [
+        "cr_t20_batting",
+        "cr_powerplay_batting",
+        "cr_middle_overs_strategy"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "analysis",
-      "description": "Advanced T20 batting tactics covering powerplay aggression, middle overs rotation, and death overs finishing."
+      "description": "Advanced T20 batting tactics covering powerplay aggression, middle overs rotation, and death overs finishing.",
+      "focus_areas": [
+        "timing",
+        "control",
+        "balance"
+      ]
     },
     {
       "id": "cr_v16",
@@ -204,11 +305,19 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+captaincy+field+placement+tactics+strategy",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["cr_captaincy_tactics"],
+      "skill_areas": [
+        "cr_captaincy_tactics"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "analysis",
-      "description": "Cricket captaincy essentials including field placement for different bowlers, bowling changes, and match situation awareness."
+      "description": "Cricket captaincy essentials including field placement for different bowlers, bowling changes, and match situation awareness.",
+      "focus_areas": [
+        "mental",
+        "rally",
+        "agility",
+        "movement"
+      ]
     },
     {
       "id": "cr_v17",
@@ -217,11 +326,18 @@
       "url": "https://www.youtube.com/results?search_query=cricket+with+snehal+fitness+training+speed+agility+endurance+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["cr_fitness"],
+      "skill_areas": [
+        "cr_fitness"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "shorts",
-      "description": "Hindi fitness guide for cricketers covering yo-yo test preparation, sprint training, fielding agility, and bowling endurance."
+      "description": "Hindi fitness guide for cricketers covering yo-yo test preparation, sprint training, fielding agility, and bowling endurance.",
+      "focus_areas": [
+        "agility",
+        "footwork",
+        "fitness"
+      ]
     },
     {
       "id": "cr_v18",
@@ -230,7 +346,9 @@
       "url": "https://www.youtube.com/results?search_query=cricket+coaching+hub+net+practice+drills+productive+batting+bowling",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["cr_net_practice"],
+      "skill_areas": [
+        "cr_net_practice"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "drill",
@@ -243,11 +361,16 @@
       "url": "https://www.youtube.com/results?search_query=cricketmashup+mental+preparation+cricket+handling+pressure+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["cr_mental_preparation"],
+      "skill_areas": [
+        "cr_mental_preparation"
+      ],
       "language": "Hindi",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Hindi guide to mental toughness in cricket, handling match pressure, visualization, dealing with failure, and building confidence."
+      "description": "Hindi guide to mental toughness in cricket, handling match pressure, visualization, dealing with failure, and building confidence.",
+      "focus_areas": [
+        "mental"
+      ]
     },
     {
       "id": "cr_v20",
@@ -256,11 +379,17 @@
       "url": "https://www.youtube.com/results?search_query=cricket+with+snehal+running+between+wickets+quick+singles+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["cr_running"],
+      "skill_areas": [
+        "cr_running"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "shorts",
-      "description": "Hindi guide to running between wickets including calling, backing up, turning technique, and converting ones into twos."
+      "description": "Hindi guide to running between wickets including calling, backing up, turning technique, and converting ones into twos.",
+      "focus_areas": [
+        "mental",
+        "rally"
+      ]
     }
   ]
 }

@@ -16,7 +16,7 @@
  * narrative. No duplicated counts.
  */
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity, Award, AlertTriangle } from "lucide-react";
+import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity, Award, AlertTriangle, Dumbbell, Clock, Play, ArrowRight, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
@@ -224,6 +224,10 @@ export default function MatchInsights({
     };
   }, [videoFile]);
   const [narrative, setNarrative] = useState(null);
+  // Personalized drills derived from the per-shot top_fixes. Populated
+  // by a background call to /api/recommendations/drills once we know
+  // what the user struggled with. Resets per analysis.
+  const [drillRecs, setDrillRecs] = useState(null); // { drills, personalized, focus_areas }
   const [errorMsg, setErrorMsg] = useState(null);
   const [wasTruncated, setWasTruncated] = useState(false);
   const ranKeyRef = useRef(null);
@@ -263,6 +267,23 @@ export default function MatchInsights({
         setPerShot(merged);
         setPhase("done");
         setProgress(100);
+
+        // Also fetch personalized drills for historical sessions —
+        // the saved formFeedback already has the top_fix per shot.
+        const top_fixes_h = merged
+          .map((s) => {
+            const ff = s.formFeedback || s.form_feedback || {};
+            return ff.tip || (Array.isArray(ff.weaknesses) && ff.weaknesses[0]) || null;
+          })
+          .filter(Boolean);
+        api.post("/recommendations/drills", {
+          sport,
+          top_fixes: top_fixes_h,
+          level: fallbackSkillLevel || null,
+          limit: 5,
+        }, { timeout: 8000 })
+          .then(({ data }) => setDrillRecs(data))
+          .catch((e) => console.warn("drill recs (historical) failed:", e?.response?.status, e?.message));
       }
       return;
     }
@@ -286,6 +307,7 @@ export default function MatchInsights({
     setPerShot([]);
     setOverall(null);
     setNarrative(null);
+    setDrillRecs(null);
     setErrorMsg(null);
     setWasTruncated(false);
     setVideoDuration(null);
@@ -476,6 +498,20 @@ export default function MatchInsights({
       }, { timeout: 20000 })
         .then(({ data }) => setNarrative(data))
         .catch((e) => console.warn("narrative failed (non-blocking):", e?.response?.status, e?.message));
+
+      // Personalized drill picks — feeds the per-shot top_fixes to the
+      // backend's keyword matcher so the "Drills For You" cards converge
+      // on the user's actual weakness instead of generic warm-ups. Pure
+      // keyword match (no LLM), so the call is fast and cheap. Falls
+      // back to a generic top-N when top_fixes is empty.
+      api.post("/recommendations/drills", {
+        sport,
+        top_fixes,
+        level: fallbackSkillLevel || null,
+        limit: 5,
+      }, { timeout: 8000 })
+        .then(({ data }) => setDrillRecs(data))
+        .catch((e) => console.warn("drill recs failed (non-blocking):", e?.response?.status, e?.message));
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || "Match analysis failed");
@@ -837,9 +873,126 @@ export default function MatchInsights({
               )}
             </div>
           )}
+
+          {/* ── Personalized Drills ──────────────────────────────────
+              Drills picked by the backend keyword matcher to address
+              the per-shot top_fixes from this session. Each card shows
+              a `why_recommended` blurb (lime accent) so the user
+              instantly sees *why* this drill is on screen for THEM.
+              Falls back to a "General drills" caption when the matcher
+              couldn't personalize. */}
+          {drillRecs?.drills?.length > 0 && (
+            <PersonalizedDrills
+              recs={drillRecs}
+              sport={sport}
+            />
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+
+// ─── Personalized drill cards ────────────────────────────────────
+// Pure render component — data comes from /api/recommendations/drills.
+// Each drill card surfaces the `why_recommended` line in a lime accent
+// so the personalization is visible at a glance.
+function PersonalizedDrills({ recs, sport }) {
+  const { drills, personalized, focus_areas } = recs || {};
+  if (!drills || drills.length === 0) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+      className="pt-3 border-t border-zinc-800"
+    >
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <p className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1.5 text-lime-400">
+          <Dumbbell className="w-3 h-3" /> Drills For You
+        </p>
+        {personalized ? (
+          <span className="text-[10px] uppercase tracking-wider font-bold bg-lime-400/10 text-lime-300 border border-lime-400/20 rounded-full px-2 py-0.5 flex items-center gap-1">
+            <Sparkles className="w-2.5 h-2.5" />
+            Tailored to your fixes
+          </span>
+        ) : (
+          <span className="text-[10px] text-zinc-500 italic">
+            General drills — analyze more sessions to unlock tailored recommendations
+          </span>
+        )}
+      </div>
+      {personalized && Array.isArray(focus_areas) && focus_areas.length > 0 && (
+        <p className="text-[11px] text-zinc-500 mb-3">
+          Focused on: <span className="text-lime-300/90 font-medium">
+            {focus_areas.slice(0, 3).map((a) => a.replace(/_/g, " ")).join(" \u00b7 ")}
+          </span>
+        </p>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        {drills.map((d, i) => (
+          <DrillCard key={d.id || i} drill={d} sport={sport} />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function DrillCard({ drill, sport }) {
+  const url = drill.url || drill.video_url || "#";
+  const thumb = drill.thumbnail || drill.thumbnail_url;
+  const dur = drill.duration_min ? `${drill.duration_min} min` : null;
+  const level = drill.level || null;
+  const why = drill.why_recommended || "";
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group block bg-zinc-800/40 hover:bg-zinc-800/70 border border-zinc-800 hover:border-lime-400/40 rounded-xl p-3 transition-colors"
+    >
+      <div className="flex gap-3">
+        {thumb ? (
+          <div className="relative w-24 aspect-video rounded-md overflow-hidden bg-zinc-900 shrink-0">
+            <img src={thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Play className="w-5 h-5 text-white fill-current" />
+            </div>
+          </div>
+        ) : (
+          <div className="w-24 aspect-video rounded-md bg-zinc-900 flex items-center justify-center shrink-0">
+            <Dumbbell className="w-5 h-5 text-lime-400/60" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-white leading-snug line-clamp-2">
+            {drill.title}
+          </p>
+          {why && (
+            <p className="text-[10px] text-lime-300 font-semibold mt-1 leading-tight">
+              {why}
+            </p>
+          )}
+          <div className="flex items-center gap-2 mt-1.5 text-[10px] text-zinc-500">
+            {dur && (
+              <span className="flex items-center gap-0.5">
+                <Clock className="w-2.5 h-2.5" /> {dur}
+              </span>
+            )}
+            {level && (
+              <span className="uppercase tracking-wider">
+                {level}
+              </span>
+            )}
+            {drill.channel && (
+              <span className="truncate">{drill.channel}</span>
+            )}
+            <ArrowRight className="w-3 h-3 ml-auto text-lime-400/70 group-hover:text-lime-300 transition-colors" />
+          </div>
+        </div>
+      </div>
+    </a>
   );
 }
 

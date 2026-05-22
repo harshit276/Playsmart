@@ -26,6 +26,7 @@ import ProReferencePanel from "@/components/ProReferencePanel";
 import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
+import VoiceCoachButton from "@/components/VoiceCoachButton";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -3683,6 +3684,9 @@ export default function AnalyzePage() {
             </motion.div>
           )}
         </div>
+
+        {/* Voice coach — browser TTS, zero cost. Hidden on unsupported browsers. */}
+        <VoiceCoachButton result={result} narrative={null} />
 
         {/* Share + Analyze another */}
         <div className="flex gap-3">

@@ -11,7 +11,12 @@
       "url": "https://www.youtube.com/watch?v=xOzaRBMDHeg",
       "thumbnail": "https://img.youtube.com/vi/xOzaRBMDHeg/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "serve",
+        "consistency",
+        "control"
+      ]
     },
     {
       "id": "pk_v02",
@@ -22,7 +27,12 @@
       "url": "https://www.youtube.com/watch?v=tnyUYMjmtzM",
       "thumbnail": "https://img.youtube.com/vi/tnyUYMjmtzM/hqdefault.jpg",
       "duration_min": 12,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "serve",
+        "consistency",
+        "control"
+      ]
     },
     {
       "id": "pk_v03",
@@ -33,7 +43,12 @@
       "url": "https://www.youtube.com/watch?v=yrT_McUYxs8",
       "thumbnail": "https://img.youtube.com/vi/yrT_McUYxs8/hqdefault.jpg",
       "duration_min": 10,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "serve",
+        "consistency",
+        "control"
+      ]
     },
     {
       "id": "pk_v04",
@@ -44,7 +59,15 @@
       "url": "https://www.youtube.com/watch?v=666qbGjP8sE",
       "thumbnail": "https://img.youtube.com/vi/666qbGjP8sE/hqdefault.jpg",
       "duration_min": 8,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "serve",
+        "consistency",
+        "control",
+        "preparation",
+        "timing",
+        "contact"
+      ]
     },
     {
       "id": "pk_v05",
@@ -55,7 +78,15 @@
       "url": "https://www.youtube.com/watch?v=akXbBEfhBeI",
       "thumbnail": "https://img.youtube.com/vi/akXbBEfhBeI/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "serve",
+        "consistency",
+        "control",
+        "preparation",
+        "timing",
+        "contact"
+      ]
     },
     {
       "id": "pk_v06",
@@ -66,7 +97,12 @@
       "url": "https://www.youtube.com/watch?v=9MzV62LnQ2I",
       "thumbnail": "https://img.youtube.com/vi/9MzV62LnQ2I/hqdefault.jpg",
       "duration_min": 7,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "preparation",
+        "timing",
+        "contact"
+      ]
     },
     {
       "id": "pk_v07",
@@ -88,7 +124,13 @@
       "url": "https://www.youtube.com/watch?v=LudiKnT6WwY",
       "thumbnail": "https://img.youtube.com/vi/LudiKnT6WwY/hqdefault.jpg",
       "duration_min": 8,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "control",
+        "rotation",
+        "net_play",
+        "contact"
+      ]
     },
     {
       "id": "pk_v09",
@@ -99,7 +141,12 @@
       "url": "https://www.youtube.com/watch?v=o8i3o_ImVZ4",
       "thumbnail": "https://img.youtube.com/vi/o8i3o_ImVZ4/hqdefault.jpg",
       "duration_min": 11,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "net_play",
+        "control",
+        "contact"
+      ]
     },
     {
       "id": "pk_v10",
@@ -110,7 +157,12 @@
       "url": "https://www.youtube.com/watch?v=IX-yFrWSOL8",
       "thumbnail": "https://img.youtube.com/vi/IX-yFrWSOL8/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "drop",
+        "control",
+        "contact"
+      ]
     },
     {
       "id": "pk_v11",
@@ -121,7 +173,11 @@
       "url": "https://www.youtube.com/watch?v=oyZBm6ByvvM",
       "thumbnail": "https://img.youtube.com/vi/oyZBm6ByvvM/hqdefault.jpg",
       "duration_min": 10,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "drop",
+        "control"
+      ]
     },
     {
       "id": "pk_v12",
@@ -132,7 +188,12 @@
       "url": "https://www.youtube.com/watch?v=sZ2aysfCF8I",
       "thumbnail": "https://img.youtube.com/vi/sZ2aysfCF8I/hqdefault.jpg",
       "duration_min": 11,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "drive",
+        "wrist",
+        "contact"
+      ]
     },
     {
       "id": "pk_v13",
@@ -143,7 +204,14 @@
       "url": "https://www.youtube.com/watch?v=7ahC9cWyWLA",
       "thumbnail": "https://img.youtube.com/vi/7ahC9cWyWLA/hqdefault.jpg",
       "duration_min": 12,
-      "content_type": "analysis"
+      "content_type": "analysis",
+      "focus_areas": [
+        "drop",
+        "control",
+        "contact",
+        "drive",
+        "wrist"
+      ]
     },
     {
       "id": "pk_v14",
@@ -154,7 +222,12 @@
       "url": "https://www.youtube.com/watch?v=Wi_E8XNRI1I",
       "thumbnail": "https://img.youtube.com/vi/Wi_E8XNRI1I/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "net_play",
+        "preparation",
+        "timing"
+      ]
     },
     {
       "id": "pk_v15",
@@ -165,7 +238,12 @@
       "url": "https://www.youtube.com/watch?v=SRJ28-ldlPM",
       "thumbnail": "https://img.youtube.com/vi/SRJ28-ldlPM/hqdefault.jpg",
       "duration_min": 13,
-      "content_type": "drill"
+      "content_type": "drill",
+      "focus_areas": [
+        "net_play",
+        "preparation",
+        "timing"
+      ]
     },
     {
       "id": "pk_v16",
@@ -198,7 +276,12 @@
       "url": "https://www.youtube.com/watch?v=eYyAz3SpwEM",
       "thumbnail": "https://img.youtube.com/vi/eYyAz3SpwEM/hqdefault.jpg",
       "duration_min": 8,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "net_play",
+        "preparation",
+        "timing"
+      ]
     },
     {
       "id": "pk_v19",
@@ -209,7 +292,11 @@
       "url": "https://www.youtube.com/watch?v=ErmFzIp7nzM",
       "thumbnail": "https://img.youtube.com/vi/ErmFzIp7nzM/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "control",
+        "rotation"
+      ]
     },
     {
       "id": "pk_v20",
@@ -253,7 +340,12 @@
       "url": "https://www.youtube.com/watch?v=NZicgJEFVm4",
       "thumbnail": "https://img.youtube.com/vi/NZicgJEFVm4/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "smash",
+        "power",
+        "rotation"
+      ]
     },
     {
       "id": "pk_v24",
@@ -264,7 +356,11 @@
       "url": "https://www.youtube.com/watch?v=pbegRlgVpxQ",
       "thumbnail": "https://img.youtube.com/vi/pbegRlgVpxQ/hqdefault.jpg",
       "duration_min": 7,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "defense",
+        "wrist"
+      ]
     },
     {
       "id": "pk_v25",
@@ -275,7 +371,14 @@
       "url": "https://www.youtube.com/watch?v=OdjEBqih_2Q",
       "thumbnail": "https://img.youtube.com/vi/OdjEBqih_2Q/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "smash",
+        "power",
+        "rotation",
+        "defense",
+        "wrist"
+      ]
     },
     {
       "id": "pk_v26",
@@ -341,7 +444,11 @@
       "url": "https://www.youtube.com/watch?v=7cQYyT3rPnA",
       "thumbnail": "https://img.youtube.com/vi/7cQYyT3rPnA/hqdefault.jpg",
       "duration_min": 11,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "mental",
+        "rally"
+      ]
     },
     {
       "id": "pk_v32",
@@ -352,7 +459,11 @@
       "url": "https://www.youtube.com/watch?v=Lsr6sjkzUGI",
       "thumbnail": "https://img.youtube.com/vi/Lsr6sjkzUGI/hqdefault.jpg",
       "duration_min": 12,
-      "content_type": "analysis"
+      "content_type": "analysis",
+      "focus_areas": [
+        "mental",
+        "rally"
+      ]
     },
     {
       "id": "pk_v33",
@@ -363,7 +474,11 @@
       "url": "https://www.youtube.com/watch?v=Ve6izbmBwGM",
       "thumbnail": "https://img.youtube.com/vi/Ve6izbmBwGM/hqdefault.jpg",
       "duration_min": 15,
-      "content_type": "analysis"
+      "content_type": "analysis",
+      "focus_areas": [
+        "mental",
+        "rally"
+      ]
     },
     {
       "id": "pk_v34",
@@ -374,7 +489,11 @@
       "url": "https://www.youtube.com/watch?v=WuS6TWANBDw",
       "thumbnail": "https://img.youtube.com/vi/WuS6TWANBDw/hqdefault.jpg",
       "duration_min": 13,
-      "content_type": "analysis"
+      "content_type": "analysis",
+      "focus_areas": [
+        "mental",
+        "rally"
+      ]
     },
     {
       "id": "pk_v35",
@@ -385,7 +504,11 @@
       "url": "https://www.youtube.com/watch?v=zHZzy8eK9vw",
       "thumbnail": "https://img.youtube.com/vi/zHZzy8eK9vw/hqdefault.jpg",
       "duration_min": 11,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "mental",
+        "rally"
+      ]
     },
     {
       "id": "pk_v36",
@@ -396,7 +519,10 @@
       "url": "https://www.youtube.com/watch?v=kZbga4quTAg",
       "thumbnail": "https://img.youtube.com/vi/kZbga4quTAg/hqdefault.jpg",
       "duration_min": 10,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "mental"
+      ]
     },
     {
       "id": "pk_v37",
@@ -407,7 +533,10 @@
       "url": "https://www.youtube.com/watch?v=owZaWcOAOQg",
       "thumbnail": "https://img.youtube.com/vi/owZaWcOAOQg/hqdefault.jpg",
       "duration_min": 12,
-      "content_type": "tutorial"
+      "content_type": "tutorial",
+      "focus_areas": [
+        "mental"
+      ]
     },
     {
       "id": "pk_v38",
@@ -418,7 +547,11 @@
       "url": "https://www.youtube.com/watch?v=_CUYNbcFe-w",
       "thumbnail": "https://img.youtube.com/vi/_CUYNbcFe-w/hqdefault.jpg",
       "duration_min": 6,
-      "content_type": "drill"
+      "content_type": "drill",
+      "focus_areas": [
+        "fitness",
+        "agility"
+      ]
     },
     {
       "id": "pk_v39",
@@ -429,7 +562,11 @@
       "url": "https://www.youtube.com/watch?v=0IX_Q-d1E5o",
       "thumbnail": "https://img.youtube.com/vi/0IX_Q-d1E5o/hqdefault.jpg",
       "duration_min": 9,
-      "content_type": "drill"
+      "content_type": "drill",
+      "focus_areas": [
+        "fitness",
+        "agility"
+      ]
     }
   ]
 }

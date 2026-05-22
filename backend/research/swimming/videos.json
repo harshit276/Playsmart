@@ -9,7 +9,9 @@
       "url": "https://www.youtube.com/results?search_query=effortless+swimming+how+to+float+overcome+fear+of+water+beginners",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_water_confidence"],
+      "skill_areas": [
+        "sw_water_confidence"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -22,11 +24,19 @@
       "url": "https://www.youtube.com/results?search_query=effortless+swimming+freestyle+technique+body+position+catch+pull",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_freestyle"],
+      "skill_areas": [
+        "sw_freestyle"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Complete freestyle tutorial covering head position, high elbow catch, hip rotation, and efficient flutter kick technique."
+      "description": "Complete freestyle tutorial covering head position, high elbow catch, hip rotation, and efficient flutter kick technique.",
+      "focus_areas": [
+        "agility",
+        "preparation",
+        "consistency",
+        "control"
+      ]
     },
     {
       "id": "sw_v03",
@@ -35,11 +45,19 @@
       "url": "https://www.youtube.com/results?search_query=myswimpro+freestyle+drills+catch+up+fingertip+drag+technique",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_freestyle"],
+      "skill_areas": [
+        "sw_freestyle"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "drill",
-      "description": "Essential freestyle drills including catch-up drill, fingertip drag, fist drill, and single arm freestyle for stroke improvement."
+      "description": "Essential freestyle drills including catch-up drill, fingertip drag, fist drill, and single arm freestyle for stroke improvement.",
+      "focus_areas": [
+        "agility",
+        "preparation",
+        "consistency",
+        "control"
+      ]
     },
     {
       "id": "sw_v04",
@@ -48,11 +66,17 @@
       "url": "https://www.youtube.com/results?search_query=effortless+swimming+breathing+technique+how+to+breathe+without+panic",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_breathing"],
+      "skill_areas": [
+        "sw_breathing"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Rhythmic breathing technique, continuous exhale underwater, bilateral breathing, and managing breathing anxiety for swimmers."
+      "description": "Rhythmic breathing technique, continuous exhale underwater, bilateral breathing, and managing breathing anxiety for swimmers.",
+      "focus_areas": [
+        "consistency",
+        "fitness"
+      ]
     },
     {
       "id": "sw_v05",
@@ -61,11 +85,18 @@
       "url": "https://www.youtube.com/results?search_query=speedo+backstroke+technique+beginners+body+position+kick",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_backstroke"],
+      "skill_areas": [
+        "sw_backstroke"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "How to swim backstroke with proper body position, arm entry, hip rotation, and steady flutter kick on your back."
+      "description": "How to swim backstroke with proper body position, arm entry, hip rotation, and steady flutter kick on your back.",
+      "focus_areas": [
+        "power",
+        "control",
+        "consistency"
+      ]
     },
     {
       "id": "sw_v06",
@@ -74,11 +105,18 @@
       "url": "https://www.youtube.com/results?search_query=myswimpro+breaststroke+tutorial+timing+whip+kick+glide",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_breaststroke"],
+      "skill_areas": [
+        "sw_breaststroke"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Breaststroke pull-breathe-kick-glide timing, proper whip kick technique, and maintaining streamline during the glide phase."
+      "description": "Breaststroke pull-breathe-kick-glide timing, proper whip kick technique, and maintaining streamline during the glide phase.",
+      "focus_areas": [
+        "power",
+        "control",
+        "consistency"
+      ]
     },
     {
       "id": "sw_v07",
@@ -87,11 +125,17 @@
       "url": "https://www.youtube.com/results?search_query=effortless+swimming+butterfly+stroke+tutorial+undulation+arm+recovery",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["sw_butterfly"],
+      "skill_areas": [
+        "sw_butterfly"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "How to swim butterfly with proper body undulation, two-kick timing, arm recovery over water, and breathing rhythm."
+      "description": "How to swim butterfly with proper body undulation, two-kick timing, arm recovery over water, and breathing rhythm.",
+      "focus_areas": [
+        "consistency",
+        "control"
+      ]
     },
     {
       "id": "sw_v08",
@@ -100,11 +144,17 @@
       "url": "https://www.youtube.com/results?search_query=myswimpro+flip+turn+tutorial+how+to+swimming",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_turns"],
+      "skill_areas": [
+        "sw_turns"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Step-by-step flip turn technique including approach, somersault, wall push-off, streamline, and breakout for freestyle and backstroke."
+      "description": "Step-by-step flip turn technique including approach, somersault, wall push-off, streamline, and breakout for freestyle and backstroke.",
+      "focus_areas": [
+        "timing",
+        "agility"
+      ]
     },
     {
       "id": "sw_v09",
@@ -113,7 +163,10 @@
       "url": "https://www.youtube.com/results?search_query=effortless+swimming+endurance+swim+without+getting+tired",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_endurance", "sw_breathing"],
+      "skill_areas": [
+        "sw_endurance",
+        "sw_breathing"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -126,7 +179,9 @@
       "url": "https://www.youtube.com/results?search_query=speedo+open+water+swimming+tips+sighting+drafting+navigation",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_open_water"],
+      "skill_areas": [
+        "sw_open_water"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -139,11 +194,17 @@
       "url": "https://www.youtube.com/results?search_query=myswimpro+underwater+dolphin+kick+streamline+breakout+technique",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["sw_underwater"],
+      "skill_areas": [
+        "sw_underwater"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "drill",
-      "description": "Streamline body position, underwater dolphin kick technique off walls and starts, and optimal breakout timing."
+      "description": "Streamline body position, underwater dolphin kick technique off walls and starts, and optimal breakout timing.",
+      "focus_areas": [
+        "power",
+        "control"
+      ]
     },
     {
       "id": "sw_v12",
@@ -152,7 +213,10 @@
       "url": "https://www.youtube.com/results?search_query=speedo+swimming+for+kids+learn+to+swim+fun+games+drills",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_kids_swimming", "sw_water_confidence"],
+      "skill_areas": [
+        "sw_kids_swimming",
+        "sw_water_confidence"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -165,7 +229,9 @@
       "url": "https://www.youtube.com/results?search_query=myswimpro+swim+workout+structure+plan+pool+session",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_workout_planning"],
+      "skill_areas": [
+        "sw_workout_planning"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -178,7 +244,9 @@
       "url": "https://www.youtube.com/results?search_query=effortless+swimming+dryland+training+core+shoulder+exercises",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_dryland"],
+      "skill_areas": [
+        "sw_dryland"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "drill",
@@ -191,7 +259,9 @@
       "url": "https://www.youtube.com/results?search_query=myswimpro+dive+start+block+start+technique+racing+swimming",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_dive_starts"],
+      "skill_areas": [
+        "sw_dive_starts"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
@@ -204,7 +274,10 @@
       "url": "https://www.youtube.com/results?search_query=skills+n+talents+swimming+kaise+seekhe+beginners+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_water_confidence", "sw_freestyle"],
+      "skill_areas": [
+        "sw_water_confidence",
+        "sw_freestyle"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "tutorial",
@@ -217,7 +290,9 @@
       "url": "https://www.youtube.com/results?search_query=effortless+swimming+pool+etiquette+lane+swimming+rules",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["sw_pool_etiquette"],
+      "skill_areas": [
+        "sw_pool_etiquette"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "shorts",
@@ -230,11 +305,18 @@
       "url": "https://www.youtube.com/results?search_query=speedo+breaststroke+kick+fix+whip+kick+mistakes+tutorial",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["sw_breaststroke"],
+      "skill_areas": [
+        "sw_breaststroke"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Fixing common breaststroke kick problems including scissor kick, asymmetric kick, and not finishing with feet together."
+      "description": "Fixing common breaststroke kick problems including scissor kick, asymmetric kick, and not finishing with feet together.",
+      "focus_areas": [
+        "power",
+        "control",
+        "consistency"
+      ]
     }
   ]
 }

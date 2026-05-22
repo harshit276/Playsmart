@@ -9,11 +9,17 @@
       "url": "https://www.youtube.com/results?search_query=progressive+soccer+dribbling+skills+tutorial+ball+control",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_dribbling"],
+      "skill_areas": [
+        "fb_dribbling"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Dribbling fundamentals including close ball control, change of direction, using both feet, and basic dribbling moves."
+      "description": "Dribbling fundamentals including close ball control, change of direction, using both feet, and basic dribbling moves.",
+      "focus_areas": [
+        "control",
+        "agility"
+      ]
     },
     {
       "id": "fb_v02",
@@ -22,11 +28,18 @@
       "url": "https://www.youtube.com/results?search_query=unisport+football+skill+moves+stepover+elastico+cruyff+turn",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_dribbling", "fb_freestyle"],
+      "skill_areas": [
+        "fb_dribbling",
+        "fb_freestyle"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "Step-by-step tutorials for popular skill moves including stepovers, elastico, Cruyff turn, and Ronaldo chop."
+      "description": "Step-by-step tutorials for popular skill moves including stepovers, elastico, Cruyff turn, and Ronaldo chop.",
+      "focus_areas": [
+        "timing",
+        "agility"
+      ]
     },
     {
       "id": "fb_v03",
@@ -35,11 +48,17 @@
       "url": "https://www.youtube.com/results?search_query=progressive+soccer+passing+accuracy+technique+short+long+passing",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_passing"],
+      "skill_areas": [
+        "fb_passing"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Passing technique for inside foot pass, driven pass, lofted pass, and through balls with proper body positioning."
+      "description": "Passing technique for inside foot pass, driven pass, lofted pass, and through balls with proper body positioning.",
+      "focus_areas": [
+        "control",
+        "preparation"
+      ]
     },
     {
       "id": "fb_v04",
@@ -48,11 +67,17 @@
       "url": "https://www.youtube.com/results?search_query=football+passing+drills+accuracy+vision+hindi+tutorial",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_passing"],
+      "skill_areas": [
+        "fb_passing"
+      ],
       "language": "Hindi",
       "has_shorts": false,
       "content_type": "drill",
-      "description": "Hindi passing drills covering one-touch passing, wall passes, switching play, and developing passing vision."
+      "description": "Hindi passing drills covering one-touch passing, wall passes, switching play, and developing passing vision.",
+      "focus_areas": [
+        "control",
+        "preparation"
+      ]
     },
     {
       "id": "fb_v05",
@@ -61,7 +86,9 @@
       "url": "https://www.youtube.com/results?search_query=unisport+shooting+technique+power+placement+guide+football",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_shooting"],
+      "skill_areas": [
+        "fb_shooting"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
@@ -74,7 +101,9 @@
       "url": "https://www.youtube.com/results?search_query=progressive+soccer+finishing+drills+score+more+goals",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_shooting"],
+      "skill_areas": [
+        "fb_shooting"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "drill",
@@ -87,11 +116,18 @@
       "url": "https://www.youtube.com/results?search_query=football+daily+defending+tutorial+tackling+positioning+1v1",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_defending"],
+      "skill_areas": [
+        "fb_defending"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
-      "description": "Defensive skills including jockeying, standing tackle, sliding tackle, body positioning, and reading the attacker."
+      "description": "Defensive skills including jockeying, standing tackle, sliding tackle, body positioning, and reading the attacker.",
+      "focus_areas": [
+        "defense",
+        "balance",
+        "wrist"
+      ]
     },
     {
       "id": "fb_v08",
@@ -100,7 +136,9 @@
       "url": "https://www.youtube.com/results?search_query=progressive+soccer+goalkeeping+basics+positioning+shot+stopping",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_goalkeeping"],
+      "skill_areas": [
+        "fb_goalkeeping"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -113,11 +151,18 @@
       "url": "https://www.youtube.com/results?search_query=football+fitness+training+speed+agility+endurance+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_fitness"],
+      "skill_areas": [
+        "fb_fitness"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "drill",
-      "description": "Hindi football fitness program covering sprint drills, agility ladders, endurance running, and match-specific conditioning."
+      "description": "Hindi football fitness program covering sprint drills, agility ladders, endurance running, and match-specific conditioning.",
+      "focus_areas": [
+        "agility",
+        "footwork",
+        "fitness"
+      ]
     },
     {
       "id": "fb_v10",
@@ -126,11 +171,17 @@
       "url": "https://www.youtube.com/results?search_query=unisport+free+kick+corner+kick+tutorial+set+piece+football",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_set_pieces"],
+      "skill_areas": [
+        "fb_set_pieces"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
-      "description": "How to take free kicks with curve and power, corner kick delivery technique, and set piece routines for teams."
+      "description": "How to take free kicks with curve and power, corner kick delivery technique, and set piece routines for teams.",
+      "focus_areas": [
+        "power",
+        "control"
+      ]
     },
     {
       "id": "fb_v11",
@@ -139,7 +190,9 @@
       "url": "https://www.youtube.com/results?search_query=progressive+soccer+first+touch+mastery+control+ball+technique",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_first_touch"],
+      "skill_areas": [
+        "fb_first_touch"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -152,7 +205,9 @@
       "url": "https://www.youtube.com/results?search_query=unisport+heading+tutorial+technique+aerial+duels+football",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_heading"],
+      "skill_areas": [
+        "fb_heading"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "tutorial",
@@ -165,7 +220,9 @@
       "url": "https://www.youtube.com/results?search_query=football+weak+foot+training+both+feet+drills+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_weak_foot"],
+      "skill_areas": [
+        "fb_weak_foot"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "shorts",
@@ -178,11 +235,17 @@
       "url": "https://www.youtube.com/results?search_query=football+daily+tactical+awareness+reading+game+positioning",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["fb_tactical_awareness"],
+      "skill_areas": [
+        "fb_tactical_awareness"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "analysis",
-      "description": "How to read the game, understand formations, make intelligent runs, and position yourself in attack and defense."
+      "description": "How to read the game, understand formations, make intelligent runs, and position yourself in attack and defense.",
+      "focus_areas": [
+        "mental",
+        "rally"
+      ]
     },
     {
       "id": "fb_v15",
@@ -191,7 +254,10 @@
       "url": "https://www.youtube.com/results?search_query=progressive+soccer+off+the+ball+movement+making+runs+creating+space",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["fb_off_the_ball", "fb_tactical_awareness"],
+      "skill_areas": [
+        "fb_off_the_ball",
+        "fb_tactical_awareness"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "analysis",
@@ -204,7 +270,9 @@
       "url": "https://www.youtube.com/results?search_query=unisport+futsal+skills+tricks+indoor+football+technique",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "intermediate",
-      "skill_areas": ["fb_futsal_skills"],
+      "skill_areas": [
+        "fb_futsal_skills"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "tutorial",
@@ -217,11 +285,17 @@
       "url": "https://www.youtube.com/results?search_query=unisport+freestyle+football+tutorial+juggling+tricks+beginners",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_freestyle"],
+      "skill_areas": [
+        "fb_freestyle"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "shorts",
-      "description": "Learn freestyle football including juggling progression, around the world, rainbow flick, and basic freestyle combos."
+      "description": "Learn freestyle football including juggling progression, around the world, rainbow flick, and basic freestyle combos.",
+      "focus_areas": [
+        "consistency",
+        "control"
+      ]
     },
     {
       "id": "fb_v18",
@@ -230,11 +304,17 @@
       "url": "https://www.youtube.com/results?search_query=football+dribbling+drills+cone+exercises+quick+feet+hindi",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "beginner",
-      "skill_areas": ["fb_dribbling"],
+      "skill_areas": [
+        "fb_dribbling"
+      ],
       "language": "Hindi",
       "has_shorts": true,
       "content_type": "drill",
-      "description": "Hindi dribbling drill session with cone exercises for developing quick feet, close control, and change of direction."
+      "description": "Hindi dribbling drill session with cone exercises for developing quick feet, close control, and change of direction.",
+      "focus_areas": [
+        "control",
+        "agility"
+      ]
     },
     {
       "id": "fb_v19",
@@ -243,11 +323,19 @@
       "url": "https://www.youtube.com/results?search_query=progressive+soccer+advanced+defending+pressing+covering+team+defense",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["fb_defending", "fb_tactical_awareness"],
+      "skill_areas": [
+        "fb_defending",
+        "fb_tactical_awareness"
+      ],
       "language": "English",
       "has_shorts": false,
       "content_type": "analysis",
-      "description": "Advanced defensive concepts including pressing triggers, covering angles, defensive line coordination, and transition defense."
+      "description": "Advanced defensive concepts including pressing triggers, covering angles, defensive line coordination, and transition defense.",
+      "focus_areas": [
+        "defense",
+        "balance",
+        "wrist"
+      ]
     },
     {
       "id": "fb_v20",
@@ -256,7 +344,9 @@
       "url": "https://www.youtube.com/results?search_query=football+daily+goalkeeper+training+advanced+shot+stopping+reflexes",
       "thumbnail": "https://img.youtube.com/vi/default/hqdefault.jpg",
       "level": "advanced",
-      "skill_areas": ["fb_goalkeeping"],
+      "skill_areas": [
+        "fb_goalkeeping"
+      ],
       "language": "English",
       "has_shorts": true,
       "content_type": "drill",
