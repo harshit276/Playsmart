@@ -397,6 +397,11 @@ export default function AnalyzePage() {
   const [scanResult, setScanResult] = useState(null);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [pendingAnalysisSport, setPendingAnalysisSport] = useState(null);
+  // Streaming-mode UI scratch state. Populated as SSE shot_detected
+  // events arrive so the loader can show "Shot 3: Forehand Drive · 95"
+  // chips while Gemini is still generating. Cleared whenever a new
+  // analysis run starts.
+  const [liveShots, setLiveShots] = useState([]);
 
   // When an analysis completes, persist the score so the next visit can
   // compute improvement and schedule a reminder for 7 days out.
@@ -865,6 +870,7 @@ export default function AnalyzePage() {
     setResult(null);
     setError(null);
     setProgress(0);
+    setLiveShots([]);
 
     // ─── Universal & Premium mode short-circuit ─────────────────────
     // Both modes use the same 2-pass flow (describe → pick → analyze);
@@ -954,16 +960,116 @@ export default function AnalyzePage() {
         const targetDesc = options.universalPick
           ? `${options.universalPick.description} (${options.universalPick.clothing}, ${options.universalPick.court_position})`.replace(/\(\s*,\s*\)/g, "").trim()
           : null;
-        const { data } = await api.post("/analyze-video-universal", {
-          mime_type: uploadFile.type || file.type || "video/mp4",
-          video_b64: b64,
-          target_player_description: targetDesc,
-          tier: accuracyMode === "premium" ? "premium" : "standard",
-          // Bumped to 180s/210s so we don't false-fail when Gemini has
-          // a slow moment. The backend itself caps Gemini at 55s and
-          // returns 504 if it overruns — these are upper bounds for
-          // upload + processing + transit combined.
-        }, { timeout: accuracyMode === "premium" ? 210000 : 180000 });
+        // ─── Streaming-first path (premium tier only) ─────────────────
+        // Default-enabled for premium: gets the user perceived progress
+        // (uploaded / analyzing / per-shot badges) while Gemini is still
+        // generating, instead of staring at a spinner for ~10-15s. The
+        // base64-in-JSON fallback below runs untouched if either:
+        //   - user opted out via ?stream=0
+        //   - streaming throws for any reason (network, CORS, abort)
+        const useStream = (
+          accuracyMode === "premium"
+          && new URLSearchParams(window.location.search).get("stream") !== "0"
+          && typeof window.fetch === "function"
+          && typeof FormData !== "undefined"
+        );
+        let data = null;
+        let streamFailed = false;
+        if (useStream) {
+          setLiveShots([]);
+          try {
+            const fd = new FormData();
+            fd.append("video", uploadFile, uploadFile.name || "clip.mp4");
+            fd.append("sport", sportToAnalyze || "badminton");
+            fd.append("tier", "premium");
+            if (targetDesc) fd.append("target_player_description", targetDesc);
+            const token = localStorage.getItem("playsmart_token");
+            const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+            // NOTE: do NOT set Content-Type — fetch sets it (with the
+            // multipart boundary) automatically when body is FormData.
+            const resp = await fetch(`${baseUrl}/api/analyze-video-stream`, {
+              method: "POST",
+              body: fd,
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            if (!resp.ok || !resp.body) {
+              throw new Error(`stream_http_${resp.status}`);
+            }
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = "";
+            let final = null;
+            let streamErr = null;
+            outer: while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buf += decoder.decode(value, { stream: true });
+              // Parse out every complete `data: <json>\n\n` frame.
+              let nlIdx;
+              while ((nlIdx = buf.indexOf("\n\n")) >= 0) {
+                const frame = buf.slice(0, nlIdx);
+                buf = buf.slice(nlIdx + 2);
+                if (!frame.startsWith("data:")) continue; // comment / keepalive
+                const jsonStr = frame.replace(/^data:\s*/, "").trim();
+                if (!jsonStr) continue;
+                let ev;
+                try { ev = JSON.parse(jsonStr); } catch { continue; }
+                const phase = ev?.phase;
+                if (phase === "uploaded") {
+                  setLoadingText(ev.msg || "Got your video...");
+                  setProgress(60);
+                } else if (phase === "analyzing") {
+                  setLoadingText(ev.msg || "AI Coach is analyzing...");
+                  setProgress(70);
+                } else if (phase === "shot_detected" && ev.shot) {
+                  setLiveShots((prev) => [...prev, ev.shot]);
+                  const n = (ev.total_seen ?? (ev.index ?? 0) + 1);
+                  const label = ev.shot.shot_label || ev.shot.shot_category || ev.shot.event_type || "Event";
+                  const score = Math.round(((ev.shot.confidence ?? 0.7) * 100));
+                  setLoadingText(`Shot ${n}: ${label} · ${score}`);
+                  setProgress(Math.min(92, 75 + n * 2));
+                } else if (phase === "complete") {
+                  final = ev;
+                } else if (phase === "error") {
+                  streamErr = ev.msg || "stream_error";
+                  break outer;
+                }
+              }
+            }
+            if (streamErr) throw new Error(streamErr);
+            if (!final) throw new Error("stream_no_complete_event");
+            // Reshape into the same `data` the non-streaming endpoint
+            // returns so the universalResult builder below is unchanged.
+            data = {
+              sport_detected: final.sport_detected,
+              summary: final.summary,
+              overall_skill_level: final.overall_skill_level,
+              events: final.events || final.shots || [],
+              _meta: { ...(final._meta || {}), streamed: true },
+            };
+          } catch (streamExc) {
+            console.warn("[universal] stream failed, falling back to base64:", streamExc?.message);
+            streamFailed = true;
+            data = null;
+            setLiveShots([]);
+          }
+        }
+        if (!data) {
+          const resp = await api.post("/analyze-video-universal", {
+            mime_type: uploadFile.type || file.type || "video/mp4",
+            video_b64: b64,
+            target_player_description: targetDesc,
+            tier: accuracyMode === "premium" ? "premium" : "standard",
+            // Bumped to 180s/210s so we don't false-fail when Gemini has
+            // a slow moment. The backend itself caps Gemini at 55s and
+            // returns 504 if it overruns — these are upper bounds for
+            // upload + processing + transit combined.
+          }, { timeout: accuracyMode === "premium" ? 210000 : 180000 });
+          data = resp.data;
+          if (streamFailed) {
+            data._meta = { ...(data._meta || {}), stream_fallback: true };
+          }
+        }
         setProgress(95);
         setLoadingText("Building results...");
         // Build a minimal result object the existing UI can render.
@@ -1996,6 +2102,33 @@ export default function AnalyzePage() {
                 Longer videos take a bit more time — hang tight, this won't fail silently.
               </motion.p>
             )}
+
+            {/* Live shots strip — only shown when the streaming endpoint is
+                feeding shots in incrementally. Each badge appears the moment
+                Gemini emits the next event object. Cleared on next run. */}
+            {liveShots.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-zinc-800">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                  Live shots ({liveShots.length})
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {liveShots.map((s, i) => {
+                    const label = s.shot_label || s.shot_category || s.event_type || "Event";
+                    const score = Math.round(((s.confidence ?? 0.7) * 100));
+                    return (
+                      <motion.span
+                        key={`live-${i}-${label}`}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="px-2 py-0.5 rounded-full bg-lime-400/10 border border-lime-400/30 text-lime-300 text-[11px]"
+                      >
+                        {i + 1}. {label} · {score}
+                      </motion.span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </motion.div>
         );
       })()}
@@ -2856,6 +2989,7 @@ export default function AnalyzePage() {
             sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
             playerPosition={targetPlayer || "auto"}
             fallbackSkillLevel={aiSkillLevel}
+            videoInfo={result.video_info || null}
           />
         )}
 

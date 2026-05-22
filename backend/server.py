@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Query, Request
-from fastapi.responses import Response as FastAPIResponse
+from fastapi.responses import Response as FastAPIResponse, StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -3365,6 +3365,216 @@ async def analyze_video_universal_endpoint(
         pass  # cache write failure is non-fatal
 
     return {"success": True, **payload}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Streaming multipart variant of /analyze-video-universal.
+# Same prompt + same final shot shape, but:
+#   - accepts multipart/form-data (no +33% base64 wire inflation)
+#   - emits Server-Sent Events as Gemini generates output, so the UI can
+#     show progress messages + per-shot badges while the backend is still
+#     waiting on Gemini instead of blocking on a single ~10-15s POST.
+# Non-streaming endpoints above are unchanged.
+# ──────────────────────────────────────────────────────────────────────
+@api_router.post("/analyze-video-stream")
+async def analyze_video_stream_endpoint(
+    video: UploadFile = File(...),
+    sport: str = "badminton",
+    target_player_description: str | None = None,
+    tier: str = "premium",
+    backend: str = "auto",
+    authorization: str = Header(None),
+):
+    """Stream a video analysis as Server-Sent Events.
+
+    Body: multipart/form-data with `video` file + form fields
+    (`sport`, `tier`, `target_player_description`).
+
+    Response: `text/event-stream` with frames `data: {...json}\\n\\n`.
+    Event phases in order:
+      - `uploaded`     – upload received, size known
+      - `analyzing`    – Gemini call kicked off
+      - `shot_detected` – one per shot/event as it streams in (best-effort)
+      - `complete`     – final normalized payload (same shape as
+                          /analyze-video-universal: {sport_detected,
+                          summary, overall_skill_level, events, _meta}
+                          but events are also aliased to `shots` so the
+                          frontend can swap endpoints without remapping)
+      - `error`        – on failure; the connection still completes 200.
+    """
+    # ─── Read the upload eagerly so we can validate size + close the
+    # ─── socket before kicking off Gemini.
+    user = await get_current_user_or_none(authorization)
+    is_guest = user is None
+
+    try:
+        video_bytes = await video.read()
+    except Exception as exc:
+        async def _err_read():
+            yield _sse_event({"phase": "error", "msg": f"upload_read_failed: {str(exc)[:200]}"})
+        return StreamingResponse(_err_read(), media_type="text/event-stream", headers=_sse_headers())
+
+    size_bytes = len(video_bytes)
+    mime_type = (video.content_type or "video/mp4")
+
+    # ─── Pre-flight validation. On error we still return a 200 SSE
+    # ─── stream with a single error event — the client expects to
+    # ─── consume events, not parse HTTP errors mid-stream.
+    if size_bytes < 1000:
+        async def _err_small():
+            yield _sse_event({"phase": "error", "msg": "Video too small"})
+        return StreamingResponse(_err_small(), media_type="text/event-stream", headers=_sse_headers())
+    if size_bytes > 25 * 1024 * 1024:
+        async def _err_big():
+            yield _sse_event({"phase": "error", "msg": "Video too large (>25 MB) — compress first"})
+        return StreamingResponse(_err_big(), media_type="text/event-stream", headers=_sse_headers())
+
+    # ─── Token gate (signed-in only; guests get one free analysis as in
+    # ─── the non-streaming endpoint).
+    analysis_cost = abs(TOKEN_RULES.get("analysis_spend", -100))
+    if not is_guest:
+        try:
+            balance = await _get_balance(user["id"])
+        except Exception:
+            balance = 0
+        if balance < analysis_cost:
+            async def _err_402():
+                yield _sse_event({
+                    "phase": "error",
+                    "msg": "insufficient_tokens",
+                    "required": analysis_cost,
+                    "balance": balance,
+                })
+            return StreamingResponse(_err_402(), media_type="text/event-stream", headers=_sse_headers())
+
+    # The actual streaming generator — runs Gemini in a thread executor
+    # and bridges its sync iterator into async SSE frames.
+    async def _stream() -> "asyncio.AsyncIterator[bytes]":
+        import queue as _queue
+        import threading as _th
+        from ai_pipeline.vlm.coaching import stream_analyze_video_universal
+
+        loop = asyncio.get_event_loop()
+        started = _time.time()
+
+        # First two events — fire immediately so the UI gets feedback
+        # well before Gemini's first token comes back.
+        yield _sse_event({
+            "phase": "uploaded",
+            "size_bytes": size_bytes,
+            "msg": "Got your video — running deep analysis...",
+        })
+        yield _sse_event({
+            "phase": "analyzing",
+            "elapsed_ms": 0,
+            "msg": "AthlyticAI Coach is watching the whole clip...",
+        })
+
+        # Bridge sync generator → async via a thread + queue.
+        q: "_queue.Queue[object]" = _queue.Queue(maxsize=64)
+        SENTINEL = object()
+
+        def _runner():
+            try:
+                for ev in stream_analyze_video_universal(
+                    video_bytes, mime_type,
+                    target_player_description=target_player_description,
+                    backend=backend, tier=tier,
+                ):
+                    q.put(ev)
+            except Exception as exc:
+                q.put({"kind": "error", "msg": f"runner_failed: {str(exc)[:200]}"})
+            finally:
+                q.put(SENTINEL)
+
+        thread = _th.Thread(target=_runner, daemon=True)
+        thread.start()
+
+        TIMEOUT_SEC = 60.0
+        shot_count = 0
+        final_payload: dict | None = None
+        try:
+            while True:
+                if _time.time() - started > TIMEOUT_SEC:
+                    yield _sse_event({"phase": "error", "msg": "analysis_timeout_60s"})
+                    break
+                # Pop one item from the bridge queue without blocking the loop
+                try:
+                    item = await asyncio.wait_for(
+                        loop.run_in_executor(None, q.get, True, 1.0),
+                        timeout=2.0,
+                    )
+                except (asyncio.TimeoutError, _queue.Empty):
+                    # Heartbeat — keeps proxies from idle-closing the SSE
+                    yield b": keepalive\n\n"
+                    continue
+                if item is SENTINEL:
+                    break
+                kind = item.get("kind") if isinstance(item, dict) else None
+                if kind == "shot":
+                    shot_count += 1
+                    yield _sse_event({
+                        "phase": "shot_detected",
+                        "shot": item.get("event"),
+                        "index": item.get("index", shot_count - 1),
+                        "total_seen": shot_count,
+                    })
+                elif kind == "complete":
+                    final_payload = item.get("result") or {}
+                elif kind == "error":
+                    yield _sse_event({"phase": "error", "msg": str(item.get("msg", "unknown"))})
+        finally:
+            # Charge tokens only on success (mirrors the non-streaming
+            # endpoint's policy).
+            if final_payload and not is_guest:
+                try:
+                    # _spend_tokens expects positive amount; it negates
+                    # internally when applying the delta.
+                    await _spend_tokens(
+                        user["id"], "analysis_spend", analysis_cost,
+                        {"endpoint": "analyze-video-stream", "tier": tier},
+                    )
+                except Exception:
+                    pass
+
+            if final_payload is not None:
+                events = final_payload.get("events") or []
+                yield _sse_event({
+                    "phase": "complete",
+                    # Alias events → shots so the frontend's existing
+                    # universal-result builder sees the field it expects.
+                    "shots": events,
+                    "events": events,
+                    "sport_detected": final_payload.get("sport_detected"),
+                    "summary": final_payload.get("summary"),
+                    "overall_skill_level": final_payload.get("overall_skill_level"),
+                    "_meta": final_payload.get("_meta", {}),
+                })
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers=_sse_headers(),
+    )
+
+
+def _sse_event(obj: dict) -> bytes:
+    """Encode a Python dict as one SSE `data:` frame. Single-line JSON
+    (newlines stripped) so the frame is parseable on the client without
+    multi-line `data:` reassembly."""
+    payload = json.dumps(obj, default=str, separators=(",", ":"))
+    return f"data: {payload}\n\n".encode("utf-8")
+
+
+def _sse_headers() -> dict:
+    """SSE response headers that defeat Vercel / nginx idle buffering
+    so individual frames reach the browser as they're written."""
+    return {
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",  # nginx
+        "Content-Encoding": "identity",  # don't compress; defeats SSE
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────

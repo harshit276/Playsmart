@@ -646,25 +646,10 @@ def analyze_video_full(
     }
 
 
-def analyze_video_universal(
-    video_bytes: bytes, mime_type: str,
-    target_player_description: str | None = None,
-    backend: str = "auto",
-    tier: str = "standard",
-) -> dict:
-    """Sport-agnostic whole-video analysis. Sends the video to Gemini with
-    an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
-    schema) so it works for swimming, snooker, golf, weightlifting, etc.
-    in addition to the racquet sports we have curated content for.
-
-    Output schema is intentionally generic — `events[]` instead of
-    `shots[]` and each event has free-form `event_type` text. The
-    frontend renders these as a simple timestamped event list.
-
-    Returns: {sport_detected, events: [{timestamp_sec, event_type,
-                description, technique_observations, strength, weakness,
-                tip, skill_level}], summary, _meta}.
-    """
+def _build_universal_prompt(target_player_description: str | None = None) -> tuple[str, str]:
+    """Build the (sys_prompt, user_msg) for the universal sport-agnostic
+    analysis call. Extracted so the streaming variant can reuse it without
+    duplicating ~150 lines of prompt text."""
     box_hint = ""
     if target_player_description:
         box_hint = (
@@ -682,11 +667,51 @@ def analyze_video_universal(
         "athlete performs a discrete technique (one shot, one stroke "
         "cycle, one rep, one pot, etc.) — NOT idle motion or recovery.\n"
         "Step 3: for each event, give a brief coach-quality analysis.\n\n"
+        "For each event you must produce TWO labels:\n\n"
+        "1. shot_label — a natural, concrete 2-5 word description a coach "
+        "would actually say out loud. Include the INTENT or OUTCOME when "
+        "visible. Examples (generic — adapt wording to the sport you see):\n"
+        "   • 'Compact flat drive (cooperative pace)'\n"
+        "   • 'Defensive lift — fell short'\n"
+        "   • 'Net kill — winner'\n"
+        "   • 'Counter-attacking backhand'\n"
+        "   • 'Long pot — top pocket'\n"
+        "   • 'Freestyle stroke — high elbow catch'\n"
+        "   DO NOT use the canonical category name as the shot_label — be "
+        "specific. A label of just 'Drive' or just 'Forehand' is WRONG; "
+        "the shot_label must describe what actually happened, not the "
+        "category bucket.\n"
+        "   For cooperative drill clips where every shot is similar, "
+        "distinguish them by sequence number, intent, or quality "
+        "(e.g. 'Forehand drive 1 — clean contact', 'Forehand drive 2 — "
+        "slightly late', 'Forehand drive 3 — rushed footwork').\n\n"
+        "2. shot_category — a single snake_case keyword for the canonical "
+        "technique (used internally for trend tracking and drill matching). "
+        "Examples: 'forehand_drive', 'smash', 'backhand_loop', 'long_pot', "
+        "'freestyle_stroke', 'deadlift', 'tee_shot'. Use lowercase, "
+        "underscores instead of spaces, no punctuation. Pick a name that "
+        "is standard for the sport you detected — if you're unsure, use "
+        "the closest common term and keep `confidence < 0.7`.\n\n"
+        "Also classify each event's INTENT and OUTCOME:\n"
+        "   • intent: 'attacking' | 'defensive' | 'neutral'\n"
+        "   • outcome: 'winner' | 'forced_error' | 'continued_rally' | "
+        "'lost_point' | 'unknown' (for non-rally sports like swimming or "
+        "weightlifting, use 'continued_rally' for clean reps and "
+        "'unknown' when you can't tell).\n"
+        "   • quality_observation: one SHORT, SPECIFIC sentence on what "
+        "made this rep good or bad. Be concrete — say what you actually "
+        "saw. BAD: 'Player executes a forehand drive' (that's just "
+        "restating the category). GOOD: 'Contact slightly late, ball "
+        "floated above net height' or 'Hips fully rotated, clean punch "
+        "through the line.'\n\n"
         "CRITICAL — ONE TECHNIQUE = ONE EVENT:\n"
         "A single physical motion (windup/contact/follow-through, or one "
         "full stroke cycle in swimming) is ONE event at the moment of "
         "execution. Do NOT emit multiple entries for phases of the same "
-        "motion. If the athlete performed 3 reps/shots/strokes, the "
+        "motion. If two consecutive timestamps are within ~1.5 seconds "
+        "AND the same shot_category, they are almost certainly the same "
+        "physical motion — merge them into one entry at the contact "
+        "moment. If the athlete performed 3 reps/shots/strokes, the "
         "events array must have 3 entries, not 9.\n\n"
         "CRITICAL — DO NOT DEFAULT TO 'SERVE' FOR RALLY-STARTING SHOTS:\n"
         "A SERVE has ALL of these traits:\n"
@@ -712,8 +737,12 @@ def analyze_video_universal(
         '  "events": [\n'
         '    {\n'
         '      "timestamp_sec": <float, when the action happens>,\n'
-        '      "event_type": "<your label e.g. forehand, freestyle stroke, '
-        'long pot, deadlift rep, golf swing>",\n'
+        '      "shot_label": "<natural 2-5 word description — see rules above>",\n'
+        '      "shot_category": "<snake_case canonical name>",\n'
+        '      "intent": "<attacking|defensive|neutral>",\n'
+        '      "outcome": "<winner|forced_error|continued_rally|lost_point|unknown>",\n'
+        '      "quality_observation": "<one specific sentence — what made '
+        'this rep good or bad>",\n'
         '      "description": "<one sentence what happened>",\n'
         '      "strengths": ["<bullet>", "..."],\n'
         '      "weaknesses": ["<bullet>", "..."],\n'
@@ -723,8 +752,12 @@ def analyze_video_universal(
         '    }\n'
         '  ]\n'
         '}\n\n'
-        "Keep events array under 20 entries. Use whichever event_type "
-        "wording naturally fits the sport — no fixed vocabulary."
+        "Keep events array under 20 entries. The shot_label is free text "
+        "tailored to the sport you detected — do not constrain yourself "
+        "to a fixed vocabulary.\n\n"
+        "IMPORTANT: ALSO include `shot_type` AND `event_type` set to the "
+        "same value as `shot_category` in every event object (for backward "
+        "compatibility with existing UI code)."
     )
     user_msg = (
         "Watch the whole video and analyze the athlete's performance "
@@ -732,6 +765,86 @@ def analyze_video_universal(
         "the action is hard to read, say so in 'summary' and emit fewer "
         "events rather than guessing."
     )
+    return sys_prompt, user_msg
+
+
+def _normalize_universal_event(e: dict, sport_vocab: list) -> dict | None:
+    """Normalize one raw event dict from Gemini into the stable output
+    schema. Returns None if `e` isn't usable. Extracted so the streaming
+    variant can normalize per-event as objects stream in."""
+    if not isinstance(e, dict):
+        return None
+    try:
+        ts = float(e.get("timestamp_sec") or 0.0)
+    except Exception:
+        ts = 0.0
+    conf = max(0.0, min(1.0, float(e.get("confidence", 0.7) or 0.7)))
+    skill = str(e.get("skill_level", "Intermediate")).strip().title()
+    if skill not in ("Beginner", "Intermediate", "Advanced", "Pro"):
+        skill = "Intermediate"
+    category_raw = e.get("shot_category") or e.get("event_type") or "event"
+    s = str(category_raw or "").strip().lower().replace("-", "_").replace(" ", "_")
+    s = "".join(ch for ch in s if ch.isalnum() or ch == "_").strip("_") or "unknown"
+    if sport_vocab and s not in sport_vocab:
+        match = next((v for v in sport_vocab if v in s or s in v), None)
+        if match:
+            s = match
+    shot_category = s
+    shot_label = str(e.get("shot_label") or e.get("event_type") or shot_category)[:120].strip()
+    intent = str(e.get("intent", "neutral")).strip().lower()
+    if intent not in ("attacking", "defensive", "neutral"):
+        intent = "neutral"
+    outcome = str(e.get("outcome", "unknown")).strip().lower()
+    if outcome not in ("winner", "forced_error", "continued_rally", "lost_point", "unknown"):
+        outcome = "unknown"
+    quality_observation = str(e.get("quality_observation", ""))[:400].strip()
+    return {
+        "timestamp_sec": ts,
+        "shot_type": shot_category,
+        "event_type": shot_category,
+        "shot_label": shot_label,
+        "shot_category": shot_category,
+        "intent": intent,
+        "outcome": outcome,
+        "quality_observation": quality_observation,
+        "description": str(e.get("description", ""))[:400],
+        "strengths": [str(x)[:200] for x in (e.get("strengths") or [])[:5]],
+        "weaknesses": [str(x)[:200] for x in (e.get("weaknesses") or [])[:5]],
+        "tip": str(e.get("tip", ""))[:300],
+        "confidence": conf,
+        "skill_level": skill,
+    }
+
+
+def _get_sport_vocab(detected_sport: str) -> list:
+    try:
+        from .prompts import SHOT_VOCAB  # type: ignore
+    except Exception:
+        SHOT_VOCAB = {}  # type: ignore
+    key = (detected_sport or "").strip().lower()
+    return SHOT_VOCAB.get(key, []) if isinstance(SHOT_VOCAB, dict) else []
+
+
+def analyze_video_universal(
+    video_bytes: bytes, mime_type: str,
+    target_player_description: str | None = None,
+    backend: str = "auto",
+    tier: str = "standard",
+) -> dict:
+    """Sport-agnostic whole-video analysis. Sends the video to Gemini with
+    an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
+    schema) so it works for swimming, snooker, golf, weightlifting, etc.
+    in addition to the racquet sports we have curated content for.
+
+    Output schema is intentionally generic — `events[]` instead of
+    `shots[]` and each event has free-form `event_type` text. The
+    frontend renders these as a simple timestamped event list.
+
+    Returns: {sport_detected, events: [{timestamp_sec, event_type,
+                description, technique_observations, strength, weakness,
+                tip, skill_level}], summary, _meta}.
+    """
+    sys_prompt, user_msg = _build_universal_prompt(target_player_description)
 
     # Premium tier swaps Gemini 2.5 Flash → Gemini 2.5 Pro for sharper
     # detection on noisy / fast-action / multi-shot clips. Costs ~5× more
@@ -759,6 +872,30 @@ def analyze_video_universal(
 
     data = _parse_json_safe(raw)
     events_out = []
+    # Optionally pull the sport's curated vocab to validate shot_category
+    # when the detected sport is one we have pre-defined. If not, accept
+    # any free-form lowercase snake_case category.
+    try:
+        from .prompts import SHOT_VOCAB  # type: ignore
+    except Exception:
+        SHOT_VOCAB = {}  # type: ignore
+    detected_sport_raw = str(data.get("sport_detected", "")).strip().lower()
+    sport_vocab = SHOT_VOCAB.get(detected_sport_raw, []) if isinstance(SHOT_VOCAB, dict) else []
+
+    def _normalize_category(raw_val: str) -> str:
+        s = str(raw_val or "").strip().lower().replace("-", "_").replace(" ", "_")
+        # Strip anything that's not a-z/0-9/_ so we always get clean snake_case
+        s = "".join(ch for ch in s if ch.isalnum() or ch == "_").strip("_")
+        if not s:
+            return "unknown"
+        # If we have a curated vocab for this sport and the model strayed,
+        # try a soft match before giving up.
+        if sport_vocab and s not in sport_vocab:
+            match = next((v for v in sport_vocab if v in s or s in v), None)
+            if match:
+                return match
+        return s
+
     for e in (data.get("events") or [])[:20]:
         if not isinstance(e, dict):
             continue
@@ -770,9 +907,29 @@ def analyze_video_universal(
         skill = str(e.get("skill_level", "Intermediate")).strip().title()
         if skill not in ("Beginner", "Intermediate", "Advanced", "Pro"):
             skill = "Intermediate"
+        # New richer fields. Fall back to legacy `event_type` when the
+        # model returned the old shape so we never drop an event.
+        category_raw = e.get("shot_category") or e.get("event_type") or "event"
+        shot_category = _normalize_category(category_raw)
+        shot_label = str(e.get("shot_label") or e.get("event_type") or shot_category)[:120].strip()
+        intent = str(e.get("intent", "neutral")).strip().lower()
+        if intent not in ("attacking", "defensive", "neutral"):
+            intent = "neutral"
+        outcome = str(e.get("outcome", "unknown")).strip().lower()
+        if outcome not in ("winner", "forced_error", "continued_rally", "lost_point", "unknown"):
+            outcome = "unknown"
+        quality_observation = str(e.get("quality_observation", ""))[:400].strip()
         events_out.append({
             "timestamp_sec": ts,
-            "event_type": str(e.get("event_type", "event"))[:80],
+            # Backward compat: shot_type / event_type mirror shot_category so
+            # legacy UI code reading either field keeps working.
+            "shot_type": shot_category,
+            "event_type": shot_category,
+            "shot_label": shot_label,
+            "shot_category": shot_category,
+            "intent": intent,
+            "outcome": outcome,
+            "quality_observation": quality_observation,
             "description": str(e.get("description", ""))[:400],
             "strengths": [str(x)[:200] for x in (e.get("strengths") or [])[:5]],
             "weaknesses": [str(x)[:200] for x in (e.get("weaknesses") or [])[:5]],
@@ -791,6 +948,216 @@ def analyze_video_universal(
             "mode": "universal", "tier": tier,
         },
     }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Streaming variant — yields events as Gemini produces them
+# ──────────────────────────────────────────────────────────────────────
+def _find_complete_event_objects(buf: str, start_pos: int) -> tuple[list[str], int]:
+    """Walk the buffer starting at `start_pos` looking for top-level JSON
+    object literals (one event). Returns (list_of_json_strings,
+    new_start_pos). Quote/escape-aware so commas/braces inside strings
+    don't confuse the depth counter. The new_start_pos is the index right
+    after the last complete object we extracted — callers should pass it
+    back as start_pos on the next invocation."""
+    out: list[str] = []
+    i = start_pos
+    n = len(buf)
+    while i < n:
+        # Find next opening brace
+        while i < n and buf[i] != "{":
+            # Bail out of the array entirely
+            if buf[i] == "]":
+                return out, i
+            i += 1
+        if i >= n:
+            break
+        # Scan for matching close
+        depth = 0
+        in_str = False
+        esc = False
+        j = i
+        complete = False
+        while j < n:
+            ch = buf[j]
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+            else:
+                if ch == '"':
+                    in_str = True
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        complete = True
+                        j += 1
+                        break
+            j += 1
+        if not complete:
+            # Partial — stop here; caller buffers more
+            break
+        out.append(buf[i:j])
+        i = j
+    return out, i
+
+
+def stream_analyze_video_universal(
+    video_bytes: bytes, mime_type: str,
+    target_player_description: str | None = None,
+    backend: str = "auto",
+    tier: str = "standard",
+):
+    """Generator wrapper around analyze_video_universal that yields
+    progress dicts as the Gemini response streams in.
+
+    Yields dicts of shape:
+      {"kind": "shot", "event": <normalized event>, "index": N}
+      {"kind": "complete", "result": <full payload identical to
+                                       analyze_video_universal's return>}
+      {"kind": "error", "msg": "..."}
+
+    The caller wraps each yielded dict in an SSE frame. The terminal
+    `complete` event carries the same shape the non-streaming endpoint
+    returns so downstream consumers get the exact same data.
+    """
+    sys_prompt, user_msg = _build_universal_prompt(target_player_description)
+    model_override = "gemini-2.5-pro" if (tier or "").lower() == "premium" else None
+    backend_obj = (
+        pick_backend(backend, model=model_override) if model_override
+        else pick_backend(backend)
+    )
+
+    try:
+        import google.generativeai as genai  # type: ignore
+        model = backend_obj._get() if hasattr(backend_obj, "_get") else None
+        if model is None:
+            import os as _os
+            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+            model = genai.GenerativeModel(backend_obj.model_name)
+        parts = _build_video_parts(
+            sys_prompt, user_msg, video_bytes,
+            mime_type or "video/mp4", fps=3.0,
+        )
+        try:
+            stream_iter = model.generate_content(
+                parts,
+                stream=True,
+                generation_config={
+                    "temperature": 0.0,
+                    "response_mime_type": "application/json",
+                },
+            )
+        except Exception as exc:
+            yield {"kind": "error", "msg": f"gemini_call_failed: {str(exc)[:200]}"}
+            return
+    except Exception as exc:
+        yield {"kind": "error", "msg": f"gemini_init_failed: {str(exc)[:200]}"}
+        return
+
+    raw_buffer = ""
+    events_scan_pos = -1   # index of the "[" after "events"
+    next_obj_pos = 0       # where to resume scanning for objects
+    emitted_indices: list[int] = []
+    sport_vocab: list = []
+
+    try:
+        for chunk in stream_iter:
+            try:
+                txt = chunk.text or ""
+            except Exception:
+                # Some chunks have no .text (safety / function-call only); skip
+                txt = ""
+            if not txt:
+                continue
+            raw_buffer += txt
+
+            # Lazy-resolve sport vocab once we've seen sport_detected
+            if not sport_vocab and '"sport_detected"' in raw_buffer:
+                # Quick regex-free pluck: find the value after "sport_detected"
+                key = '"sport_detected"'
+                k = raw_buffer.find(key)
+                if k >= 0:
+                    seg = raw_buffer[k + len(key):k + len(key) + 80]
+                    # find first quoted string
+                    q1 = seg.find('"')
+                    q2 = seg.find('"', q1 + 1) if q1 >= 0 else -1
+                    if q1 >= 0 and q2 > q1:
+                        sport_vocab = _get_sport_vocab(seg[q1 + 1:q2])
+
+            # Locate the events array opener once
+            if events_scan_pos < 0:
+                key = '"events"'
+                k = raw_buffer.find(key)
+                if k >= 0:
+                    bracket = raw_buffer.find("[", k)
+                    if bracket >= 0:
+                        events_scan_pos = bracket + 1
+                        next_obj_pos = events_scan_pos
+            if events_scan_pos < 0:
+                continue
+
+            # Try to pull out any newly-complete event objects
+            objs, new_pos = _find_complete_event_objects(raw_buffer, next_obj_pos)
+            next_obj_pos = new_pos
+            for raw_obj in objs:
+                try:
+                    parsed = json.loads(raw_obj)
+                except Exception:
+                    continue
+                norm = _normalize_universal_event(parsed, sport_vocab)
+                if not norm:
+                    continue
+                emitted_indices.append(len(emitted_indices))
+                yield {
+                    "kind": "shot",
+                    "event": norm,
+                    "index": len(emitted_indices) - 1,
+                }
+    except Exception as exc:
+        # Streaming aborted partway through. Fall through to final parse —
+        # raw_buffer may still hold useful partial content.
+        yield {"kind": "error", "msg": f"stream_aborted: {str(exc)[:200]}"}
+
+    # Final pass: parse the whole accumulated buffer for the authoritative
+    # answer (covers fields outside events[] like summary, sport_detected,
+    # and catches any events we missed via incremental scan).
+    data = _parse_json_safe(raw_buffer)
+    if not sport_vocab:
+        sport_vocab = _get_sport_vocab(str(data.get("sport_detected", "")))
+    events_out: list = []
+    for e in (data.get("events") or [])[:20]:
+        norm = _normalize_universal_event(e, sport_vocab)
+        if norm:
+            events_out.append(norm)
+
+    # If incremental scanning missed everything, we still emit the full
+    # batch here so the client renders something.
+    if not emitted_indices and events_out:
+        for idx, ev in enumerate(events_out):
+            yield {"kind": "shot", "event": ev, "index": idx}
+
+    payload = {
+        "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
+        "summary": str(data.get("summary", ""))[:600],
+        "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
+        "events": events_out,
+        "_meta": {
+            "backend": backend_obj.name,
+            "model": backend_obj.model_name,
+            "video_bytes": len(video_bytes),
+            "mime_type": mime_type,
+            "mode": "universal_stream",
+            "tier": tier,
+            "stream_incremental_emits": len(emitted_indices),
+        },
+    }
+    yield {"kind": "complete", "result": payload}
 
 
 def describe_players_in_video(

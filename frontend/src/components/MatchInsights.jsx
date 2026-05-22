@@ -197,12 +197,21 @@ export default function MatchInsights({
   // eslint-disable-next-line no-unused-vars
   fallbackSkillLevel = null,  // top-level skill from AnalyzePage, used when
                               // per-shot vlmSkill is empty across all shots
+  videoInfo = null,           // backend's video_info ({duration, duration_sec, ...})
+                              // — supplies the canonical duration for historical
+                              // analyses where we no longer have the original file.
 }) {
   const [phase, setPhase] = useState("idle"); // idle | extracting | narrating | done | error
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
   const [perShot, setPerShot] = useState([]); // [{ label, pose: {speed, extension, smoothness} | null }]
   const [overall, setOverall] = useState(null);
+  // Real video duration in seconds. Populated live from videoEl.duration
+  // during the pose-extraction pass; for historical analyses (no videoFile)
+  // we fall back to videoInfo.duration_sec / .duration below. Without this
+  // the tempo metric divides by (max shot timestamp + 1), which on a clip
+  // where Gemini stamped shots in the first second reads as 375 shots/min.
+  const [videoDuration, setVideoDuration] = useState(null);
 
   // Make the analyzed videoFile reachable from per-shot cards (which
   // are deeply nested + don't get the prop). Cleared on unmount.
@@ -279,6 +288,7 @@ export default function MatchInsights({
     setNarrative(null);
     setErrorMsg(null);
     setWasTruncated(false);
+    setVideoDuration(null);
 
     try {
       // Pick top-N highest-scored shots if more than MAX_SHOTS
@@ -313,6 +323,14 @@ export default function MatchInsights({
       const W = videoEl.videoWidth || 640;
       const H = videoEl.videoHeight || 360;
       const cropBox = computeCropBox(W, H, playerPosition);
+
+      // Stash the real video duration so MatchMetricsPanel can compute
+      // shots/min against the actual clip length — not against (max shot
+      // timestamp + 1), which would read a 17s clip with shots clustered
+      // in the first second as 375 shots/min.
+      if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
+        setVideoDuration(videoEl.duration);
+      }
 
       // Set up MoveNet
       setProgressMsg("Loading pose detector…");
@@ -694,6 +712,16 @@ export default function MatchInsights({
               shape is an older cached version. */}
           <MatchMetricsPanel
             perShot={perShot}
+            // Real clip length — live videoEl.duration first, then the
+            // backend's saved video_info for historical replays. Falls back
+            // to (max ts + 1) inside computeMatchMetrics only as a last
+            // resort. Without this the 17s/10-shot bug surfaced as 375
+            // shots/min because shot timestamps clustered in <2s.
+            durationSec={
+              videoDuration
+              ?? (videoInfo && (videoInfo.duration_sec ?? videoInfo.duration))
+              ?? null
+            }
             sport={sport}
             sessionType={narrative?.session_type}
             contextualBenchmarks={narrative?.contextual_benchmarks}
@@ -1236,7 +1264,11 @@ function computeMatchMetrics(perShot, durationSec, sport) {
   if (!perShot || perShot.length === 0) return null;
   const N = perShot.length;
   // Fall back to (max timestamp + 1s) if caller didn't pass duration.
-  // Good enough for tempo math when video duration isn't plumbed through.
+  // Last-resort only — the real video duration should flow in via the
+  // durationSec prop. When it doesn't (e.g. early Mongo records missing
+  // video_info), this estimate can be wildly off if Gemini stamped all
+  // shots in the first second of the clip, hence the >200 shots/min
+  // sanity clamp below.
   let dur = Number(durationSec) || 0;
   if (!dur) {
     const tsList = perShot.map((s) => Number(s.timestamp)).filter((t) => Number.isFinite(t));
@@ -1244,7 +1276,18 @@ function computeMatchMetrics(perShot, durationSec, sport) {
   }
 
   // 1. Tempo — shots per minute (only meaningful when we know duration)
-  const tempo = dur > 0 ? (N / dur) * 60 : null;
+  let tempo = dur > 0 ? (N / dur) * 60 : null;
+  // Defensive clamp: no racket sport sustains >200 shots/min. If we
+  // computed something higher it means the duration we used is wrong
+  // (almost always a missing/short video_info on a historical replay).
+  // Drop to null so the panel renders "—" instead of a garbage number.
+  if (tempo != null && tempo > 200) {
+    console.warn(
+      `[MatchMetrics] suspicious tempo ${tempo.toFixed(1)} shots/min ` +
+      `(N=${N}, dur=${dur.toFixed(2)}s) — likely missing video duration; hiding metric.`
+    );
+    tempo = null;
+  }
 
   // 2. Aggression — % of shots that match an offensive keyword
   let attack = 0, defense = 0;
