@@ -11490,6 +11490,193 @@ class CoachingNarrativeRequest(BaseModel):
 
     player_level: Optional[str] = Field(None, max_length=20)
 
+    # NEW: per-shot top_fix strings (one per analyzed shot, in order).
+    # The frontend already computes a "top fix" per shot from the VLM
+    # form_feedback (tip || weaknesses[0]). Aggregating these on the server
+    # gives us the dominant cross-session weakness — used to keep the
+    # session-level "what to improve" line CONSISTENT with the per-shot
+    # cards (so we don't say "you're well-rounded" while every per-shot
+    # card flags the same issue). Optional for backward-compat with older
+    # clients; if absent we fall back to existing logic.
+    top_fixes: Optional[list[str]] = Field(
+        None, description="Per-shot top_fix strings, in order"
+    )
+
+
+# ─── Session-type + contextual benchmarks for match metrics ──────────────
+# Realistic rally tempos by sport (shots/min) collected from coaching
+# literature + broadcast match samples. The bands distinguish recreational
+# play from club/league from pro burst-rally tempo so we never claim a
+# 47 shots/min user is "above pro" when they really just hit fast in a
+# 13-second drill clip. Values are intentionally conservative on the low
+# end so we don't shame recreational players.
+_TEMPO_BANDS: dict[str, list[tuple[float, float, str]]] = {
+    # (lo, hi, label) inclusive of lo, exclusive of hi
+    "badminton":    [(0, 12, "below typical rally pace"),
+                     (12, 25, "recreational rally pace"),
+                     (25, 45, "club rally pace"),
+                     (45, 1e9, "fast rally pace (pro-burst)")],
+    "tennis":       [(0, 4, "below typical rally pace"),
+                     (4, 10, "recreational rally pace"),
+                     (10, 18, "club rally pace"),
+                     (18, 1e9, "fast rally pace (pro-burst)")],
+    "table_tennis": [(0, 25, "below typical rally pace"),
+                     (25, 55, "club-recreational pace"),
+                     (55, 90, "competitive rally pace"),
+                     (90, 1e9, "fast rally pace (pro-burst)")],
+    "pickleball":   [(0, 8, "below typical rally pace"),
+                     (8, 18, "recreational rally pace"),
+                     (18, 35, "club rally pace"),
+                     (35, 1e9, "fast rally pace (pro-burst)")],
+    "squash":       [(0, 10, "below typical rally pace"),
+                     (10, 25, "recreational rally pace"),
+                     (25, 45, "club rally pace"),
+                     (45, 1e9, "fast rally pace (pro-burst)")],
+}
+
+_VARIETY_SUGGESTIONS: dict[str, str] = {
+    "badminton": "Mix in clears, drops or net shots for a more complete session.",
+    "tennis": "Add slices, drop shots or volleys to round out the session.",
+    "table_tennis": "Add backhand drives, pushes or chops to round out the session.",
+    "pickleball": "Mix in dinks, drops or volleys to round out the session.",
+    "squash": "Add boasts, drops or volleys to round out the session.",
+}
+
+
+def _classify_session_type(distribution: dict | None, total_shots: int) -> str:
+    """Heuristic: 1 distinct populated type = drill, 2-3 = mixed, 4+ = rally/match.
+    Empty / unknown → "unknown" so the frontend can fall back gracefully.
+    """
+    if not distribution or total_shots <= 0:
+        return "unknown"
+    populated = sum(1 for c in distribution.values() if c and c > 0)
+    if populated <= 1:
+        return "drill"
+    if populated <= 3:
+        return "mixed"
+    return "rally"
+
+
+def _tempo_band(sport: str, shots_per_min: float | None) -> dict | None:
+    """Return {value, band, note} describing where the user's tempo sits
+    on the sport-specific recreational→club→pro spectrum. No more
+    misleading 'pro ~10' suffixes — instead 'club rally pace (25-45)'."""
+    if shots_per_min is None:
+        return None
+    sport_lc = (sport or "").lower().strip()
+    bands = _TEMPO_BANDS.get(sport_lc) or _TEMPO_BANDS.get("badminton")
+    for lo, hi, label in bands:
+        if lo <= shots_per_min < hi:
+            # Don't surface the unbounded upper bound — clip to 200 for display.
+            hi_display = "∞" if hi >= 1e9 else f"{int(hi)}"
+            return {
+                "value": round(shots_per_min, 1),
+                "band": label,
+                "range": f"{int(lo)}-{hi_display}",
+                "note": f"\u2713 {label}",
+            }
+    return None
+
+
+def _contextual_benchmarks(sport: str, session_type: str,
+                           distribution: dict | None,
+                           total_shots: int,
+                           duration_sec: float | None,
+                           avg_recovery_sec: float | None) -> dict:
+    """Build the metric-context payload the frontend uses to render the
+    metrics row WITHOUT misleading 'pro ~X' suffixes. Each entry is
+    either {value, ...} (show this metric) or {hidden: true, reason}
+    (don't render — e.g. aggression in a single-shot-type drill).
+
+    Returning this from the backend (rather than hardcoding bands in
+    the frontend) means: when we update what counts as 'club pace' for
+    pickleball next month, every cached analysis re-renders with the
+    new bands automatically — frontend stays dumb."""
+    sport_lc = (sport or "").lower().strip()
+    out: dict = {"sport": sport_lc, "session_type": session_type}
+
+    # Tempo — always shown when we know duration. Use sport-specific bands
+    # rather than a pro point estimate.
+    tempo = None
+    if duration_sec and duration_sec > 0 and total_shots > 0:
+        tempo = (total_shots / float(duration_sec)) * 60.0
+    out["tempo"] = _tempo_band(sport_lc, tempo) or {"hidden": True, "reason": "Need video duration"}
+
+    # Aggression — only meaningful with 5+ shots AND >1 shot type. Drill
+    # sessions get the aggression metric HIDDEN with a clear reason
+    # (otherwise 10 forehand drives reads as "100% aggressive" which is
+    # both technically true and totally useless).
+    populated = sum(1 for c in (distribution or {}).values() if c and c > 0)
+    if total_shots < 5 or populated <= 1:
+        out["aggression"] = {
+            "hidden": True,
+            "reason": "Aggression % is meaningful in rallies, not single-shot drills",
+        }
+    else:
+        out["aggression"] = {"shown": True}
+
+    # Recovery — same gating. A drill where the player stands still and
+    # repeats one shot will report ~1s recovery which is NOT a sign of
+    # faster-than-pro footwork; it's the absence of footwork. Hide for
+    # drills, reframe for everything else.
+    if populated <= 1:
+        out["recovery"] = {
+            "hidden": True,
+            "reason": "Recovery time only reflects footwork during rallies",
+        }
+    elif avg_recovery_sec is not None:
+        # Rally context — slower recovery = worse footwork.
+        if avg_recovery_sec <= 1.5:
+            note = "\u2713 quick reset between shots"
+        elif avg_recovery_sec <= 2.5:
+            note = "average reset — split-step would tighten this"
+        else:
+            note = "slow reset — work on split-step + base-position return"
+        out["recovery"] = {
+            "value": round(avg_recovery_sec, 1),
+            "note": note,
+        }
+    else:
+        out["recovery"] = {"hidden": True, "reason": "Need 2+ shots with timestamps"}
+
+    # Variety — always shown. Add a sport-specific suggestion of what to
+    # add when the variety count is low (≤2).
+    variety_suggestion = _VARIETY_SUGGESTIONS.get(sport_lc)
+    out["variety"] = {
+        "value": populated,
+        "suggestion": variety_suggestion if populated <= 2 and variety_suggestion else None,
+    }
+    return out
+
+
+def _aggregate_top_fix(top_fixes: list[str] | None) -> str | None:
+    """Most-frequent per-shot top_fix, normalised for casing/punctuation
+    so 'limited body rotation' and 'Limited body rotation.' count as the
+    same fix. Returns None if no clear winner."""
+    if not top_fixes:
+        return None
+    import re as _re
+    from collections import Counter as _Counter
+    norm = {}
+    for raw in top_fixes:
+        if not raw:
+            continue
+        k = _re.sub(r"\s+", " ", str(raw).strip().rstrip(".!").lower())
+        if len(k) < 6:
+            continue
+        # Preserve the FIRST original (best-cased) version we saw for this
+        # normalised key — that's what we'll surface back to the user.
+        if k not in norm:
+            norm[k] = str(raw).strip().rstrip(".")
+    if not norm:
+        return None
+    counts = _Counter(_re.sub(r"\s+", " ", str(t).strip().rstrip(".!").lower())
+                      for t in top_fixes if t and len(str(t).strip()) >= 6)
+    if not counts:
+        return None
+    top_key, _ = counts.most_common(1)[0]
+    return norm.get(top_key)
+
 
 _COACHING_SYSTEM_PROMPT = (
     "You are AthlyticAI, a concise coaching narrator. The frontend has detected "
@@ -11506,11 +11693,19 @@ _COACHING_SYSTEM_PROMPT = (
     "If format B (clusters): describe the motion category, do NOT invent specific shot names.\n"
     "  2. ALWAYS cite actual numbers (counts, consistency %, speeds).\n"
     "  3. Honest tone — call out weaknesses without sugar-coating.\n"
-    "  4. Output ONLY JSON, no prose around it. Schema:\n"
+    "  4. CONSISTENCY: the user message may contain a 'Dominant per-shot weakness' line. "
+    "When present, your 'improvements' MUST lead with or reinforce that exact weakness. "
+    "NEVER write 'you're well-rounded', 'push for a stronger opponent', or 'push for "
+    "higher pace' when a dominant per-shot weakness exists — that creates a visible "
+    "contradiction between this section and the per-shot cards.\n"
+    "  5. DRILL SESSIONS: if the session_type is 'drill' (single shot type), DO NOT "
+    "comment on aggression %, rally tempo vs pro, or footwork recovery — those metrics "
+    "don't apply. Focus on technique repeatability and what to add next session.\n"
+    "  6. Output ONLY JSON, no prose around it. Schema:\n"
     "  {\n"
     '    "summary": "<one-sentence overview, e.g. \'12 shots, attacking-heavy session — 5 powerful overheads with strong consistency, but soft-touch shots vary wildly\'>",\n'
     '    "strengths": ["<3 bullets, each citing real numbers>"],\n'
-    '    "improvements": ["<3 bullets, each grounded in cluster stats>"],\n'
+    '    "improvements": ["<3 bullets, each grounded in cluster stats AND consistent with the dominant per-shot weakness if one is given>"],\n'
     '    "next_focus": "<one concrete drill, e.g. \'10 minutes of soft-touch reps to bring touch consistency from 52% to 70%+\'>"\n'
     "  }\n"
 )
@@ -11551,6 +11746,52 @@ async def coaching_narrative(req: CoachingNarrativeRequest):
     else:
         body_section = "\n(No per-shot breakdown provided.)"
 
+    # Pre-compute session_type + contextual benchmarks so they're available
+    # to both the LLM (so it doesn't say "well-rounded rally" about a single-
+    # shot drill) and the response shape. Wrapped in try so a bug here can
+    # never knock out the endpoint — the hot path falls back to the old
+    # shape without these enrichments.
+    session_type = "unknown"
+    contextual_benchmarks: dict = {}
+    aggregated_top_fix = None
+    try:
+        dist_dict = dict(req.distribution or {})
+        session_type = _classify_session_type(dist_dict, req.total_shots)
+        contextual_benchmarks = _contextual_benchmarks(
+            sport=req.sport,
+            session_type=session_type,
+            distribution=dist_dict,
+            total_shots=req.total_shots,
+            duration_sec=req.duration_sec,
+            avg_recovery_sec=req.avg_recovery_sec,
+        )
+        aggregated_top_fix = _aggregate_top_fix(req.top_fixes)
+    except Exception as enrich_err:
+        logger.warning(f"coaching_narrative enrichment failed (non-fatal): {enrich_err}")
+
+    # Tell the LLM about the session shape + per-shot dominant fix so its
+    # "improvements" output STAYS CONSISTENT with the per-shot cards the
+    # user is also reading. Without this, the LLM happily generates a
+    # cheerful "well-rounded" close while every per-shot card flags the
+    # same weakness — which reads as the AI contradicting itself.
+    session_context_lines = [f"Session type heuristic: {session_type}"]
+    if session_type == "drill":
+        session_context_lines.append(
+            "IMPORTANT: this is a DRILL (single shot type repeated). Do NOT "
+            "comment on aggression %, tempo vs pro rally, footwork recovery, "
+            "or rally tactics. Focus on technique repeatability and what to "
+            "add next session to make it a richer practice."
+        )
+    if aggregated_top_fix:
+        session_context_lines.append(
+            f"Dominant per-shot weakness (across all analyzed shots): "
+            f"{aggregated_top_fix}. The session-level 'improvements' MUST "
+            f"reinforce this, not contradict it. NEVER write 'you're "
+            f"well-rounded' or 'push for harder opponent' if a clear "
+            f"per-shot fix exists."
+        )
+    session_context = "\n" + "\n".join(session_context_lines) + "\n"
+
     user_msg = (
         f"Sport: {req.sport}\n"
         f"Total shots detected: {req.total_shots}\n"
@@ -11558,12 +11799,17 @@ async def coaching_narrative(req: CoachingNarrativeRequest):
         + (f"Avg recovery between shots: {req.avg_recovery_sec:.1f}s\n" if req.avg_recovery_sec else "")
         + f"Overall technique consistency: {req.overall_consistency:.0%}\n"
         + (f"Self-rated level: {req.player_level}\n" if req.player_level else "")
+        + session_context
         + body_section
     )
 
     # Fallback if Groq isn't configured
     if not GROQ_API_KEY:
-        return _fallback_narrative(req)
+        result = _fallback_narrative(req, aggregated_top_fix=aggregated_top_fix,
+                                     session_type=session_type)
+        result["session_type"] = session_type
+        result["contextual_benchmarks"] = contextual_benchmarks
+        return result
 
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
@@ -11589,15 +11835,47 @@ async def coaching_narrative(req: CoachingNarrativeRequest):
             except Exception:
                 cleaned = content.strip().strip("`").lstrip("json").strip()
                 parsed = _json.loads(cleaned)
+
+            improvements = [s[:240] for s in (parsed.get("improvements") or [])][:3]
+            # Post-hoc consistency guard: if the LLM still emitted
+            # "well-rounded"/"stronger opponent" while a per-shot fix
+            # exists, splice that fix in as the lead bullet so the user
+            # sees a coherent message instead of a contradiction.
+            if aggregated_top_fix:
+                contradictions = ("well-rounded", "well rounded",
+                                  "stronger opponent", "push for higher pace")
+                bad_idx = [i for i, b in enumerate(improvements)
+                           if any(c in b.lower() for c in contradictions)]
+                lead_bullet = (
+                    f"Across the session, the main thing to work on is "
+                    f"{aggregated_top_fix.rstrip('.')}."
+                )
+                if bad_idx:
+                    for i in sorted(bad_idx, reverse=True):
+                        improvements.pop(i)
+                    improvements.insert(0, lead_bullet)
+                elif not any(
+                    aggregated_top_fix.lower()[:24] in (b or "").lower()
+                    for b in improvements
+                ):
+                    improvements.insert(0, lead_bullet)
+                improvements = improvements[:3]
+
             return {
                 "summary": parsed.get("summary", "")[:240],
                 "strengths": [s[:240] for s in (parsed.get("strengths") or [])][:3],
-                "improvements": [s[:240] for s in (parsed.get("improvements") or [])][:3],
+                "improvements": improvements,
                 "next_focus": (parsed.get("next_focus") or "")[:320],
+                "session_type": session_type,
+                "contextual_benchmarks": contextual_benchmarks,
             }
     except Exception as e:
         logger.warning(f"coaching_narrative LLM failed: {e}")
-        return _fallback_narrative(req)
+        result = _fallback_narrative(req, aggregated_top_fix=aggregated_top_fix,
+                                     session_type=session_type)
+        result["session_type"] = session_type
+        result["contextual_benchmarks"] = contextual_benchmarks
+        return result
 
 
 _CLUSTER_HUMAN_NAMES = {
@@ -11609,8 +11887,21 @@ _CLUSTER_HUMAN_NAMES = {
 }
 
 
-def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
-    """Deterministic non-LLM fallback. Used when GROQ_API_KEY missing."""
+def _fallback_narrative(
+    req: CoachingNarrativeRequest,
+    aggregated_top_fix: str | None = None,
+    session_type: str = "unknown",
+) -> dict:
+    """Deterministic non-LLM fallback. Used when GROQ_API_KEY missing.
+
+    `aggregated_top_fix` is the dominant per-shot weakness (computed once
+    upstream from req.top_fixes) — when present, the "improvements" list
+    leads with it so the session-level narrative AGREES with the per-shot
+    cards. `session_type` lets us swap the closing line for drills
+    ("add another shot type") vs rallies ("push pace") instead of always
+    saying "you're well-rounded".
+    """
+    is_drill = session_type == "drill"
     # Branch on the new distribution+per_type_quality format vs legacy clusters.
     if req.distribution:
         populated_dist = {n: c for n, c in req.distribution.items() if c > 0}
@@ -11634,6 +11925,13 @@ def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
             strengths = [f"{req.total_shots} shots completed this session"]
 
         improvements = []
+        # Lead with the aggregated per-shot weakness so the session-level
+        # message stays consistent with the per-shot coaching cards.
+        if aggregated_top_fix:
+            improvements.append(
+                f"Across the session, the main thing to work on is "
+                f"{aggregated_top_fix.rstrip('.')}."
+            )
         inconsistent = [(n, ptq[n]) for n, c in populated_dist.items()
                         if n in ptq and ptq[n].consistency < 0.55 and c >= 2]
         if inconsistent:
@@ -11641,12 +11939,30 @@ def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
             improvements.append(
                 f"Your {n}s vary a lot ({q.consistency:.0%} consistency). Drill this to build muscle memory."
             )
-        if req.avg_recovery_sec and req.avg_recovery_sec > 1.5:
+        # Recovery only matters in rallies — drills naturally have short
+        # gaps because the player stands still and repeats one motion,
+        # which isn't a footwork virtue.
+        if not is_drill and req.avg_recovery_sec and req.avg_recovery_sec > 1.5:
             improvements.append(
                 f"Recovery time between shots is {req.avg_recovery_sec:.1f}s — work on quick split-step footwork."
             )
+        # Variety nudge for drill sessions: never claim "well-rounded" —
+        # explicitly say there's only one shot type so the user knows to
+        # broaden the session.
+        if is_drill and len(populated_dist) == 1:
+            only_shot = next(iter(populated_dist))
+            improvements.append(
+                f"Only {only_shot}s this session — mix in another shot type "
+                f"next time so we can score your full game."
+            )
         if not improvements:
-            improvements = ["You're well-rounded — push for higher pace or a stronger opponent next session."]
+            # When there's genuinely nothing to fix AND no per-shot weakness
+            # was reported, say so honestly without the "stronger opponent"
+            # bait. Honest > flattering.
+            improvements = [
+                "No clear weakness in this clip. Try a longer rally or a "
+                "different shot type to give the AI more to grade."
+            ]
 
         n_types = len(populated_dist)
         summary = (
@@ -11689,6 +12005,11 @@ def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
         strengths = [f"{req.total_shots} shots completed this session"]
 
     improvements = []
+    if aggregated_top_fix:
+        improvements.append(
+            f"Across the session, the main thing to work on is "
+            f"{aggregated_top_fix.rstrip('.')}."
+        )
     inconsistent = [(n, s) for n, s in populated.items() if s.consistency < 0.55 and s.count >= 2]
     if inconsistent:
         n, s = min(inconsistent, key=lambda kv: kv[1].consistency)
@@ -11698,10 +12019,13 @@ def _fallback_narrative(req: CoachingNarrativeRequest) -> dict:
     if underused and len(underused) <= 3:
         humans = [_CLUSTER_HUMAN_NAMES.get(n, n) for n in underused]
         improvements.append(f"You didn't use these patterns: {', '.join(humans)}. Mix them in to be less predictable.")
-    if req.avg_recovery_sec and req.avg_recovery_sec > 1.5:
+    if not is_drill and req.avg_recovery_sec and req.avg_recovery_sec > 1.5:
         improvements.append(f"Recovery time between shots is {req.avg_recovery_sec:.1f}s — work on quick split-step footwork.")
     if not improvements:
-        improvements = ["You're well-rounded — push for higher pace or a stronger opponent next session."]
+        improvements = [
+            "No clear weakness in this clip. Try a longer rally or a "
+            "different shot type to give the AI more to grade."
+        ]
 
     n_patterns = len(populated)
     summary = (

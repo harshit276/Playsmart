@@ -22,6 +22,42 @@ import api from "@/lib/api";
 import PoseOverlayModal from "@/components/PoseOverlayModal";
 
 
+// "Coach's read" text quality gate. The VLM sometimes emits a purely
+// descriptive sentence ("The player executes a forehand drive, making
+// good contact with the ball") that adds zero insight beyond the shot
+// label the user already sees. Showing it under a "Coach's read"
+// heading makes the AI look filler-grade — so we suppress those and
+// only render reasoning text that actually says something specific
+// about technique, body parts, intent, or correction.
+const _COACH_READ_INSIGHT_WORDS = [
+  // anatomy / contact mechanics
+  "hip", "shoulder", "wrist", "elbow", "knee", "stance", "footwork",
+  "balance", "weight", "transfer", "contact", "follow-through", "follow through",
+  "swing path", "racket face", "paddle face", "bat face", "grip",
+  // intent / correction language
+  "should", "could", "try", "needs", "needed", "limited", "early", "late",
+  "open", "closed", "shift", "drop", "lift", "rotate", "rotation", "extend",
+  "extension", "release", "load", "loading", "tight", "tense", "rushed",
+  "compact", "controlled", "exposed", "off-balance", "out of position",
+  "instead", "rather than", "better", "improve", "stronger", "weaker", "more",
+  "less", "watch", "keep", "stay", "lean", "step",
+];
+
+function _isInsightfulReasoning(text) {
+  if (!text) return false;
+  const t = String(text).toLowerCase();
+  // Reject the two specific filler patterns we've seen most often in
+  // production: "the player executes a [shot], making good contact"
+  // and "performs a [shot] with [adjective] form" — pure narration.
+  if (/^the player (executes|performs|hits|plays|makes) [a-z ]{2,30}(,|\.| with)/i.test(text.trim())
+      && !_COACH_READ_INSIGHT_WORDS.some((kw) => t.includes(kw))) {
+    return false;
+  }
+  // General gate: must contain at least one insight keyword OR be long
+  // enough (>= 90 chars) to plausibly contain multi-clause analysis.
+  return _COACH_READ_INSIGHT_WORDS.some((kw) => t.includes(kw)) || text.length >= 90;
+}
+
 // In-flight cache so we don't refetch the same reference video for
 // every shot of the same type in one analysis.
 const _refCache = new Map();
@@ -384,6 +420,18 @@ export default function MatchInsights({
 
       const dist = groupByType(merged);
       const ptq = buildPerTypeQuality(merged);
+      // Per-shot top_fix list: the backend uses the most-common one to
+      // keep the session-level "what to improve" line CONSISTENT with
+      // the per-shot Top-fix cards. Without this, the LLM happily
+      // closes with "you're well-rounded" while every per-shot card
+      // flags the same weakness — which reads as the AI contradicting
+      // itself.
+      const top_fixes = merged
+        .map((s) => {
+          const ff = s.formFeedback || s.form_feedback || {};
+          return ff.tip || (Array.isArray(ff.weaknesses) && ff.weaknesses[0]) || null;
+        })
+        .filter(Boolean);
       // Don't await — let it resolve whenever, render when ready.
       api.post("/analysis/coaching-narrative", {
         sport,
@@ -393,6 +441,7 @@ export default function MatchInsights({
         overall_consistency: overallStats.consistency,
         distribution: dist,
         per_type_quality: ptq,
+        top_fixes,
       }, { timeout: 20000 })
         .then(({ data }) => setNarrative(data))
         .catch((e) => console.warn("narrative failed (non-blocking):", e?.response?.status, e?.message));
@@ -622,8 +671,22 @@ export default function MatchInsights({
 
           {/* Coach-style metrics — tempo, aggression, variety, recovery,
               side balance, and a quality-over-time sparkline. Pure math
-              on perShot[], no AI calls, no curation dependency. */}
-          <MatchMetricsPanel perShot={perShot} sport={sport} />
+              on perShot[], no AI calls, no curation dependency.
+
+              When the backend's coaching-narrative response is ready it
+              ships a session_type + contextual_benchmarks payload that
+              tells us which metrics to hide (drill sessions don't have
+              meaningful aggression %) and how to label them
+              ("club-recreational pace" instead of "pro ~10"). We pass it
+              through here; the panel falls back to its own client-side
+              math when the narrative hasn't loaded yet or the response
+              shape is an older cached version. */}
+          <MatchMetricsPanel
+            perShot={perShot}
+            sport={sport}
+            sessionType={narrative?.session_type}
+            contextualBenchmarks={narrative?.contextual_benchmarks}
+          />
 
           {/* Per-type quality — consistency for n≥2, form score for n=1 */}
           {populatedTypes.length > 0 && (
@@ -935,14 +998,81 @@ function _toneVs(value, benchmark, higherIsBetter = true) {
   return "text-red-400";
 }
 
-function MatchMetricsPanel({ perShot, durationSec, sport }) {
+// Client-side session classifier — mirrors the backend's
+// _classify_session_type so the metrics row can hide aggression/recovery
+// for drill sessions BEFORE the backend narrative arrives. The backend
+// version wins once the narrative loads (it has the canonical answer).
+function _clientSessionType(perShot) {
+  if (!perShot || perShot.length === 0) return "unknown";
+  const types = new Set(
+    perShot.map((s) => (s.type || s.label || "").toLowerCase()).filter(Boolean),
+  );
+  if (types.size <= 1) return "drill";
+  if (types.size <= 3) return "mixed";
+  return "rally";
+}
+
+// Variety-suggestion fallback for when the backend hasn't returned a
+// contextual_benchmarks payload yet (older cached analyses, or before
+// the narrative LLM call completes). Keep this aligned with the
+// server-side _VARIETY_SUGGESTIONS dict.
+const _CLIENT_VARIETY_SUGGESTIONS = {
+  badminton: "Mix in clears, drops or net shots for a more complete session.",
+  tennis: "Add slices, drop shots or volleys to round out the session.",
+  table_tennis: "Add backhand drives, pushes or chops to round out the session.",
+  pickleball: "Mix in dinks, drops or volleys to round out the session.",
+  squash: "Add boasts, drops or volleys to round out the session.",
+};
+
+function MatchMetricsPanel({ perShot, durationSec, sport, sessionType, contextualBenchmarks }) {
   const m = useMemo(
     () => computeMatchMetrics(perShot, durationSec, sport),
     [perShot, durationSec, sport],
   );
   if (!m) return null;
   const sportLc = (sport || "").toLowerCase();
-  const bench = PRO_BENCHMARKS[sportLc] || PRO_BENCHMARKS.badminton;
+
+  // Prefer backend session_type, but compute one client-side as a
+  // fallback so older cached analyses (no narrative payload) and the
+  // brief window before the LLM narrative arrives still gate the
+  // misleading metrics correctly.
+  const effectiveSessionType = sessionType || _clientSessionType(perShot);
+  const isDrill = effectiveSessionType === "drill";
+
+  // Backend supplies per-metric show/hide + contextual text. Fall back
+  // to gentle client-side defaults that NEVER print "pro ~10" (the
+  // misleading suffix the old code shipped).
+  const cb = contextualBenchmarks || {};
+  const tempoCtx = cb.tempo || null;
+  const aggressionCtx = cb.aggression || null;
+  const recoveryCtx = cb.recovery || null;
+  const varietyCtx = cb.variety || null;
+
+  // Resolve "should this metric render at all?"
+  const showAggression = aggressionCtx
+    ? !aggressionCtx.hidden
+    : (m.totalShots >= 5 && m.varietyCount > 1);
+  const showRecovery = recoveryCtx
+    ? !recoveryCtx.hidden
+    : (m.varietyCount > 1 && m.recoveryAvg != null);
+
+  // How many metrics actually render → choose the grid column count so
+  // we don't end up with one tile floating awkwardly to the left.
+  const metricCount = 1 + (showAggression ? 1 : 0) + 1 + (showRecovery ? 1 : 0);
+  const gridCols = metricCount >= 4 ? "sm:grid-cols-4"
+    : metricCount === 3 ? "sm:grid-cols-3"
+    : metricCount === 2 ? "sm:grid-cols-2"
+    : "sm:grid-cols-1";
+
+  // Variety suggestion: prefer backend's sport-specific text, else
+  // client-side dict. Only surface when variety is low (≤2).
+  const varietySuggestion = varietyCtx?.suggestion
+    || (m.varietyCount <= 2 ? _CLIENT_VARIETY_SUGGESTIONS[sportLc] : null);
+
+  // Tempo note: backend text wins, else generic prompt.
+  const tempoNote = tempoCtx?.note
+    || (tempoCtx?.band ? `\u2713 ${tempoCtx.band}` : "shots/min");
+  const tempoRangeHint = tempoCtx?.range ? ` (${tempoCtx.range})` : "";
 
   // Quality-curve sparkline geometry — pure SVG, no chart lib.
   const sparkW = 280, sparkH = 60;
@@ -957,49 +1087,85 @@ function MatchMetricsPanel({ perShot, durationSec, sport }) {
 
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1">
           <TrendingUp className="w-3 h-3 text-lime-400" /> Match metrics
         </p>
-        <p className="text-[10px] text-zinc-500">vs {sportLc || "pro"} avg</p>
+        {isDrill ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-400/15 text-sky-300 border border-sky-400/30 font-bold uppercase tracking-wider">
+            🎯 Drill session
+          </span>
+        ) : (
+          <p className="text-[10px] text-zinc-500">{effectiveSessionType !== "unknown" ? `${effectiveSessionType} session` : `vs ${sportLc || "pro"} avg`}</p>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {/* TEMPO */}
+      {isDrill && (
+        <p className="text-[11px] text-sky-200/80 leading-snug -mt-1">
+          Drill session detected — aggression % and recovery time only
+          measure well in a full rally. Switch to a rally for those.
+        </p>
+      )}
+
+      <div className={`grid grid-cols-2 ${gridCols} gap-2`}>
+        {/* TEMPO — always shown when we can compute it. Pro point-estimate
+            replaced with sport-specific band so a 47 shots/min drill clip
+            no longer reads as "above pro ~10". */}
         <div className="bg-zinc-800/40 rounded-lg p-2.5">
           <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Tempo</p>
-          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.tempo, bench.tempo, true)}`}>
+          <p className="text-xl font-bold mt-0.5 text-white">
             {m.tempo != null ? m.tempo.toFixed(1) : "—"}
           </p>
-          <p className="text-[10px] text-zinc-500">shots/min · pro ~{bench.tempo}</p>
-        </div>
-
-        {/* AGGRESSION */}
-        <div className="bg-zinc-800/40 rounded-lg p-2.5">
-          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Aggression</p>
-          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.aggressionPct, bench.aggression, true)}`}>
-            {Math.round(m.aggressionPct)}%
+          <p className="text-[10px] text-zinc-500">shots/min</p>
+          <p className="text-[10px] text-lime-300 mt-1 leading-snug">
+            {tempoNote}{tempoRangeHint}
           </p>
-          <p className="text-[10px] text-zinc-500">attack shots · pro ~{bench.aggression}%</p>
         </div>
 
-        {/* VARIETY */}
+        {/* AGGRESSION — hidden in drill sessions (10 forehand drives reads
+            as "100% aggression" which is technically true and totally
+            useless). Pro benchmarks are rally-derived; we don't print
+            them next to drill data anymore. */}
+        {showAggression && (
+          <div className="bg-zinc-800/40 rounded-lg p-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Aggression</p>
+            <p className="text-xl font-bold mt-0.5 text-white">
+              {Math.round(m.aggressionPct)}%
+            </p>
+            <p className="text-[10px] text-zinc-500">attack shots</p>
+          </div>
+        )}
+
+        {/* VARIETY — always shown, with a one-line "what to add" prompt
+            when count is low so the user has a concrete next step instead
+            of a numeric verdict. */}
         <div className="bg-zinc-800/40 rounded-lg p-2.5">
           <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Variety</p>
-          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.varietyCount, bench.variety, true)}`}>
+          <p className="text-xl font-bold mt-0.5 text-white">
             {m.varietyCount}
           </p>
-          <p className="text-[10px] text-zinc-500">distinct shots · pro ~{bench.variety}+</p>
+          <p className="text-[10px] text-zinc-500">distinct shot{m.varietyCount === 1 ? "" : "s"}</p>
+          {varietySuggestion && (
+            <p className="text-[10px] text-amber-300 mt-1 leading-snug">{varietySuggestion}</p>
+          )}
         </div>
 
-        {/* RECOVERY */}
-        <div className="bg-zinc-800/40 rounded-lg p-2.5">
-          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Recovery</p>
-          <p className={`text-xl font-bold mt-0.5 ${_toneVs(m.recoveryAvg, bench.recovery, false)}`}>
-            {m.recoveryAvg != null ? m.recoveryAvg.toFixed(1) : "—"}s
-          </p>
-          <p className="text-[10px] text-zinc-500">between shots · pro ~{bench.recovery}s</p>
-        </div>
+        {/* RECOVERY — hidden for drills (short recovery in a drill means
+            the player stood still, not that they recover faster than a
+            pro). For rallies we show the value with a contextual note
+            instead of a misleading pro-time benchmark. */}
+        {showRecovery && (
+          <div className="bg-zinc-800/40 rounded-lg p-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Recovery</p>
+            <p className="text-xl font-bold mt-0.5 text-white">
+              {m.recoveryAvg != null ? m.recoveryAvg.toFixed(1) : "—"}s
+            </p>
+            <p className="text-[10px] text-zinc-500">between shots</p>
+            {recoveryCtx?.note && (
+              <p className="text-[10px] text-lime-300 mt-1 leading-snug">{recoveryCtx.note}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Side balance + peak power (only when data is meaningful) */}
@@ -1392,7 +1558,7 @@ function IndividualShotCard({ shot, label, sport }) {
           </div>
         )}
 
-        {shot.reasoning && (
+        {shot.reasoning && _isInsightfulReasoning(shot.reasoning) && (
           <div className="pt-2 border-t border-zinc-800/60">
             <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
             <p className="text-[12px] text-zinc-300 leading-relaxed">{shot.reasoning}</p>
@@ -1641,7 +1807,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
           </div>
         )}
 
-        {reasoning && (
+        {reasoning && _isInsightfulReasoning(reasoning) && (
           <div className="pt-2 border-t border-zinc-800/60">
             <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Coach's read</p>
             <p className="text-[12px] text-zinc-300 leading-relaxed">{reasoning}</p>
