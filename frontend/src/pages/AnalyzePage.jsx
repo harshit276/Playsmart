@@ -345,6 +345,72 @@ export default function AnalyzePage() {
     }
   }, []);
 
+  // Restore the most-recent analysis on mount so a page refresh doesn't
+  // wipe the user's session. The original videoFile (a Blob) isn't
+  // serializable so the slow-mo player on FormComparisonModal will
+  // gracefully fall back to its thumbnail + "re-upload" hint — but
+  // every other piece (shots, narrative, drills, references) is back.
+  // Cleared on every explicit "start new analysis" gesture below.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("playsmart_last_analysis");
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== "object" || !saved.result) return;
+      // Sanity check: must look like an analysis result.
+      if (!Array.isArray(saved.result.shots)) return;
+      // Honor stored sport so per-sport components don't fall back to badminton.
+      if (saved.sport) setSelectedSport(saved.sport);
+      setResult(saved.result);
+      setViewingHistorical(true);
+    } catch {
+      // ignore corrupt storage entries — they'll be overwritten on next save.
+    }
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist the latest analysis whenever it's set to something useful.
+  // We DON'T save while analyzing (would write intermediate partials),
+  // we DON'T save when result is null (handled by clearLastAnalysis
+  // helper below — null means "we wiped on purpose, don't restore"),
+  // and we cap localStorage at ~1.5 MB so a huge result with embedded
+  // thumbnails doesn't blow past quota.
+  useEffect(() => {
+    if (!result) return;
+    if (!Array.isArray(result.shots)) return;
+    try {
+      const payload = JSON.stringify({
+        result,
+        sport: result.sport || selectedSport || null,
+        savedAt: Date.now(),
+      });
+      if (payload.length < 1_500_000) {
+        localStorage.setItem("playsmart_last_analysis", payload);
+      } else {
+        // Strip thumbnails (data URLs are the biggest field) so we
+        // still save the analysis structure even on long sessions.
+        const slim = {
+          ...result,
+          shots: (result.shots || []).map((s) => ({ ...s, thumbnail: null })),
+        };
+        const slimPayload = JSON.stringify({
+          result: slim,
+          sport: result.sport || selectedSport || null,
+          savedAt: Date.now(),
+          _slim: true,
+        });
+        localStorage.setItem("playsmart_last_analysis", slimPayload);
+      }
+    } catch {
+      // ignore quota / serialization errors — persistence is best-effort.
+    }
+  }, [result, selectedSport]);
+
+  const clearLastAnalysisStorage = () => {
+    try { localStorage.removeItem("playsmart_last_analysis"); } catch {}
+  };
+
   const [targetPlayer, setTargetPlayer] = useState("auto");
   const [playerSelectorOpen, setPlayerSelectorOpen] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -682,6 +748,12 @@ export default function AnalyzePage() {
   const clearFile = () => {
     setFile(null);
     setResult(null);
+    // User is explicitly starting over → wipe the persisted analysis
+    // so a refresh doesn't restore a stale one. Other in-flight
+    // resets (errors, tab switches) deliberately don't wipe storage —
+    // those want refresh-to-recover behavior.
+    clearLastAnalysisStorage();
+    setViewingHistorical(false);
     setError(null);
     setTargetPlayer("auto");
     setPlayerSelectorOpen(false);
