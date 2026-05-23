@@ -3562,6 +3562,13 @@ async def analyze_video_stream_endpoint(
         TIMEOUT_SEC = 60.0
         shot_count = 0
         final_payload: dict | None = None
+        # Tracks whether the client actually received the complete event.
+        # Charging is gated on this — previously the spend lived in a
+        # `finally` and fired even when the client disconnected before
+        # seeing the result, so the user saw "analysis didn't complete"
+        # but tokens were still deducted. Now: yield first, set flag,
+        # charge in finally only if the flag is set.
+        complete_delivered = False
         try:
             while True:
                 if _time.time() - started > TIMEOUT_SEC:
@@ -3592,20 +3599,10 @@ async def analyze_video_stream_endpoint(
                     final_payload = item.get("result") or {}
                 elif kind == "error":
                     yield _sse_event({"phase": "error", "msg": str(item.get("msg", "unknown"))})
-        finally:
-            # Charge tokens only on success (mirrors the non-streaming
-            # endpoint's policy).
-            if final_payload and not is_guest:
-                try:
-                    # _spend_tokens expects positive amount; it negates
-                    # internally when applying the delta.
-                    await _spend_tokens(
-                        user["id"], "analysis_spend", analysis_cost,
-                        {"endpoint": "analyze-video-stream", "tier": tier},
-                    )
-                except Exception:
-                    pass
 
+            # Deliver the complete event INSIDE the try, so if the client
+            # disconnected mid-stream the yield raises GeneratorExit and
+            # complete_delivered stays False → no charge.
             if final_payload is not None:
                 events = final_payload.get("events") or []
                 yield _sse_event({
@@ -3619,6 +3616,20 @@ async def analyze_video_stream_endpoint(
                     "overall_skill_level": final_payload.get("overall_skill_level"),
                     "_meta": final_payload.get("_meta", {}),
                 })
+                complete_delivered = True
+        finally:
+            # Charge ONLY if the user actually received the complete
+            # event. Disconnect mid-analysis, timeout, error events, and
+            # other partial-failure paths all leave complete_delivered
+            # = False → no charge.
+            if complete_delivered and not is_guest:
+                try:
+                    await _spend_tokens(
+                        user["id"], "analysis_spend", analysis_cost,
+                        {"endpoint": "analyze-video-stream", "tier": tier},
+                    )
+                except Exception:
+                    pass
 
     return StreamingResponse(
         _stream(),
