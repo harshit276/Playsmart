@@ -29,6 +29,7 @@ import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
 import GeminiDebugPanel from "@/components/GeminiDebugPanel";
+import CoachNarrativeCard from "@/components/CoachNarrativeCard";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -1121,6 +1122,10 @@ export default function AnalyzePage() {
               sport_detected: final.sport_detected,
               summary: final.summary,
               overall_skill_level: final.overall_skill_level,
+              // The multi-paragraph coach voice — rendered prominently at
+              // the top of the analyze result so users see the same
+              // Gemini-grade narrative they would in Gemini Studio.
+              coach_narrative: final.coach_narrative || {},
               events: final.events || final.shots || [],
               _meta: { ...(final._meta || {}), streamed: true },
             };
@@ -1162,6 +1167,9 @@ export default function AnalyzePage() {
           // non-stream path's. Both should ride through unchanged.
           _meta: data?._meta || null,
           _debug: data?._debug || data?._meta || null,
+          // The Gemini-Studio-grade narrative paragraphs. Top-of-page
+          // CoachNarrativeCard renders these verbatim.
+          coach_narrative: data?.coach_narrative || null,
           sport: data?.sport_detected || "unknown",
           skill_level: data?.overall_skill_level || "Intermediate",
           quick_summary: data?.summary || "",
@@ -3006,6 +3014,15 @@ export default function AnalyzePage() {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {/* Coach's full read — the Gemini-Studio-grade multi-paragraph
+            narrative (intro / strengths / improvements / takeaway). This
+            is the FIRST thing the user sees after the universal-mode
+            banner so the rich coach voice is the lead, not buried under
+            metric tiles. Renders nothing if Gemini returned empty. */}
+        {result?.coach_narrative && (
+          <CoachNarrativeCard narrative={result.coach_narrative} />
         )}
 
         {/* Debug panel — visible with ?debug=1 or localStorage.playsmart_debug=true.
