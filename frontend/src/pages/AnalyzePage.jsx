@@ -408,30 +408,77 @@ export default function AnalyzePage() {
   const [liveShots, setLiveShots] = useState([]);
 
   // Restore the most-recent analysis on mount so a page refresh doesn't
-  // wipe the user's session. The original videoFile (a Blob) isn't
-  // serializable so the slow-mo player on FormComparisonModal will
-  // gracefully fall back to its thumbnail + "re-upload" hint — but
-  // every other piece (shots, narrative, drills, references) is back.
-  // Cleared on every explicit "start new analysis" gesture (clearFile).
+  // wipe the user's session. We restore in TWO layers:
+  //   1. The analysis result (text JSON) from localStorage — always.
+  //   2. The original videoFile (Blob) from IndexedDB — when present.
+  //
+  // When the video IS restored, we DO NOT mark viewingHistorical — the
+  // session behaves like a live upload, so the FormComparisonModal's
+  // slow-mo player works after refresh. When the video is missing or
+  // expired (>1h since last upload), we fall back to viewingHistorical
+  // mode and the modal shows the honest "re-upload" hint.
+  //
   // IMPORTANT — must be declared AFTER all useState calls above; we
   // hit a TDZ-via-React (blank page on /analyze) the first time this
   // was placed earlier in the file because `setResult` / `result` /
   // `setViewingHistorical` weren't initialized yet at that point.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("playsmart_last_analysis");
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (!saved || typeof saved !== "object" || !saved.result) return;
-      if (!Array.isArray(saved.result.shots)) return;
-      if (saved.sport) setSelectedSport(saved.sport);
-      setResult(saved.result);
-      setViewingHistorical(true);
-    } catch {
-      // ignore corrupt storage entries
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = localStorage.getItem("playsmart_last_analysis");
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (cancelled) return;
+        if (!saved || typeof saved !== "object" || !saved.result) return;
+        if (!Array.isArray(saved.result.shots)) return;
+        if (saved.sport) setSelectedSport(saved.sport);
+        setResult(saved.result);
+
+        // Try to rehydrate the original video from IndexedDB. If it's
+        // there and not expired, we get the full slow-mo experience
+        // back; otherwise we degrade gracefully to historical mode.
+        try {
+          const vs = await import("@/lib/videoStore");
+          const cached = await vs.loadVideo();
+          if (cancelled) return;
+          if (cached?.file) {
+            setFile(cached.file);
+            setViewingHistorical(false);
+          } else {
+            setViewingHistorical(true);
+          }
+        } catch {
+          if (!cancelled) setViewingHistorical(true);
+        }
+      } catch {
+        // ignore corrupt storage entries
+      }
+    })();
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Cache the actual video Blob in IndexedDB whenever we have both a
+  // file AND a successful result. 1-hour TTL keeps storage bounded —
+  // long enough to cover the realistic "I refreshed mid-review" case
+  // without committing us to long-term video storage.
+  useEffect(() => {
+    if (!result || !file) return;
+    if (!Array.isArray(result.shots)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const vs = await import("@/lib/videoStore");
+        if (cancelled) return;
+        await vs.saveVideo(file, 60 * 60 * 1000);
+      } catch {
+        // Storage is best-effort — quota exceeded / private mode just
+        // means the modal will need the re-upload hint after refresh.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [result, file]);
 
   // Persist the latest analysis whenever it changes to something useful.
   // Skips null/empty results; clips payloads near 1.5 MB by stripping
@@ -742,11 +789,14 @@ export default function AnalyzePage() {
   const clearFile = () => {
     setFile(null);
     setResult(null);
-    // User is explicitly starting over → wipe the persisted analysis
-    // so a refresh doesn't restore a stale one. Other in-flight
-    // resets (errors, tab switches) deliberately don't wipe storage —
-    // those want refresh-to-recover behavior.
+    // User is explicitly starting over → wipe BOTH the persisted
+    // analysis result (localStorage) AND the cached video blob
+    // (IndexedDB). Other in-flight resets (errors, tab switches)
+    // deliberately don't wipe — those want refresh-to-recover.
     try { localStorage.removeItem("playsmart_last_analysis"); } catch {}
+    import("@/lib/videoStore")
+      .then((vs) => vs.purgeVideo())
+      .catch(() => { /* storage purge is best-effort */ });
     setViewingHistorical(false);
     setError(null);
     setTargetPlayer("auto");

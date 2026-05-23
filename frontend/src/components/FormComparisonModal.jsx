@@ -68,21 +68,61 @@ export default function FormComparisonModal({
   const [videoError, setVideoError] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
 
-  const hasUserVideo = !!videoFile
+  // Fallback video sourced from IndexedDB. We try this when the parent
+  // didn't pass a videoFile prop (typical after a refresh: AnalyzePage
+  // restored the analysis result from localStorage but the live `file`
+  // state is null until the IndexedDB hydrate completes — or the
+  // hydrate itself failed). When set, this file feeds the same player
+  // pipeline as a fresh upload would.
+  const [fallbackFile, setFallbackFile] = useState(null);
+  const [fallbackMeta, setFallbackMeta] = useState(null); // {savedAt, expiresAt}
+
+  // Resolve which file actually drives the player — prop wins, fallback
+  // only kicks in when prop is missing.
+  const effectiveVideoFile = videoFile || fallbackFile;
+  const hasUserVideo = !!effectiveVideoFile
     && typeof timestamp === "number"
     && Number.isFinite(timestamp);
   const hasPro = !!proReference?.youtube_id;
+
+  // ── IndexedDB fallback hydrate ──────────────────────────────────────
+  // Only fires when the modal opens and the parent didn't pass a
+  // videoFile. Single shot — once we have a fallback file (or confirm
+  // there isn't one), we stop trying.
+  useEffect(() => {
+    if (!open) {
+      setFallbackFile(null);
+      setFallbackMeta(null);
+      return undefined;
+    }
+    if (videoFile) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const vs = await import("@/lib/videoStore");
+        const cached = await vs.loadVideo();
+        if (cancelled) return;
+        if (cached?.file) {
+          setFallbackFile(cached.file);
+          setFallbackMeta({ savedAt: cached.savedAt, expiresAt: cached.expiresAt });
+        }
+      } catch {
+        // Best-effort — fall through to the "re-upload" empty state.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, videoFile]);
 
   // ── Object URL lifecycle ─────────────────────────────────────────────
   // We deliberately use useState (not useMemo) so the cleanup runs at
   // the right time and doesn't double-revoke. Pattern: create on open,
   // revoke on close OR unmount.
   useEffect(() => {
-    if (!open || !videoFile) {
+    if (!open || !effectiveVideoFile) {
       setUserVideoUrl(null);
       return undefined;
     }
-    const url = URL.createObjectURL(videoFile);
+    const url = URL.createObjectURL(effectiveVideoFile);
     objectUrlRef.current = url;
     setUserVideoUrl(url);
     setVideoReady(false);
@@ -93,7 +133,7 @@ export default function FormComparisonModal({
         objectUrlRef.current = null;
       }
     };
-  }, [open, videoFile]);
+  }, [open, effectiveVideoFile]);
 
   // ── Loop setup ───────────────────────────────────────────────────────
   // Runs only when the SOURCE of the loop changes (videoUrl + timestamp).
@@ -331,8 +371,17 @@ export default function FormComparisonModal({
                   <p className="text-[9px] uppercase tracking-wider text-sky-300 font-bold">You</p>
                 </div>
                 {hasUserVideo && videoReady && (
-                  <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded-md px-2 py-0.5">
-                    <p className="text-[9px] uppercase tracking-wider text-lime-300 font-bold">{speed}× slow-mo</p>
+                  <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+                    <div className="bg-black/70 backdrop-blur-sm rounded-md px-2 py-0.5">
+                      <p className="text-[9px] uppercase tracking-wider text-lime-300 font-bold">{speed}× slow-mo</p>
+                    </div>
+                    {fallbackFile && !videoFile && fallbackMeta?.expiresAt && (
+                      <div className="bg-black/70 backdrop-blur-sm rounded-md px-2 py-0.5 border border-sky-400/40">
+                        <p className="text-[9px] uppercase tracking-wider text-sky-300 font-bold" title="Restored from your browser's local cache">
+                          ⟲ Cached · {_minutesUntil(fallbackMeta.expiresAt)}m left
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -510,9 +559,14 @@ export default function FormComparisonModal({
           {!hasUserVideo && (
             <div className="bg-amber-400/5 border border-amber-400/30 rounded-lg p-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-amber-200/90 leading-snug">
-                We don't have the original video for this session. Open the analysis from a fresh upload to use the slow-motion player on the left.
-              </p>
+              <div className="flex-1">
+                <p className="text-[11px] text-amber-200/90 leading-snug">
+                  The slow-motion replay needs the original video file. Your last upload was more than an hour ago (local cache TTL), so it's already cleared from this browser.
+                </p>
+                <p className="text-[10px] text-zinc-500 leading-snug mt-1">
+                  Re-upload the clip to enable side-by-side replay. The analysis you're reading is preserved.
+                </p>
+              </div>
             </div>
           )}
 
@@ -531,7 +585,7 @@ export default function FormComparisonModal({
             {showDetail && (
               <div className="px-3 pb-3">
                 <TechnicalDetailLazy
-                  videoFile={videoFile}
+                  videoFile={effectiveVideoFile}
                   timestamp={timestamp}
                   sport={sport}
                   shotType={shotType}
@@ -545,6 +599,16 @@ export default function FormComparisonModal({
       </motion.div>
     </div>
   );
+}
+
+// Floor-rounded minutes until the timestamp (or 0 when in the past).
+// Used by the "Cached · Nm left" pill so users know how much longer
+// the slow-mo player will still work after a refresh.
+function _minutesUntil(ts) {
+  if (!ts || typeof ts !== "number") return 0;
+  const diff = ts - Date.now();
+  if (diff <= 0) return 0;
+  return Math.max(1, Math.floor(diff / 60000));
 }
 
 function TechnicalDetailLazy({ videoFile, timestamp, sport, shotType, shotName, userThumbnail }) {
