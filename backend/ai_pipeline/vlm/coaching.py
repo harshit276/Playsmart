@@ -523,6 +523,31 @@ def analyze_video_full(
         f"Practice clips against a wall, robot, or feeder coach are never "
         f"serves. When uncertain, classify as a drive and set confidence "
         f"< 0.7 — never invent a serve.\n\n"
+        + (
+            # Badminton-only — the most common misclassification in
+            # practice is calling a flat DRIVE a "clear" because both
+            # can travel deep. The contact HEIGHT and shuttle TRAJECTORY
+            # are the only reliable disambiguators; lock the model onto
+            # them.
+            (
+              f"CRITICAL — DRIVE vs CLEAR (badminton):\n"
+              f"These two are the most-commonly-confused shots. Use this exact rule:\n"
+              f"  • CLEAR: contact happens ABOVE THE HEAD with the racket arm "
+              f"fully extended UP; shuttle then arcs HIGH (peaks well above the "
+              f"players, often near the ceiling for indoor footage) and lands "
+              f"in the back court. No high arc = NOT a clear.\n"
+              f"  • DRIVE: contact at SHOULDER/CHEST height with a short, "
+              f"punchy forearm whip; shuttle stays FLAT and travels horizontally "
+              f"just over the net. Used in fast mid-court rallies. Flat "
+              f"trajectory = drive even if it reaches the back court.\n"
+              f"In any flat exchange or drill where players are facing each "
+              f"other at the mid-court and trading shots at shoulder level, "
+              f"the shots are DRIVES — do not label them clears just because "
+              f"they travel deep.\n\n"
+            ) if sport == "badminton" else ""
+          )
+        +
+        f""
         f"CRITICAL — ONE SWING = ONE SHOT:\n"
         f"A single physical shot has a windup, contact, and follow-through "
         f"that span 0.5-2 seconds. Report each physical swing AS ONE SHOT, "
@@ -757,7 +782,18 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         "drills against a wall, robot, or coach feeding shots are NEVER "
         "serves even if they look like the rally start. When in doubt, "
         "classify as a drive/stroke and put `confidence < 0.7` so the "
-        "user knows it's tentative — do not invent a serve.\n"
+        "user knows it's tentative — do not invent a serve.\n\n"
+        "CRITICAL — FLAT-EXCHANGE DRILLS ARE DRIVES, NOT CLEARS:\n"
+        "If you see two players (or a player and a feeder) trading shots "
+        "at SHOULDER/CHEST height with FLAT shuttle trajectory just over "
+        "the net — that is a flat drive exchange drill. Every shot in it "
+        "is a DRIVE (or forehand_drive / backhand_drive). It is NOT a "
+        "clear. A CLEAR requires contact ABOVE THE HEAD with the racket "
+        "arm fully extended UP, and the shuttle then arcs HIGH (peaks "
+        "well above the players) into the back court. No high arc + no "
+        "overhead contact = NOT a clear, even if the shuttle eventually "
+        "reaches a deep landing zone. Use the actual shuttle path, not "
+        "the landing depth, to decide.\n"
         f"{box_hint}\n\n"
         "Respond with valid JSON ONLY (no markdown):\n"
         '{\n'
@@ -867,9 +903,14 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
     s = str(category_raw or "").strip().lower().replace("-", "_").replace(" ", "_")
     s = "".join(ch for ch in s if ch.isalnum() or ch == "_").strip("_") or "unknown"
     if sport_vocab and s not in sport_vocab:
-        match = next((v for v in sport_vocab if v in s or s in v), None)
-        if match:
-            s = match
+        # Prefer the LONGEST vocab term that's a substring of `s` (or
+        # vice versa). Previously this took the first match, which for
+        # a Gemini label like "drive_clear" (a flat drive that goes
+        # deep) collapsed to "clear" because "clear" appears earlier in
+        # the badminton vocab. Longest-match → "drive" wins.
+        candidates = [v for v in sport_vocab if v in s or s in v]
+        if candidates:
+            s = max(candidates, key=len)
     shot_category = s
     shot_label = str(e.get("shot_label") or e.get("event_type") or shot_category)[:120].strip()
     intent = str(e.get("intent", "neutral")).strip().lower()

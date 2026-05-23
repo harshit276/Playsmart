@@ -26,11 +26,11 @@ SHOT_VOCAB: dict[str, list[str]] = {
 # Concise — these go in every prompt, so they cost tokens.
 SHOT_DEFINITIONS: dict[str, dict[str, str]] = {
     "badminton": {
-        "clear":    "Overhead shot, racket arcs UP, shuttle goes high and deep to opponent's back court.",
+        "clear":    "Overhead OVERHEAD shot only — contact happens ABOVE the head with the racket arm fully extended UP. Shuttle then ARCS HIGH (peaks above 5m) and lands deep in the opponent's back court. If contact is at shoulder height or the shuttle stays low/flat over the net, this is NOT a clear.",
         "drop":     "Overhead shot, soft touch, shuttle drops gently just over the net to opponent's front court.",
         "smash":    "Overhead shot, racket arcs DOWN sharply, shuttle goes fast and steeply downward.",
         "net_shot": "Played near the net, racket head up, gentle wrist tap, shuttle just clears net.",
-        "drive":    "Flat horizontal shot at shoulder height, fast forearm whip, racket in front of body.",
+        "drive":    "FLAT shoulder-height shot — contact at shoulder/chest level with a SHORT punchy forearm whip. Shuttle travels HORIZONTALLY over the net (never arcs high). Used in fast mid-court exchanges. If the racket stays in front of the body and the shuttle flies flat, it's a drive — even if the shuttle eventually reaches the back court.",
         "serve":    "Service motion, contact below the waist, used to start the rally.",
         "lift":     "Underarm shot, racket scoops shuttle UP and back to opponent's back court (defensive).",
         "block":    "Soft defensive return at the net, almost no swing — letting the shuttle rebound.",
