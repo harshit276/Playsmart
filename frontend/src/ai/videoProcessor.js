@@ -1970,6 +1970,74 @@ export async function compressVideoForUpload(videoFile, options = {}) {
 }
 
 
+/**
+ * compressUnderSize — wraps compressVideoForUpload with a retry ladder
+ * so the output is guaranteed to fit under `targetBytes` (or we throw a
+ * specific, helpful error).
+ *
+ * Why this exists:
+ *   compressVideoForUpload's skipBelowBytes default (15 MB) means small
+ *   phone clips (5-12 MB) bypass compression entirely and get returned
+ *   as-is. That's correct for Vercel's 25 MB raw cap, but breaks for
+ *   the analyze endpoints which have a 4-4.5 MB body cap. And even when
+ *   compression DOES run, the bitrate is a target, not a guarantee —
+ *   high-motion content can overshoot by 30-50%.
+ *
+ * Strategy:
+ *   1. First attempt at the caller's preferred preset, but with
+ *      skipBelowBytes forced to targetBytes (so anything over the cap
+ *      gets compressed, no exceptions).
+ *   2. If still over target, retry at progressively tighter rungs:
+ *      - 90% bitrate, same dims/duration
+ *      - 70% bitrate, 0.8x maxDim
+ *      - 50% bitrate, 0.66x maxDim, 0.8x duration
+ *   3. After all rungs, throw with a clear "trim this clip" message
+ *      that includes the actual size + the cap.
+ */
+export async function compressUnderSize(videoFile, targetBytes, options = {}) {
+  const {
+    maxDim = 480,
+    bitrate = 800_000,
+    maxDurationSec = 30,
+    onProgress,
+  } = options;
+
+  const rungs = [
+    { maxDim, bitrate, maxDurationSec },
+    { maxDim, bitrate: Math.round(bitrate * 0.7), maxDurationSec },
+    { maxDim: Math.round(maxDim * 0.8), bitrate: Math.round(bitrate * 0.5), maxDurationSec },
+    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.4), maxDurationSec: Math.max(10, Math.round(maxDurationSec * 0.8)) },
+  ];
+
+  let best = null;
+  for (let i = 0; i < rungs.length; i++) {
+    const r = rungs[i];
+    // Forced compression: don't skip for files between targetBytes and 15 MB.
+    // We also forward onProgress on the FIRST attempt only — re-firing 0→100
+    // for each retry confuses the UI.
+    const result = await compressVideoForUpload(videoFile, {
+      ...r,
+      skipBelowBytes: targetBytes,
+      onProgress: i === 0 ? onProgress : undefined,
+    });
+    if (!best || result.size < best.size) best = result;
+    if (result.size <= targetBytes) {
+      if (i > 0) console.info(`[compress-fit] fit on rung ${i + 1}/${rungs.length} (${(result.size / 1024).toFixed(0)} KB)`);
+      return result;
+    }
+    console.warn(`[compress-fit] rung ${i + 1} overshot: ${(result.size / 1024).toFixed(0)} KB > ${(targetBytes / 1024).toFixed(0)} KB — retrying tighter`);
+  }
+
+  // Every rung overshot. Surface a specific, actionable error.
+  const sizeMb = (best?.size || videoFile.size) / 1024 / 1024;
+  const capMb = targetBytes / 1024 / 1024;
+  const e = new Error(`Even at lowest quality, the clip is ${sizeMb.toFixed(1)} MB (cap ${capMb.toFixed(1)} MB). Trim to ~15 seconds and try again.`);
+  e.code = "COMPRESSION_OVERSHOOT";
+  e.bestResult = best;
+  throw e;
+}
+
+
 export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox, options = {}) {
   if (!peakTimes || peakTimes.length === 0) return [];
   const { maxDim = 180, jpegQuality = 0.7, expandFactor = 1.5 } = options;
