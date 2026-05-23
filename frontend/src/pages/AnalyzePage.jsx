@@ -28,6 +28,7 @@ import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
+import GeminiDebugPanel from "@/components/GeminiDebugPanel";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -1163,6 +1164,12 @@ export default function AnalyzePage() {
           _universal: true,
           _target_player_description: targetDesc,
           _target_player_thumbnail: options.universalPick?.thumbnail || null,
+          // Forward the backend's debug surface so the in-app debug
+          // panel can show raw Gemini output + filtered/dropped counts.
+          // _meta is the stream path's debug carrier; _debug is the
+          // non-stream path's. Both should ride through unchanged.
+          _meta: data?._meta || null,
+          _debug: data?._debug || data?._meta || null,
           sport: data?.sport_detected || "unknown",
           skill_level: data?.overall_skill_level || "Intermediate",
           quick_summary: data?.summary || "",
@@ -3007,6 +3014,13 @@ export default function AnalyzePage() {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {/* Debug panel — visible with ?debug=1 or localStorage.playsmart_debug=true.
+            Shows raw Gemini output + filtered/dropped event counts so
+            "missing shots" can be triaged in-app. */}
+        {result?.shots && (
+          <GeminiDebugPanel result={result} />
         )}
 
         {/* ── Coach's read of the session — lead with a Gemini-style

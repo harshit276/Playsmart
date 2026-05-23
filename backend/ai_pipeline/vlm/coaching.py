@@ -915,16 +915,25 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
 
 
 def _belongs_to_target(e: dict, target_player_description: str | None) -> bool:
-    """Belt-and-suspenders filter — even with strict prompt rules, Gemini
-    sometimes ignores them and emits opponent shots in 2-player clips. We
-    look at reasoning + description and require it to mention the target
-    person OR a self-referential cue ('the player', 'they', 'their racket').
-    If we have a target description with concrete tokens (colors, names,
-    positions), require at least one of those tokens to appear too.
+    """Belt-and-suspenders filter to drop shots Gemini clearly attributes
+    to the opponent.
 
-    Returns True when the event is plausibly the target's. Permissive on
-    purpose — only the most-obvious "opponent attacks target" wording gets
-    filtered out.
+    PHILOSOPHY — trust Gemini's own filter at the source. The prompt
+    already instructs Gemini to ONLY include events from the target
+    person. The previous version of this function ALSO required Gemini's
+    per-shot reasoning to literally contain an anchor word from the
+    target description (e.g. "blue", "near"). That second gate dropped
+    most events in the wild — for default auto-descriptions like
+    "the player closest to the camera (foreground)", every token gets
+    filtered out except "(foreground)", and Gemini's reasoning almost
+    never says "foreground" verbatim → ALL events dropped.
+
+    Result: users uploaded clips with N real shots and saw 1 in the UI.
+
+    The new shape: only drop events whose reasoning EXPLICITLY says
+    "opponent hit this" (or similar). Anything else passes — we'd
+    rather show a few opponent shots that slip through than silently
+    drop the user's whole session.
     """
     if not target_player_description:
         return True  # No filter active
@@ -934,7 +943,9 @@ def _belongs_to_target(e: dict, target_player_description: str | None) -> bool:
     ]).lower()
     if not text:
         return True  # nothing to filter against, give benefit of the doubt
-    # Drop obvious opponent-shot phrasings
+
+    # Hard-reject only the most explicit opponent-shot phrasings. Casting
+    # this list narrowly on purpose: we are deliberately permissive now.
     opponent_markers = [
         "opponent hits", "opponent's smash", "opponent smash",
         "opponent kills", "opponent's kill", "from the opponent",
@@ -945,19 +956,9 @@ def _belongs_to_target(e: dict, target_player_description: str | None) -> bool:
     for marker in opponent_markers:
         if marker in text:
             return False
-    # Look for affirmative target tokens (color/name/position words from the
-    # target description). E.g. "the player in the blue shirt" → ["blue", "shirt"].
-    tokens = [t for t in target_player_description.lower().split() if len(t) >= 4]
-    # Filter out generic English filler words that don't disambiguate
-    skip = {"the", "player", "person", "with", "who", "wearing", "shirt",
-            "shorts", "near", "court", "side", "center", "foreground",
-            "background", "closest", "camera", "court", "patterned"}
-    tokens = [t for t in tokens if t not in skip]
-    if not tokens:
-        return True  # description was all generic — no concrete anchor
-    # If we have anchor tokens (colors, names), require at least one to
-    # appear in the reasoning/description.
-    return any(tok in text for tok in tokens)
+
+    # No positive anchor-token requirement anymore (see PHILOSOPHY above).
+    return True
 
 
 def _normalize_universal_event(e: dict, sport_vocab: list, target_player_description: str | None = None) -> dict | None:
@@ -1161,11 +1162,20 @@ def analyze_video_universal(
             "confidence": conf,
             "skill_level": skill,
         })
+    raw_events_total = len(data.get("events") or [])
     return {
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
         "events": events_out,
+        # Debug surface for the in-app debug panel — see stream variant.
+        "_debug": {
+            "raw_gemini_response": (raw or "")[:32000],
+            "raw_event_count": raw_events_total,
+            "filtered_event_count": len(events_out),
+            "events_dropped": max(0, raw_events_total - len(events_out)),
+            "target_player_description": target_player_description,
+        },
         "_meta": {
             "backend": backend_obj.name, "model": backend_obj.model_name,
             "video_bytes": len(video_bytes), "mime_type": mime_type,
@@ -1366,6 +1376,12 @@ def stream_analyze_video_universal(
         for idx, ev in enumerate(events_out):
             yield {"kind": "shot", "event": ev, "index": idx}
 
+    # Pre-filter count from Gemini's raw output — so the debug panel can
+    # show "Gemini returned 12, we kept 11" when the target filter
+    # rejected a shot for being explicitly opponent-attributed. Helps
+    # diagnose "why are there fewer shots in the UI than Gemini saw?"
+    raw_events_total = len(data.get("events") or [])
+
     payload = {
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
@@ -1379,6 +1395,14 @@ def stream_analyze_video_universal(
             "mode": "universal_stream",
             "tier": tier,
             "stream_incremental_emits": len(emitted_indices),
+            # Debug surface — lets the user verify in-app what Gemini
+            # actually returned vs what made it through our pipeline.
+            # Capped to ~32 KB to keep the response payload sane.
+            "raw_gemini_response": (raw_buffer or "")[:32000],
+            "raw_event_count": raw_events_total,
+            "filtered_event_count": len(events_out),
+            "events_dropped": max(0, raw_events_total - len(events_out)),
+            "target_player_description": target_player_description,
         },
     }
     yield {"kind": "complete", "result": payload}
