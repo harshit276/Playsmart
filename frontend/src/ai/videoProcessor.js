@@ -1788,10 +1788,20 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     bitrate = 800_000,
     maxDurationSec = 30,
     onProgress,
+    // Skip compression for any file below this size — modern phones produce
+    // 6-12 MB for a short clip, well under Vercel's 25 MB cap. Compression
+    // was the SLOWEST step (50s+ for a 17s clip via canvas seek-loop), and
+    // most of the time it wasn't even saving meaningful bytes. Raised from
+    // 3 MB → 15 MB.
+    skipBelowBytes = 15 * 1024 * 1024,
   } = options;
 
-  // Quick exit: if file is already small, skip the work.
-  if (videoFile.size <= 3 * 1024 * 1024) return videoFile;
+  // Fast exit: file is already small enough — Vercel accepts up to 25 MB.
+  // For nearly all phone-recorded short clips this returns immediately.
+  if (videoFile.size <= skipBelowBytes) {
+    if (onProgress) onProgress(100);
+    return videoFile;
+  }
 
   // Feature detect — MediaRecorder + captureStream are needed
   if (typeof window === "undefined" || !window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
@@ -1840,19 +1850,22 @@ export async function compressVideoForUpload(videoFile, options = {}) {
   const outW = Math.max(2, Math.round(vw * scale / 2) * 2);  // even
   const outH = Math.max(2, Math.round(vh * scale / 2) * 2);
 
+  // ── Strategy A (FAST): playbackRate-based real-time-x4 capture ─────
+  // The old seek-loop strategy did 340 seeks for a 17s video — each
+  // seek-and-decode took 100-300ms in Chrome = ~50s of wall time for a
+  // 17s video. The new strategy plays the video at 4x speed and records
+  // the canvas in real time. Wall time: duration_sec / playback_rate ≈
+  // 4-8s for a 30s source. Frames are drawn via requestAnimationFrame
+  // (paced by the video itself, not manual seeking).
+  const PLAYBACK_RATE = 4.0;
   const canvas = document.createElement("canvas");
   canvas.width = outW;
   canvas.height = outH;
   const ctx = canvas.getContext("2d");
 
-  // captureStream gives us a MediaStream of canvas redraws
-  const stream = canvas.captureStream(0);  // 0 = manual frame requests
-  const track = stream.getVideoTracks()[0];
-  // Some browsers require requestFrame() to push frames manually
-  const requestFrame = (track && typeof track.requestFrame === "function")
-    ? track.requestFrame.bind(track)
-    : null;
-
+  // captureStream(fps) — give the stream a target frame rate so the
+  // recorder doesn't starve when the video element pauses for buffering.
+  const stream = canvas.captureStream(20);
   const recorder = new window.MediaRecorder(stream, {
     mimeType,
     videoBitsPerSecond: bitrate,
@@ -1860,27 +1873,89 @@ export async function compressVideoForUpload(videoFile, options = {}) {
   const chunks = [];
   recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
 
-  const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
-  recorder.start(200);
+  // Try the fast playbackRate path first; fall back to the seek-loop only
+  // if the browser refuses to honor playbackRate > 2 (some Android setups).
+  let fastPathOk = true;
+  try {
+    video.playbackRate = PLAYBACK_RATE;
+    // Some browsers silently cap playbackRate. Read it back to confirm.
+    if (video.playbackRate < PLAYBACK_RATE - 0.1) {
+      console.warn(`[compress] playbackRate capped at ${video.playbackRate} — slower compression path`);
+      fastPathOk = false;
+    }
+  } catch {
+    fastPathOk = false;
+  }
 
-  // Walk through the video and draw frames at ~20 fps to the canvas.
-  const fps = 20;
-  const step = 1 / fps;
-  for (let t = 0; t < duration; t += step) {
+  if (fastPathOk) {
+    recorder.start(200);
+    let rafId = null;
+    let lastDrawnTime = -1;
+    const drawLoop = () => {
+      if (video.ended || video.currentTime >= duration) return;
+      const t = video.currentTime;
+      if (t !== lastDrawnTime) {
+        try { ctx.drawImage(video, 0, 0, outW, outH); } catch {}
+        lastDrawnTime = t;
+        if (onProgress) onProgress(Math.min(99, Math.round((t / duration) * 100)));
+      }
+      rafId = requestAnimationFrame(drawLoop);
+    };
+    const playEnded = new Promise((resolve) => {
+      const finish = () => { resolve(); };
+      video.addEventListener("ended", finish, { once: true });
+      // Defensive timeout: cap at 2x the expected (4x-speed) wall time so a
+      // stuck video doesn't hang the upload forever.
+      setTimeout(finish, Math.max(15000, (duration / PLAYBACK_RATE) * 2000));
+    });
     try {
-      video.currentTime = t;
-      await _waitForEvent(video, "seeked", 1500);
-      ctx.drawImage(video, 0, 0, outW, outH);
-      if (requestFrame) requestFrame();
-      if (onProgress) onProgress(Math.round((t / duration) * 100));
-    } catch {
-      // skip frames we can't decode
+      await video.play();
+      drawLoop();
+      // Also auto-stop when we cross the duration cap (in case the source
+      // is longer than maxDurationSec and `ended` never fires within our window)
+      const hitCap = new Promise((resolve) => {
+        const check = () => {
+          if (video.currentTime >= duration - 0.05 || video.ended) resolve();
+          else setTimeout(check, 100);
+        };
+        check();
+      });
+      await Promise.race([playEnded, hitCap]);
+    } catch (err) {
+      console.warn("[compress] playbackRate path failed:", err);
+      fastPathOk = false;
+    } finally {
+      if (rafId) cancelAnimationFrame(rafId);
+      try { video.pause(); } catch {}
     }
   }
 
+  if (!fastPathOk) {
+    // ── Strategy B (SLOW FALLBACK): seek-loop @ 15 fps ────────────────
+    // Reduced from 20 → 15 fps to cut wall-time by 25% while staying
+    // visually adequate for AI analysis (Gemini samples at 3 fps anyway).
+    const track = stream.getVideoTracks()[0];
+    const requestFrame = (track && typeof track.requestFrame === "function")
+      ? track.requestFrame.bind(track)
+      : null;
+    recorder.start(200);
+    const fps = 15;
+    const step = 1 / fps;
+    for (let t = 0; t < duration; t += step) {
+      try {
+        video.currentTime = t;
+        await _waitForEvent(video, "seeked", 1500);
+        ctx.drawImage(video, 0, 0, outW, outH);
+        if (requestFrame) requestFrame();
+        if (onProgress) onProgress(Math.round((t / duration) * 100));
+      } catch { /* skip undecodable frames */ }
+    }
+  }
+
+  const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
   recorder.stop();
   await stopped;
-  try { track && track.stop(); } catch {}
+  try { stream.getTracks().forEach((t) => t.stop()); } catch {}
   URL.revokeObjectURL(objectUrl);
 
   const outBlob = new Blob(chunks, { type: mimeType });
@@ -1888,8 +1963,8 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     console.warn(`[compress] no win (${outBlob.size} >= ${videoFile.size}) — sending original`);
     return videoFile;
   }
-  console.info(`[compress] ${(videoFile.size / 1024).toFixed(0)} KB -> ${(outBlob.size / 1024).toFixed(0)} KB (${outW}x${outH} @ ${bitrate / 1000} kbps)`);
-  // Give the blob a filename + content type that looks like a file
+  console.info(`[compress] ${(videoFile.size / 1024).toFixed(0)} KB -> ${(outBlob.size / 1024).toFixed(0)} KB (${outW}x${outH} @ ${bitrate / 1000} kbps, fast=${fastPathOk})`);
+  if (onProgress) onProgress(100);
   const ext = mimeType.startsWith("video/mp4") ? "mp4" : "webm";
   return new File([outBlob], `compressed.${ext}`, { type: mimeType });
 }
