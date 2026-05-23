@@ -16,11 +16,15 @@
  * narrative. No duplicated counts.
  */
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity, Award, AlertTriangle, Dumbbell, Clock, Play, ArrowRight, Sparkles } from "lucide-react";
+import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity, Award, AlertTriangle, Dumbbell, Clock, Play, ArrowRight, Sparkles, ScanFace } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 import PoseOverlayModal from "@/components/PoseOverlayModal";
+import CoachReplayModal from "@/components/CoachReplayModal";
+import SpeakTipButton from "@/components/SpeakTipButton";
+import ImprovementCards from "@/components/ImprovementCards";
+import CoachNoteOverlay from "@/components/CoachNoteOverlay";
 
 
 // "Coach's read" text quality gate. The VLM sometimes emits a purely
@@ -815,6 +819,13 @@ export default function MatchInsights({
             );
           })()}
 
+          {/* Priority Fixes — surfaces the top 2-3 actionable corrections
+              aggregated from per-shot feedback so the user gets the
+              "what should I work on?" answer up front, without scrolling
+              every individual card. Each fix is hearable + jumps the
+              video to a concrete example. */}
+          <ImprovementCards shots={perShot} sport={sport} maxCards={3} />
+
           {/* Per-shot AI coach cards. With ≤4 shots we list each one. With
               5+ we group by shot type so a 12-shot rally doesn't drown the
               user in 12 cards — show one aggregated card per type with an
@@ -1277,6 +1288,12 @@ function VideoPlayerWithMarkers({ playerUrl, perShot }) {
           playsInline
           className="w-full rounded-lg bg-black max-h-72 object-contain"
         />
+
+        {/* Coach Note overlay — floats over the video when a shot is
+            jumped to (best/worst shortcut, timeline marker, card click).
+            Shows the coach's one-line correction so the user reads it
+            in the same eyeline as the replay, not buried below.  */}
+        <CoachNoteOverlay shots={indexedShots} />
 
         {/* Chapter markers overlay — pinned to the bottom of the video
             box so they sit just above the native controls' progress bar.
@@ -1906,6 +1923,7 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
+  const [coachReplayOpen, setCoachReplayOpen] = useState(false);
   // Bidirectional link: card highlights briefly when video plays past
   // this shot's timestamp OR when the user clicks a marker / shortcut.
   const [pulsing, setPulsing] = useState(false);
@@ -2108,8 +2126,20 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
       <div className="p-3 space-y-3">
         {headlineFix && (
           <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
-            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
-            <p className="text-sm text-white leading-snug">{headlineFix}</p>
+            <div className="flex items-start gap-2">
+              <div className="flex-1">
+                <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
+                <p className="text-sm text-white leading-snug">{headlineFix}</p>
+              </div>
+              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <SpeakTipButton
+                  text={headlineFix}
+                  prefix={`On your ${(cleanLabel || "shot").toLowerCase()},`}
+                  size="xs"
+                  label="Listen"
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -2149,14 +2179,34 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
         )}
 
 
-        {proRef && (
+        {(proRef || hasTimestamp || shot.thumbnail) && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-            <button
-              onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-            </button>
+            {hasTimestamp && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setCoachReplayOpen(true); }}
+                title="Replay this shot with the green ideal-pose ghost overlaid at the contact frame"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-300 hover:text-lime-200 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Activity className="w-3 h-3" /> Coach replay
+              </button>
+            )}
+            {shot.thumbnail && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setPoseOpen(true); }}
+                title="Show pose skeleton + joint angles on the contact frame"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-300 hover:text-sky-200 bg-sky-400/10 border border-sky-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <ScanFace className="w-3 h-3" /> Pose check
+              </button>
+            )}
+            {proRef && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -2174,6 +2224,16 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
         sport={sport}
         shotType={shot.type}
         shotName={cleanLabel}
+      />
+      <CoachReplayModal
+        open={coachReplayOpen}
+        onClose={() => setCoachReplayOpen(false)}
+        videoFile={typeof window !== "undefined" ? window.__playsmartCurrentVideo : null}
+        timestamp={shot.timestamp}
+        sport={sport}
+        shotType={shot.type || shot.category}
+        shotName={cleanLabel}
+        topFix={headlineFix}
       />
     </motion.div>
   );
@@ -2271,6 +2331,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
+  const [coachReplayOpen, setCoachReplayOpen] = useState(false);
   // AI Correct auto-generation state. Fires once when we have a
   // thumbnail + timestamp; dedupe ref prevents re-fires on rerender.
   const [aiGenStatus, setAiGenStatus] = useState("idle"); // idle | running | done | failed
@@ -2413,8 +2474,20 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
       <div className="p-3 space-y-3">
         {headlineFix && (
           <div className="bg-amber-400/8 border border-amber-400/30 rounded-lg p-2.5">
-            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
-            <p className="text-sm text-white leading-snug">{headlineFix}</p>
+            <div className="flex items-start gap-2">
+              <div className="flex-1">
+                <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">🎯 Top fix</p>
+                <p className="text-sm text-white leading-snug">{headlineFix}</p>
+              </div>
+              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <SpeakTipButton
+                  text={headlineFix}
+                  prefix={`Across your ${name.toLowerCase()} shots,`}
+                  size="xs"
+                  label="Listen"
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -2454,14 +2527,34 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         )}
 
 
-        {proRef && (
+        {(proRef || hasJump || heroShot?.thumbnail) && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-            <button
-              onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-            >
-              <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-            </button>
+            {hasJump && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setCoachReplayOpen(true); }}
+                title={`Replay your best ${name} with the green ideal-pose ghost`}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-300 hover:text-lime-200 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Activity className="w-3 h-3" /> Coach replay
+              </button>
+            )}
+            {heroShot?.thumbnail && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setPoseOpen(true); }}
+                title="Show pose skeleton + joint angles on the contact frame"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-300 hover:text-sky-200 bg-sky-400/10 border border-sky-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <ScanFace className="w-3 h-3" /> Pose check
+              </button>
+            )}
+            {proRef && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
+              >
+                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -2479,6 +2572,16 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
         sport={sport}
         shotType={sample.type}
         shotName={name}
+      />
+      <CoachReplayModal
+        open={coachReplayOpen}
+        onClose={() => setCoachReplayOpen(false)}
+        videoFile={typeof window !== "undefined" ? window.__playsmartCurrentVideo : null}
+        timestamp={jumpTarget?.timestamp}
+        sport={sport}
+        shotType={sample.type}
+        shotName={name}
+        topFix={headlineFix}
       />
     </motion.div>
   );
