@@ -3371,7 +3371,7 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
-    PROMPT_VERSION = "v2026-05-23-gemini-native-labels"
+    PROMPT_VERSION = "v2026-05-24-coach-narrative-paragraphs"
     video_hash = hashlib.sha256(video_bytes).hexdigest()[:32]
     cache_key = f"{PROMPT_VERSION}:{video_hash}:{req.tier}:{(req.target_player_description or '')[:80]}"
     try:
@@ -3411,7 +3411,12 @@ async def analyze_video_universal_endpoint(
         "sport_detected": result.get("sport_detected", "unknown"),
         "summary": result.get("summary", ""),
         "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
+        # Forward the rich coach narrative paragraphs straight through.
+        # This is the field that gives the user the Gemini-Studio-grade
+        # coach voice they expect on the analyze result page.
+        "coach_narrative": result.get("coach_narrative") or {},
         "events": result.get("events") or [],
+        "_debug": result.get("_debug") or {},
         "_meta": result.get("_meta") or {},
     }
 
@@ -3614,6 +3619,7 @@ async def analyze_video_stream_endpoint(
                     "sport_detected": final_payload.get("sport_detected"),
                     "summary": final_payload.get("summary"),
                     "overall_skill_level": final_payload.get("overall_skill_level"),
+                    "coach_narrative": final_payload.get("coach_narrative") or {},
                     "_meta": final_payload.get("_meta", {}),
                 })
                 complete_delivered = True
@@ -12126,7 +12132,15 @@ def _parse_shot_response(text: str) -> dict:
 class PerTypeQuality(BaseModel):
     avg_smoothness: float = Field(..., ge=0, le=1)
     avg_speed: float = Field(..., ge=0, le=1)
-    consistency: float = Field(..., ge=0, le=1)
+    # Consistency is null when the shot type only has one sample
+    # (stddev of one number isn't meaningful). The frontend sends null
+    # in that case — previously this was non-nullable and triggered a
+    # 422 that silently knocked out the entire coaching-narrative call,
+    # leaving the analyze page with skinny per-shot bullets only.
+    consistency: Optional[float] = Field(None, ge=0, le=1)
+    # The frontend also sends an `n` (sample count) here for context.
+    # Accept it as an optional field instead of letting Pydantic reject.
+    n: Optional[int] = Field(None, ge=0)
 
 
 class ShotClusterStats(BaseModel):
@@ -12391,11 +12405,15 @@ async def coaching_narrative(req: CoachingNarrativeRequest):
                 continue
             q = (req.per_type_quality or {}).get(shot_type)
             if q:
+                # consistency may be None for singletons (stddev of one
+                # is meaningless). Format defensively so we don't crash.
+                cons_str = (f"{q.consistency:.0%}"
+                            if q.consistency is not None else "n/a (1 sample)")
                 lines.append(
                     f"  {shot_type}: count={count}, "
                     f"avg_smoothness={q.avg_smoothness:.0%}, "
                     f"avg_speed={q.avg_speed:.0%}, "
-                    f"consistency={q.consistency:.0%}"
+                    f"consistency={cons_str}"
                 )
             else:
                 lines.append(f"  {shot_type}: count={count}")

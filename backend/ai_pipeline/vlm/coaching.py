@@ -880,6 +880,26 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         '  "sport_detected": "<sport name in your own words>",\n'
         '  "summary": "<2-3 sentence overall coach take on the session>",\n'
         '  "overall_skill_level": "<Beginner|Intermediate|Advanced|Pro>",\n'
+        '  "coach_narrative": {\n'
+        '    "intro": "<2-3 sentence warm opener that NAMES the drill or '
+        'session shape AND what the target player is working on. Coach '
+        'voice. Example: \'This is a classic flat drive exchange drill. '
+        'Drives are the bread and butter of fast-paced doubles play — '
+        'practicing them like this is essential for reaction time, racket '
+        'control, and grip transitions.\'>",\n'
+        '    "strengths_paragraph": "<3-5 sentences describing what the '
+        'target player is doing well. Be SPECIFIC — name body parts, grip, '
+        'contact point, court position, racket carriage. Each observation '
+        'should reference what you actually saw in the video, not a generic '
+        'platitude. Format as flowing prose, not a bulleted list.>",\n'
+        '    "improvements_paragraph": "<4-6 sentences identifying 2-3 '
+        'specific corrections, each in OBSERVATION → CORRECTION form. '
+        'Anchor each on a visual cue (stance width, knee bend, weight '
+        'transfer, contact height, follow-through). Like a real coach '
+        'standing on the sideline pointing at things.>",\n'
+        '    "takeaway": "<1-2 sentence forward-looking close. Name the '
+        'ONE thing this player should work on next session.>"\n'
+        '  },\n'
         '  "events": [\n'
         '    {\n'
         '      "timestamp_sec": <float, when the action happens>,\n'
@@ -898,6 +918,12 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         '    }\n'
         '  ]\n'
         '}\n\n'
+        "ABOUT coach_narrative — this is the MOST IMPORTANT field. Write it "
+        "like a real coach giving a session debrief. Concrete observations, "
+        "specific body parts and angles, gentle but honest. Avoid generic "
+        "lines like 'good effort' or 'keep practicing'. If the video is "
+        "unclear or you have low confidence in your read, say so in the "
+        "intro instead of filling the paragraphs with filler.\n\n"
         "Keep events array under 20 entries. The shot_label is free text "
         "tailored to the sport you detected — do not constrain yourself "
         "to a fixed vocabulary.\n\n"
@@ -1163,10 +1189,22 @@ def analyze_video_universal(
             "skill_level": skill,
         })
     raw_events_total = len(data.get("events") or [])
+    # Sanitize Gemini's coach_narrative — strings only, length-capped so a
+    # runaway Gemini response can't blow the response payload.
+    cn_raw = data.get("coach_narrative") or {}
+    if not isinstance(cn_raw, dict):
+        cn_raw = {}
+    coach_narrative = {
+        "intro": str(cn_raw.get("intro", ""))[:800].strip(),
+        "strengths_paragraph": str(cn_raw.get("strengths_paragraph", ""))[:1500].strip(),
+        "improvements_paragraph": str(cn_raw.get("improvements_paragraph", ""))[:1500].strip(),
+        "takeaway": str(cn_raw.get("takeaway", ""))[:500].strip(),
+    }
     return {
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
+        "coach_narrative": coach_narrative,
         "events": events_out,
         # Debug surface for the in-app debug panel — see stream variant.
         "_debug": {
@@ -1382,10 +1420,25 @@ def stream_analyze_video_universal(
     # diagnose "why are there fewer shots in the UI than Gemini saw?"
     raw_events_total = len(data.get("events") or [])
 
+    # Sanitize Gemini's coach_narrative — see analyze_video_universal for
+    # the same shape. Without this, the front-end render fallback shows
+    # one-liner chips like "Compact swing" instead of the multi-paragraph
+    # coach voice users actually want.
+    cn_raw_stream = data.get("coach_narrative") or {}
+    if not isinstance(cn_raw_stream, dict):
+        cn_raw_stream = {}
+    coach_narrative_stream = {
+        "intro": str(cn_raw_stream.get("intro", ""))[:800].strip(),
+        "strengths_paragraph": str(cn_raw_stream.get("strengths_paragraph", ""))[:1500].strip(),
+        "improvements_paragraph": str(cn_raw_stream.get("improvements_paragraph", ""))[:1500].strip(),
+        "takeaway": str(cn_raw_stream.get("takeaway", ""))[:500].strip(),
+    }
+
     payload = {
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
+        "coach_narrative": coach_narrative_stream,
         "events": events_out,
         "_meta": {
             "backend": backend_obj.name,
