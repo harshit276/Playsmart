@@ -7,6 +7,7 @@ the image-based shot classification.
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 
@@ -14,6 +15,23 @@ from .backends import pick_backend
 
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+
+
+def _premium_model_override() -> str:
+    """Resolve the model used for Premium-tier universal analyses.
+
+    Priority:
+      1. GEMINI_PREMIUM_MODEL — explicit override just for Premium tier.
+      2. GEMINI_MODEL — single env var that upgrades both Standard and
+         Premium together. Set this on Vercel to e.g. 'gemini-3.1-pro'
+         and every analysis path picks it up.
+      3. 'gemini-2.5-pro' — historical default.
+    """
+    return (
+        os.getenv("GEMINI_PREMIUM_MODEL")
+        or os.getenv("GEMINI_MODEL")
+        or "gemini-2.5-pro"
+    ).strip() or "gemini-2.5-pro"
 
 
 def _parse_json_safe(raw: str) -> dict:
@@ -489,20 +507,26 @@ def analyze_video_full(
         # it on the sideline) AND a canonical category from a controlled
         # list (used downstream for trend tracking, drill matching, and
         # pro-reference lookup). Both fields are required.
-        f"For each shot you must produce TWO labels:\n\n"
+        f"For each shot you produce TWO labels — shot_label is what the "
+        f"user sees, shot_category is for internal routing:\n\n"
         f"1. shot_label — a natural, concrete description of the shot a "
-        f"coach would say out loud. 2-5 words. Include the INTENT or "
-        f"OUTCOME when visible. Examples:\n"
+        f"coach would say out loud. 2-6 words. Include the INTENT or "
+        f"OUTCOME when visible. THIS IS THE PRIMARY USER-FACING LABEL — "
+        f"make it specific and useful. Examples:\n"
         f"   • 'Defensive lift (short)' — when a lift falls mid-court\n"
-        f"   • 'Cross-court smash'\n"
+        f"   • 'Cross-court smash — winner'\n"
         f"   • 'Diving backhand block'\n"
         f"   • 'Net kill — winner'\n"
         f"   • 'Forehand drive — neutral rally'\n"
-        f"   Do NOT use the canonical category as the label (no plain 'Clear').\n\n"
-        f"2. shot_category — a single keyword from this controlled list "
-        f"(used internally for matching to drills and references):\n{defs}\n\n"
-        f"If a shot doesn't fit any category cleanly, pick the CLOSEST one "
-        f"and set confidence < 0.6 — never invent a new category.\n\n"
+        f"   • 'Flat backhand drive at body'\n"
+        f"   Do NOT just use the canonical category as the label (don't write plain 'Clear' or 'Drive'). Describe what actually happened.\n\n"
+        f"2. shot_category — a single snake_case keyword for the technique. "
+        f"PREFER one of these familiar terms (used internally for drill "
+        f"matching and pro-reference lookup):\n{defs}\n"
+        f"But if the shot genuinely doesn't fit any of them, use your own "
+        f"snake_case label (e.g. 'forehand_drive', 'backhand_block', "
+        f"'cross_court_drop') and set confidence < 0.7 — better an honest "
+        f"out-of-vocab label than a wrong-bucket label.\n\n"
         f"Also classify each shot's INTENT and OUTCOME:\n"
         f"   • intent: 'attacking' | 'defensive' | 'neutral'\n"
         f"   • outcome: 'winner' | 'forced_error' | 'continued_rally' | 'lost_point' | 'unknown'\n"
@@ -523,6 +547,31 @@ def analyze_video_full(
         f"Practice clips against a wall, robot, or feeder coach are never "
         f"serves. When uncertain, classify as a drive and set confidence "
         f"< 0.7 — never invent a serve.\n\n"
+        + (
+            # Badminton-only — the most common misclassification in
+            # practice is calling a flat DRIVE a "clear" because both
+            # can travel deep. The contact HEIGHT and shuttle TRAJECTORY
+            # are the only reliable disambiguators; lock the model onto
+            # them.
+            (
+              f"CRITICAL — DRIVE vs CLEAR (badminton):\n"
+              f"These two are the most-commonly-confused shots. Use this exact rule:\n"
+              f"  • CLEAR: contact happens ABOVE THE HEAD with the racket arm "
+              f"fully extended UP; shuttle then arcs HIGH (peaks well above the "
+              f"players, often near the ceiling for indoor footage) and lands "
+              f"in the back court. No high arc = NOT a clear.\n"
+              f"  • DRIVE: contact at SHOULDER/CHEST height with a short, "
+              f"punchy forearm whip; shuttle stays FLAT and travels horizontally "
+              f"just over the net. Used in fast mid-court rallies. Flat "
+              f"trajectory = drive even if it reaches the back court.\n"
+              f"In any flat exchange or drill where players are facing each "
+              f"other at the mid-court and trading shots at shoulder level, "
+              f"the shots are DRIVES — do not label them clears just because "
+              f"they travel deep.\n\n"
+            ) if sport == "badminton" else ""
+          )
+        +
+        f""
         f"CRITICAL — ONE SWING = ONE SHOT:\n"
         f"A single physical shot has a windup, contact, and follow-through "
         f"that span 0.5-2 seconds. Report each physical swing AS ONE SHOT, "
@@ -597,10 +646,39 @@ def analyze_video_full(
     for s in (data.get("shots") or [])[:20]:
         if not isinstance(s, dict):
             continue
-        shot = str(s.get("shot_type", "unknown")).lower().strip().replace(" ", "_")
-        if shot not in vocab and shot != "unknown":
-            match = next((v for v in vocab if v in shot or shot in v), None)
-            shot = match or "unknown"
+
+        # PHILOSOPHY: trust Gemini's labels. Old code took Gemini's
+        # natural language ("Cross-court drive — winner") and collapsed
+        # it into our 8-shot vocab via substring matching, which
+        # routinely mis-bucketed drives as clears because "clear"
+        # appears earlier than "drive" in the vocab. The new flow:
+        #   • shot_label   — Gemini's free-text description (PRIMARY display).
+        #   • shot_category — Gemini's snake_case category as returned.
+        #   • shot_type    — same as shot_category (back-compat alias).
+        #   • _lookup_category — longest-match vocab entry used ONLY for
+        #     internal lookups (pro reference, drill matching). Never
+        #     displayed. Falls through to None when no vocab match.
+
+        raw_label = str(s.get("shot_label") or "").strip()
+        raw_category = (
+            str(s.get("shot_category") or s.get("shot_type") or "unknown")
+            .lower().strip().replace("-", "_").replace(" ", "_")
+        )
+        raw_category = "".join(ch for ch in raw_category if ch.isalnum() or ch == "_").strip("_") or "unknown"
+
+        # Vocab lookup — longest-match wins so "low_drive_clear" → "drive",
+        # not "clear" (which was the production bug). Returns None when
+        # Gemini's category is genuinely outside our curated vocab; we
+        # surface it as-is and rely on downstream (pro ref) to fall back
+        # gracefully.
+        lookup_category = None
+        if raw_category in vocab:
+            lookup_category = raw_category
+        elif vocab:
+            candidates = [v for v in vocab if v in raw_category or raw_category in v]
+            if candidates:
+                lookup_category = max(candidates, key=len)
+
         conf = max(0.0, min(1.0, float(s.get("confidence", 0.0) or 0.0)))
         skill = str(s.get("estimated_skill", "Intermediate")).strip().title()
         if skill not in ("Beginner", "Intermediate", "Advanced", "Pro"):
@@ -608,6 +686,7 @@ def analyze_video_full(
         power = str(s.get("power_level", "medium")).strip().lower()
         if power not in ("soft", "medium", "hard", "max"):
             power = "medium"
+
         ff = s.get("form_feedback") or {}
         if not isinstance(ff, dict):
             ff = {}
@@ -616,24 +695,50 @@ def analyze_video_full(
             "weaknesses": [str(x) for x in (ff.get("weaknesses") or [])[:5]],
             "tip": str(ff.get("tip", "")),
         }
+
         alts = []
         for a in (s.get("alternatives") or [])[:3]:
             if isinstance(a, dict) and "shot" in a:
                 a_shot = str(a["shot"]).lower().strip().replace(" ", "_")
-                if a_shot in vocab:
-                    alts.append({
-                        "shot": a_shot,
-                        "confidence": max(0.0, min(1.0, float(a.get("confidence", 0.0) or 0.0))),
-                    })
+                # Keep alternatives even when outside vocab — they're
+                # informational and the UI just displays the name.
+                alts.append({
+                    "shot": a_shot,
+                    "confidence": max(0.0, min(1.0, float(a.get("confidence", 0.0) or 0.0))),
+                })
+
+        intent = str(s.get("intent", "neutral")).strip().lower()
+        if intent not in ("attacking", "defensive", "neutral"):
+            intent = "neutral"
+        outcome = str(s.get("outcome", "unknown")).strip().lower()
+        if outcome not in ("winner", "forced_error", "continued_rally", "lost_point", "unknown"):
+            outcome = "unknown"
+
         try:
             ts = float(s.get("timestamp_sec") or 0.0)
         except Exception:
             ts = 0.0
+
+        # Display label hierarchy: rich free-text from Gemini if it gave
+        # us one, otherwise titlecased category, otherwise "Shot".
+        display_label = raw_label or (raw_category.replace("_", " ").title() if raw_category != "unknown" else "Shot")
+
         shots_out.append({
             "timestamp_sec": ts,
-            "shot_type": shot,
+            # Primary user-visible label — Gemini's natural language.
+            "shot_label": display_label,
+            # Category (Gemini's snake_case) preserved as-is.
+            "shot_category": raw_category,
+            # Back-compat alias for downstream code that reads shot_type.
+            "shot_type": raw_category,
+            # Vocab-mapped key — internal use only (pro-ref / drill lookup).
+            "_lookup_category": lookup_category,
             "confidence": conf,
             "reasoning": str(s.get("reasoning", ""))[:500],
+            "description": str(s.get("description", ""))[:400],
+            "quality_observation": str(s.get("quality_observation", ""))[:400],
+            "intent": intent,
+            "outcome": outcome,
             "alternatives": alts,
             "form_feedback": ff,
             "estimated_skill": skill,
@@ -757,7 +862,18 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         "drills against a wall, robot, or coach feeding shots are NEVER "
         "serves even if they look like the rally start. When in doubt, "
         "classify as a drive/stroke and put `confidence < 0.7` so the "
-        "user knows it's tentative — do not invent a serve.\n"
+        "user knows it's tentative — do not invent a serve.\n\n"
+        "CRITICAL — FLAT-EXCHANGE DRILLS ARE DRIVES, NOT CLEARS:\n"
+        "If you see two players (or a player and a feeder) trading shots "
+        "at SHOULDER/CHEST height with FLAT shuttle trajectory just over "
+        "the net — that is a flat drive exchange drill. Every shot in it "
+        "is a DRIVE (or forehand_drive / backhand_drive). It is NOT a "
+        "clear. A CLEAR requires contact ABOVE THE HEAD with the racket "
+        "arm fully extended UP, and the shuttle then arcs HIGH (peaks "
+        "well above the players) into the back court. No high arc + no "
+        "overhead contact = NOT a clear, even if the shuttle eventually "
+        "reaches a deep landing zone. Use the actual shuttle path, not "
+        "the landing depth, to decide.\n"
         f"{box_hint}\n\n"
         "Respond with valid JSON ONLY (no markdown):\n"
         '{\n'
@@ -863,15 +979,29 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
     skill = str(e.get("skill_level", "Intermediate")).strip().title()
     if skill not in ("Beginner", "Intermediate", "Advanced", "Pro"):
         skill = "Intermediate"
+    # PHILOSOPHY: preserve Gemini's free-text labels. We compute a
+    # vocab-mapped `_lookup_category` for pro-ref / drill lookups but
+    # never use it as the display field — the rich Gemini label
+    # ("Cross-court drive — winner") is far more useful to the user
+    # than the canonical 8-shot bucket name.
     category_raw = e.get("shot_category") or e.get("event_type") or "event"
     s = str(category_raw or "").strip().lower().replace("-", "_").replace(" ", "_")
     s = "".join(ch for ch in s if ch.isalnum() or ch == "_").strip("_") or "unknown"
-    if sport_vocab and s not in sport_vocab:
-        match = next((v for v in sport_vocab if v in s or s in v), None)
-        if match:
-            s = match
+
+    lookup_category = None
+    if sport_vocab:
+        if s in sport_vocab:
+            lookup_category = s
+        else:
+            candidates = [v for v in sport_vocab if v in s or s in v]
+            if candidates:
+                lookup_category = max(candidates, key=len)
+
+    # shot_category passed through as-is (Gemini's snake_case). We do
+    # NOT collapse it to the vocab — that was the source of the
+    # drive→clear misclassification users were seeing.
     shot_category = s
-    shot_label = str(e.get("shot_label") or e.get("event_type") or shot_category)[:120].strip()
+    shot_label = str(e.get("shot_label") or e.get("event_type") or shot_category.replace("_", " ").title())[:120].strip()
     intent = str(e.get("intent", "neutral")).strip().lower()
     if intent not in ("attacking", "defensive", "neutral"):
         intent = "neutral"
@@ -885,6 +1015,10 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
         "event_type": shot_category,
         "shot_label": shot_label,
         "shot_category": shot_category,
+        # Internal lookup key. UI must NOT display this — it's only for
+        # routing to pro-ref / drill lookups that need the controlled
+        # vocab. None when Gemini's category genuinely doesn't fit.
+        "_lookup_category": lookup_category,
         "intent": intent,
         "outcome": outcome,
         "quality_observation": quality_observation,
@@ -927,10 +1061,14 @@ def analyze_video_universal(
     """
     sys_prompt, user_msg = _build_universal_prompt(target_player_description)
 
-    # Premium tier swaps Gemini 2.5 Flash → Gemini 2.5 Pro for sharper
-    # detection on noisy / fast-action / multi-shot clips. Costs ~5× more
-    # in tokens but typically catches every shot vs Flash sometimes missing.
-    model_override = "gemini-2.5-pro" if (tier or "").lower() == "premium" else None
+    # Premium tier swaps Gemini Flash → a Pro model for sharper detection
+    # on noisy / fast-action / multi-shot clips. Costs more in tokens but
+    # typically catches every shot vs Flash sometimes missing.
+    # Model selection is env-driven so ops can ship a newer Pro model
+    # without code changes: GEMINI_PREMIUM_MODEL overrides specifically
+    # for premium tier; if unset, falls back to GEMINI_MODEL (so a single
+    # env-var change upgrades both tiers); final fallback is gemini-2.5-pro.
+    model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
     backend_obj = pick_backend(backend, model=model_override) if model_override else pick_backend(backend)
     try:
         import google.generativeai as genai  # type: ignore
@@ -1113,7 +1251,7 @@ def stream_analyze_video_universal(
     returns so downstream consumers get the exact same data.
     """
     sys_prompt, user_msg = _build_universal_prompt(target_player_description)
-    model_override = "gemini-2.5-pro" if (tier or "").lower() == "premium" else None
+    model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
     backend_obj = (
         pick_backend(backend, model=model_override) if model_override
         else pick_backend(backend)

@@ -27,6 +27,7 @@ import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
+import SessionSummaryHero from "@/components/SessionSummaryHero";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -2926,6 +2927,19 @@ export default function AnalyzePage() {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {/* ── Coach's read of the session — lead with a Gemini-style
+            one-line summary + identified-shot chips so users can verify
+            the AI got the basic shape right BEFORE scrolling through
+            stats. Confidence-aware: opens "I watched ..." on high-conf
+            sessions, "Looks like ..." on low-conf, "Best guess —" when
+            we're really unsure. */}
+        {result?.shots?.length > 0 && (
+          <SessionSummaryHero
+            result={result}
+            sport={result.sport || selectedSport || profile?.active_sport || "badminton"}
+          />
         )}
 
         {/* ── Match summary — moved here from below for at-a-glance read.

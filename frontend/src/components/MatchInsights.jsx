@@ -50,17 +50,20 @@ const _COACH_READ_INSIGHT_WORDS = [
 
 function _isInsightfulReasoning(text) {
   if (!text) return false;
-  const t = String(text).toLowerCase();
-  // Reject the two specific filler patterns we've seen most often in
-  // production: "the player executes a [shot], making good contact"
-  // and "performs a [shot] with [adjective] form" — pure narration.
-  if (/^the player (executes|performs|hits|plays|makes) [a-z ]{2,30}(,|\.| with)/i.test(text.trim())
-      && !_COACH_READ_INSIGHT_WORDS.some((kw) => t.includes(kw))) {
-    return false;
-  }
-  // General gate: must contain at least one insight keyword OR be long
-  // enough (>= 90 chars) to plausibly contain multi-clause analysis.
-  return _COACH_READ_INSIGHT_WORDS.some((kw) => t.includes(kw)) || text.length >= 90;
+  const trimmed = String(text).trim();
+  if (trimmed.length < 20) return false;
+  // PHILOSOPHY: trust Gemini's output. The old gate suppressed any
+  // reasoning text that didn't hit a keyword allow-list, which routinely
+  // hid useful sentences ("Contact slightly late, shuttle floated above
+  // net" → suppressed because no anatomy word). Now we only reject the
+  // two narrow filler patterns we've actually seen in production, and
+  // show everything else.
+  const fillerPatterns = [
+    /^the player (executes|performs|hits|plays|makes) [a-z ]{2,30}(,|\.| with)\s*[^,.]{0,40}\.?$/i,
+    /^a (forehand|backhand|smash|clear|drive|drop|lift) (shot|stroke)\.?$/i,
+  ];
+  if (fillerPatterns.some((re) => re.test(trimmed))) return false;
+  return true;
 }
 
 // In-flight cache so we don't refetch the same reference video for
@@ -1982,13 +1985,17 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
     // Pro reference is keyed on the canonical category, not the free-text
     // label. A 'Defensive lift (short)' label and a 'Crisp clear to back court'
     // label both map to category=lift/clear and share a pro reference.
-    const refKey = shot.category || shot.type;
+    // Prefer the backend's vocab-mapped _lookup_category — Gemini's raw
+    // category may be free-text (e.g. "low_drive_clear") that the pro-ref
+    // catalog doesn't index. Falls through to category/type when the
+    // lookup hint isn't present (e.g. legacy historical analyses).
+    const refKey = shot._lookup_category || shot.lookup_category || shot.category || shot.type;
     if (!sport || !refKey) return;
     fetchProReference(sport, refKey).then((ref) => {
       if (!cancelled && ref) setProRef(ref);
     });
     return () => { cancelled = true; };
-  }, [sport, shot.category, shot.type]);
+  }, [sport, shot._lookup_category, shot.lookup_category, shot.category, shot.type]);
 
   // MANUAL generation — user clicks "Generate" on each card. We used to
   // auto-fire but Replicate's free tier is 6 req/min with burst=1, so
