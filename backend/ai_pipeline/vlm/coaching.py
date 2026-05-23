@@ -7,6 +7,7 @@ the image-based shot classification.
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 
@@ -14,6 +15,23 @@ from .backends import pick_backend
 
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+
+
+def _premium_model_override() -> str:
+    """Resolve the model used for Premium-tier universal analyses.
+
+    Priority:
+      1. GEMINI_PREMIUM_MODEL — explicit override just for Premium tier.
+      2. GEMINI_MODEL — single env var that upgrades both Standard and
+         Premium together. Set this on Vercel to e.g. 'gemini-3.1-pro'
+         and every analysis path picks it up.
+      3. 'gemini-2.5-pro' — historical default.
+    """
+    return (
+        os.getenv("GEMINI_PREMIUM_MODEL")
+        or os.getenv("GEMINI_MODEL")
+        or "gemini-2.5-pro"
+    ).strip() or "gemini-2.5-pro"
 
 
 def _parse_json_safe(raw: str) -> dict:
@@ -1043,10 +1061,14 @@ def analyze_video_universal(
     """
     sys_prompt, user_msg = _build_universal_prompt(target_player_description)
 
-    # Premium tier swaps Gemini 2.5 Flash → Gemini 2.5 Pro for sharper
-    # detection on noisy / fast-action / multi-shot clips. Costs ~5× more
-    # in tokens but typically catches every shot vs Flash sometimes missing.
-    model_override = "gemini-2.5-pro" if (tier or "").lower() == "premium" else None
+    # Premium tier swaps Gemini Flash → a Pro model for sharper detection
+    # on noisy / fast-action / multi-shot clips. Costs more in tokens but
+    # typically catches every shot vs Flash sometimes missing.
+    # Model selection is env-driven so ops can ship a newer Pro model
+    # without code changes: GEMINI_PREMIUM_MODEL overrides specifically
+    # for premium tier; if unset, falls back to GEMINI_MODEL (so a single
+    # env-var change upgrades both tiers); final fallback is gemini-2.5-pro.
+    model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
     backend_obj = pick_backend(backend, model=model_override) if model_override else pick_backend(backend)
     try:
         import google.generativeai as genai  # type: ignore
@@ -1229,7 +1251,7 @@ def stream_analyze_video_universal(
     returns so downstream consumers get the exact same data.
     """
     sys_prompt, user_msg = _build_universal_prompt(target_player_description)
-    model_override = "gemini-2.5-pro" if (tier or "").lower() == "premium" else None
+    model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
     backend_obj = (
         pick_backend(backend, model=model_override) if model_override
         else pick_backend(backend)
