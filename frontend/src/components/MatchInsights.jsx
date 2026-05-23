@@ -22,6 +22,7 @@ import { Progress } from "@/components/ui/progress";
 import api from "@/lib/api";
 import PoseOverlayModal from "@/components/PoseOverlayModal";
 import CoachReplayModal from "@/components/CoachReplayModal";
+import FormComparisonModal from "@/components/FormComparisonModal";
 import SpeakTipButton from "@/components/SpeakTipButton";
 import ImprovementCards from "@/components/ImprovementCards";
 import CoachNoteOverlay from "@/components/CoachNoteOverlay";
@@ -1925,8 +1926,11 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
+  // Legacy modals kept for back-compat (anywhere external code opens
+  // them by ref); the new primary CTA is the Form Comparison modal.
   const [poseOpen, setPoseOpen] = useState(false);
   const [coachReplayOpen, setCoachReplayOpen] = useState(false);
+  const [formCompareOpen, setFormCompareOpen] = useState(false);
   // Bidirectional link: card highlights briefly when video plays past
   // this shot's timestamp OR when the user clicks a marker / shortcut.
   const [pulsing, setPulsing] = useState(false);
@@ -2188,35 +2192,40 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
 
         {(proRef || hasTimestamp || shot.thumbnail) && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-            {hasTimestamp && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setCoachReplayOpen(true); }}
-                title="Replay this shot with the green ideal-pose ghost overlaid at the contact frame"
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-300 hover:text-lime-200 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Activity className="w-3 h-3" /> Coach replay
-              </button>
-            )}
-            {shot.thumbnail && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setPoseOpen(true); }}
-                title="Show pose skeleton + joint angles on the contact frame"
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-300 hover:text-sky-200 bg-sky-400/10 border border-sky-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <ScanFace className="w-3 h-3" /> Pose check
-              </button>
-            )}
-            {proRef && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-              </button>
-            )}
+            {/* Single primary CTA — opens the side-by-side slow-mo
+                comparison. Replaces the old trio (Coach replay / Pose
+                check / Compare to Pro) which fragmented one mental
+                action ("show me what good looks like") into three
+                separate views. */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setFormCompareOpen(true); }}
+              title="Watch your shot in slow motion next to a pro reference, with the coach's correction"
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-lime-300 hover:text-lime-200 bg-lime-400/10 hover:bg-lime-400/20 border border-lime-400/40 rounded-full px-3 py-1 transition-colors"
+            >
+              <Trophy className="w-3 h-3" />
+              Compare your form
+              {proRef?.player && (
+                <span className="text-zinc-500 font-normal">· vs {proRef.player.split(/\s+/)[0]}</span>
+              )}
+            </button>
           </div>
         )}
       </div>
+      <FormComparisonModal
+        open={formCompareOpen}
+        onClose={() => setFormCompareOpen(false)}
+        videoFile={typeof window !== "undefined" ? window.__playsmartCurrentVideo : null}
+        timestamp={shot.timestamp}
+        sport={sport}
+        shotType={shot.type || shot.category}
+        shotName={cleanLabel}
+        topFix={headlineFix}
+        proReference={proRef}
+        userThumbnail={shot.thumbnail}
+      />
+      {/* Legacy modals kept mounted so external triggers (jump-to-shot
+          flows, deep-linked URLs) continue to work; new primary
+          experience is FormComparisonModal above. */}
       <ProComparisonModal
         open={compareOpen}
         onClose={() => setCompareOpen(false)}
@@ -2339,6 +2348,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   const [compareOpen, setCompareOpen] = useState(false);
   const [poseOpen, setPoseOpen] = useState(false);
   const [coachReplayOpen, setCoachReplayOpen] = useState(false);
+  const [formCompareOpen, setFormCompareOpen] = useState(false);
   // AI Correct auto-generation state. Fires once when we have a
   // thumbnail + timestamp; dedupe ref prevents re-fires on rerender.
   const [aiGenStatus, setAiGenStatus] = useState("idle"); // idle | running | done | failed
@@ -2536,35 +2546,36 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
 
         {(proRef || hasJump || heroShot?.thumbnail) && (
           <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-zinc-800/60">
-            {hasJump && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setCoachReplayOpen(true); }}
-                title={`Replay your best ${name} with the green ideal-pose ghost`}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-lime-300 hover:text-lime-200 bg-lime-400/10 border border-lime-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Activity className="w-3 h-3" /> Coach replay
-              </button>
-            )}
-            {heroShot?.thumbnail && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setPoseOpen(true); }}
-                title="Show pose skeleton + joint angles on the contact frame"
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-300 hover:text-sky-200 bg-sky-400/10 border border-sky-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <ScanFace className="w-3 h-3" /> Pose check
-              </button>
-            )}
-            {proRef && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setCompareOpen(true); }}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 border border-amber-400/30 rounded-full px-2.5 py-1 transition-colors"
-              >
-                <Trophy className="w-3 h-3" /> Compare to {proRef.player?.split(/\s+/)[0] || "Pro"}
-              </button>
-            )}
+            {/* Single primary CTA — same pattern as IndividualShotCard.
+                Opens the slow-mo side-by-side comparison on the group's
+                best timestamped shot. */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setFormCompareOpen(true); }}
+              title={`Watch your best ${name} in slow motion next to a pro reference`}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-lime-300 hover:text-lime-200 bg-lime-400/10 hover:bg-lime-400/20 border border-lime-400/40 rounded-full px-3 py-1 transition-colors"
+            >
+              <Trophy className="w-3 h-3" />
+              Compare your form
+              {proRef?.player && (
+                <span className="text-zinc-500 font-normal">· vs {proRef.player.split(/\s+/)[0]}</span>
+              )}
+            </button>
           </div>
         )}
       </div>
+      <FormComparisonModal
+        open={formCompareOpen}
+        onClose={() => setFormCompareOpen(false)}
+        videoFile={typeof window !== "undefined" ? window.__playsmartCurrentVideo : null}
+        timestamp={jumpTarget?.timestamp}
+        sport={sport}
+        shotType={sample.type}
+        shotName={name}
+        topFix={headlineFix}
+        proReference={proRef}
+        userThumbnail={heroShot?.thumbnail}
+      />
+      {/* Legacy modals kept mounted for back-compat. */}
       <ProComparisonModal
         open={compareOpen}
         onClose={() => setCompareOpen(false)}
