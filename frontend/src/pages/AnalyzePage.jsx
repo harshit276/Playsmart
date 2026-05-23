@@ -1003,11 +1003,19 @@ export default function AnalyzePage() {
             if (players.length > 0) {
               try {
                 const vp2 = await import("@/ai/videoProcessor");
-                midFrame = await vp2.extractMidFrameKeyframe(file, { maxDim: 720, jpegQuality: 0.8 });
-                // Per-player crops are still useful as a tiny avatar in
-                // the result banner — keep generating them but smaller.
+                // Use an EARLY frame (1.5s in, or first 10% — whichever is
+                // smaller) instead of mid-video. The describe-players prompt
+                // tells Gemini to estimate bboxes at the EARLIEST frame
+                // where every player is visible, so the rendered frame
+                // needs to be near that same point or boxes look "off".
+                // Mid-video frames showed players mid-rally, where they'd
+                // moved 1-2m from where Gemini estimated the box.
+                midFrame = await vp2.extractMidFrameKeyframe(file, {
+                  maxDim: 720, jpegQuality: 0.8, atFraction: 0.08,
+                });
+                const seekSec = Math.min(1.5, (uploadFile.duration || 5) * 0.08);
                 const bboxes = players.map((p) => p.bbox || null);
-                const thumbs = await vp2.extractPlayerThumbnails(file, (uploadFile.duration || 5) / 2, bboxes, { maxDim: 96, jpegQuality: 0.75 });
+                const thumbs = await vp2.extractPlayerThumbnails(file, seekSec, bboxes, { maxDim: 96, jpegQuality: 0.75 });
                 players = players.map((p, idx) => ({ ...p, thumbnail: thumbs[idx] || null }));
               } catch (thumbErr) {
                 console.warn("[universal] keyframe extraction failed:", thumbErr?.message);
@@ -4298,8 +4306,11 @@ export default function AnalyzePage() {
                   {universalPlayers.length} {universalPlayers.length === 1 ? "Player Detected" : "Players Detected"}
                 </h3>
               </div>
-              <p className="text-sm text-zinc-400 mb-4">
+              <p className="text-sm text-zinc-400 mb-1">
                 Tap the player you want to analyze. We'll focus the AI Coach on them.
+              </p>
+              <p className="text-[11px] text-zinc-500 mb-4">
+                Boxes are approximate — if one looks off, pick by clothing color or court position from the list below.
               </p>
 
               {/* Full-frame keyframe with Gemini bboxes overlaid as
