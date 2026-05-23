@@ -28,6 +28,7 @@ import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
+import GeminiDebugPanel from "@/components/GeminiDebugPanel";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -344,6 +345,72 @@ export default function AnalyzePage() {
       // ignore localStorage errors
     }
   }, []);
+
+  // Restore the most-recent analysis on mount so a page refresh doesn't
+  // wipe the user's session. The original videoFile (a Blob) isn't
+  // serializable so the slow-mo player on FormComparisonModal will
+  // gracefully fall back to its thumbnail + "re-upload" hint — but
+  // every other piece (shots, narrative, drills, references) is back.
+  // Cleared on every explicit "start new analysis" gesture below.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("playsmart_last_analysis");
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || typeof saved !== "object" || !saved.result) return;
+      // Sanity check: must look like an analysis result.
+      if (!Array.isArray(saved.result.shots)) return;
+      // Honor stored sport so per-sport components don't fall back to badminton.
+      if (saved.sport) setSelectedSport(saved.sport);
+      setResult(saved.result);
+      setViewingHistorical(true);
+    } catch {
+      // ignore corrupt storage entries — they'll be overwritten on next save.
+    }
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist the latest analysis whenever it's set to something useful.
+  // We DON'T save while analyzing (would write intermediate partials),
+  // we DON'T save when result is null (handled by clearLastAnalysis
+  // helper below — null means "we wiped on purpose, don't restore"),
+  // and we cap localStorage at ~1.5 MB so a huge result with embedded
+  // thumbnails doesn't blow past quota.
+  useEffect(() => {
+    if (!result) return;
+    if (!Array.isArray(result.shots)) return;
+    try {
+      const payload = JSON.stringify({
+        result,
+        sport: result.sport || selectedSport || null,
+        savedAt: Date.now(),
+      });
+      if (payload.length < 1_500_000) {
+        localStorage.setItem("playsmart_last_analysis", payload);
+      } else {
+        // Strip thumbnails (data URLs are the biggest field) so we
+        // still save the analysis structure even on long sessions.
+        const slim = {
+          ...result,
+          shots: (result.shots || []).map((s) => ({ ...s, thumbnail: null })),
+        };
+        const slimPayload = JSON.stringify({
+          result: slim,
+          sport: result.sport || selectedSport || null,
+          savedAt: Date.now(),
+          _slim: true,
+        });
+        localStorage.setItem("playsmart_last_analysis", slimPayload);
+      }
+    } catch {
+      // ignore quota / serialization errors — persistence is best-effort.
+    }
+  }, [result, selectedSport]);
+
+  const clearLastAnalysisStorage = () => {
+    try { localStorage.removeItem("playsmart_last_analysis"); } catch {}
+  };
 
   const [targetPlayer, setTargetPlayer] = useState("auto");
   const [playerSelectorOpen, setPlayerSelectorOpen] = useState(false);
@@ -682,6 +749,12 @@ export default function AnalyzePage() {
   const clearFile = () => {
     setFile(null);
     setResult(null);
+    // User is explicitly starting over → wipe the persisted analysis
+    // so a refresh doesn't restore a stale one. Other in-flight
+    // resets (errors, tab switches) deliberately don't wipe storage —
+    // those want refresh-to-recover behavior.
+    clearLastAnalysisStorage();
+    setViewingHistorical(false);
     setError(null);
     setTargetPlayer("auto");
     setPlayerSelectorOpen(false);
@@ -931,11 +1004,19 @@ export default function AnalyzePage() {
             if (players.length > 0) {
               try {
                 const vp2 = await import("@/ai/videoProcessor");
-                midFrame = await vp2.extractMidFrameKeyframe(file, { maxDim: 720, jpegQuality: 0.8 });
-                // Per-player crops are still useful as a tiny avatar in
-                // the result banner — keep generating them but smaller.
+                // Use an EARLY frame (1.5s in, or first 10% — whichever is
+                // smaller) instead of mid-video. The describe-players prompt
+                // tells Gemini to estimate bboxes at the EARLIEST frame
+                // where every player is visible, so the rendered frame
+                // needs to be near that same point or boxes look "off".
+                // Mid-video frames showed players mid-rally, where they'd
+                // moved 1-2m from where Gemini estimated the box.
+                midFrame = await vp2.extractMidFrameKeyframe(file, {
+                  maxDim: 720, jpegQuality: 0.8, atFraction: 0.08,
+                });
+                const seekSec = Math.min(1.5, (uploadFile.duration || 5) * 0.08);
                 const bboxes = players.map((p) => p.bbox || null);
-                const thumbs = await vp2.extractPlayerThumbnails(file, (uploadFile.duration || 5) / 2, bboxes, { maxDim: 96, jpegQuality: 0.75 });
+                const thumbs = await vp2.extractPlayerThumbnails(file, seekSec, bboxes, { maxDim: 96, jpegQuality: 0.75 });
                 players = players.map((p, idx) => ({ ...p, thumbnail: thumbs[idx] || null }));
               } catch (thumbErr) {
                 console.warn("[universal] keyframe extraction failed:", thumbErr?.message);
@@ -1083,6 +1164,12 @@ export default function AnalyzePage() {
           _universal: true,
           _target_player_description: targetDesc,
           _target_player_thumbnail: options.universalPick?.thumbnail || null,
+          // Forward the backend's debug surface so the in-app debug
+          // panel can show raw Gemini output + filtered/dropped counts.
+          // _meta is the stream path's debug carrier; _debug is the
+          // non-stream path's. Both should ride through unchanged.
+          _meta: data?._meta || null,
+          _debug: data?._debug || data?._meta || null,
           sport: data?.sport_detected || "unknown",
           skill_level: data?.overall_skill_level || "Intermediate",
           quick_summary: data?.summary || "",
@@ -2929,6 +3016,13 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
+        {/* Debug panel — visible with ?debug=1 or localStorage.playsmart_debug=true.
+            Shows raw Gemini output + filtered/dropped event counts so
+            "missing shots" can be triaged in-app. */}
+        {result?.shots && (
+          <GeminiDebugPanel result={result} />
+        )}
+
         {/* ── Coach's read of the session — lead with a Gemini-style
             one-line summary + identified-shot chips so users can verify
             the AI got the basic shape right BEFORE scrolling through
@@ -4226,8 +4320,11 @@ export default function AnalyzePage() {
                   {universalPlayers.length} {universalPlayers.length === 1 ? "Player Detected" : "Players Detected"}
                 </h3>
               </div>
-              <p className="text-sm text-zinc-400 mb-4">
+              <p className="text-sm text-zinc-400 mb-1">
                 Tap the player you want to analyze. We'll focus the AI Coach on them.
+              </p>
+              <p className="text-[11px] text-zinc-500 mb-4">
+                Boxes are approximate — if one looks off, pick by clothing color or court position from the list below.
               </p>
 
               {/* Full-frame keyframe with Gemini bboxes overlaid as
