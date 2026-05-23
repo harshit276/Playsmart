@@ -899,13 +899,15 @@ export default function AnalyzePage() {
           // and Gemini processing time by ~30-40% vs the previous 540p /
           // 1Mbps / 30s, which was the main reason Standard analyses hit
           // the 120s frontend timeout on mobile networks.
-          uploadFile = await vp.compressVideoForUpload(file, {
+          // compressUnderSize retries with tighter rungs until output
+          // fits the 4 MB Vercel body cap. Was throwing immediately on
+          // any overshoot, which surfaced as "compressed video too large
+          // (5.5 MB)" for moderately long phone clips. Now we step down
+          // bitrate + dims + duration before giving up.
+          uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
             maxDim: 480, bitrate: 800_000, maxDurationSec: 20,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
-          if (uploadFile.size > 4 * 1024 * 1024) {
-            throw new Error(`compressed video too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB)`);
-          }
           const buf = await uploadFile.arrayBuffer();
           const bytes = new Uint8Array(buf);
           let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
@@ -1174,14 +1176,22 @@ export default function AnalyzePage() {
               // identification on personal phone clips. Still fits Vercel's
               // 4.5 MB body limit for ~30s clips.
               const mod = await import("@/ai/videoProcessor");
-              const uploadFile = await mod.compressVideoForUpload(file, {
-                maxDim: 540,
-                bitrate: 1_000_000,
-                maxDurationSec: 30,
-                onProgress: (pct) => setLoadingText(`Preparing video... ${pct}%`),
-              });
-              if (uploadFile.size > 4 * 1024 * 1024) {
-                videoDirectError = `compressed video still too large (${(uploadFile.size / 1024 / 1024).toFixed(1)} MB > 4 MB) — try a shorter clip`;
+              // Retry ladder: 540p/1Mbps → 540p/700k → 432p/500k → 360p/400k/24s.
+              // Same fix as the universal/premium path — uncompressed
+              // 5-12 MB phone clips no longer fail outright with
+              // "compressed video still too large".
+              let uploadFile;
+              try {
+                uploadFile = await mod.compressUnderSize(file, 4 * 1024 * 1024, {
+                  maxDim: 540,
+                  bitrate: 1_000_000,
+                  maxDurationSec: 30,
+                  onProgress: (pct) => setLoadingText(`Preparing video... ${pct}%`),
+                });
+              } catch (compErr) {
+                videoDirectError = compErr.code === "COMPRESSION_OVERSHOOT"
+                  ? compErr.message
+                  : `Compression failed: ${compErr.message}`;
                 return;
               }
               setLoadingText("Sending video to AI Coach for full analysis...");
