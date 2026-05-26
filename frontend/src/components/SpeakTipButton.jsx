@@ -1,33 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Volume2, Square } from "lucide-react";
+import { pickVoice, cleanForSpeech } from "@/lib/voiceCoach";
 
 // Per-shot "Listen" — speaks one or more conversational coaching lines
 // via window.speechSynthesis. Zero-dep, zero-cost, works offline.
 //
 // Built deliberately small (~5-15s of speech per shot) so users can
-// stack multiple plays without context-bleed. We pick the same kind of
-// voice the session-level VoiceCoachButton prefers (local + premium-ish)
-// so the timbre stays consistent across the page.
-
-function pickVoice(voices) {
-  if (!voices?.length) return null;
-  const en = voices.filter((v) => /^en[-_]?/i.test(v.lang || ""));
-  const pool = en.length ? en : voices;
-  const local = pool.filter((v) => v.localService);
-  const base = local.length ? local : pool;
-  const premium = base.filter((v) =>
-    /(natural|neural|premium|enhanced|siri|aria|jenny|guy)/i.test(v.name || "")
-  );
-  return premium[0] || base[0];
-}
-
-function cleanForSpeech(s) {
-  return String(s || "")
-    .replace(/[#*_`~>]/g, "")
-    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+// stack multiple plays without context-bleed. The voice-picking logic
+// lives in src/lib/voiceCoach.js so this button, the analyze-page
+// "Listen to coach" pill, and the new LiveVoiceCoach all share the
+// same timbre selection.
 
 export default function SpeakTipButton({
   text,

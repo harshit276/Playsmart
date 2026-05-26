@@ -28,6 +28,7 @@ import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
+import LiveVoiceCoach from "@/components/LiveVoiceCoach";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
 import GeminiDebugPanel from "@/components/GeminiDebugPanel";
 import CoachNarrativeCard from "@/components/CoachNarrativeCard";
@@ -3963,6 +3964,15 @@ export default function AnalyzePage() {
         <div id="analysis-section-audio-coaching" className="scroll-mt-24">
           <VoiceCoachButton result={result} narrative={null} />
         </div>
+
+        {/* Live two-way voice coach — browser STT + TTS, streaming Gemini
+            reply grounded in this analysis. Renders only once we have
+            actual shots to ground on (the floating pill is also gated
+            inside the component, but we gate here too so the heavier
+            recognizer setup isn't even mounted on empty results). */}
+        {result?.shots?.length > 0 && (
+          <LiveVoiceCoach result={result} />
+        )}
 
         {/* Share + Analyze another */}
         <div className="flex gap-3">
