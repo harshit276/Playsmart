@@ -30,6 +30,7 @@ import VoiceCoachButton from "@/components/VoiceCoachButton";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
 import GeminiDebugPanel from "@/components/GeminiDebugPanel";
 import CoachNarrativeCard from "@/components/CoachNarrativeCard";
+import PlayerDetectionCard from "@/components/PlayerDetectionCard";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -1214,6 +1215,11 @@ export default function AnalyzePage() {
           _universal: true,
           _target_player_description: targetDesc,
           _target_player_thumbnail: options.universalPick?.thumbnail || null,
+          // Full picked-player descriptor — PlayerDetectionCard reads
+          // clothing/court_position/id from here when available so the
+          // universal-mode card can render richer metadata than just the
+          // raw thumbnail + description.
+          _target_player: options.universalPick || null,
           // Forward the backend's debug surface so the in-app debug
           // panel can show raw Gemini output + filtered/dropped counts.
           // _meta is the stream path's debug carrier; _debug is the
@@ -1233,7 +1239,15 @@ export default function AnalyzePage() {
           coach_feedback: { summary: data?.summary || "", encouragement: "" },
           shots: events.map((e, i) => ({
             type: (e.event_type || "event").toLowerCase().replace(/\s+/g, "_"),
-            name: e.event_type || "Event",
+            name: e.shot_label || e.event_type || "Event",
+            // Pass through the richer per-shot labels & intent/outcome
+            // fields so downstream cards (PlayerDetectionCard, MatchInsights)
+            // can read them without a second backend round-trip.
+            shot_label: e.shot_label || e.event_type || null,
+            shot_category: e.shot_category || e.event_type || null,
+            intent: e.intent || null,
+            outcome: e.outcome || null,
+            quality_observation: e.quality_observation || null,
             confidence: e.confidence ?? 0.7,
             timestamp: Math.round((e.timestamp_sec || 0) * 10) / 10,
             grade: (e.confidence ?? 0.7) >= 0.7 ? "A" : (e.confidence ?? 0) >= 0.5 ? "B" : "C",
@@ -3040,37 +3054,16 @@ export default function AnalyzePage() {
           );
         })()}
 
-        {/* Universal-mode banner — shows the detected sport + picked
-            athlete (with thumbnail when available) so the user knows
-            exactly who was analyzed. */}
+        {/* Universal-mode player detection card — replaces the old
+            "Analyzing: …" banner with a richer, premium card that shows
+            who was analyzed (thumbnail + ID + confidence) plus stat tiles
+            and highlight tags derived client-side from result.shots and
+            coach_narrative. */}
         {result._universal && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-zinc-900/80 border border-purple-400/30 rounded-2xl p-4">
-            <div className="flex items-start gap-3">
-              {result._target_player_thumbnail && (
-                <img
-                  src={result._target_player_thumbnail}
-                  alt="Analyzed player"
-                  className="w-14 h-14 rounded-xl object-cover border border-purple-400/30 shrink-0"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-[10px] uppercase tracking-wider text-purple-300 font-bold">Universal mode</span>
-                  <Badge className="bg-purple-400/10 text-purple-200 border-purple-400/30 text-[10px] capitalize">
-                    {result.sport || "unknown sport"}
-                  </Badge>
-                </div>
-                {result._target_player_description ? (
-                  <p className="text-sm text-white leading-snug">
-                    <span className="text-zinc-500">Analyzing:</span> {result._target_player_description}
-                  </p>
-                ) : (
-                  <p className="text-xs text-zinc-500">Analyzed the most prominent person in frame.</p>
-                )}
-              </div>
-            </div>
-          </motion.div>
+          <PlayerDetectionCard
+            result={result}
+            sport={result.sport || "unknown"}
+          />
         )}
 
         {/* Player-pick mismatch banner — fires when the user selected
