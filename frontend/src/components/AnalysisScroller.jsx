@@ -134,16 +134,28 @@ export default function AnalysisScroller({ sections = [] }) {
     return () => io.disconnect();
   }, [presentIds]);
 
-  // The visible items are those in sections[] order that are also mounted.
+  // The visible items list. We deliberately show ALL provided sections
+  // even before the DOM-presence check finishes — the click handler
+  // already guards against missing targets via document.getElementById,
+  // and the IntersectionObserver only highlights ids that are present.
+  // The previous version returned null while presentIds was empty,
+  // which on slow renders meant the rail never appeared at all.
   const items = useMemo(
-    () => sections.filter((s) => s && s.id && presentIds.has(s.id)),
-    [sections, presentIds],
+    () => sections.filter((s) => s && s.id),
+    [sections],
+  );
+
+  // Subset of items whose DOM target exists — used for the active-state
+  // highlight and the empty/loading copy below.
+  const itemsPresent = useMemo(
+    () => items.filter((s) => presentIds.has(s.id)),
+    [items, presentIds],
   );
 
   // First-mount default: pick the first present section if nothing active.
   useEffect(() => {
-    if (!activeId && items.length > 0) setActiveId(items[0].id);
-  }, [items, activeId]);
+    if (!activeId && itemsPresent.length > 0) setActiveId(itemsPresent[0].id);
+  }, [itemsPresent, activeId]);
 
   const handleJump = useCallback((id) => {
     if (!id) return;
@@ -152,6 +164,7 @@ export default function AnalysisScroller({ sections = [] }) {
     smoothScrollTo(id);
   }, []);
 
+  // Hard guard — only hide if literally zero sections were passed in.
   if (items.length === 0) return null;
 
   const activeItem = items.find((s) => s.id === activeId) || items[0];

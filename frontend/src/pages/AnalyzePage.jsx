@@ -872,6 +872,9 @@ export default function AnalyzePage() {
     setResult(null);
     setError(null);
     setProgress(0);
+    // Reset historical flag at the start of a new analysis so a
+    // localStorage-restored historical view doesn't keep videoFile=null.
+    setViewingHistorical(false);
     // Scroll to top so the user sees the loading panel immediately
     try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
 
@@ -993,6 +996,12 @@ export default function AnalyzePage() {
     setError(null);
     setProgress(0);
     setLiveShots([]);
+    // A fresh analyze run is by definition NOT a historical view. The
+    // localStorage-restore on mount can leave viewingHistorical=true
+    // even when the user has loaded a new file — that turns videoFile
+    // into null for MatchInsights → AutoProReferencePanel's YOU panel
+    // shows "No preview available" despite a perfectly good upload.
+    setViewingHistorical(false);
 
     // ─── Universal & Premium mode short-circuit ─────────────────────
     // Both modes use the same 2-pass flow (describe → pick → analyze);
@@ -1696,6 +1705,7 @@ export default function AnalyzePage() {
     setResult(null);
     setError(null);
     setProgress(0);
+    setViewingHistorical(false);
 
     // ─── Server-side analysis (upload) ───
     setLoadingText("Uploading video...");
@@ -1782,6 +1792,7 @@ export default function AnalyzePage() {
     setResult(null);
     setError(null);
     setProgress(0);
+    setViewingHistorical(false);
     setLoadingText(`Analyzing ${boxes.length} players in parallel...`);
     try {
       const formData = (box) => {
