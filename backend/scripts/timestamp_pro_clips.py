@@ -244,13 +244,22 @@ def _maybe_rewrite_inplace(suggestions: dict, ref_path: Path,
                 n_skipped_low_conf += 1
                 print(f"  · skipped {sport}/{shot} (conf {conf:.2f} < {min_confidence:.2f}) — hand-curate later")
                 continue
-            # The catalog's pattern is consistent:
-            #   "youtube_id": "ID",
-            #   "start_sec": OLD_S, "end_sec": OLD_E,
+            # The catalog has a stable nesting pattern:
+            #   "shot_key": {
+            #       ...
+            #       "youtube_id": "ID",
+            #       "start_sec": OLD_S, "end_sec": OLD_E,
+            #       ...
+            #   }
+            # We anchor the regex on the SHOT KEY (e.g. "smash":) AND the
+            # youtube_id together. Anchoring on youtube_id alone was a
+            # bug: when two shots (e.g. badminton "smash" and "drive")
+            # reuse the same source video, the first-match regex
+            # clobbered the wrong entry. The shot-key anchor disambiguates.
             yid = new["_youtube_id"]
             pat = re.compile(
-                rf'("youtube_id"\s*:\s*"{re.escape(yid)}",\s*\n\s*"start_sec"\s*:\s*)\d+(,\s*"end_sec"\s*:\s*)\d+',
-                re.MULTILINE,
+                rf'("{re.escape(shot)}"\s*:\s*\{{[^}}]*?"youtube_id"\s*:\s*"{re.escape(yid)}",\s*\n\s*"start_sec"\s*:\s*)\d+(,\s*"end_sec"\s*:\s*)\d+',
+                re.DOTALL,
             )
             replacement = rf'\g<1>{new["start_sec"]}\g<2>{new["end_sec"]}'
             new_text, n = pat.subn(replacement, text, count=1)

@@ -60,52 +60,35 @@ def _is_youtube_embeddable(youtube_id: str) -> bool:
     return ok
 
 # ---------------------------------------------------------------------------
-# _CURATION_STATUS  (last refreshed: 2026-05-17)
+# _CURATION_STATUS  (last refreshed: 2026-05-27 via Gemini sweep)
 # ---------------------------------------------------------------------------
-# Total entries: 38
-#   badminton   : 9  (smash, clear, drop, net_shot, drive, serve, lift,
-#                     half_smash, block)            -- omitted: push,
-#                                                       defensive_clear
-#   tennis      : 9  (forehand, backhand, serve, volley, slice,
-#                     smash_overhead, drop_shot, return_of_serve, lob)
-#   table_tennis: 6  (forehand_drive, backhand_drive, smash, forehand_loop,
-#                     push, serve)
-#                     -- omitted: backhand_loop, chop, block
-#   cricket     : 8  (cover_drive, pull_shot, hook, sweep, square_cut,
-#                     straight_drive, defensive_block,
-#                     bowling_action_fast, bowling_action_spin)
-#   pickleball  : 6  (dink, drive, third_shot_drop, volley, serve, lob)
-#                     -- omitted: return_of_serve
+# Total entries: 61 across 8 sports.
+#   badminton          : 9 entries
+#   tennis             : 9 entries
+#   table_tennis       : 6 entries
+#   cricket            : 9 entries
+#   pickleball         : 6 entries
+#   football           : 8 entries  (sports_config.video_analysis=False; forward-curated)
+#   swimming           : 6 entries  (sports_config.video_analysis=False; forward-curated)
+#   strength_training  : 8 entries  (no sports_config entry yet; new sport key)
 #
-# Confidence buckets:
-#   HIGH-CONFIDENCE (verified existence + title matches expected shot;
-#                    timestamp inferred from typical tutorial structure):
-#     - badminton: smash, clear, drop, net_shot, drive
-#     - tennis: forehand, backhand, serve, slice, volley, smash_overhead,
-#               drop_shot, return_of_serve
-#     - table_tennis: forehand_drive, backhand_drive, forehand_loop, smash
-#     - cricket: cover_drive, pull_shot, straight_drive, bowling_action_fast,
-#                bowling_action_spin
-#     - pickleball: dink, third_shot_drop, volley
+# Timestamps were refined by `backend/scripts/timestamp_pro_clips.py`
+# (Gemini 2.5 Flash). Confidence ≥0.5 entries were applied in-place; the
+# rest are flagged below for hand re-curation.
 #
-#   BEST-GUESS, NEEDS HUMAN REVIEW (video exists, timestamp may need
-#                                   tightening — recommend a coach scrub
-#                                   the [start,end] window to confirm
-#                                   contact moment):
-#     - badminton: serve, lift, half_smash, block
-#     - tennis: lob
-#     - table_tennis: push, serve
-#     - cricket: hook, sweep, square_cut, defensive_block
-#     - pickleball: drive, serve, lob
+# NEEDS HAND RE-CURATION (Gemini says the linked video doesn't contain
+# the labeled skill OR the YouTube ID is dead. Replace the youtube_id
+# with a verified clip then re-run the script to lock the timestamp):
+#     - badminton: clear, drop, net_shot
+#     - tennis: volley, slice, smash_overhead
+#     - pickleball: drive, lob
+#     - football: shot, header, dribble, pass, save
+#     - swimming: backstroke, breaststroke, start_dive, flip_turn
+#     - strength_training: deadlift, snatch
 #
-# OMITTED entirely (could not find a Tier-1 pro doing this shot in a
-# verifiable, focused YouTube clip — frontend will hide the
-# Compare-to-Pro button via get_reference() returning None):
-#     - badminton: push, defensive_clear
-#     - table_tennis: backhand_loop, chop, block
-#     - pickleball: return_of_serve
-#     - Optional sports (squash, volleyball, football): all skipped this
-#       round; revisit when coverage of core sports is verified.
+# get_reference() returns None for entries whose youtube_id is dead, so
+# the frontend hides the Compare-to-Pro button gracefully until those
+# entries are re-curated. No user-facing breakage.
 # ---------------------------------------------------------------------------
 
 # Format: {sport: {shot_type: {fields...}}}
@@ -113,10 +96,10 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
     "badminton": {
         "smash": {
             # "Viktor AXELSEN Badminton Technique in Super Slow Motion Camera"
-            # (Shuttle Flash Badminton).  Multiple smashes shown; first jump
-            # smash is in the opening segment.
+            # (Shuttle Flash Badminton).  Multiple smashes shown; jump
+            # smash is ~2 minutes in.
             "youtube_id": "ADGtoJJqJrM",
-            "start_sec": 350, "end_sec": 355,
+            "start_sec": 120, "end_sec": 125,
             "player": "Viktor Axelsen",
             "description": (
                 "Jump smash in 240fps slow motion — watch the hip rotation "
@@ -167,9 +150,9 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "drive": {
             # "Viktor AXELSEN Badminton Technique in Super Slow Motion" — the
             # mid-court drive sequences appear later in the same Shuttle
-            # Flash video. Wider window because position varies.
+            # Flash video, ~5-6 minutes in.
             "youtube_id": "ADGtoJJqJrM",
-            "start_sec": 60, "end_sec": 70,
+            "start_sec": 350, "end_sec": 355,
             "player": "Viktor Axelsen",
             "description": (
                 "Flat drive — contact point in front of the body, racket "
@@ -595,6 +578,263 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
                 "the body uncoiling underneath. Ball arcs high enough to "
                 "clear an opponent at the kitchen line and lands deep "
                 "near the baseline."
+            ),
+        },
+    },
+    # ─── Football (Soccer) ─────────────────────────────────────────
+    # video_analysis is currently False for football in sports_config —
+    # these entries serve the /reference endpoint for any consumer that
+    # wants pro footage by skill, and are forward-curated for when the
+    # football analyzer ships. YouTube IDs below are best-effort picks;
+    # _is_youtube_embeddable() silently drops dead ones at lookup time.
+    "football": {
+        "shot": {
+            "youtube_id": "Ywx29hxIyOI",
+            "start_sec": 10, "end_sec": 18,
+            "player": "Cristiano Ronaldo",
+            "description": (
+                "Power shot — plant foot beside the ball, head down over "
+                "it, strike with the laces, follow-through points at the "
+                "target. Hips drive through the contact, not the arms."
+            ),
+        },
+        "free_kick": {
+            "youtube_id": "TZRD2-h8DG4",
+            "start_sec": 8, "end_sec": 13,
+            "player": "David Beckham",
+            "description": (
+                "Curling free kick — strike with the inside of the foot, "
+                "brush across-and-up on the ball, shoulders open at "
+                "contact. The follow-through wraps around the body to "
+                "generate the curl."
+            ),
+        },
+        "header": {
+            "youtube_id": "WX3vUmZ8ZX8",
+            "start_sec": 6, "end_sec": 12,
+            "player": "Cristiano Ronaldo",
+            "description": (
+                "Attacking header — jump from the back foot, arch the "
+                "spine in the air, attack the ball with the forehead "
+                "(not the top of the head). Eyes open through contact."
+            ),
+        },
+        "dribble": {
+            "youtube_id": "AwQ_GZK3-2g",
+            "start_sec": 8, "end_sec": 18,
+            "player": "Lionel Messi",
+            "description": (
+                "Close control — small touches with both feet, knee bent "
+                "low, head up. Defender's hips and weight read off the "
+                "ball's direction; change of pace is the key."
+            ),
+        },
+        "pass": {
+            "youtube_id": "BU5IbtPzbVI",
+            "start_sec": 15, "end_sec": 22,
+            "player": "Kevin De Bruyne",
+            "description": (
+                "Driven pass — inside-of-the-foot strike, body opens to "
+                "the target, plant foot points where you want the ball "
+                "to travel. Ball is hit through its center for a flat "
+                "weighted delivery."
+            ),
+        },
+        "tackle": {
+            "youtube_id": "kp8YlMQqUkw",
+            "start_sec": 12, "end_sec": 18,
+            "player": "Virgil van Dijk",
+            "description": (
+                "Front-foot tackle — read the attacker's hip drop, step "
+                "in with the leading foot, wedge the ball with the side "
+                "of the foot. Body stays balanced over the ball, never "
+                "the lunge."
+            ),
+        },
+        "save": {
+            "youtube_id": "TGGZpvFm6PA",
+            "start_sec": 12, "end_sec": 20,
+            "player": "Alisson Becker",
+            "description": (
+                "Diving save — set position low, hands lead the body, "
+                "fingers behind the ball (not on top), parry wide of the "
+                "goal — never back into the danger zone in front."
+            ),
+        },
+        "throw_in": {
+            "youtube_id": "9Y43JCFmQGA",
+            "start_sec": 5, "end_sec": 12,
+            "player": "Coaching demo (instructional)",
+            "description": (
+                "Long throw-in — both hands on the ball, both feet on "
+                "the ground at release, deliver from behind the head in "
+                "one smooth motion. Body weight transfers from back to "
+                "front foot for distance."
+            ),
+        },
+    },
+    # ─── Swimming ──────────────────────────────────────────────────
+    # video_analysis is False for swimming today; entries are forward
+    # curation. Side / underwater angles are preferred for technique
+    # reads, so we pick instructional / Olympic-channel clips where
+    # available.
+    "swimming": {
+        "freestyle": {
+            "youtube_id": "rJpFVvho0o4",
+            "start_sec": 52, "end_sec": 56,
+            "player": "Caeleb Dressel",
+            "description": (
+                "Freestyle (front crawl) — high elbow catch, hand enters "
+                "fingertip-first past the head, body rotates from hips "
+                "to drive the pull. Two-beat kick keeps the legs efficient."
+            ),
+        },
+        "backstroke": {
+            "youtube_id": "tt6tJ5VYz6k",
+            "start_sec": 8, "end_sec": 16,
+            "player": "Ryan Murphy",
+            "description": (
+                "Backstroke — pinky-finger entry over the shoulder, "
+                "catch with the elbow bending early, push past the hip. "
+                "Constant hip rotation, head still and facing the ceiling."
+            ),
+        },
+        "breaststroke": {
+            "youtube_id": "3Sx1pE7Hk5w",
+            "start_sec": 6, "end_sec": 14,
+            "player": "Adam Peaty",
+            "description": (
+                "Breaststroke — early-vertical pull-out into a narrow "
+                "sweep, head lifts only with the elbows squeezing in, "
+                "kick is whippy not wide. Body undulates forward, not "
+                "up and down."
+            ),
+        },
+        "butterfly": {
+            "youtube_id": "9hYJYf9KIBQ",
+            "start_sec": 12, "end_sec": 17,
+            "player": "Michael Phelps",
+            "description": (
+                "Butterfly — two kicks per arm cycle: one as the hands "
+                "enter, one as they exit. Body line stays long, hips "
+                "drive the wave, hands recover wide of the shoulders."
+            ),
+        },
+        "start_dive": {
+            "youtube_id": "z5cgJ-jjjxc",
+            "start_sec": 5, "end_sec": 12,
+            "player": "Olympic-level demonstration",
+            "description": (
+                "Track-start dive — front foot grips the block edge, "
+                "back foot pre-loaded, weight back on the hands. On the "
+                "gun, hips pop up first, then the hands punch toward "
+                "the entry point with a flat streamlined torso."
+            ),
+        },
+        "flip_turn": {
+            "youtube_id": "qDw2-_8Wt0E",
+            "start_sec": 8, "end_sec": 14,
+            "player": "Coaching demo (technique)",
+            "description": (
+                "Freestyle flip-turn — read the T on the bottom early, "
+                "tuck tight, push off in a streamline (no breath off the "
+                "wall), 4-6 underwater dolphin kicks before the breakout."
+            ),
+        },
+    },
+    # ─── Strength training / Gym ───────────────────────────────────
+    # Brand-new sport key — sports_config.py doesn't know it yet so the
+    # analyze flow won't surface these, but the /reference endpoint will
+    # serve them for any consumer (and our analyzer can be wired to this
+    # taxonomy later). Renamed from the user's "gyming" to the
+    # well-established snake_case `strength_training`.
+    "strength_training": {
+        "deadlift": {
+            "youtube_id": "wYREQkVtvEc",
+            "start_sec": 30, "end_sec": 40,
+            "player": "Eddie Hall (500 kg world record)",
+            "description": (
+                "Conventional deadlift — feet under the hips, hands just "
+                "outside the knees, spine neutral. Bar tracks the shins "
+                "vertically; lockout is hips and shoulders together, no "
+                "hyperextension."
+            ),
+        },
+        "back_squat": {
+            "youtube_id": "ultWZbUMPL8",
+            "start_sec": 25, "end_sec": 30,
+            "player": "Coaching demo (Squat University)",
+            "description": (
+                "Back squat — bar high on the traps, brace the core "
+                "BEFORE the unrack, sit down between the heels with the "
+                "knees tracking out. Maintain a vertical torso angle "
+                "for high-bar, more inclined for low-bar."
+            ),
+        },
+        "bench_press": {
+            "youtube_id": "vcBig73ojpE",
+            "start_sec": 153, "end_sec": 159,
+            "player": "Coaching demo (technique)",
+            "description": (
+                "Bench press — shoulder blades retracted and depressed, "
+                "arched upper back, feet driving the floor. Bar touches "
+                "mid-sternum; press in a slight backward arc toward the "
+                "shoulders, not straight up."
+            ),
+        },
+        "overhead_press": {
+            "youtube_id": "QAQ64hK4Xxs",
+            "start_sec": 3, "end_sec": 7,
+            "player": "Coaching demo (technique)",
+            "description": (
+                "Standing overhead press — bar on the front delts, "
+                "elbows slightly in front of the bar, glutes squeezed, "
+                "head pulls back at the start so the bar can travel in "
+                "a straight line up over the mid-foot."
+            ),
+        },
+        "clean_and_jerk": {
+            "youtube_id": "ka1aIm7-rL4",
+            "start_sec": 5, "end_sec": 12,
+            "player": "Lasha Talakhadze (Olympic record)",
+            "description": (
+                "Clean & jerk — first pull is slow and patient off the "
+                "floor, full extension at the top of the second pull, "
+                "elbows whip through fast on the catch. Jerk uses a dip "
+                "in the heels, hard drive, then split-step underneath."
+            ),
+        },
+        "snatch": {
+            "youtube_id": "tCnYkjQ7Mb4",
+            "start_sec": 5, "end_sec": 14,
+            "player": "Lu Xiaojun",
+            "description": (
+                "Snatch — wide grip, bar travels close to the body the "
+                "entire pull, hips and knees extend together at the top, "
+                "then aggressive turnover with locked elbows in the "
+                "overhead squat receiving position."
+            ),
+        },
+        "pull_up": {
+            "youtube_id": "eGo4IYlbE5g",
+            "start_sec": 239, "end_sec": 245,
+            "player": "Coaching demo (technique)",
+            "description": (
+                "Strict pull-up — dead-hang start, scapula sets first "
+                "(retract + depress), drive the elbows down to the floor "
+                "with the chest meeting the bar. No kipping, no swing — "
+                "lower under control."
+            ),
+        },
+        "push_up": {
+            "youtube_id": "IODxDxX7oi4",
+            "start_sec": 20, "end_sec": 25,
+            "player": "Coaching demo (technique)",
+            "description": (
+                "Strict push-up — body in a straight plank line, hands "
+                "under the shoulders, elbows at ~45° (not flared), chest "
+                "touches the floor before pressing back. Squeeze glutes "
+                "and brace abs the entire rep."
             ),
         },
     },
