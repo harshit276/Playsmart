@@ -116,7 +116,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # (Shuttle Flash Badminton).  Multiple smashes shown; first jump
             # smash is in the opening segment.
             "youtube_id": "ADGtoJJqJrM",
-            "start_sec": 8, "end_sec": 16,
+            "start_sec": 350, "end_sec": 355,
             "player": "Viktor Axelsen",
             "description": (
                 "Jump smash in 240fps slow motion — watch the hip rotation "
@@ -181,7 +181,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Clever Flick Serve play by Mohammad Ahsan & Hendra Setiawan"
             # — multiple low + flick serves from the legendary doubles pair.
             "youtube_id": "QfvugJcyIo0",
-            "start_sec": 5, "end_sec": 13,
+            "start_sec": 58, "end_sec": 61,
             "player": "Hendra Setiawan (doubles)",
             "description": (
                 "Doubles backhand low serve — racket held in front of the "
@@ -194,7 +194,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Badminton Late Forehand Shot Technique | underarm stroke" —
             # contains PV Sindhu vs Wang Rio Olympics underarm/lift footage.
             "youtube_id": "mp6P6jIf0rE",
-            "start_sec": 8, "end_sec": 16,
+            "start_sec": 127, "end_sec": 132,
             "player": "Pusarla V. Sindhu",
             "description": (
                 "Underarm forehand lift from the front-court — lunge with "
@@ -207,7 +207,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # of world-class players. Half-smashes (steeper, less power)
             # appear among the variations.
             "youtube_id": "2csBzZywVv8",
-            "start_sec": 18, "end_sec": 26,
+            "start_sec": 240, "end_sec": 244,
             "player": "Chen Long",
             "description": (
                 "Half-smash — about 70% power, steeper trajectory than a "
@@ -218,7 +218,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "block": {
             # "Badminton Smash Defence-How To Do Backhand Block Return"
             "youtube_id": "xwvZAb6Xyak",
-            "start_sec": 30, "end_sec": 38,
+            "start_sec": 208, "end_sec": 212,
             "player": "Coaching demo (BadmintonHQ)",
             "description": (
                 "Backhand block return of smash — racket extended forward, "
@@ -233,7 +233,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Rafael Nadal Forehand Slow Motion - Modern ATP Forehand
             # Technique" (Top Tennis Training). Heavy topspin buggy-whip.
             "youtube_id": "BlBgArGeC0Q",
-            "start_sec": 8, "end_sec": 16,
+            "start_sec": 52, "end_sec": 57,
             "player": "Rafael Nadal",
             "description": (
                 "Heavy topspin forehand — open stance, big hip rotation "
@@ -246,7 +246,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Novak Djokovic Backhand Slow Motion - ATP Tennis Two Handed
             # Backhand Technique" (Top Tennis Training).
             "youtube_id": "AFyPREOG0BM",
-            "start_sec": 6, "end_sec": 14,
+            "start_sec": 105, "end_sec": 112,
             "player": "Novak Djokovic",
             "description": (
                 "Two-handed backhand — compact unit turn, contact slightly "
@@ -258,7 +258,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Roger Federer Serve Slow Motion - ATP Tennis Serve Technique"
             # (Top Tennis Training).
             "youtube_id": "1YuShuvbZnM",
-            "start_sec": 5, "end_sec": 14,
+            "start_sec": 15, "end_sec": 20,
             "player": "Roger Federer",
             "description": (
                 "Flat / slice serve — note the trophy position with bent "
@@ -307,7 +307,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "drop_shot": {
             # "Roger Federer. Drop Shot Technique" — focused drop-shot clip.
             "youtube_id": "VbXUG3GvsSo",
-            "start_sec": 4, "end_sec": 12,
+            "start_sec": 3, "end_sec": 7,
             "player": "Roger Federer",
             "description": (
                 "Forehand drop shot — disguised as a regular forehand "
@@ -320,7 +320,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Novak Djokovic Return of Serve Slow Motion - ATP Greatest
             # Tennis Serve Return EVER!" (Top Tennis Training).
             "youtube_id": "4wXKFZJ0WAM",
-            "start_sec": 8, "end_sec": 16,
+            "start_sec": 24, "end_sec": 29,
             "player": "Novak Djokovic",
             "description": (
                 "Return of serve — small split-step at server's contact, "
@@ -333,7 +333,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Master the Tennis Topspin Lob - Advanced Lesson" (Feel Tennis
             # / Tomaz Mencinger).  Coaching demo with pro execution.
             "youtube_id": "axv8yZF_8j4",
-            "start_sec": 20, "end_sec": 28,
+            "start_sec": 238, "end_sec": 243,
             "player": "Coaching demo (Feel Tennis)",
             "description": (
                 "Topspin lob — preparation looks like a passing shot "
@@ -347,7 +347,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "forehand_drive": {
             # "Ma Long Forehand Loop Technique | TABLE TENNIS"
             "youtube_id": "j8FPpZ2_cxE",
-            "start_sec": 6, "end_sec": 14,
+            "start_sec": 8, "end_sec": 13,
             "player": "Ma Long",
             "description": (
                 "Forehand topspin drive — body weight transfers from right "
@@ -358,7 +358,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "backhand_drive": {
             # "Timo Boll backhand topspin - Then vs Now"
             "youtube_id": "0Nwoxjd4aMM",
-            "start_sec": 5, "end_sec": 13,
+            "start_sec": 104, "end_sec": 108,
             "player": "Timo Boll",
             "description": (
                 "Backhand topspin drive — compact stroke driven by the "
@@ -369,7 +369,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "forehand_loop": {
             # "15 minutes of Ma Long's forehand technique (slow motion)"
             "youtube_id": "jig_5SLN2Eo",
-            "start_sec": 12, "end_sec": 20,
+            "start_sec": 37, "end_sec": 40,
             "player": "Ma Long",
             "description": (
                 "Forehand loop against backspin — drop the racket below "
@@ -381,7 +381,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "smash": {
             # "Table tennis in slow motion (240fps). Fan Zhendong, forehand"
             "youtube_id": "gdU4l98m_hQ",
-            "start_sec": 6, "end_sec": 14,
+            "start_sec": 10, "end_sec": 15,
             "player": "Fan Zhendong",
             "description": (
                 "Forehand smash / power loop — full body uncoil, contact "
@@ -393,7 +393,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Table Tennis Slowmotion Analysis - Fan Zhendong VS Koki Niwa
             # - Push Long" (ITTF Education).
             "youtube_id": "DQXigcbCx34",
-            "start_sec": 15, "end_sec": 23,
+            "start_sec": 26, "end_sec": 31,
             "player": "Fan Zhendong",
             "description": (
                 "Long backhand push — open racket face, contact under the "
@@ -404,7 +404,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "serve": {
             # "The amazing serve of Fan Zhendong [Slow Motion]"
             "youtube_id": "880kiy4z-W4",
-            "start_sec": 5, "end_sec": 13,
+            "start_sec": 8, "end_sec": 13,
             "player": "Fan Zhendong",
             "description": (
                 "Pendulum serve — contact close to the table with a "
@@ -418,7 +418,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "cover_drive": {
             # "Virat Kohli Cover Drive in Slow Motion | Treat to Watch"
             "youtube_id": "In8_N4CTfSk",
-            "start_sec": 6, "end_sec": 14,
+            "start_sec": 0, "end_sec": 3,
             "player": "Virat Kohli",
             "description": (
                 "Front-foot cover drive — full stride towards the pitch "
@@ -430,7 +430,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "pull_shot": {
             # "Rohit Sharma Pull Shot Masterclass: ... in Slow Motion"
             "youtube_id": "hpZ4z8I_aQM",
-            "start_sec": 8, "end_sec": 16,
+            "start_sec": 1, "end_sec": 6,
             "player": "Rohit Sharma",
             "description": (
                 "Pull shot off the back foot — back foot pivots towards "
@@ -441,7 +441,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "hook": {
             # "Cricket Coaching - When to Pull & Hook - choosing"
             "youtube_id": "shqYapuko9U",
-            "start_sec": 60, "end_sec": 70,
+            "start_sec": 1, "end_sec": 5,
             "player": "Coaching demo (Mark Garaway)",
             "description": (
                 "Hook shot vs short delivery at head height — pivot on "
@@ -455,7 +455,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # tutorial; intro section shows the conventional sweep first.
             # Best-guess; needs human review for exact contact frame.
             "youtube_id": "I_Xe3i8ZsyI",
-            "start_sec": 30, "end_sec": 40,
+            "start_sec": 429, "end_sec": 434,
             "player": "Coaching demo (cricket academy)",
             "description": (
                 "Conventional sweep — front knee drops to the ground, bat "
@@ -468,7 +468,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "How To Play The Square Cut Cricket Shot" - Toby Radford
             # (former West Indies batting coach).
             "youtube_id": "p4WPqPirEes",
-            "start_sec": 30, "end_sec": 40,
+            "start_sec": 2, "end_sec": 7,
             "player": "Coaching demo (Toby Radford)",
             "description": (
                 "Square cut — back and across with the back foot, "
@@ -479,7 +479,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "straight_drive": {
             # "Ultra Slow motion of Sachin Tendulkar STRAIGHT DRIVE | MASTERCLASS"
             "youtube_id": "nFXrwGKISTQ",
-            "start_sec": 4, "end_sec": 12,
+            "start_sec": 4, "end_sec": 10,
             "player": "Sachin Tendulkar",
             "description": (
                 "Straight drive — front foot strides directly down the "
@@ -491,7 +491,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Shubman Gill Batting Technique Slow-Motion" — contains both
             # attacking and forward-defensive shots.
             "youtube_id": "MIeRSR9fS8M",
-            "start_sec": 15, "end_sec": 23,
+            "start_sec": 401, "end_sec": 406,
             "player": "Shubman Gill",
             "description": (
                 "Forward defensive block — front foot strides forward, "
@@ -503,7 +503,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "Jasprit Bumrah Fast Bowling Action in Slow Motion | India
             # Unique Fast Bowler | Ground View"
             "youtube_id": "6PcsfehCw-k",
-            "start_sec": 6, "end_sec": 14,
+            "start_sec": 350, "end_sec": 355,
             "player": "Jasprit Bumrah",
             "description": (
                 "Fast bowling action — short run-up, hyperextension of "
@@ -514,7 +514,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "bowling_action_spin": {
             # "warne slowmo 2001" — Shane Warne leg-spin in 500fps.
             "youtube_id": "sFwhAsoax7w",
-            "start_sec": 4, "end_sec": 12,
+            "start_sec": 116, "end_sec": 122,
             "player": "Shane Warne",
             "description": (
                 "Leg-spin bowling action — side-on at the crease, fully "
@@ -529,7 +529,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "How to Perform a Dink Attack in Pickleball with Ben Johns"
             # (Life Time).
             "youtube_id": "KJvHGGJ7TcE",
-            "start_sec": 25, "end_sec": 33,
+            "start_sec": 26, "end_sec": 31,
             "player": "Ben Johns",
             "description": (
                 "Soft cross-court dink — paddle face open, contact in "
@@ -553,7 +553,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
             # "How To Hit A 3rd Shot Drop In Pickleball (Technique Explained
             # & More)"
             "youtube_id": "T5anZZ4-Iwo",
-            "start_sec": 45, "end_sec": 55,
+            "start_sec": 32, "end_sec": 35,
             "player": "Coaching demo (pro tutorial)",
             "description": (
                 "Third-shot drop — small swing from low to high, paddle "
@@ -564,7 +564,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "volley": {
             # "The Volley - Pickleball Tips with Tyson McGuffin"
             "youtube_id": "lhFe1qRMkMg",
-            "start_sec": 30, "end_sec": 38,
+            "start_sec": 255, "end_sec": 300,
             "player": "Tyson McGuffin",
             "description": (
                 "Forehand punch volley at the kitchen line — minimal "
@@ -575,7 +575,7 @@ REFERENCE_VIDEOS: dict[str, dict[str, dict]] = {
         "serve": {
             # "Federico Staksrud Teaches How to Serve in Pickleball!"
             "youtube_id": "_ew47Dqi-3w",
-            "start_sec": 30, "end_sec": 40,
+            "start_sec": 924, "end_sec": 928,
             "player": "Federico Staksrud",
             "description": (
                 "Drive serve — low-to-high paddle path (rule-required "

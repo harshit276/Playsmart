@@ -63,6 +63,17 @@ import time
 from pathlib import Path
 from typing import Any
 
+# Force UTF-8 on the script's stdout/stderr. On Windows the default
+# console codepage (cp1252) can't encode the arrow / warning chars we
+# use in the output formatting, which crashes the script mid-run AFTER
+# Gemini calls have already incurred cost. Reconfigure here once so
+# operators don't lose a paid call to a print() encoding error.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 # Resolve the backend/ root so we can import reference_videos regardless
 # of where this script is invoked from. Same pattern as scripts/tag_drills.py.
 THIS_DIR = Path(__file__).resolve().parent
@@ -208,17 +219,30 @@ def _format_change_row(sport: str, shot: str, old: dict, new: dict) -> str:
     )
 
 
-def _maybe_rewrite_inplace(suggestions: dict, ref_path: Path) -> None:
+def _maybe_rewrite_inplace(suggestions: dict, ref_path: Path,
+                           min_confidence: float = 0.0) -> None:
     """Naive in-place rewrite: find the existing youtube_id literal in
     reference_videos.py and update the immediately-adjacent start_sec /
     end_sec on that block. We deliberately don't parse the AST because
     the file mixes data and docs/comments — line-based replacement is
-    simpler to review in a diff. Operator must --confirm to run."""
+    simpler to review in a diff. Operator must --confirm to run.
+
+    `min_confidence` filters out low-confidence suggestions (e.g. when
+    Gemini says "video doesn't actually contain this shot") so the
+    --apply pass only commits trusted changes. The skipped entries
+    still print so the operator knows to hand-curate them later.
+    """
     text = ref_path.read_text(encoding="utf-8")
     n_changed = 0
+    n_skipped_low_conf = 0
     for sport, shot_data in suggestions.items():
         for shot, new in shot_data.items():
             if "error" in new:
+                continue
+            conf = float(new.get("confidence", 0))
+            if conf < min_confidence:
+                n_skipped_low_conf += 1
+                print(f"  · skipped {sport}/{shot} (conf {conf:.2f} < {min_confidence:.2f}) — hand-curate later")
                 continue
             # The catalog's pattern is consistent:
             #   "youtube_id": "ID",
@@ -241,6 +265,8 @@ def _maybe_rewrite_inplace(suggestions: dict, ref_path: Path) -> None:
         print(f"\nWrote {n_changed} updates to {ref_path}")
     else:
         print("\nNo changes written.")
+    if n_skipped_low_conf:
+        print(f"({n_skipped_low_conf} suggestions skipped for low confidence — review them in the JSON if you ran --write.)")
 
 
 # ─── Main ───────────────────────────────────────────────────────────────
@@ -257,11 +283,46 @@ def main() -> int:
                     help="Required alongside --apply")
     ap.add_argument("--delay", type=float, default=1.0,
                     help="Seconds between calls to avoid rate limits (default 1.0)")
+    ap.add_argument("--min-confidence", type=float, default=0.0,
+                    dest="min_confidence",
+                    help="With --apply: skip suggestions below this confidence. "
+                         "Recommended: 0.5 (drops the 'video doesn't contain this "
+                         "shot' false-negative cases so they can be hand-curated).")
+    ap.add_argument("--from-json", metavar="PATH", dest="from_json",
+                    help="Load previously-saved suggestions instead of "
+                         "re-calling Gemini. Pairs naturally with --apply when "
+                         "you've already run a dry-run and want to commit the "
+                         "result without spending API quota again.")
     args = ap.parse_args()
 
     if args.apply and not args.confirm:
         print("--apply requires --confirm. Aborting.", file=sys.stderr)
         return 2
+
+    # --from-json: skip Gemini entirely, load saved suggestions.
+    if args.from_json:
+        try:
+            suggestions = json.loads(Path(args.from_json).read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"Failed to read {args.from_json}: {exc}", file=sys.stderr)
+            return 1
+        print(f"Loaded suggestions from {args.from_json} (skipping Gemini calls).")
+        # Print summary so the operator sees what's about to apply.
+        for sport, shot_data in suggestions.items():
+            for shot, new in shot_data.items():
+                if "error" in new:
+                    print(f"  ✗ {sport}/{shot}: {new['error']}")
+                    continue
+                entry = REFERENCE_VIDEOS.get(sport, {}).get(shot, {})
+                if entry:
+                    print(_format_change_row(sport, shot, entry, new))
+        if args.apply:
+            print(f"\nApplying changes to reference_videos.py (min_confidence={args.min_confidence})…")
+            ref_path = BACKEND_DIR / "reference_videos.py"
+            _maybe_rewrite_inplace(suggestions, ref_path, min_confidence=args.min_confidence)
+        else:
+            print("\n(Dry run — pass --apply --confirm to write changes back.)")
+        return 0
 
     entries = list(_iter_entries(args.sport, args.shot))
     if not entries:
@@ -308,9 +369,9 @@ def main() -> int:
         print(f"\nSaved suggestions to {out_path}")
 
     if args.apply:
-        print("\nApplying changes to reference_videos.py…")
+        print(f"\nApplying changes to reference_videos.py (min_confidence={args.min_confidence})…")
         ref_path = BACKEND_DIR / "reference_videos.py"
-        _maybe_rewrite_inplace(suggestions, ref_path)
+        _maybe_rewrite_inplace(suggestions, ref_path, min_confidence=args.min_confidence)
     else:
         print("\n(Dry run — pass --apply --confirm to write changes back.)")
 
