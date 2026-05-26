@@ -1062,6 +1062,7 @@ TOKEN_RULES = {
     "training_day":    20,   # cap 1/day
     "daily_login":     25,   # cap 1/day, only first 7 days
     "analysis_spend": -100,  # negative = debit
+    "coach_voice_spend": -5, # negative = debit; per Live Voice Coach reply
 }
 
 DAILY_CAPS = {"host_game": 5, "training_day": 1, "daily_login": 1}
@@ -11966,6 +11967,311 @@ def _retrieval_only_answer(q: str, docs: list) -> str:
             lines.append(f"- {meta.get('name')} ({meta.get('sport')})")
     lines.append("\nVisit [/equipment](/equipment) for personalised picks or [/training](/training) for drills.")
     return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════
+# Live Voice Coach — streaming, analysis-grounded chat for the
+# new headline voice experience. Frontend (LiveVoiceCoach.jsx)
+# uses browser-native STT/TTS, then POSTs the user's transcript
+# along with the trimmed analysis_context built from the analyze
+# page's result. We respond via SSE so the user sees words appear
+# as Gemini emits them, and the frontend triggers TTS once the
+# stream is `done`.
+# ═══════════════════════════════════════════════════════════════
+class VoiceChatTurn(BaseModel):
+    role: str = Field(..., max_length=10)        # "user" | "coach"
+    text: str = Field(..., max_length=2000)
+
+
+class VoiceChatContext(BaseModel):
+    # All fields optional — the LLM should reference whatever is present
+    # and decline gracefully when something is missing.
+    sport: Optional[str] = Field(None, max_length=40)
+    overall_skill_level: Optional[str] = Field(None, max_length=40)
+    target_player_description: Optional[str] = Field(None, max_length=600)
+    # coach_narrative paragraphs (each ~≤600 chars after frontend trim)
+    coach_narrative: Optional[dict] = None
+    # List of compact shot summaries
+    shots: Optional[List[dict]] = None
+
+
+class VoiceChatRequest(BaseModel):
+    analysis_id: Optional[str] = Field(None, max_length=80)
+    session_id: str = Field(..., min_length=4, max_length=80)
+    history: List[VoiceChatTurn] = Field(default_factory=list)
+    user_message: str = Field(..., min_length=1, max_length=1000)
+    analysis_context: VoiceChatContext = Field(default_factory=VoiceChatContext)
+
+
+def _coach_voice_system_prompt(ctx: VoiceChatContext) -> str:
+    """Build a sport-specific coach system prompt grounded in this user's
+    analysis. We keep grounding conservative — the model is repeatedly
+    told to refer to OBSERVATIONS from the clip, not invent metrics, and
+    to decline anything off-coaching politely."""
+    sport = (ctx.sport or "").strip() or "the sport"
+    skill = (ctx.overall_skill_level or "").strip()
+    cn = ctx.coach_narrative or {}
+    intro = str(cn.get("intro", "") or "")[:600]
+    strengths = str(cn.get("strengths_paragraph", "") or "")[:600]
+    improvements = str(cn.get("improvements_paragraph", "") or "")[:600]
+    takeaway = str(cn.get("takeaway", "") or "")[:600]
+
+    shots = ctx.shots or []
+    shot_lines = []
+    for s in shots[:8]:
+        try:
+            label = str(s.get("label") or "").strip()[:60]
+            ts = s.get("timestamp_sec")
+            ts_str = f" @ {ts:.1f}s" if isinstance(ts, (int, float)) else ""
+            top_fix = str(s.get("top_fix") or "").strip()[:180]
+            reasoning = str(s.get("reasoning") or "").strip()[:200]
+            line = f"- {label or 'shot'}{ts_str}"
+            if top_fix:
+                line += f" — fix: {top_fix}"
+            if reasoning:
+                line += f" | what I saw: {reasoning}"
+            shot_lines.append(line)
+        except Exception:
+            continue
+    shots_block = "\n".join(shot_lines) if shot_lines else "(no per-shot details)"
+
+    tpd = (ctx.target_player_description or "").strip()[:240]
+
+    return f"""You are AthlyticAI's live voice coach speaking directly to the player
+about the {sport} clip you just analysed. You are NOT a generic chatbot — you
+are this player's coach for THIS clip.
+
+GROUNDING — these are the observations from the analysis. Reference them
+naturally; do NOT make up other metrics, scores, or numbers that aren't here.
+{f"Target player you tracked: {tpd}" if tpd else ""}
+{f"Overall skill level read: {skill}" if skill else ""}
+
+Coach narrative — intro:
+{intro or "(no intro paragraph)"}
+
+What's working:
+{strengths or "(no strengths paragraph)"}
+
+What to fix:
+{improvements or "(no improvements paragraph)"}
+
+One-line takeaway:
+{takeaway or "(no takeaway)"}
+
+Shots I saw, in order:
+{shots_block}
+
+STYLE RULES (these are non-negotiable):
+1. Speak in second person: "you", "your smash", "your footwork". Never
+   refer to "the player" — you're talking TO them.
+2. Keep replies SHORT for voice playback: 1-3 sentences normally, 4-5
+   only when explaining technique. Cap at ~120 words total.
+3. Reference SPECIFIC observations from above when the question is about
+   their gameplay (e.g., a particular shot label, or the
+   improvements_paragraph). Don't paraphrase the entire narrative — pull
+   the one detail that matches their question.
+4. If a user asks something OFF-TOPIC (weather, news, recipes, generic
+   trivia), decline politely in one sentence: "I'm your coach for this
+   session — let's stay on your gameplay." Then offer one specific next
+   thing they could ask about.
+5. NEVER invent stats, speeds, scores, or shot counts that aren't in the
+   grounding above. If asked something the analysis doesn't cover, say
+   so honestly: "I didn't track that in this clip, but here's what I did
+   see…"
+6. Plain spoken prose. No markdown, no bullet lists, no emojis — your
+   reply gets read aloud by the browser TTS.
+7. Examples:
+   - "Why was my smash weak?" → pull from the relevant smash shot's fix
+     or from the improvements paragraph.
+   - "What should I work on first?" → use the takeaway, or the top fix
+     across shots.
+   - "How's the weather?" → decline + redirect.
+
+Stay confident, warm, specific. You watched this clip."""
+
+
+def _build_voice_chat_user_message(req: VoiceChatRequest) -> str:
+    """Encode the rolling conversation as a single user message so we can
+    use the generic Gemini text generation path without needing a
+    separate chat session abstraction."""
+    parts = []
+    history = req.history or []
+    # Keep the last ~12 turns to stay well under the prompt budget.
+    for turn in history[-12:]:
+        role = (turn.role or "user").lower()
+        who = "PLAYER" if role == "user" else "COACH"
+        txt = (turn.text or "").strip()
+        if not txt:
+            continue
+        # Each historical turn capped to 500 chars — enough for context,
+        # not so much that the prompt explodes.
+        parts.append(f"{who}: {txt[:500]}")
+    parts.append(f"PLAYER (new message): {req.user_message.strip()[:1000]}")
+    parts.append("COACH (your reply — short, spoken, grounded in the analysis):")
+    return "\n\n".join(parts)
+
+
+@api_router.post("/coach/voice-chat")
+async def coach_voice_chat(
+    req: VoiceChatRequest,
+    authorization: str = Header(None),
+):
+    """Stream a sport-coach reply grounded in the user's analysis clip.
+
+    Request: JSON body validated as VoiceChatRequest.
+    Response: `text/event-stream`. Frames:
+      - `data: {"chunk": "..."}\\n\\n` per token group as Gemini emits.
+      - `data: {"done": true}\\n\\n` when the stream finishes.
+      - `data: {"error": "..."}\\n\\n` on failure (still HTTP 200; the
+        client renders the error in the transcript).
+
+    Token economics: 5 tokens per successful reply. Charged only after
+    the `done` frame is delivered (same pattern as analyze-video-stream)
+    so a disconnect mid-stream doesn't burn the user's balance.
+    """
+    user = await get_current_user_or_none(authorization)
+    is_guest = user is None
+    cost = abs(TOKEN_RULES.get("coach_voice_spend", -5))
+
+    # Up-front balance check for signed-in users so we don't open a
+    # stream we're going to fail anyway. Guests get one freebie chain
+    # (consistent with how analyze-video-stream handles them).
+    if not is_guest:
+        try:
+            balance = await _get_balance(user["id"])
+        except Exception:
+            balance = 0
+        if balance < cost:
+            async def _err_402():
+                yield _sse_event({
+                    "error": "insufficient_tokens",
+                    "required": cost,
+                    "balance": balance,
+                })
+                yield _sse_event({"done": True})
+            return StreamingResponse(
+                _err_402(), media_type="text/event-stream",
+                headers=_sse_headers(),
+            )
+
+    sys_prompt = _coach_voice_system_prompt(req.analysis_context)
+    user_msg = _build_voice_chat_user_message(req)
+
+    async def _stream():
+        complete_delivered = False
+        emitted_anything = False
+        try:
+            try:
+                import google.generativeai as genai  # type: ignore
+                import os as _os
+                model_name = (
+                    _os.environ.get("GEMINI_MODEL")
+                    or "gemini-2.5-flash"
+                )
+                if not _os.environ.get("GEMINI_API_KEY"):
+                    yield _sse_event({
+                        "error": "Voice coach unavailable — GEMINI_API_KEY not configured.",
+                    })
+                    yield _sse_event({"done": True})
+                    return
+                genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+                model = genai.GenerativeModel(
+                    model_name,
+                    system_instruction=sys_prompt,
+                )
+            except Exception as exc:
+                yield _sse_event({
+                    "error": f"gemini_init_failed: {str(exc)[:200]}",
+                })
+                yield _sse_event({"done": True})
+                return
+
+            loop = asyncio.get_event_loop()
+            started = _time.time()
+            TIMEOUT_SEC = 25.0
+
+            # Bridge sync Gemini stream → async SSE through a queue +
+            # thread, same pattern as analyze-video-stream.
+            import queue as _queue
+            import threading as _th
+            q: "_queue.Queue[object]" = _queue.Queue(maxsize=64)
+            SENTINEL = object()
+
+            def _runner():
+                try:
+                    stream_iter = model.generate_content(
+                        user_msg,
+                        stream=True,
+                        generation_config={
+                            "temperature": 0.4,
+                            # No JSON response — we want spoken prose.
+                            "max_output_tokens": 320,
+                        },
+                    )
+                    for chunk in stream_iter:
+                        try:
+                            txt = chunk.text or ""
+                        except Exception:
+                            txt = ""
+                        if txt:
+                            q.put({"chunk": txt})
+                except Exception as exc:
+                    q.put({"error": f"gemini_call_failed: {str(exc)[:200]}"})
+                finally:
+                    q.put(SENTINEL)
+
+            thread = _th.Thread(target=_runner, daemon=True)
+            thread.start()
+
+            while True:
+                if _time.time() - started > TIMEOUT_SEC:
+                    yield _sse_event({
+                        "error": "voice_chat_timeout_25s",
+                    })
+                    break
+                try:
+                    item = await asyncio.wait_for(
+                        loop.run_in_executor(None, q.get, True, 1.0),
+                        timeout=2.0,
+                    )
+                except (asyncio.TimeoutError, _queue.Empty):
+                    # SSE keepalive — comments are ignored by the client
+                    # parser but defeat proxy idle-close.
+                    yield b": keepalive\n\n"
+                    continue
+                if item is SENTINEL:
+                    break
+                if isinstance(item, dict):
+                    if "chunk" in item and item["chunk"]:
+                        emitted_anything = True
+                        yield _sse_event({"chunk": item["chunk"]})
+                    elif "error" in item:
+                        yield _sse_event({"error": item["error"]})
+
+            # Terminal frame — delivered inside try so a client disconnect
+            # mid-stream raises GeneratorExit and complete_delivered stays
+            # False → no charge.
+            yield _sse_event({"done": True})
+            complete_delivered = emitted_anything
+        finally:
+            if complete_delivered and not is_guest:
+                try:
+                    await _spend_tokens(
+                        user["id"], "coach_voice_spend", cost,
+                        {
+                            "endpoint": "coach-voice-chat",
+                            "session_id": req.session_id,
+                            "analysis_id": req.analysis_id,
+                        },
+                    )
+                except Exception:
+                    pass
+
+    return StreamingResponse(
+        _stream(),
+        media_type="text/event-stream",
+        headers=_sse_headers(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════
