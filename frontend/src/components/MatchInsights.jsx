@@ -572,10 +572,12 @@ export default function MatchInsights({
           Per-shot card click uses data-playsmart-clip to find the <video>
           and seek to the moment. */}
       {playerUrl && (
-        <VideoPlayerWithMarkers
-          playerUrl={playerUrl}
-          perShot={perShot}
-        />
+        <div id="analysis-section-rally-breakdown" className="scroll-mt-24">
+          <VideoPlayerWithMarkers
+            playerUrl={playerUrl}
+            perShot={perShot}
+          />
+        </div>
       )}
 
       {(phase === "extracting" || phase === "narrating") && (
@@ -768,22 +770,24 @@ export default function MatchInsights({
               through here; the panel falls back to its own client-side
               math when the narrative hasn't loaded yet or the response
               shape is an older cached version. */}
-          <MatchMetricsPanel
-            perShot={perShot}
-            // Real clip length — live videoEl.duration first, then the
-            // backend's saved video_info for historical replays. Falls back
-            // to (max ts + 1) inside computeMatchMetrics only as a last
-            // resort. Without this the 17s/10-shot bug surfaced as 375
-            // shots/min because shot timestamps clustered in <2s.
-            durationSec={
-              videoDuration
-              ?? (videoInfo && (videoInfo.duration_sec ?? videoInfo.duration))
-              ?? null
-            }
-            sport={sport}
-            sessionType={narrative?.session_type}
-            contextualBenchmarks={narrative?.contextual_benchmarks}
-          />
+          <div id="analysis-section-metrics-dashboard" className="scroll-mt-24">
+            <MatchMetricsPanel
+              perShot={perShot}
+              // Real clip length — live videoEl.duration first, then the
+              // backend's saved video_info for historical replays. Falls back
+              // to (max ts + 1) inside computeMatchMetrics only as a last
+              // resort. Without this the 17s/10-shot bug surfaced as 375
+              // shots/min because shot timestamps clustered in <2s.
+              durationSec={
+                videoDuration
+                ?? (videoInfo && (videoInfo.duration_sec ?? videoInfo.duration))
+                ?? null
+              }
+              sport={sport}
+              sessionType={narrative?.session_type}
+              contextualBenchmarks={narrative?.contextual_benchmarks}
+            />
+          </div>
 
           {/* Per-type quality — consistency for n≥2, form score for n=1 */}
           {populatedTypes.length > 0 && (
@@ -842,7 +846,9 @@ export default function MatchInsights({
               "what should I work on?" answer up front, without scrolling
               every individual card. Each fix is hearable + jumps the
               video to a concrete example. */}
-          <ImprovementCards shots={perShot} sport={sport} maxCards={3} />
+          <div id="analysis-section-tactical-mistakes" className="scroll-mt-24">
+            <ImprovementCards shots={perShot} sport={sport} maxCards={3} />
+          </div>
 
           {/* Per-shot AI coach cards. With ≤4 shots we list each one. With
               5+ we group by shot type so a 12-shot rally doesn't drown the
@@ -855,7 +861,9 @@ export default function MatchInsights({
           <AutoProReferencePanel perShot={perShot} sport={sport} videoFile={videoFile} />
 
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
-            <PerShotCoachSection perShot={perShot} sport={sport} />
+            <div id="analysis-section-shot-analysis" className="scroll-mt-24">
+              <PerShotCoachSection perShot={perShot} sport={sport} />
+            </div>
           )}
 
           {/* Narrative */}
