@@ -208,7 +208,21 @@ export default function MatchInsights({
   videoInfo = null,           // backend's video_info ({duration, duration_sec, ...})
                               // — supplies the canonical duration for historical
                               // analyses where we no longer have the original file.
+  // Player avatar — cropped thumb of the analyzed player from
+  // /describe-players. Threaded through to IndividualShotCard /
+  // ShotGroupCard via window.__playsmartTargetPlayer so deeply-nested
+  // children don't need prop drilling.
+  targetPlayerThumbnail = null,
+  targetPlayerDescription = null,
 }) {
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.__playsmartTargetPlayer = {
+      thumbnail: targetPlayerThumbnail,
+      description: targetPlayerDescription,
+    };
+    return () => { window.__playsmartTargetPlayer = null; };
+  }, [targetPlayerThumbnail, targetPlayerDescription]);
   const [phase, setPhase] = useState("idle"); // idle | extracting | narrating | done | error
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
@@ -2090,11 +2104,27 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
       className={`bg-zinc-900/60 border ${pulsing ? "border-lime-400/60" : "border-zinc-800"} rounded-xl overflow-hidden transition-colors ${hasTimestamp ? "cursor-pointer hover:border-zinc-700" : ""}`}
       title={hasTimestamp ? `Click to jump to ${shot.timestamp.toFixed(1)}s` : undefined}
     >
-      {/* Compact header: thumbnail + name + quality bar */}
+      {/* Compact header: thumbnail + name + quality bar.
+          The small player-avatar dot in the corner of the contact-frame
+          thumbnail is the cropped image of the player Gemini analyzed
+          (sourced from /describe-players via universalPick). It's the
+          visual "this is who was analyzed" confirmation — pairs with
+          the mismatch banner at the top of the page when applicable. */}
       <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
         {shot.thumbnail && (
-          <img src={shot.thumbnail} alt={cleanLabel}
-               className="w-20 h-20 rounded-lg object-cover bg-black shrink-0" loading="lazy" />
+          <div className="relative shrink-0">
+            <img src={shot.thumbnail} alt={cleanLabel}
+                 className="w-20 h-20 rounded-lg object-cover bg-black" loading="lazy" />
+            {typeof window !== "undefined" && window.__playsmartTargetPlayer?.thumbnail && (
+              <img
+                src={window.__playsmartTargetPlayer.thumbnail}
+                alt="Analyzed player"
+                title={window.__playsmartTargetPlayer.description || "Analyzed player"}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-cover bg-black border-2 border-zinc-900 shadow-md"
+                loading="lazy"
+              />
+            )}
+          </div>
         )}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -2449,11 +2479,23 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
       className={`bg-zinc-900/60 border ${pulsing ? "border-lime-400/60" : "border-zinc-800"} rounded-xl overflow-hidden transition-colors ${hasJump ? "cursor-pointer hover:border-zinc-700" : ""}`}
       title={hasJump ? `Click to jump to the best ${name} (${jumpTarget.timestamp.toFixed(1)}s)` : undefined}
     >
-      {/* Compact header: thumbnail + shot name + quality bar */}
+      {/* Compact header: thumbnail + shot name + quality bar.
+          See IndividualShotCard for the player-avatar overlay rationale. */}
       <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
         {heroShot?.thumbnail && (
-          <img src={heroShot.thumbnail} alt={name}
-               className="w-20 h-20 rounded-lg object-cover bg-black shrink-0" loading="lazy" />
+          <div className="relative shrink-0">
+            <img src={heroShot.thumbnail} alt={name}
+                 className="w-20 h-20 rounded-lg object-cover bg-black" loading="lazy" />
+            {typeof window !== "undefined" && window.__playsmartTargetPlayer?.thumbnail && (
+              <img
+                src={window.__playsmartTargetPlayer.thumbnail}
+                alt="Analyzed player"
+                title={window.__playsmartTargetPlayer.description || "Analyzed player"}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-cover bg-black border-2 border-zinc-900 shadow-md"
+                loading="lazy"
+              />
+            )}
+          </div>
         )}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2 flex-wrap">

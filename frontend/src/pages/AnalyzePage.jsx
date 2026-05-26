@@ -3225,6 +3225,14 @@ export default function AnalyzePage() {
             playerPosition={targetPlayer || "auto"}
             fallbackSkillLevel={aiSkillLevel}
             videoInfo={result.video_info || null}
+            // Cropped avatar of the player Gemini analyzed (from
+            // /describe-players via universalPick.thumbnail). Each shot
+            // card shows it next to the shot name so users have a
+            // visual "this is who was analyzed" confirmation —
+            // especially important on multi-player clips where the
+            // target-pick can be subtle.
+            targetPlayerThumbnail={result._target_player_thumbnail || null}
+            targetPlayerDescription={result._target_player_description || null}
           />
         )}
 
