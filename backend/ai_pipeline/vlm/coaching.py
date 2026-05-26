@@ -940,6 +940,111 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
     return sys_prompt, user_msg
 
 
+def _detect_target_mismatch(
+    target_player_description: str | None,
+    coach_narrative: dict | None,
+    events: list,
+) -> dict | None:
+    """When the user picked Player A (e.g. 'blue shirt, white shorts')
+    but Gemini's coach_narrative spends its words describing Player B
+    (e.g. 'dark blue tshirt'), surface that gracefully instead of
+    silently mismatching.
+
+    The detection is heuristic and conservative: we only flag when
+    Gemini referenced a COLOR/CLOTHING token that contradicts the
+    picked description's COLOR/CLOTHING tokens. Generic disagreement
+    ("the player" vs "the athlete") doesn't trigger.
+
+    Returns either None (no mismatch detected / can't tell) or:
+      {
+        "reason": "<short explanation users can read>",
+        "picked":  "<user's pick, repeated for context>",
+        "detected_phrases": ["<excerpt from Gemini that suggests another player>", ...],
+      }
+    """
+    if not target_player_description:
+        return None
+    if not isinstance(coach_narrative, dict):
+        coach_narrative = {}
+
+    # Color/clothing vocabulary — we only treat these as anchors. Adding
+    # to this list is safe; the function bails to None when it can't
+    # find a confident contradiction.
+    COLORS = {
+        "red", "orange", "yellow", "green", "blue", "navy", "teal",
+        "cyan", "purple", "pink", "magenta", "black", "white", "grey",
+        "gray", "brown", "tan", "beige", "maroon", "olive", "lime",
+        "sky", "indigo", "violet", "gold", "silver",
+    }
+    GARMENTS = {
+        "shirt", "tshirt", "t-shirt", "jersey", "top", "tank", "tee",
+        "shorts", "pants", "trousers", "skirt", "kit", "uniform",
+    }
+
+    desc = (target_player_description or "").lower()
+    # The colors the user *picked*. We need at least one to do the check.
+    picked_colors = {c for c in COLORS if c in desc}
+    if not picked_colors:
+        return None  # nothing concrete to compare against
+
+    # Pull text Gemini wrote describing the analyzed player. Stick to
+    # the narrative paragraphs (where Gemini introduces "the player in
+    # X") and per-event reasoning that names clothing.
+    haystack_parts = [
+        str(coach_narrative.get("intro", "")),
+        str(coach_narrative.get("strengths_paragraph", "")),
+    ]
+    for e in (events or [])[:8]:
+        if isinstance(e, dict):
+            haystack_parts.append(str(e.get("reasoning", "")))
+            haystack_parts.append(str(e.get("description", "")))
+    haystack = " ".join(haystack_parts).lower()
+    if not haystack:
+        return None
+
+    # Did Gemini name a color directly attached to a garment word?
+    # That's a stronger signal than a bare color (might be the court).
+    import re as _re
+    found_phrases = []
+    for c in COLORS:
+        if c in picked_colors:
+            continue
+        for g in GARMENTS:
+            # Match "dark blue shirt", "blue tshirt", "navy jersey" — but
+            # also bare "in the X shirt" via the optional adjective.
+            pattern = rf"\b(?:dark|light|bright|pale|deep)?\s*{c}\s+{g}\b"
+            for m in _re.finditer(pattern, haystack):
+                found_phrases.append(m.group(0).strip())
+
+    if not found_phrases:
+        return None
+
+    # Confirm at least one of the picked colors is ALSO mentioned —
+    # otherwise we just don't have enough signal (Gemini might have
+    # described the kit by terms we don't recognize as colors).
+    picked_mentioned = any(
+        _re.search(rf"\b{c}\b", haystack) for c in picked_colors
+    )
+    # If the picked color IS mentioned, this is genuinely ambiguous;
+    # don't fire (the picked player may have been visible alongside the
+    # described one). We only flag the clean "picked X, talked about Y
+    # only" case.
+    if picked_mentioned:
+        return None
+
+    return {
+        "reason": (
+            "Gemini's coach read mentions a player whose clothing doesn't "
+            "match the one you selected. This usually happens when the "
+            "selected player is partly out of frame or the most prominent "
+            "athlete on screen wears different colors. The shot analysis "
+            "below may describe that prominent athlete, not your selection."
+        ),
+        "picked": target_player_description,
+        "detected_phrases": sorted(set(found_phrases))[:4],
+    }
+
+
 def _belongs_to_target(e: dict, target_player_description: str | None) -> bool:
     """Belt-and-suspenders filter to drop shots Gemini clearly attributes
     to the opponent.
@@ -1200,11 +1305,19 @@ def analyze_video_universal(
         "improvements_paragraph": str(cn_raw.get("improvements_paragraph", ""))[:1500].strip(),
         "takeaway": str(cn_raw.get("takeaway", ""))[:500].strip(),
     }
+    # Detect "user picked Player A but Gemini described Player B" cases —
+    # the UI surfaces this as a banner so users aren't confused when the
+    # coach read describes someone wearing different colors than they
+    # selected. Returns None when no mismatch is detected.
+    target_mismatch_warning = _detect_target_mismatch(
+        target_player_description, coach_narrative, data.get("events") or [],
+    )
     return {
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
         "coach_narrative": coach_narrative,
+        "target_mismatch_warning": target_mismatch_warning,
         "events": events_out,
         # Debug surface for the in-app debug panel — see stream variant.
         "_debug": {
@@ -1433,12 +1546,16 @@ def stream_analyze_video_universal(
         "improvements_paragraph": str(cn_raw_stream.get("improvements_paragraph", ""))[:1500].strip(),
         "takeaway": str(cn_raw_stream.get("takeaway", ""))[:500].strip(),
     }
+    target_mismatch_warning_stream = _detect_target_mismatch(
+        target_player_description, coach_narrative_stream, data.get("events") or [],
+    )
 
     payload = {
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
         "coach_narrative": coach_narrative_stream,
+        "target_mismatch_warning": target_mismatch_warning_stream,
         "events": events_out,
         "_meta": {
             "backend": backend_obj.name,

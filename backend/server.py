@@ -3415,6 +3415,9 @@ async def analyze_video_universal_endpoint(
         # This is the field that gives the user the Gemini-Studio-grade
         # coach voice they expect on the analyze result page.
         "coach_narrative": result.get("coach_narrative") or {},
+        # When the user's selected player and Gemini's described player
+        # disagree, this carries the explanation for the in-app banner.
+        "target_mismatch_warning": result.get("target_mismatch_warning") or None,
         "events": result.get("events") or [],
         "_debug": result.get("_debug") or {},
         "_meta": result.get("_meta") or {},
@@ -3620,6 +3623,7 @@ async def analyze_video_stream_endpoint(
                     "summary": final_payload.get("summary"),
                     "overall_skill_level": final_payload.get("overall_skill_level"),
                     "coach_narrative": final_payload.get("coach_narrative") or {},
+                    "target_mismatch_warning": final_payload.get("target_mismatch_warning") or None,
                     "_meta": final_payload.get("_meta", {}),
                 })
                 complete_delivered = True

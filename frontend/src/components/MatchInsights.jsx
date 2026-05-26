@@ -208,7 +208,21 @@ export default function MatchInsights({
   videoInfo = null,           // backend's video_info ({duration, duration_sec, ...})
                               // — supplies the canonical duration for historical
                               // analyses where we no longer have the original file.
+  // Player avatar — cropped thumb of the analyzed player from
+  // /describe-players. Threaded through to IndividualShotCard /
+  // ShotGroupCard via window.__playsmartTargetPlayer so deeply-nested
+  // children don't need prop drilling.
+  targetPlayerThumbnail = null,
+  targetPlayerDescription = null,
 }) {
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    window.__playsmartTargetPlayer = {
+      thumbnail: targetPlayerThumbnail,
+      description: targetPlayerDescription,
+    };
+    return () => { window.__playsmartTargetPlayer = null; };
+  }, [targetPlayerThumbnail, targetPlayerDescription]);
   const [phase, setPhase] = useState("idle"); // idle | extracting | narrating | done | error
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState("");
@@ -2090,11 +2104,27 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
       className={`bg-zinc-900/60 border ${pulsing ? "border-lime-400/60" : "border-zinc-800"} rounded-xl overflow-hidden transition-colors ${hasTimestamp ? "cursor-pointer hover:border-zinc-700" : ""}`}
       title={hasTimestamp ? `Click to jump to ${shot.timestamp.toFixed(1)}s` : undefined}
     >
-      {/* Compact header: thumbnail + name + quality bar */}
+      {/* Compact header: thumbnail + name + quality bar.
+          The small player-avatar dot in the corner of the contact-frame
+          thumbnail is the cropped image of the player Gemini analyzed
+          (sourced from /describe-players via universalPick). It's the
+          visual "this is who was analyzed" confirmation — pairs with
+          the mismatch banner at the top of the page when applicable. */}
       <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
         {shot.thumbnail && (
-          <img src={shot.thumbnail} alt={cleanLabel}
-               className="w-20 h-20 rounded-lg object-cover bg-black shrink-0" loading="lazy" />
+          <div className="relative shrink-0">
+            <img src={shot.thumbnail} alt={cleanLabel}
+                 className="w-20 h-20 rounded-lg object-cover bg-black" loading="lazy" />
+            {typeof window !== "undefined" && window.__playsmartTargetPlayer?.thumbnail && (
+              <img
+                src={window.__playsmartTargetPlayer.thumbnail}
+                alt="Analyzed player"
+                title={window.__playsmartTargetPlayer.description || "Analyzed player"}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-cover bg-black border-2 border-zinc-900 shadow-md"
+                loading="lazy"
+              />
+            )}
+          </div>
         )}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -2449,11 +2479,23 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
       className={`bg-zinc-900/60 border ${pulsing ? "border-lime-400/60" : "border-zinc-800"} rounded-xl overflow-hidden transition-colors ${hasJump ? "cursor-pointer hover:border-zinc-700" : ""}`}
       title={hasJump ? `Click to jump to the best ${name} (${jumpTarget.timestamp.toFixed(1)}s)` : undefined}
     >
-      {/* Compact header: thumbnail + shot name + quality bar */}
+      {/* Compact header: thumbnail + shot name + quality bar.
+          See IndividualShotCard for the player-avatar overlay rationale. */}
       <div className="flex items-stretch gap-3 p-3 border-b border-zinc-800/60">
         {heroShot?.thumbnail && (
-          <img src={heroShot.thumbnail} alt={name}
-               className="w-20 h-20 rounded-lg object-cover bg-black shrink-0" loading="lazy" />
+          <div className="relative shrink-0">
+            <img src={heroShot.thumbnail} alt={name}
+                 className="w-20 h-20 rounded-lg object-cover bg-black" loading="lazy" />
+            {typeof window !== "undefined" && window.__playsmartTargetPlayer?.thumbnail && (
+              <img
+                src={window.__playsmartTargetPlayer.thumbnail}
+                alt="Analyzed player"
+                title={window.__playsmartTargetPlayer.description || "Analyzed player"}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full object-cover bg-black border-2 border-zinc-900 shadow-md"
+                loading="lazy"
+              />
+            )}
+          </div>
         )}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -2614,7 +2656,16 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   const [proRef, setProRef] = useState(null);
   const [headlineShot, setHeadlineShot] = useState(null);
   const userVideoRef = useRef(null);
-  const userVideoUrlRef = useRef(null);
+  // useState (not useRef) for the URL so canShowVideo actually re-evaluates
+  // after we build the URL — the previous useRef version meant the
+  // conditional ran with current=null on first render, fell through to
+  // the "No preview available" branch, and never updated. Bug surfaced
+  // as the screenshot the user flagged: YOU panel permanently empty even
+  // when the file was right there.
+  const [userVideoUrl, setUserVideoUrl] = useState(null);
+  // Speed selector for the YOU clip — same toggle pattern users already
+  // know from FormComparisonModal.
+  const [speed, setSpeed] = useState(0.5);
   // AI Correct generation removed — Replicate motion-transfer models
   // are too slow + flaky to be a foreground feature right now (60-180s,
   // sometimes failing even with billing). Keeping the backend endpoint
@@ -2626,11 +2677,11 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   // side-by-side replay against the YouTube pro reference.
   useEffect(() => {
     if (!videoFile) {
-      userVideoUrlRef.current = null;
-      return;
+      setUserVideoUrl(null);
+      return undefined;
     }
     const url = URL.createObjectURL(videoFile);
-    userVideoUrlRef.current = url;
+    setUserVideoUrl(url);
     return () => { try { URL.revokeObjectURL(url); } catch {} };
   }, [videoFile]);
 
@@ -2689,6 +2740,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       try {
         v.currentTime = Math.max(0, ts - SHOT_LEAD);
         v.muted = true;
+        v.playbackRate = speed;
         v.play?.();
       } catch {}
       v._loopStart = Math.max(0, ts - SHOT_LEAD);
@@ -2706,11 +2758,51 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       v.removeEventListener("timeupdate", onTimeUpdate);
       try { v.pause?.(); } catch {}
     };
-  }, [headlineShot, userVideoUrlRef.current]);
+  }, [headlineShot, userVideoUrl, speed]);
+
+  // Push speed changes to the live video element without restarting
+  // the loop (separate effect so toggling speed mid-loop doesn't snap
+  // back to lead time).
+  useEffect(() => {
+    const v = userVideoRef.current;
+    if (!v) return;
+    try { v.playbackRate = speed; } catch {}
+  }, [speed]);
 
   if (!proRef || !headlineShot) return null;
-  const ytSrc = `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}?start=${proRef.start_sec || 0}&end=${proRef.end_sec || (proRef.start_sec || 0) + 6}&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}&controls=1&modestbranding=1&rel=0`;
-  const canShowVideo = !!userVideoUrlRef.current && typeof headlineShot.timestamp === "number";
+
+  // Pro segment in seconds, used for both the embed window AND the
+  // visible "Ns segment · loop" badge so users don't see the full
+  // 10-minute video chrome and assume we're playing the whole video.
+  const proStart = Math.max(0, Math.round(proRef.start_sec || 0));
+  const proEnd = Math.max(proStart + 1, Math.round(proRef.end_sec || proStart + 5));
+  const proSegmentSec = Math.max(1, proEnd - proStart);
+
+  // controls=0 + disablekb + showinfo=0 + iv_load_policy=3 strips YT's
+  // own progress bar and title chrome — the same approach the Form
+  // Comparison modal uses. We render our own segment label.
+  const ytSrc = `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}`
+    + `?start=${proStart}&end=${proEnd}`
+    + `&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}`
+    + `&controls=0&modestbranding=1&rel=0&disablekb=1&iv_load_policy=3`
+    + `&showinfo=0&fs=0&playsinline=1`;
+
+  const canShowVideo = !!userVideoUrl && typeof headlineShot.timestamp === "number";
+
+  // Click YOU panel → seek the page's main video to this shot AND
+  // scroll it into view, so users have one path to "study this in
+  // depth" without leaving the analyze page.
+  const jumpToShotOnPage = (e) => {
+    e?.stopPropagation?.();
+    if (typeof headlineShot.timestamp !== "number") return;
+    window.dispatchEvent(new CustomEvent("playsmart:seek", {
+      detail: { time: headlineShot.timestamp },
+    }));
+    const v = document.querySelector("video[data-playsmart-clip]");
+    if (v) {
+      try { v.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {}
+    }
+  };
 
   return (
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl overflow-hidden">
@@ -2726,17 +2818,23 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-        {/* USER side — raw user clip looping the shot window */}
-        <div className="bg-black aspect-video relative">
+        {/* USER side — raw user clip looping the shot window.
+            Click anywhere on the panel to jump the main page video to
+            this shot (so the panel doubles as a fast nav surface). */}
+        <div
+          className="bg-black aspect-video relative group cursor-pointer"
+          onClick={canShowVideo ? jumpToShotOnPage : undefined}
+          role={canShowVideo ? "button" : undefined}
+          title={canShowVideo ? "Jump to this shot in the main player" : undefined}
+        >
           {canShowVideo ? (
             <video
               ref={userVideoRef}
-              src={userVideoUrlRef.current}
+              src={userVideoUrl}
               muted
               playsInline
               preload="auto"
-              className="w-full h-full object-cover"
-              data-playsmart-clip
+              className="w-full h-full object-cover pointer-events-none"
             />
           ) : headlineShot.thumbnail ? (
             <img src={headlineShot.thumbnail} alt="Your shot" className="w-full h-full object-cover" />
@@ -2748,10 +2846,20 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
             <p className="text-[10px] uppercase tracking-wider text-white font-bold">You</p>
           </div>
+          {canShowVideo && (
+            <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
+              <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold">{speed}× slow-mo</p>
+            </div>
+          )}
+          {canShowVideo && (
+            <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <p className="text-[9px] uppercase tracking-wider text-sky-300 font-bold">Tap to jump ↗</p>
+            </div>
+          )}
         </div>
-        {/* PRO side — curated YouTube segment. Embed CAN fail (region
-            block, owner disabled embed without removing video, etc),
-            so we always offer "Open on YouTube" fallback below. */}
+        {/* PRO side — curated YouTube segment. controls=0 + custom
+            badge so users don't see the full 10-minute video chrome
+            and think we're playing the whole video. */}
         <div className="bg-black aspect-video relative">
           <iframe
             src={ytSrc}
@@ -2763,8 +2871,41 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
             <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold">{proRef.player}</p>
           </div>
+          <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
+            <p className="text-[10px] uppercase tracking-wider text-amber-200 font-bold">
+              {proSegmentSec}s segment · loop
+            </p>
+          </div>
         </div>
       </div>
+      {/* Speed controls row — only when a real video is loaded; we
+          deliberately put it BELOW the panels so it doesn't overlap
+          the click-to-jump area. */}
+      {canShowVideo && (
+        <div className="px-3 py-2 bg-zinc-900/60 border-t border-zinc-800 flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">
+            Your clip speed
+          </span>
+          <div className="inline-flex rounded-md overflow-hidden border border-zinc-700 bg-zinc-900">
+            {[0.25, 0.5, 1.0].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setSpeed(r); }}
+                aria-pressed={speed === r}
+                className={`min-h-[32px] px-2.5 py-1 text-[11px] font-bold transition-colors ${
+                  speed === r ? "bg-sky-400 text-black" : "text-zinc-300 hover:bg-zinc-800"
+                }`}
+              >
+                {r === 1 ? "1×" : `${r}×`}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10px] text-zinc-600 ml-auto">
+            Tap the YOU panel to jump there in the main player
+          </span>
+        </div>
+      )}
       {proRef.description && (
         <div className="px-4 py-2 bg-zinc-800/30 border-t border-zinc-800 flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
