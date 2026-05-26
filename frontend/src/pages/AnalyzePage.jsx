@@ -1176,6 +1176,9 @@ export default function AnalyzePage() {
               // the top of the analyze result so users see the same
               // Gemini-grade narrative they would in Gemini Studio.
               coach_narrative: final.coach_narrative || {},
+              // Backend-side detection of "user picked Player A but
+              // Gemini described Player B" — surfaces as an amber banner.
+              target_mismatch_warning: final.target_mismatch_warning || null,
               events: final.events || final.shots || [],
               _meta: { ...(final._meta || {}), streamed: true },
             };
@@ -1220,6 +1223,10 @@ export default function AnalyzePage() {
           // The Gemini-Studio-grade narrative paragraphs. Top-of-page
           // CoachNarrativeCard renders these verbatim.
           coach_narrative: data?.coach_narrative || null,
+          // Player-pick mismatch surface — forwarded so the banner can
+          // render at the top of the result page when the user-picked
+          // description doesn't line up with Gemini's described subject.
+          target_mismatch_warning: data?.target_mismatch_warning || null,
           sport: data?.sport_detected || "unknown",
           skill_level: data?.overall_skill_level || "Intermediate",
           quick_summary: data?.summary || "",
@@ -3064,6 +3071,56 @@ export default function AnalyzePage() {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {/* Player-pick mismatch banner — fires when the user selected
+            Player A (e.g. "blue shirt, white shorts") but Gemini's
+            coach read clearly describes Player B (e.g. "dark blue
+            tshirt"). Shows the picked description + the conflicting
+            phrases Gemini used so users aren't confused why the
+            analysis describes a different person. Honest about what
+            usually causes it (selected player partially out of frame,
+            another athlete being more prominent on screen). */}
+        {result?.target_mismatch_warning && (
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-amber-400/8 border border-amber-400/40 rounded-2xl p-4 mb-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-400/15 border border-amber-400/40 flex items-center justify-center shrink-0">
+                <span className="text-lg">⚠</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold leading-none mb-1">
+                  Player-pick mismatch detected
+                </p>
+                <p className="text-sm text-white leading-snug">
+                  {result.target_mismatch_warning.reason}
+                </p>
+                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {result.target_mismatch_warning.picked && (
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-2.5">
+                      <p className="text-[10px] uppercase tracking-wider text-sky-300 font-bold mb-1">You selected</p>
+                      <p className="text-[12px] text-zinc-100 leading-snug">
+                        {result.target_mismatch_warning.picked}
+                      </p>
+                    </div>
+                  )}
+                  {Array.isArray(result.target_mismatch_warning.detected_phrases)
+                    && result.target_mismatch_warning.detected_phrases.length > 0 && (
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg p-2.5">
+                      <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold mb-1">Gemini described</p>
+                      <p className="text-[12px] text-zinc-100 leading-snug capitalize">
+                        {result.target_mismatch_warning.detected_phrases.join(" · ")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.section>
         )}
 
         {/* Coach's full read — the Gemini-Studio-grade multi-paragraph
