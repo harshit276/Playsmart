@@ -245,34 +245,30 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
       className={`bg-zinc-900/80 border border-purple-400/30 rounded-2xl ${
-        isCompact ? "p-3" : "p-4 sm:p-5"
+        isCompact ? "p-3" : "p-3 sm:p-4"
       } shadow-lg shadow-purple-400/5`}
       data-testid="player-detection-card"
     >
       {/* Header row: avatar + identity + confidence */}
-      <div className="flex items-start gap-3 sm:gap-4">
+      <div className="flex items-start gap-3">
         {thumbnail ? (
           <div className="relative shrink-0">
             <img
               src={thumbnail}
               alt={`${playerLabel} thumbnail`}
-              className={`rounded-2xl object-cover border border-purple-400/30 ${
-                isCompact
-                  ? "w-16 h-16"
-                  : "w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28"
+              className={`rounded-xl object-cover border border-purple-400/30 ${
+                isCompact ? "w-14 h-14" : "w-16 h-16 sm:w-20 sm:h-20"
               }`}
             />
-            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-purple-400 text-black text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow">
+            <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-purple-400 text-black text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full shadow">
               Analyzed
             </span>
           </div>
         ) : (
-          // Avatar fallback — we still show something so the layout
-          // doesn't collapse, but it's a neutral icon, not "N/A".
-          <div className={`shrink-0 rounded-2xl bg-purple-400/10 border border-purple-400/30 flex items-center justify-center ${
-            isCompact ? "w-16 h-16" : "w-20 h-20 sm:w-24 sm:h-24"
+          <div className={`shrink-0 rounded-xl bg-purple-400/10 border border-purple-400/30 flex items-center justify-center ${
+            isCompact ? "w-14 h-14" : "w-16 h-16 sm:w-20 sm:h-20"
           }`}>
-            <Users className="w-7 h-7 text-purple-300" />
+            <Users className="w-6 h-6 text-purple-300" />
           </div>
         )}
 

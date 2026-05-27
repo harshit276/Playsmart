@@ -12911,9 +12911,20 @@ def _fallback_narrative(
         if sorted_types:
             top_name, top_count = sorted_types[0]
             q = ptq.get(top_name)
-            if q and top_count >= 2:
-                strengths.append(f"Used {top_name} {top_count}× — {q.consistency:.0%} consistency, "
-                                 f"{q.avg_smoothness:.0%} smoothness")
+            # consistency is Optional[float] — None for single-sample
+            # shot types (stddev of one is meaningless). Earlier code
+            # used `{q.consistency:.0%}` and `q.consistency < 0.55`
+            # directly, which raised TypeError on None and 500'd the
+            # whole endpoint. Format defensively.
+            if q and top_count >= 2 and q.consistency is not None:
+                strengths.append(
+                    f"Used {top_name} {top_count}× — {q.consistency:.0%} consistency, "
+                    f"{q.avg_smoothness:.0%} smoothness"
+                )
+            elif q and top_count >= 2:
+                strengths.append(
+                    f"Used {top_name} {top_count}× — {q.avg_smoothness:.0%} smoothness"
+                )
             elif top_count >= 2:
                 strengths.append(f"Used {top_name} {top_count}× this session")
         if len(populated_dist) >= 3:
@@ -12929,8 +12940,14 @@ def _fallback_narrative(
                 f"Across the session, the main thing to work on is "
                 f"{aggregated_top_fix.rstrip('.')}."
             )
-        inconsistent = [(n, ptq[n]) for n, c in populated_dist.items()
-                        if n in ptq and ptq[n].consistency < 0.55 and c >= 2]
+        # Filter out None-consistency entries (same root cause as above).
+        inconsistent = [
+            (n, ptq[n]) for n, c in populated_dist.items()
+            if n in ptq
+            and ptq[n].consistency is not None
+            and ptq[n].consistency < 0.55
+            and c >= 2
+        ]
         if inconsistent:
             n, q = min(inconsistent, key=lambda kv: kv[1].consistency)
             improvements.append(

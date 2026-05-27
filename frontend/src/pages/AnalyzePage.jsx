@@ -3293,39 +3293,11 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* Profile setup prompt for signed-in users without a profile */}
-        {user && !profile?.active_sport && result && !viewingHistorical && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-5 mb-4"
-          >
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-blue-400 mt-1 shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-bold text-white mb-1">Get personalized training</h3>
-                <p className="text-sm text-zinc-400 mb-3">
-                  You haven't set up your profile yet. Choose an option:
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    onClick={() => navigate("/assessment")}
-                    className="bg-lime-400 text-black hover:bg-lime-500 font-bold text-xs"
-                  >
-                    Take 1-min Quiz (Best)
-                  </Button>
-                  <Button
-                    onClick={createProfileFromAnalysis}
-                    variant="outline"
-                    className="border-lime-400/30 text-lime-400 hover:bg-lime-400/10 text-xs"
-                  >
-                    Use This Analysis
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {/* Removed: "Get personalized training" profile-setup nudge. The
+            analyze result page is meant for analysis content; profile
+            setup belongs in onboarding, not as a banner on every fresh
+            analysis. Functionality preserved in /assessment for users
+            who want it. */}
 
         {/* Back to History button when viewing a past analysis */}
         {viewingHistorical && (
@@ -3609,24 +3581,10 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── Progress Reminder Banner ── */}
-        {reminderDue && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-purple-500/5 border border-purple-500/20 rounded-2xl p-4 flex items-start gap-3">
-            <Calendar className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <h4 className="font-bold text-white text-sm">Welcome back!</h4>
-              <p className="text-xs text-zinc-400 mb-1">
-                It has been over 7 days since your last analysis{previousScore ? ` (${previousScore}/100)` : ""}. Upload a new video to see your improvement.
-              </p>
-            </div>
-            <button
-              onClick={() => { setReminderDue(false); try { localStorage.removeItem("next_analysis_reminder"); } catch { /* ignore */ } }}
-              className="text-zinc-500 hover:text-white text-xs">
-              Dismiss
-            </button>
-          </motion.div>
-        )}
+        {/* Removed: "Welcome back" reminder banner — it cluttered the
+            analyze result with onboarding-style content unrelated to
+            the analysis at hand. The reminder timer in localStorage is
+            still maintained so future surfaces (Dashboard) can use it. */}
 
         {/* ── Strengths ── */}
         {(strengths.length > 0 || shot.strengths?.length > 0) && (
@@ -3815,74 +3773,16 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* ── Personalized Drills (derived from this video) — hidden when VLM coach drills present ── */}
-        {showStaticTemplates && contextualDrills.length > 0 && gate(
-          <motion.div
-            id="analysis-section-improvement-areas"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.39 }}
-            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 scroll-mt-24"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium flex items-center gap-1">
-                <Dumbbell className="w-3 h-3 text-lime-400" /> Drills For You
-              </p>
-              <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px]">
-                Based on this video
-              </Badge>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {contextualDrills.map((drill, i) => {
-                const Icon = DRILL_TYPE_ICON[drill.type] || Dumbbell;
-                const diffClass = DRILL_DIFFICULTY_STYLE[drill.difficulty] || DRILL_DIFFICULTY_STYLE.medium;
-                return (
-                  <motion.div
-                    key={i}
-                    whileHover={{ y: -2, scale: 1.01 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                    className="group relative bg-zinc-800/40 border border-zinc-800 hover:border-lime-400/40 rounded-2xl p-4 transition-all"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/20 flex items-center justify-center shrink-0 group-hover:bg-lime-400/20 transition-colors">
-                        <Icon className="w-5 h-5 text-lime-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className="font-heading font-bold text-sm text-white leading-tight">
-                            {drill.name}
-                          </h4>
-                          <Badge
-                            variant="outline"
-                            className={`text-[9px] uppercase font-bold shrink-0 ${diffClass}`}
-                          >
-                            {drill.difficulty}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-1 text-[11px] text-zinc-500 mb-2">
-                          <Clock className="w-3 h-3" />
-                          <span>{drill.duration}</span>
-                        </div>
-                        <p className="text-xs text-zinc-400 leading-relaxed mb-3">
-                          {drill.why}
-                        </p>
-                        <a
-                          href={drill.video}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-bold text-lime-400 hover:text-lime-300 transition-colors"
-                        >
-                          <Play className="w-3 h-3 fill-current" /> Try It
-                          <ArrowRight className="w-3 h-3" />
-                        </a>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
+        {/* Removed: static "Drills For You" generic template cards
+            (Dynamic Warm-Up Flow / Shadow Footwork Routine). They
+            rendered alongside the personalized AI-coach drills and
+            made the page feel cluttered. The AI-coach drills inside
+            MatchInsights (`ImprovementCards` + the VLM priority
+            drills block) cover the same need with shot-specific
+            content tailored to THIS analysis. Static template
+            rendering can be reinstated for offline/cold-start cases
+            if needed — keep the contextualDrills compute in case a
+            future use-case wants it. */}
 
         {/* ── Recommended Videos ── */}
         {videos.length > 0 && (

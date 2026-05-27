@@ -43,20 +43,15 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className="bg-gradient-to-br from-lime-400/8 via-zinc-900 to-zinc-900 border border-lime-400/30 rounded-2xl p-4 sm:p-5 mb-4 shadow-lg shadow-lime-400/5"
+      className="bg-gradient-to-br from-lime-400/8 via-zinc-900 to-zinc-900 border border-lime-400/30 rounded-2xl p-3 sm:p-4 mb-4 shadow-lg shadow-lime-400/5"
     >
-      <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl bg-lime-400/15 border border-lime-400/40 flex items-center justify-center shrink-0">
-          <MessageSquareQuote className="w-5 h-5 text-lime-300" />
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-7 h-7 rounded-lg bg-lime-400/15 border border-lime-400/40 flex items-center justify-center shrink-0">
+          <MessageSquareQuote className="w-3.5 h-3.5 text-lime-300" />
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold leading-none flex items-center gap-1.5 flex-wrap">
-            <Sparkles className="w-3 h-3 text-lime-400" /> Coach's full read of your session
-          </p>
-          <p className="text-[11px] text-zinc-500 mt-1 leading-tight">
-            Straight from the AI — no edits, no templates.
-          </p>
-        </div>
+        <p className="flex-1 min-w-0 text-[10px] uppercase tracking-wider text-lime-300 font-bold leading-none flex items-center gap-1.5 flex-wrap">
+          <Sparkles className="w-3 h-3 text-lime-400" /> Coach's read
+        </p>
         {speakScript && (
           <div className="shrink-0">
             <SpeakTipButton text={speakScript} prefix="" size="xs" label="Listen" />
@@ -64,9 +59,9 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {intro && (
-          <p className="text-sm sm:text-base text-white leading-relaxed">
+          <p className="text-[13px] sm:text-sm text-white leading-relaxed">
             {intro}
           </p>
         )}
@@ -90,13 +85,13 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
         )}
 
         {takeaway && (
-          <div className="bg-lime-400/8 border border-lime-400/30 rounded-xl p-3 flex items-start gap-2">
-            <Target className="w-4 h-4 text-lime-300 shrink-0 mt-0.5" />
+          <div className="bg-lime-400/8 border border-lime-400/30 rounded-lg p-2.5 flex items-start gap-2">
+            <Target className="w-3.5 h-3.5 text-lime-300 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold mb-1">
+              <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold mb-0.5">
                 Next session focus
               </p>
-              <p className="text-sm text-white leading-snug">{takeaway}</p>
+              <p className="text-[13px] text-white leading-snug">{takeaway}</p>
             </div>
           </div>
         )}
@@ -146,15 +141,15 @@ function Section({ label, color, icon: Icon, body }) {
     .filter(Boolean);
 
   return (
-    <div className={`${palette.bg} border ${palette.border} rounded-xl p-3 flex items-start gap-2.5`}>
-      <div className={`w-7 h-7 rounded-lg ${palette.iconBg} border ${palette.iconBorder} flex items-center justify-center shrink-0`}>
-        <Icon className={`w-3.5 h-3.5 ${palette.iconColor}`} />
+    <div className={`${palette.bg} border ${palette.border} rounded-lg p-2.5 flex items-start gap-2`}>
+      <div className={`w-6 h-6 rounded-md ${palette.iconBg} border ${palette.iconBorder} flex items-center justify-center shrink-0`}>
+        <Icon className={`w-3 h-3 ${palette.iconColor}`} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-[10px] uppercase tracking-wider font-bold ${palette.label} mb-1.5`}>
+        <p className={`text-[10px] uppercase tracking-wider font-bold ${palette.label} mb-1`}>
           {label}
         </p>
-        <div className="space-y-2 text-[13px] sm:text-sm text-zinc-100 leading-relaxed">
+        <div className="space-y-1.5 text-[12.5px] text-zinc-100 leading-snug">
           {paragraphs.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
