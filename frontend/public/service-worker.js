@@ -1,6 +1,6 @@
 // Bump CACHE_VERSION whenever cache strategy or shell assets change.
 // On version bump, old caches are deleted on activate.
-const CACHE_VERSION = 'v22';
+const CACHE_VERSION = 'v23';
 const SHELL_CACHE = `athlyticai-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `athlyticai-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `athlyticai-data-${CACHE_VERSION}`;
