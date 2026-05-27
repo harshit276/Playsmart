@@ -50,10 +50,11 @@ export function setCoachVoicePref(key) {
 
 // Cached availability ping. The Live Coach calls this once on mount so
 // the voice selector only renders when the backend can actually deliver
-// premium TTS (otherwise the picker is dead UI).
-let _premiumVoiceAvailable = null;
+// premium TTS (otherwise the picker is dead UI). Now returns the active
+// provider too — drives the "HD Voice · Sarvam" / "· ElevenLabs" badge.
+let _premiumVoiceState = null;
 export async function checkPremiumVoiceAvailable() {
-  if (_premiumVoiceAvailable !== null) return _premiumVoiceAvailable;
+  if (_premiumVoiceState !== null) return _premiumVoiceState;
   try {
     const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
     const res = await fetch(`${backendUrl}/api/coach/voice-tts/voices`, {
@@ -61,15 +62,18 @@ export async function checkPremiumVoiceAvailable() {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) {
-      _premiumVoiceAvailable = false;
-      return false;
+      _premiumVoiceState = { available: false, provider: "none" };
+      return _premiumVoiceState;
     }
     const j = await res.json();
-    _premiumVoiceAvailable = !!j?.available;
-    return _premiumVoiceAvailable;
+    _premiumVoiceState = {
+      available: !!j?.available,
+      provider: j?.provider || "none",
+    };
+    return _premiumVoiceState;
   } catch {
-    _premiumVoiceAvailable = false;
-    return false;
+    _premiumVoiceState = { available: false, provider: "none" };
+    return _premiumVoiceState;
   }
 }
 
@@ -268,8 +272,13 @@ export function speak(text, opts = {}) {
       const u = new SpeechSynthesisUtterance(chunkText);
       if (voice) u.voice = voice;
       u.lang = voice?.lang || "en-US";
-      u.rate = typeof opts.rate === "number" ? opts.rate : 1.0;
-      u.pitch = typeof opts.pitch === "number" ? opts.pitch : 1.0;
+      // Defaults tuned for the live coach: rate 0.92 reads at a calmer
+      // pace than the browser default (1.0), which on Windows/Edge SAPI
+      // voices reads noticeably fast. Slight pitch trim (0.97) makes
+      // the default Microsoft Aria / Google voices feel less synthetic.
+      // Callers can still override either via opts.
+      u.rate = typeof opts.rate === "number" ? opts.rate : 0.92;
+      u.pitch = typeof opts.pitch === "number" ? opts.pitch : 0.97;
       u.volume = typeof opts.volume === "number" ? opts.volume : 1.0;
 
       u.onstart = () => {
@@ -281,7 +290,10 @@ export function speak(text, opts = {}) {
       };
       u.onend = () => {
         chunkIndex += 1;
-        speakChunk();
+        // Small inter-sentence pause (~140ms) — most engines play
+        // chunks back-to-back with zero gap, which reads as rushed.
+        // The pause approximates natural breath between thoughts.
+        setTimeout(speakChunk, 140);
       };
       u.onerror = (e) => {
         // Cancel = expected (user/cancel button). Anything else: log

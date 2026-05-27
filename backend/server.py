@@ -12188,7 +12188,11 @@ async def coach_voice_chat(
 
             loop = asyncio.get_event_loop()
             started = _time.time()
-            TIMEOUT_SEC = 25.0
+            # Was 25s — replies above ~250 words were truncating mid-word
+            # (Gemini 2.5 Flash can think for 30-40s on a meaty coaching
+            # question). 45s leaves headroom for the model + the SSE
+            # buffer drain before the watchdog fires.
+            TIMEOUT_SEC = 45.0
 
             # Bridge sync Gemini stream → async SSE through a queue +
             # thread, same pattern as analyze-video-stream.
@@ -12205,7 +12209,11 @@ async def coach_voice_chat(
                         generation_config={
                             "temperature": 0.4,
                             # No JSON response — we want spoken prose.
-                            "max_output_tokens": 320,
+                            # 320 was clipping replies mid-sentence on
+                            # multi-paragraph coaching answers ("...because
+                            # of what your non-" then EOF). 700 is enough
+                            # for ~5 sentences of natural coach voice.
+                            "max_output_tokens": 700,
                         },
                     )
                     for chunk in stream_iter:
@@ -12226,7 +12234,7 @@ async def coach_voice_chat(
             while True:
                 if _time.time() - started > TIMEOUT_SEC:
                     yield _sse_event({
-                        "error": "voice_chat_timeout_25s",
+                        "error": f"voice_chat_timeout_{int(TIMEOUT_SEC)}s",
                     })
                     break
                 try:
@@ -12275,27 +12283,148 @@ async def coach_voice_chat(
 
 
 # ═══════════════════════════════════════════════════════════════
-# Coach Voice TTS — ElevenLabs proxy
+# Coach Voice TTS — multi-provider (Sarvam AI / ElevenLabs)
 # ═══════════════════════════════════════════════════════════════
-# The live coach reads its replies through ElevenLabs Flash v2.5 so the
+# The live coach reads its replies through a real TTS provider so the
 # voice sounds genuinely human instead of the robotic Web Speech default.
-# The API key MUST stay server-side — never expose `xi-api-key` to the
-# browser. Frontend posts {text, voice_id} and gets back audio/mpeg bytes.
+# Two providers supported:
+#   - Sarvam AI (Bulbul v2)  — Indian-English accents, cheap, generous
+#     free credits. Default when SARVAM_API_KEY is set (better fit for
+#     PlaySmart's India-heavy user base).
+#   - ElevenLabs (Flash v2.5) — premium global accents, ~$0.05/1K chars.
 #
-# When ELEVENLABS_API_KEY isn't configured (local dev, key rotation) we
-# return 503 with `fallback: "browser"` so the frontend can silently
-# degrade to window.speechSynthesis without surfacing an error.
+# Selection order: explicit TTS_PROVIDER env var → SARVAM_API_KEY →
+# ELEVENLABS_API_KEY → none (frontend falls back to browser TTS).
 #
-# Voice IDs below are ElevenLabs pre-made library voices — public, safe
-# to ship in source. Only the API key is sensitive. Flash v2.5 is the
-# cheapest tier (~$0.05/1K chars) with sub-second first-audio latency.
+# API keys MUST stay server-side. Voice IDs below are public, safe to
+# ship in source. Both providers' free tiers are enough to evaluate.
 
 _COACH_VOICE_PRESETS = {
-    "aria":   {"el_id": "9BWtsMINqrJLrRacOk9x", "label": "Aria — warm coach"},
-    "bryan":  {"el_id": "nPczCjzI2devNBz1zQrb", "label": "Bryan — calm pro"},
-    "river":  {"el_id": "SAz9YHcvj6GT2YYXdXww", "label": "River — energetic"},
+    # Same key set across providers so the frontend selector survives a
+    # provider switch — each entry maps to the closest analogue voice
+    # on each backend.
+    "aria":  {
+        "label": "Aria — warm coach",
+        "elevenlabs_id": "9BWtsMINqrJLrRacOk9x",
+        "sarvam_speaker": "anushka",  # female, warm Indian-English
+    },
+    "bryan": {
+        "label": "Bryan — calm pro",
+        "elevenlabs_id": "nPczCjzI2devNBz1zQrb",
+        "sarvam_speaker": "abhilash",  # male, measured tone
+    },
+    "river": {
+        "label": "River — energetic",
+        "elevenlabs_id": "SAz9YHcvj6GT2YYXdXww",
+        "sarvam_speaker": "manisha",  # female, brighter
+    },
 }
 _DEFAULT_COACH_VOICE = "aria"
+
+
+def _coach_tts_provider() -> str:
+    """Returns 'sarvam' | 'elevenlabs' | 'none'. Explicit TTS_PROVIDER
+    env var wins; otherwise Sarvam beats ElevenLabs when both keys are
+    configured (cheaper + better accent fit for our user base)."""
+    explicit = os.environ.get("TTS_PROVIDER", "").strip().lower()
+    if explicit in ("sarvam", "elevenlabs"):
+        return explicit
+    if os.environ.get("SARVAM_API_KEY", "").strip():
+        return "sarvam"
+    if os.environ.get("ELEVENLABS_API_KEY", "").strip():
+        return "elevenlabs"
+    return "none"
+
+
+async def _sarvam_tts_synthesize(text: str, speaker: str):
+    """Call Sarvam Bulbul v2. Returns (mime_type, audio_bytes) on
+    success, None on any failure. Sarvam returns base64-encoded WAV
+    inside a JSON envelope; we decode and return raw bytes."""
+    api_key = os.environ.get("SARVAM_API_KEY", "").strip()
+    if not api_key:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as hc:
+            r = await hc.post(
+                "https://api.sarvam.ai/text-to-speech",
+                headers={
+                    "api-subscription-key": api_key,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "text": text,
+                    "target_language_code": "en-IN",
+                    "speaker": speaker,
+                    "model": "bulbul:v2",
+                    "pitch": 0,
+                    "pace": 1.0,
+                    "loudness": 1.0,
+                    "speech_sample_rate": 22050,
+                    "enable_preprocessing": True,
+                },
+            )
+    except httpx.RequestError as exc:
+        logging.warning("[sarvam-tts] network: %s", exc)
+        return None
+    if r.status_code != 200:
+        snippet = ""
+        try:
+            snippet = r.text[:240]
+        except Exception:
+            pass
+        logging.warning("[sarvam-tts] %s: %s", r.status_code, snippet)
+        return None
+    try:
+        body = r.json()
+        audios = body.get("audios") or []
+        if not audios:
+            return None
+        import base64 as _b64
+        wav_bytes = _b64.b64decode(audios[0])
+        return ("audio/wav", wav_bytes)
+    except Exception as exc:
+        logging.warning("[sarvam-tts] decode: %s", exc)
+        return None
+
+
+async def _elevenlabs_tts_synthesize(text: str, el_voice_id: str):
+    """Call ElevenLabs Flash v2.5. Returns (mime_type, audio_bytes) on
+    success, None on any failure."""
+    api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+    if not api_key:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as hc:
+            r = await hc.post(
+                f"https://api.elevenlabs.io/v1/text-to-speech/{el_voice_id}",
+                headers={
+                    "xi-api-key": api_key,
+                    "accept": "audio/mpeg",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "text": text,
+                    "model_id": "eleven_flash_v2_5",
+                    "voice_settings": {
+                        "stability": 0.45,
+                        "similarity_boost": 0.75,
+                        "style": 0.25,
+                        "use_speaker_boost": True,
+                    },
+                },
+            )
+    except httpx.RequestError as exc:
+        logging.warning("[elevenlabs-tts] network: %s", exc)
+        return None
+    if r.status_code != 200:
+        snippet = ""
+        try:
+            snippet = r.text[:240]
+        except Exception:
+            pass
+        logging.warning("[elevenlabs-tts] %s: %s", r.status_code, snippet)
+        return None
+    return ("audio/mpeg", r.content)
 
 
 class CoachTTSRequest(BaseModel):
@@ -12308,15 +12437,12 @@ async def coach_voice_tts(
     req: CoachTTSRequest,
     authorization: str = Header(None),
 ):
-    """Synthesize the coach's reply through ElevenLabs Flash v2.5.
+    """Synthesize the coach's reply through the configured TTS provider.
 
-    Auth is required (matches voice-chat — only paying/signed-in users
-    spend bandwidth on premium TTS). The reply audio is short-cacheable
-    by the browser, never by intermediaries (`private`).
-
-    Failure modes are all transparent to the frontend: any non-200
-    bubbles up with `fallback: "browser"` and the frontend will silently
-    re-render through window.speechSynthesis.
+    Auth required. The audio is browser-cacheable for 5 minutes (`private`),
+    never by intermediaries. Any provider failure returns 503 with
+    `fallback: "browser"` so the frontend silently degrades to
+    window.speechSynthesis without surfacing an error.
     """
     user = await get_current_user_or_none(authorization)
     if user is None:
@@ -12325,87 +12451,65 @@ async def coach_voice_tts(
             detail={"error": "auth_required", "fallback": "browser"},
         )
 
-    api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
-    if not api_key:
-        # Not an error per se — just tells the frontend to use browser TTS.
+    provider = _coach_tts_provider()
+    if provider == "none":
         raise HTTPException(
             status_code=503,
-            detail={"error": "elevenlabs_not_configured", "fallback": "browser"},
+            detail={"error": "tts_not_configured", "fallback": "browser"},
         )
 
     voice_key = (req.voice_id or _DEFAULT_COACH_VOICE).lower()
     preset = _COACH_VOICE_PRESETS.get(voice_key) or _COACH_VOICE_PRESETS[_DEFAULT_COACH_VOICE]
-    el_voice_id = preset["el_id"]
 
     cleaned = (req.text or "").strip()
     if not cleaned:
         raise HTTPException(status_code=400, detail={"error": "empty_text"})
-    # Cap effective length — a misbehaving client shouldn't burn quota.
+    # Cap effective length — both providers have per-request limits and
+    # a misbehaving client shouldn't burn quota. Sarvam Bulbul v2 accepts
+    # up to ~1500 chars in a single call; ElevenLabs is happy with more.
     if len(cleaned) > 1500:
         cleaned = cleaned[:1500]
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as hc:
-            r = await hc.post(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{el_voice_id}",
-                headers={
-                    "xi-api-key": api_key,
-                    "accept": "audio/mpeg",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "text": cleaned,
-                    "model_id": "eleven_flash_v2_5",
-                    "voice_settings": {
-                        "stability": 0.45,
-                        "similarity_boost": 0.75,
-                        "style": 0.25,
-                        "use_speaker_boost": True,
-                    },
-                },
-            )
-    except httpx.RequestError as exc:
-        logging.warning("[coach-voice-tts] network: %s", exc)
-        raise HTTPException(
-            status_code=502,
-            detail={"error": "elevenlabs_unreachable", "fallback": "browser"},
-        )
+    if provider == "sarvam":
+        result = await _sarvam_tts_synthesize(cleaned, preset["sarvam_speaker"])
+    else:
+        result = await _elevenlabs_tts_synthesize(cleaned, preset["elevenlabs_id"])
 
-    if r.status_code != 200:
-        snippet = ""
-        try:
-            snippet = r.text[:240]
-        except Exception:
-            pass
-        logging.warning("[coach-voice-tts] EL %s: %s", r.status_code, snippet)
-        # Quota exhausted, auth fail, transient 5xx — all fall back to browser.
+    if result is None:
+        # Provider failed (auth, quota, transient 5xx, network). Tell the
+        # frontend to use browser TTS — surfacing the error would just
+        # leave the user with a silent coach.
         return FastAPIResponse(
             status_code=503,
             content=json.dumps({
-                "error": f"elevenlabs_status_{r.status_code}",
+                "error": f"{provider}_failed",
                 "fallback": "browser",
             }),
             media_type="application/json",
         )
 
+    mime_type, audio_bytes = result
     return FastAPIResponse(
-        content=r.content,
-        media_type="audio/mpeg",
+        content=audio_bytes,
+        media_type=mime_type,
         headers={
             "Cache-Control": "private, max-age=300",
             "X-Coach-Voice": voice_key,
+            "X-Coach-Provider": provider,
         },
     )
 
 
 @api_router.get("/coach/voice-tts/voices")
 async def coach_voice_tts_voices():
-    """Returns the public list of available coach voices and whether the
-    backend has ElevenLabs configured. The frontend uses this to decide
-    whether to show the voice selector at all (when no key is set,
-    everyone falls back to browser TTS — selector adds no value)."""
+    """Returns the public list of available coach voices and which
+    provider is active. The frontend uses `available` to decide whether
+    to show the voice selector, and `provider` to label the HD badge
+    (e.g. "HD Voice · Sarvam")."""
+    provider = _coach_tts_provider()
     return {
-        "available": bool(os.environ.get("ELEVENLABS_API_KEY", "").strip()),
+        "available": provider != "none",
+        "provider": provider,
         "default": _DEFAULT_COACH_VOICE,
         "voices": [
             {"id": k, "label": v["label"]}
