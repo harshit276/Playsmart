@@ -247,6 +247,7 @@ export default function LiveVoiceCoach({ result }) {
   // `lastEngine` is set after each reply finishes and drives the
   // "Premium voice" vs "Device voice" badge shown under the speaking row.
   const [premiumAvailable, setPremiumAvailable] = useState(false);
+  const [premiumProvider, setPremiumProvider] = useState("none");
   const [coachVoiceKey, setCoachVoiceKeyState] = useState(() => getCoachVoicePref());
   const [lastEngine, setLastEngine] = useState(null);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
@@ -279,13 +280,22 @@ export default function LiveVoiceCoach({ result }) {
   // selector adds no value — every reply lands on browser TTS anyway.
   useEffect(() => {
     let active = true;
-    checkPremiumVoiceAvailable().then((ok) => {
-      if (active) setPremiumAvailable(ok);
+    checkPremiumVoiceAvailable().then((state) => {
+      if (!active) return;
+      setPremiumAvailable(!!state?.available);
+      setPremiumProvider(state?.provider || "none");
     });
     return () => {
       active = false;
     };
   }, []);
+
+  // Human-readable provider label for the HD badge + footer microcopy.
+  const providerLabel = useMemo(() => {
+    if (premiumProvider === "sarvam") return "Sarvam AI";
+    if (premiumProvider === "elevenlabs") return "ElevenLabs";
+    return null;
+  }, [premiumProvider]);
 
   const handleSelectVoice = useCallback((key) => {
     setCoachVoiceKeyState(key);
@@ -1265,7 +1275,7 @@ export default function LiveVoiceCoach({ result }) {
             </div>
             <p className="mt-2 text-[10px] text-zinc-600 leading-relaxed">
               {premiumAvailable
-                ? "HD voice powered by ElevenLabs · Mic runs on-device · 5 tokens per reply."
+                ? `HD voice powered by ${providerLabel || "HD TTS"} · Mic runs on-device · 5 tokens per reply.`
                 : "Voice runs on your device · Coach answers stream from AthlyticAI · 5 tokens per reply."}
             </p>
           </div>
