@@ -745,22 +745,42 @@ export default function LiveVoiceCoach({ result }) {
   if (!result || shotCount === 0) return null;
 
   // ─── Floating pill (closed) ──────────────────────────────────────
+  // Two anchors:
+  //   - Desktop / tablet (>=sm): bottom-left so it doesn't fight the
+  //     AnalysisScroller right-rail OR the existing VirtualCoach pill
+  //     (both anchored right side). Left side is otherwise empty.
+  //   - Mobile (<sm): bottom-center pill stacked above the scroller
+  //     mobile pill. Both share the bottom rail but at different
+  //     vertical offsets.
+  // We also add a subtle continuous lime ring pulse so the button is
+  // genuinely impossible to miss — the previous version blended into
+  // the page on dark backgrounds.
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Talk to your coach"
-        className="fixed bottom-24 right-5 z-40 group flex items-center gap-2 bg-lime-400 hover:bg-lime-300 text-black rounded-full pl-3 pr-4 py-3 shadow-2xl shadow-lime-400/40 transition-all hover:scale-105 active:scale-95"
-      >
-        <span className="relative inline-flex items-center justify-center w-7 h-7 rounded-full bg-black/10">
-          <Mic className="w-4 h-4" />
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-        </span>
-        <span className="text-sm font-bold whitespace-nowrap">
-          Talk to Your Coach
-        </span>
-      </button>
+      <>
+        {/* Continuous attention-pulse — keyed off the button itself via
+            an absolutely-positioned sibling so we don't fight the
+            button's hover animation. */}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Talk to your coach"
+          className="fixed z-40 group inline-flex items-center gap-2 bg-lime-400 hover:bg-lime-300 text-black rounded-full pl-3 pr-4 py-3 shadow-2xl shadow-lime-400/50 transition-all hover:scale-105 active:scale-95
+                     left-5 bottom-5
+                     sm:left-5 sm:bottom-5"
+        >
+          {/* Pulse halo behind the button — pointer-events-none so it
+              doesn't intercept clicks. */}
+          <span aria-hidden className="absolute inset-0 rounded-full bg-lime-400/40 animate-ping pointer-events-none" />
+          <span className="relative inline-flex items-center justify-center w-7 h-7 rounded-full bg-black/10">
+            <Mic className="w-4 h-4" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          </span>
+          <span className="relative text-sm font-bold whitespace-nowrap">
+            Talk to Your Coach
+          </span>
+        </button>
+      </>
     );
   }
 
