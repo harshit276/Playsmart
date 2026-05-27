@@ -1938,7 +1938,17 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     const requestFrame = (track && typeof track.requestFrame === "function")
       ? track.requestFrame.bind(track)
       : null;
-    recorder.start(200);
+    // The fast path may have already called recorder.start() before
+    // video.play() threw — on mobile (especially iOS Safari) autoplay
+    // gets blocked here. Calling start() a second time throws
+    // "InvalidStateError: MediaRecorder's state must be inactive".
+    // Only start if we haven't already. The recorder keeps capturing
+    // from the canvas as we drive frames via drawImage() below.
+    if (recorder.state === "inactive") {
+      try { recorder.start(200); } catch (e) {
+        console.warn("[compress] slow-path recorder.start failed:", e?.message || e);
+      }
+    }
     const fps = 15;
     const step = 1 / fps;
     for (let t = 0; t < duration; t += step) {
@@ -1952,8 +1962,18 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     }
   }
 
-  const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
-  recorder.stop();
+  // Symmetric guard: if neither path ever started the recorder (both
+  // failed silently), calling .stop() on an inactive recorder throws.
+  // Resolve immediately in that case so the function still returns.
+  const stopped = new Promise((resolve) => {
+    if (recorder.state === "inactive") { resolve(); return; }
+    recorder.onstop = resolve;
+  });
+  try {
+    if (recorder.state !== "inactive") recorder.stop();
+  } catch (e) {
+    console.warn("[compress] recorder.stop failed:", e?.message || e);
+  }
   await stopped;
   try { stream.getTracks().forEach((t) => t.stop()); } catch {}
   URL.revokeObjectURL(objectUrl);
