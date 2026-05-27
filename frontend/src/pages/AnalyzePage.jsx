@@ -1142,8 +1142,29 @@ export default function AnalyzePage() {
             let buf = "";
             let final = null;
             let streamErr = null;
+            // Idle watchdog. The backend sends SSE keepalive frames
+            // (`: keepalive\n\n`) ~every 2s while it's waiting on
+            // Gemini, so under normal conditions reader.read() should
+            // return well within this budget. On flaky mobile networks
+            // the upstream connection can silently drop mid-stream
+            // and reader.read() hangs forever — that surfaced to users
+            // as "stuck at 78%". Racing each read against a 35s timer
+            // lets us bail and fall through to the non-streaming
+            // /analyze-video-universal call instead.
+            const IDLE_TIMEOUT_MS = 35000;
+            const readWithIdleTimeout = () => {
+              return Promise.race([
+                reader.read(),
+                new Promise((_, reject) => {
+                  setTimeout(
+                    () => reject(new Error("stream_idle_timeout")),
+                    IDLE_TIMEOUT_MS,
+                  );
+                }),
+              ]);
+            };
             outer: while (true) {
-              const { done, value } = await reader.read();
+              const { done, value } = await readWithIdleTimeout();
               if (done) break;
               buf += decoder.decode(value, { stream: true });
               // Parse out every complete `data: <json>\n\n` frame.
