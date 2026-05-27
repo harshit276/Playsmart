@@ -268,8 +268,13 @@ export function speak(text, opts = {}) {
       const u = new SpeechSynthesisUtterance(chunkText);
       if (voice) u.voice = voice;
       u.lang = voice?.lang || "en-US";
-      u.rate = typeof opts.rate === "number" ? opts.rate : 1.0;
-      u.pitch = typeof opts.pitch === "number" ? opts.pitch : 1.0;
+      // Defaults tuned for the live coach: rate 0.92 reads at a calmer
+      // pace than the browser default (1.0), which on Windows/Edge SAPI
+      // voices reads noticeably fast. Slight pitch trim (0.97) makes
+      // the default Microsoft Aria / Google voices feel less synthetic.
+      // Callers can still override either via opts.
+      u.rate = typeof opts.rate === "number" ? opts.rate : 0.92;
+      u.pitch = typeof opts.pitch === "number" ? opts.pitch : 0.97;
       u.volume = typeof opts.volume === "number" ? opts.volume : 1.0;
 
       u.onstart = () => {
@@ -281,7 +286,10 @@ export function speak(text, opts = {}) {
       };
       u.onend = () => {
         chunkIndex += 1;
-        speakChunk();
+        // Small inter-sentence pause (~140ms) — most engines play
+        // chunks back-to-back with zero gap, which reads as rushed.
+        // The pause approximates natural breath between thoughts.
+        setTimeout(speakChunk, 140);
       };
       u.onerror = (e) => {
         // Cancel = expected (user/cancel button). Anything else: log

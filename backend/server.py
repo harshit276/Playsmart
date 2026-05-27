@@ -12188,7 +12188,11 @@ async def coach_voice_chat(
 
             loop = asyncio.get_event_loop()
             started = _time.time()
-            TIMEOUT_SEC = 25.0
+            # Was 25s — replies above ~250 words were truncating mid-word
+            # (Gemini 2.5 Flash can think for 30-40s on a meaty coaching
+            # question). 45s leaves headroom for the model + the SSE
+            # buffer drain before the watchdog fires.
+            TIMEOUT_SEC = 45.0
 
             # Bridge sync Gemini stream → async SSE through a queue +
             # thread, same pattern as analyze-video-stream.
@@ -12205,7 +12209,11 @@ async def coach_voice_chat(
                         generation_config={
                             "temperature": 0.4,
                             # No JSON response — we want spoken prose.
-                            "max_output_tokens": 320,
+                            # 320 was clipping replies mid-sentence on
+                            # multi-paragraph coaching answers ("...because
+                            # of what your non-" then EOF). 700 is enough
+                            # for ~5 sentences of natural coach voice.
+                            "max_output_tokens": 700,
                         },
                     )
                     for chunk in stream_iter:
@@ -12226,7 +12234,7 @@ async def coach_voice_chat(
             while True:
                 if _time.time() - started > TIMEOUT_SEC:
                     yield _sse_event({
-                        "error": "voice_chat_timeout_25s",
+                        "error": f"voice_chat_timeout_{int(TIMEOUT_SEC)}s",
                     })
                     break
                 try:
