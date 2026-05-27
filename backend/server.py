@@ -12275,6 +12275,146 @@ async def coach_voice_chat(
 
 
 # ═══════════════════════════════════════════════════════════════
+# Coach Voice TTS — ElevenLabs proxy
+# ═══════════════════════════════════════════════════════════════
+# The live coach reads its replies through ElevenLabs Flash v2.5 so the
+# voice sounds genuinely human instead of the robotic Web Speech default.
+# The API key MUST stay server-side — never expose `xi-api-key` to the
+# browser. Frontend posts {text, voice_id} and gets back audio/mpeg bytes.
+#
+# When ELEVENLABS_API_KEY isn't configured (local dev, key rotation) we
+# return 503 with `fallback: "browser"` so the frontend can silently
+# degrade to window.speechSynthesis without surfacing an error.
+#
+# Voice IDs below are ElevenLabs pre-made library voices — public, safe
+# to ship in source. Only the API key is sensitive. Flash v2.5 is the
+# cheapest tier (~$0.05/1K chars) with sub-second first-audio latency.
+
+_COACH_VOICE_PRESETS = {
+    "aria":   {"el_id": "9BWtsMINqrJLrRacOk9x", "label": "Aria — warm coach"},
+    "bryan":  {"el_id": "nPczCjzI2devNBz1zQrb", "label": "Bryan — calm pro"},
+    "river":  {"el_id": "SAz9YHcvj6GT2YYXdXww", "label": "River — energetic"},
+}
+_DEFAULT_COACH_VOICE = "aria"
+
+
+class CoachTTSRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=2000)
+    voice_id: Optional[str] = Field(None, max_length=32)
+
+
+@api_router.post("/coach/voice-tts")
+async def coach_voice_tts(
+    req: CoachTTSRequest,
+    authorization: str = Header(None),
+):
+    """Synthesize the coach's reply through ElevenLabs Flash v2.5.
+
+    Auth is required (matches voice-chat — only paying/signed-in users
+    spend bandwidth on premium TTS). The reply audio is short-cacheable
+    by the browser, never by intermediaries (`private`).
+
+    Failure modes are all transparent to the frontend: any non-200
+    bubbles up with `fallback: "browser"` and the frontend will silently
+    re-render through window.speechSynthesis.
+    """
+    user = await get_current_user_or_none(authorization)
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "auth_required", "fallback": "browser"},
+        )
+
+    api_key = os.environ.get("ELEVENLABS_API_KEY", "").strip()
+    if not api_key:
+        # Not an error per se — just tells the frontend to use browser TTS.
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "elevenlabs_not_configured", "fallback": "browser"},
+        )
+
+    voice_key = (req.voice_id or _DEFAULT_COACH_VOICE).lower()
+    preset = _COACH_VOICE_PRESETS.get(voice_key) or _COACH_VOICE_PRESETS[_DEFAULT_COACH_VOICE]
+    el_voice_id = preset["el_id"]
+
+    cleaned = (req.text or "").strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail={"error": "empty_text"})
+    # Cap effective length — a misbehaving client shouldn't burn quota.
+    if len(cleaned) > 1500:
+        cleaned = cleaned[:1500]
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as hc:
+            r = await hc.post(
+                f"https://api.elevenlabs.io/v1/text-to-speech/{el_voice_id}",
+                headers={
+                    "xi-api-key": api_key,
+                    "accept": "audio/mpeg",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "text": cleaned,
+                    "model_id": "eleven_flash_v2_5",
+                    "voice_settings": {
+                        "stability": 0.45,
+                        "similarity_boost": 0.75,
+                        "style": 0.25,
+                        "use_speaker_boost": True,
+                    },
+                },
+            )
+    except httpx.RequestError as exc:
+        logging.warning("[coach-voice-tts] network: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "elevenlabs_unreachable", "fallback": "browser"},
+        )
+
+    if r.status_code != 200:
+        snippet = ""
+        try:
+            snippet = r.text[:240]
+        except Exception:
+            pass
+        logging.warning("[coach-voice-tts] EL %s: %s", r.status_code, snippet)
+        # Quota exhausted, auth fail, transient 5xx — all fall back to browser.
+        return FastAPIResponse(
+            status_code=503,
+            content=json.dumps({
+                "error": f"elevenlabs_status_{r.status_code}",
+                "fallback": "browser",
+            }),
+            media_type="application/json",
+        )
+
+    return FastAPIResponse(
+        content=r.content,
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "private, max-age=300",
+            "X-Coach-Voice": voice_key,
+        },
+    )
+
+
+@api_router.get("/coach/voice-tts/voices")
+async def coach_voice_tts_voices():
+    """Returns the public list of available coach voices and whether the
+    backend has ElevenLabs configured. The frontend uses this to decide
+    whether to show the voice selector at all (when no key is set,
+    everyone falls back to browser TTS — selector adds no value)."""
+    return {
+        "available": bool(os.environ.get("ELEVENLABS_API_KEY", "").strip()),
+        "default": _DEFAULT_COACH_VOICE,
+        "voices": [
+            {"id": k, "label": v["label"]}
+            for k, v in _COACH_VOICE_PRESETS.items()
+        ],
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
 # Shot Labeling Tool (dataset collection for future classifier)
 # ═══════════════════════════════════════════════════════════════
 

@@ -19,8 +19,59 @@
 //     — localStorage helpers, capped at 3 history entries per analysis.
 
 const VOICE_PREF_KEY = "athlytic_voice_pref_v1";
+const COACH_VOICE_PREF_KEY = "athlytic_coach_voice_v1";
 const TRANSCRIPT_KEY_PREFIX = "athlytic_voice_transcript_";
 const MAX_HISTORY_PER_ANALYSIS = 3;
+
+// Mirror of backend `_COACH_VOICE_PRESETS` keys + blurbs. The UI uses
+// these for the voice selector pill; the actual ElevenLabs voice_id
+// mapping lives only on the server.
+export const COACH_VOICE_PRESETS = [
+  { key: "aria",  label: "Aria",  blurb: "Warm coach" },
+  { key: "bryan", label: "Bryan", blurb: "Calm pro" },
+  { key: "river", label: "River", blurb: "Energetic" },
+];
+
+export function getCoachVoicePref() {
+  try {
+    return localStorage.getItem(COACH_VOICE_PREF_KEY) || "aria";
+  } catch {
+    return "aria";
+  }
+}
+
+export function setCoachVoicePref(key) {
+  try {
+    localStorage.setItem(COACH_VOICE_PREF_KEY, key);
+  } catch {
+    /* noop */
+  }
+}
+
+// Cached availability ping. The Live Coach calls this once on mount so
+// the voice selector only renders when the backend can actually deliver
+// premium TTS (otherwise the picker is dead UI).
+let _premiumVoiceAvailable = null;
+export async function checkPremiumVoiceAvailable() {
+  if (_premiumVoiceAvailable !== null) return _premiumVoiceAvailable;
+  try {
+    const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+    const res = await fetch(`${backendUrl}/api/coach/voice-tts/voices`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      _premiumVoiceAvailable = false;
+      return false;
+    }
+    const j = await res.json();
+    _premiumVoiceAvailable = !!j?.available;
+    return _premiumVoiceAvailable;
+  } catch {
+    _premiumVoiceAvailable = false;
+    return false;
+  }
+}
 
 // ─── Voice selection ────────────────────────────────────────────────
 // Mirrors the (formerly private) pickVoice() in SpeakTipButton.jsx —
@@ -251,6 +302,160 @@ export function speak(text, opts = {}) {
 
     speakChunk();
   });
+
+  return Object.assign(promise, controller);
+}
+
+// ─── Remote TTS (ElevenLabs via backend proxy) ──────────────────────
+// Plays a single MP3 blob returned by `/api/coach/voice-tts`. Returns
+// a controller compatible with speak() — { cancel() } and the promise
+// resolves on natural-end OR on cancel. Throws on any non-200 so the
+// outer `speakWithCoachVoice` can fall back to the browser engine.
+function _speakRemote(text, opts = {}) {
+  const audio = new Audio();
+  audio.preload = "auto";
+  let cancelled = false;
+  let urlToRevoke = null;
+
+  const controller = {
+    cancel: () => {
+      cancelled = true;
+      try {
+        audio.pause();
+        audio.src = "";
+      } catch {
+        /* noop */
+      }
+      if (urlToRevoke) {
+        try {
+          URL.revokeObjectURL(urlToRevoke);
+        } catch {
+          /* noop */
+        }
+        urlToRevoke = null;
+      }
+    },
+  };
+
+  const promise = (async () => {
+    const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+    const token = (() => {
+      try {
+        return localStorage.getItem("playsmart_token");
+      } catch {
+        return null;
+      }
+    })();
+
+    const res = await fetch(`${backendUrl}/api/coach/voice-tts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "audio/mpeg",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        text,
+        voice_id: opts.voiceKey || getCoachVoicePref(),
+      }),
+    });
+    if (!res.ok) {
+      const err = new Error(`tts_http_${res.status}`);
+      err.status = res.status;
+      throw err;
+    }
+    if (cancelled) return;
+    const blob = await res.blob();
+    if (cancelled) return;
+    urlToRevoke = URL.createObjectURL(blob);
+    audio.src = urlToRevoke;
+
+    await new Promise((resolve, reject) => {
+      audio.onended = () => resolve();
+      audio.onerror = () => reject(new Error("audio_play_error"));
+      audio
+        .play()
+        .then(() => {
+          try {
+            opts.onStart?.();
+          } catch {
+            /* noop */
+          }
+        })
+        .catch((e) => reject(e || new Error("audio_play_blocked")));
+    });
+
+    if (urlToRevoke) {
+      try {
+        URL.revokeObjectURL(urlToRevoke);
+      } catch {
+        /* noop */
+      }
+      urlToRevoke = null;
+    }
+    try {
+      opts.onEnd?.();
+    } catch {
+      /* noop */
+    }
+  })();
+
+  return Object.assign(promise, controller);
+}
+
+// Unified TTS used by the Live Coach. Tries the backend ElevenLabs
+// proxy first, falls back to browser speechSynthesis on ANY failure
+// (no key configured, 401, 503, network drop, audio playback blocked).
+// The returned controller's `engine` field is updated mid-flight so the
+// UI can show a "Premium voice" vs "Device voice" badge after the call
+// settles. `opts.onEngineFallback` fires the moment we switch.
+export function speakWithCoachVoice(text, opts = {}) {
+  const cleaned = cleanForSpeech(text);
+  const controller = {
+    cancel: () => {
+      /* replaced below */
+    },
+    engine: "remote",
+  };
+  if (!cleaned) {
+    return Object.assign(Promise.resolve(), controller);
+  }
+
+  let activeController = null;
+  let cancelled = false;
+  controller.cancel = () => {
+    cancelled = true;
+    try {
+      activeController?.cancel?.();
+    } catch {
+      /* noop */
+    }
+  };
+
+  const promise = (async () => {
+    try {
+      activeController = _speakRemote(cleaned, opts);
+      await activeController;
+      return;
+    } catch (e) {
+      // 401 / 503 / network / quota → silent fallback. Log only when the
+      // server actually returned something unexpected so a misconfigured
+      // backend is still visible during local development.
+      if (e?.status && e.status !== 401 && e.status !== 503 && e.status !== 402) {
+        // eslint-disable-next-line no-console
+        console.warn("[speakWithCoachVoice] remote failed:", e.status);
+      }
+    }
+    if (cancelled) return;
+    controller.engine = "browser";
+    try {
+      opts.onEngineFallback?.();
+    } catch {
+      /* noop */
+    }
+    activeController = speak(cleaned, opts);
+    await activeController;
+  })();
 
   return Object.assign(promise, controller);
 }

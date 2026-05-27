@@ -4,17 +4,21 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mic, MicOff, X, ChevronDown, Sparkles, StopCircle,
-  Download, RefreshCw, Trash2, Radio, Volume2, History,
+  Download, RefreshCw, Trash2, Radio, Volume2, History, Headphones,
 } from "lucide-react";
 import {
   SpeechRecognizer,
-  speak,
+  speakWithCoachVoice,
   sttSupported,
   ttsSupported,
   saveTranscript,
   loadTranscripts,
   clearTranscripts,
   newSessionId,
+  COACH_VOICE_PRESETS,
+  getCoachVoicePref,
+  setCoachVoicePref,
+  checkPremiumVoiceAvailable,
 } from "@/lib/voiceCoach";
 
 // ──────────────────────────────────────────────────────────────────────
@@ -238,6 +242,14 @@ export default function LiveVoiceCoach({ result }) {
   const [showHistory, setShowHistory] = useState(false);
   const [historyEntries, setHistoryEntries] = useState([]);
   const [error, setError] = useState("");
+  // Premium-voice plumbing. `premiumAvailable` controls whether the voice
+  // selector renders at all; `coachVoiceKey` is the user's chosen preset;
+  // `lastEngine` is set after each reply finishes and drives the
+  // "Premium voice" vs "Device voice" badge shown under the speaking row.
+  const [premiumAvailable, setPremiumAvailable] = useState(false);
+  const [coachVoiceKey, setCoachVoiceKeyState] = useState(() => getCoachVoicePref());
+  const [lastEngine, setLastEngine] = useState(null);
+  const [showVoiceMenu, setShowVoiceMenu] = useState(false);
 
   // Voice / audio refs
   const recognizerRef = useRef(null);
@@ -261,6 +273,25 @@ export default function LiveVoiceCoach({ result }) {
     () => buildAnalysisContext(result),
     [result],
   );
+
+  // Ping the backend once on mount to decide if we should show the
+  // voice-selector pill. When ELEVENLABS_API_KEY isn't configured the
+  // selector adds no value — every reply lands on browser TTS anyway.
+  useEffect(() => {
+    let active = true;
+    checkPremiumVoiceAvailable().then((ok) => {
+      if (active) setPremiumAvailable(ok);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleSelectVoice = useCallback((key) => {
+    setCoachVoiceKeyState(key);
+    setCoachVoicePref(key);
+    setShowVoiceMenu(false);
+  }, []);
 
   const shotCount = Array.isArray(result?.shots) ? result.shots.length : 0;
   const sportLabel = result?.sport || result?.sport_detected || "";
@@ -590,17 +621,24 @@ export default function LiveVoiceCoach({ result }) {
       setStreaming(false);
       abortControllerRef.current = null;
 
-      // Trigger TTS only once the full reply landed — browser TTS
-      // chunked playback wedges if you call speak() on every token.
-      if (finalText && ttsSupported()) {
+      // Trigger TTS only once the full reply landed. The unified
+      // speakWithCoachVoice() tries the backend ElevenLabs proxy first
+      // and silently falls back to browser speechSynthesis when the
+      // backend can't deliver (no key, quota exhausted, 5xx). Engine
+      // used is read off the controller after the call settles to
+      // drive the "Premium voice" / "Device voice" badge.
+      if (finalText) {
         setCoachTalking(true);
-        const controller2 = speak(finalText, {
+        const controller2 = speakWithCoachVoice(finalText, {
+          voiceKey: coachVoiceKey,
           onStart: () => setCoachTalking(true),
           onEnd: () => setCoachTalking(false),
+          onEngineFallback: () => setLastEngine("browser"),
         });
         ttsControllerRef.current = controller2;
         try {
           await controller2;
+          setLastEngine(controller2.engine || null);
         } finally {
           setCoachTalking(false);
           if (ttsControllerRef.current === controller2) {
@@ -615,6 +653,7 @@ export default function LiveVoiceCoach({ result }) {
       analysisContext,
       streaming,
       cancelTts,
+      coachVoiceKey,
     ],
   );
 
@@ -811,26 +850,44 @@ export default function LiveVoiceCoach({ result }) {
                      flex flex-col max-h-[88vh] md:max-h-screen"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-lime-400/10 to-transparent">
-            <div className="flex items-center gap-2.5">
-              <div className="relative w-9 h-9 rounded-xl bg-lime-400 flex items-center justify-center">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-gradient-to-r from-lime-400/15 via-emerald-400/5 to-transparent">
+            <div className="flex items-center gap-3">
+              <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-lime-300 to-emerald-500 flex items-center justify-center shadow-lg shadow-lime-500/30">
                 <Sparkles className="w-4 h-4 text-black" />
                 {coachTalking && (
-                  <motion.span
-                    className="absolute inset-0 rounded-xl ring-2 ring-lime-400"
-                    initial={{ opacity: 0.6, scale: 1 }}
-                    animate={{ opacity: 0, scale: 1.45 }}
-                    transition={{
-                      duration: 1.2,
-                      repeat: Infinity,
-                      ease: "easeOut",
-                    }}
-                  />
+                  <>
+                    <motion.span
+                      className="absolute inset-0 rounded-2xl ring-2 ring-lime-300"
+                      initial={{ opacity: 0.7, scale: 1 }}
+                      animate={{ opacity: 0, scale: 1.6 }}
+                      transition={{
+                        duration: 1.3,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                      }}
+                    />
+                    <motion.span
+                      className="absolute inset-0 rounded-2xl ring-2 ring-emerald-400/70"
+                      initial={{ opacity: 0.5, scale: 1 }}
+                      animate={{ opacity: 0, scale: 1.85 }}
+                      transition={{
+                        duration: 1.3,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                        delay: 0.3,
+                      }}
+                    />
+                  </>
                 )}
               </div>
               <div>
-                <p className="text-sm font-semibold leading-tight">
+                <p className="text-sm font-semibold leading-tight flex items-center gap-1.5">
                   Live Coach
+                  {premiumAvailable && (
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-lime-300 bg-lime-400/10 border border-lime-400/30 px-1.5 py-0.5 rounded">
+                      HD Voice
+                    </span>
+                  )}
                 </p>
                 <p className="text-[10px] text-zinc-500 leading-tight">
                   {sportLabel ? `${sportLabel} · ` : ""}
@@ -1076,11 +1133,87 @@ export default function LiveVoiceCoach({ result }) {
 
               {coachTalking && (
                 <div className="flex items-center gap-1.5 text-[11px] text-lime-300">
-                  <Volume2 className="w-3 h-3" />
-                  Coach is talking…
+                  <motion.span
+                    className="inline-flex items-center gap-0.5"
+                    aria-hidden
+                  >
+                    {[0, 1, 2].map((i) => (
+                      <motion.span
+                        key={i}
+                        className="block w-[3px] h-3 rounded-full bg-lime-300"
+                        animate={{ scaleY: [0.4, 1, 0.4] }}
+                        transition={{
+                          duration: 0.9,
+                          repeat: Infinity,
+                          delay: i * 0.15,
+                          ease: "easeInOut",
+                        }}
+                      />
+                    ))}
+                  </motion.span>
+                  <span>
+                    {lastEngine === "browser"
+                      ? "Coach is talking · device voice"
+                      : "Coach is talking"}
+                  </span>
                 </div>
               )}
             </div>
+
+            {/* Voice picker — only renders when the backend has
+                ElevenLabs configured AND no premium reply is in flight.
+                Closing the menu via outside-click is implicit since the
+                next mic press will steal focus. */}
+            {premiumAvailable && (
+              <div className="mt-3 relative">
+                <button
+                  type="button"
+                  onClick={() => setShowVoiceMenu((v) => !v)}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-lime-400/10 to-emerald-400/5 border border-lime-400/30 text-[11px] font-semibold text-lime-200 hover:from-lime-400/15 transition-colors"
+                  aria-expanded={showVoiceMenu}
+                  aria-label="Choose coach voice"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Headphones className="w-3.5 h-3.5" />
+                    Voice:
+                    <span className="text-white">
+                      {COACH_VOICE_PRESETS.find((p) => p.key === coachVoiceKey)?.label || "Aria"}
+                    </span>
+                    <span className="text-zinc-400 font-normal">
+                      · {COACH_VOICE_PRESETS.find((p) => p.key === coachVoiceKey)?.blurb || "Warm coach"}
+                    </span>
+                  </span>
+                  <span className="text-[9px] uppercase tracking-wider text-lime-300/80">
+                    Premium ▾
+                  </span>
+                </button>
+                {showVoiceMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute z-10 left-0 right-0 bottom-full mb-1 rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40 overflow-hidden"
+                  >
+                    {COACH_VOICE_PRESETS.map((p) => (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => handleSelectVoice(p.key)}
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-zinc-800 ${
+                          p.key === coachVoiceKey
+                            ? "bg-lime-400/10 text-lime-200"
+                            : "text-zinc-200"
+                        }`}
+                      >
+                        <span className="font-semibold">{p.label}</span>
+                        <span className="text-[10px] text-zinc-500">
+                          {p.blurb}
+                        </span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </div>
+            )}
 
             {/* Mode + secondary controls */}
             <div className="mt-3 flex items-center justify-between gap-2">
@@ -1131,8 +1264,9 @@ export default function LiveVoiceCoach({ result }) {
               </div>
             </div>
             <p className="mt-2 text-[10px] text-zinc-600 leading-relaxed">
-              Voice runs on your device · Coach answers stream from
-              AthlyticAI · 5 tokens per reply.
+              {premiumAvailable
+                ? "HD voice powered by ElevenLabs · Mic runs on-device · 5 tokens per reply."
+                : "Voice runs on your device · Coach answers stream from AthlyticAI · 5 tokens per reply."}
             </p>
           </div>
         </motion.div>
