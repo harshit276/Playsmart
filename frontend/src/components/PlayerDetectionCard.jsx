@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import {
-  Sparkles, ShieldCheck, Flame, Navigation, Activity, Users,
+  Sparkles, Flame, Navigation, Users,
+  Star, ThumbsUp, AlertTriangle, Target, Gauge, BarChart3, Clock, Repeat,
 } from "lucide-react";
 
 // PlayerDetectionCard — replaces the bare "Analyzing: …" universal-mode
@@ -65,26 +66,17 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
     : null;
   const confidencePct = avgConf !== null ? Math.round(avgConf * 100) : null;
 
-  // Top 3 shot types by frequency. Use the user-visible label
-  // (`name` / `shot_label`) but key by the canonical `type` so similar
-  // labels collapse cleanly.
+  // Count distinct shot types — used by the Variety match-metric tile.
+  // We no longer render the top-shot chips row, so we don't track
+  // per-type counts past `size`.
   const counts = new Map();
   for (const s of shots) {
     const key = (s.type || s.shot_category || s.shot_type || s.name || "")
       .toString()
       .toLowerCase()
       .trim();
-    if (!key) continue;
-    const label = s.shot_label || s.name || key.replace(/_/g, " ");
-    const prev = counts.get(key) || { label, count: 0 };
-    prev.count += 1;
-    // Prefer the longer/richer label if we've seen multiple variants.
-    if (label && label.length > prev.label.length) prev.label = label;
-    counts.set(key, prev);
+    if (key) counts.set(key, true);
   }
-  const topShots = [...counts.values()]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
 
   // Movement-style summary — extract the FIRST sentence of
   // coach_narrative.intro (which the prompt encourages to lead with the
@@ -100,140 +92,221 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
     if (styleSentence.length > 160) styleSentence = styleSentence.slice(0, 157).trim() + "…";
   }
 
-  // Movement quality — average confidence × skill-level multiplier so
-  // an "Advanced" Beginner-confidence read isn't overstated. Returns a
-  // qualitative label + a 0..100 score so the tile can show both.
+  // Skill level is read in two places: the "Level" headline tile and
+  // the matchMetricTiles row label below. Keep it close to the top.
   const skillLevel =
     (result.skill_level || result.overall_skill_level || "").toString().trim();
-  const skillMultMap = { Beginner: 0.7, Intermediate: 0.85, Advanced: 1.0, Pro: 1.1 };
-  const skillMult = skillMultMap[skillLevel] || 0.9;
-  const movementScore =
-    avgConf !== null ? Math.max(0, Math.min(100, Math.round(avgConf * 100 * skillMult))) : null;
-  const movementLabel = movementScore === null
-    ? null
-    : movementScore >= 80 ? "Sharp"
-    : movementScore >= 65 ? "Solid"
-    : movementScore >= 50 ? "Developing"
-    : "Loose";
 
-  // Aggression — % of shots flagged as `attacking` intent. When intent
-  // wasn't forwarded (older shot shapes) we just hide the tile.
+  // Aggression — % of shots flagged as `attacking` intent. Used by the
+  // Match Metrics row only.
   const intentShots = shots.filter((s) => typeof s.intent === "string");
   const attackingCount = intentShots.filter((s) => s.intent === "attacking").length;
-  const defensiveCount = intentShots.filter((s) => s.intent === "defensive").length;
   const aggressionPct = intentShots.length
     ? Math.round((attackingCount / intentShots.length) * 100)
     : null;
-  const aggressionLabel = aggressionPct === null
-    ? null
-    : aggressionPct >= 60 ? "Aggressive"
-    : aggressionPct >= 35 ? "Balanced"
-    : "Defensive";
 
-  // Recovery — if MatchMetrics-style fields are present on the result,
-  // surface a short qualitative read. Otherwise the tile is hidden.
-  // We look at common shapes: result.match_metrics.recovery_score (0..100),
-  // or result.metrics.recovery_score, or result.match_metrics.recovery.
-  const recoveryScore =
-    result.match_metrics?.recovery_score ??
-    result.metrics?.recovery_score ??
-    (typeof result.match_metrics?.recovery === "number" ? result.match_metrics.recovery : null);
-  const recoveryLabel = typeof recoveryScore === "number"
-    ? (recoveryScore >= 75 ? "Fast" : recoveryScore >= 50 ? "Steady" : "Slow")
-    : null;
-
-  // Positioning — qualitative read from court_position + whether shot
-  // count suggests active coverage. We only show this when we have
-  // SOMETHING concrete to say; otherwise hide.
-  let positioningLabel = null;
-  if (courtPosition) {
-    const cp = courtPosition.toLowerCase();
-    if (cp.includes("net") || cp.includes("front")) positioningLabel = "Net-forward";
-    else if (cp.includes("back") || cp.includes("baseline")) positioningLabel = "Baseline";
-    else if (cp.includes("mid")) positioningLabel = "Mid-court";
-    else positioningLabel = courtPosition.length <= 24
-      ? courtPosition.replace(/^\w/, (c) => c.toUpperCase())
-      : null;
-  }
-
-  // ── Highlight tags (3-5 max) ────────────────────────────────────────
-  // Aggregate strengths + weaknesses across all shots, normalise, then
-  // pull the most frequent themes. Tags carry a `kind` (strength/weakness)
-  // so the renderer can colour-code them.
-  const phraseCounts = new Map(); // key -> { label, kind, count }
-  const addPhrase = (raw, kind) => {
-    if (!raw) return;
-    const text = String(raw).trim();
-    if (!text) return;
-    // Compact label: trim to ~22 chars at a word boundary.
-    let label = text;
-    if (label.length > 22) {
-      const cut = label.slice(0, 22);
-      const lastSpace = cut.lastIndexOf(" ");
-      label = (lastSpace > 10 ? cut.slice(0, lastSpace) : cut).trim() + "…";
+  // ── Best shot ────────────────────────────────────────────────────────
+  // The user-requested "Best shot of the session" hero row. Pick by
+  // composite score: shot quality > raw confidence > timestamp tie-break
+  // so we pick the one a coach would actually call out, not just the
+  // first high-confidence frame.
+  const bestShot = shots.reduce((best, s) => {
+    if (!s) return best;
+    const score = typeof s.score === "number"
+      ? s.score
+      : typeof s.confidence === "number" ? Math.round(s.confidence * 100) : 0;
+    if (!best || score > best._score) {
+      return { ...s, _score: score };
     }
-    // Capitalise first letter for chip display.
-    label = label.replace(/^\w/, (c) => c.toUpperCase());
-    const key = text.toLowerCase().slice(0, 40);
-    const prev = phraseCounts.get(key);
-    if (prev) {
-      prev.count += 1;
-    } else {
-      phraseCounts.set(key, { label, kind, count: 1 });
+    return best;
+  }, null);
+
+  // ── Aggregate strengths / weaknesses for the tile row ───────────────
+  // Take the most-common positive and the most-common improvement
+  // across all shots. Falls back to coach_narrative when per-shot
+  // form_feedback is sparse.
+  const firstNonEmpty = (...items) => {
+    for (const v of items) {
+      if (Array.isArray(v) && v.length && typeof v[0] === "string" && v[0].trim()) return v[0].trim();
+      if (typeof v === "string" && v.trim()) return v.trim();
     }
+    return null;
   };
+  const sentenceFromNarrative = (text, maxLen = 120) => {
+    if (!text) return null;
+    const m = String(text).match(/^[^.!?]+[.!?]/);
+    let out = (m ? m[0] : String(text)).trim();
+    if (out.length > maxLen) out = out.slice(0, maxLen - 1).trim() + "…";
+    return out;
+  };
+  const aggStrengths = shots.flatMap((s) => (s.formFeedback?.strengths || s.form_feedback?.strengths || []));
+  const aggWeakness = shots.flatMap((s) => (s.formFeedback?.weaknesses || s.form_feedback?.weaknesses || []));
+  const aggTips = shots.flatMap((s) => {
+    const t = s.formFeedback?.tip || s.form_feedback?.tip;
+    return t ? [t] : [];
+  });
+  const workingPhrase = firstNonEmpty(
+    aggStrengths,
+    sentenceFromNarrative(result.coach_narrative?.strengths_paragraph, 60),
+  );
+  const topFixPhrase = firstNonEmpty(
+    aggTips,
+    aggWeakness,
+    sentenceFromNarrative(result.coach_narrative?.improvements_paragraph, 60),
+    sentenceFromNarrative(result.coach_narrative?.takeaway, 60),
+  );
+
+  // ── Consistency — motion repeatability across the session ────────────
+  // The on-device pipeline writes this to result.match_metrics.consistency
+  // (0..1) or result.overall_consistency (0..1). When neither is present
+  // we fall back to a confidence-stddev proxy: lower stddev → higher
+  // perceived consistency.
+  let consistencyScore =
+    typeof result.match_metrics?.consistency === "number" ? result.match_metrics.consistency
+    : typeof result.overall_consistency === "number" ? result.overall_consistency
+    : null;
+  if (consistencyScore === null && confValues.length >= 3) {
+    const mean = confValues.reduce((a, b) => a + b, 0) / confValues.length;
+    const variance = confValues.reduce((a, b) => a + (b - mean) ** 2, 0) / confValues.length;
+    const stddev = Math.sqrt(variance);
+    // Map stddev∈[0..0.4] → consistency∈[1..0]
+    consistencyScore = Math.max(0, Math.min(1, 1 - stddev * 2.5));
+  }
+  const consistencyPct = typeof consistencyScore === "number"
+    ? Math.round(consistencyScore * 100)
+    : null;
+  // Require >= 3 shots to call it "consistency" — anything less is too
+  // small a sample for the word to mean anything.
+  const consistencyShownPct = total >= 3 ? consistencyPct : null;
+
+  // ── Match metrics — Tempo / Aggression / Variety / Recovery / FH-BH ──
+  // Computed from the shots[] array we already have. Each metric is
+  // surfaced only when we have enough signal to back it up; otherwise
+  // the tile is hidden rather than rendered as "—" or "n/a".
+  const tsValues = shots
+    .map((s) => (typeof s.timestamp === "number" && isFinite(s.timestamp) ? s.timestamp : null))
+    .filter((v) => v !== null)
+    .sort((a, b) => a - b);
+  const durationSec =
+    (typeof result.video_info?.duration_sec === "number" && result.video_info.duration_sec) ||
+    (typeof result.video_info?.duration === "number" && result.video_info.duration) ||
+    (tsValues.length >= 2 ? tsValues[tsValues.length - 1] - tsValues[0] : null);
+  const tempoShotsPerMin =
+    durationSec && durationSec > 0
+      ? Math.round((total / durationSec) * 60 * 10) / 10
+      : null;
+  const distinctTypes = counts.size;
+  const recoveryGaps = [];
+  for (let i = 1; i < tsValues.length; i++) {
+    recoveryGaps.push(tsValues[i] - tsValues[i - 1]);
+  }
+  const avgRecoverySec = recoveryGaps.length
+    ? Math.round((recoveryGaps.reduce((a, b) => a + b, 0) / recoveryGaps.length) * 10) / 10
+    : null;
+  // Forehand / backhand split — count shots whose label or category
+  // mentions the words. Single-word checks so we don't double-count
+  // "forehand drive" + "fh drive" type variants.
+  let fhCount = 0;
+  let bhCount = 0;
   for (const s of shots) {
-    const ff = s.formFeedback || s.form_feedback || {};
-    for (const x of (ff.strengths || []).slice(0, 2)) addPhrase(x, "strength");
-    for (const x of (ff.weaknesses || []).slice(0, 2)) addPhrase(x, "weakness");
+    const text = `${s.shot_label || ""} ${s.shot_category || ""} ${s.type || ""} ${s.name || ""}`.toLowerCase();
+    if (/\bforehand|\bfh\b|\bf\b/.test(text)) fhCount += 1;
+    if (/\bbackhand|\bbh\b|\bb\b/.test(text)) bhCount += 1;
   }
-  // If intent data is around, synthesise a high-level tag too.
-  if (intentShots.length >= 3) {
-    if (attackingCount / intentShots.length >= 0.6) {
-      addPhrase("Aggressive play", "strength");
-    } else if (defensiveCount / intentShots.length >= 0.6) {
-      addPhrase("Patient defender", "strength");
-    }
-  }
-  const highlightTags = [...phraseCounts.values()]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+  const sideTotal = fhCount + bhCount;
+  const fhPct = sideTotal > 0 ? Math.round((fhCount / sideTotal) * 100) : null;
+  const bhPct = sideTotal > 0 ? 100 - fhPct : null;
+
+  // Session type heuristic for the metrics-band label (drill vs rally).
+  const sessionType = result.session_type
+    || result._session_type
+    || (distinctTypes <= 1 ? "drill" : tempoShotsPerMin && tempoShotsPerMin > 6 ? "rally" : "mixed");
 
   // ── Render ──────────────────────────────────────────────────────────
   const isCompact = emphasis === "compact";
 
-  // Build the list of stat tiles dynamically — anything that resolved to
-  // null is dropped, so we never render an empty "—" tile.
-  const tiles = [
-    movementLabel && {
-      key: "movement",
-      label: "Movement quality",
-      value: movementLabel,
-      sub: movementScore !== null ? `${movementScore}/100` : null,
-      icon: Activity,
+  // Build the 4 user-requested headline tiles (Level / What's working /
+  // Top fix / Consistency). Anything not derivable is dropped — we never
+  // render "—" tiles, the column shrinks instead. This MIRRORS the
+  // tile row that previously lived in MatchInsights, so consolidating
+  // here lets us hide it there.
+  const headlineTiles = [
+    skillLevel && {
+      key: "level",
+      label: "Level",
+      value: skillLevel,
+      sub: "AI Coach verdict",
+      icon: Star,
       tone: "lime",
     },
-    aggressionLabel && {
-      key: "aggression",
+    workingPhrase && {
+      key: "working",
+      label: "What's working",
+      value: workingPhrase,
+      sub: null,
+      icon: ThumbsUp,
+      tone: "lime",
+      multiline: true,
+    },
+    topFixPhrase && {
+      key: "fix",
+      label: "Top fix",
+      value: topFixPhrase,
+      sub: null,
+      icon: AlertTriangle,
+      tone: "amber",
+      multiline: true,
+    },
+    {
+      key: "consistency",
+      label: "Consistency",
+      value: consistencyShownPct !== null ? `${consistencyShownPct}%` : "—",
+      sub: consistencyShownPct !== null ? "Motion repeatability" : `Need 3+ shots${total > 0 ? ` (have ${total})` : ""}`,
+      icon: Repeat,
+      tone: consistencyShownPct !== null ? "sky" : "muted",
+    },
+  ].filter(Boolean);
+
+  // Match-metrics row. Same gating: only shown when there's anything
+  // useful to say.
+  const matchMetricTiles = [
+    tempoShotsPerMin !== null && {
+      key: "tempo",
+      label: "Tempo",
+      value: `${tempoShotsPerMin}`,
+      sub: "shots / min",
+      icon: Gauge,
+      tone: "lime",
+    },
+    aggressionPct !== null && {
+      key: "aggression-metric",
       label: "Aggression",
-      value: aggressionLabel,
-      sub: aggressionPct !== null ? `${aggressionPct}% attacking` : null,
+      value: `${aggressionPct}%`,
+      sub: "attack shots",
       icon: Flame,
       tone: "amber",
     },
-    recoveryLabel && {
-      key: "recovery",
-      label: "Recovery",
-      value: recoveryLabel,
-      sub: typeof recoveryScore === "number" ? `${Math.round(recoveryScore)}/100` : null,
-      icon: ShieldCheck,
+    distinctTypes > 0 && {
+      key: "variety",
+      label: "Variety",
+      value: String(distinctTypes),
+      sub: `distinct shot${distinctTypes === 1 ? "" : "s"}`,
+      icon: BarChart3,
       tone: "sky",
     },
-    positioningLabel && {
-      key: "positioning",
-      label: "Positioning",
-      value: positioningLabel,
-      sub: null,
+    avgRecoverySec !== null && {
+      key: "recovery-metric",
+      label: "Recovery",
+      value: `${avgRecoverySec}s`,
+      sub: "between shots",
+      icon: Clock,
+      tone: "purple",
+    },
+    sideTotal >= 2 && {
+      key: "fhbh",
+      label: "FH vs BH",
+      value: `${fhPct}% / ${bhPct}%`,
+      sub: `${fhCount} FH · ${bhCount} BH`,
       icon: Navigation,
       tone: "purple",
     },
@@ -311,55 +384,71 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
         </p>
       )}
 
-      {/* Top detected shot types */}
-      {topShots.length > 0 && (
-        <div className="mt-3">
-          <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold mb-1.5">
-            Top detected shots
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {topShots.map((s) => (
-              <span
-                key={s.label}
-                className="text-[11px] px-2 py-1 rounded-full bg-purple-400/10 text-purple-100 border border-purple-400/30 capitalize"
-              >
-                {s.label}
-                <span className="ml-1 text-purple-300/80">×{s.count}</span>
-              </span>
-            ))}
+      {/* ── Best shot of the session ────────────────────────────────────
+          The user asked for this to live in the first card. Pulled from
+          the highest-scoring shot in result.shots — bold left strip,
+          big confidence number on the right. */}
+      {bestShot && (
+        <div className="mt-3 bg-gradient-to-r from-lime-400/12 via-zinc-900 to-zinc-900 border border-lime-400/30 rounded-xl px-3 py-2.5 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-lime-400/15 border border-lime-400/40 flex items-center justify-center shrink-0">
+            <Star className="w-4 h-4 text-lime-300 fill-current" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold leading-none">
+              ⭐ Best shot of the session
+            </p>
+            <p className="text-[13px] sm:text-sm text-white font-semibold mt-1 leading-tight truncate">
+              {bestShot.shot_label || bestShot.name || (bestShot.type || "Shot").replace(/_/g, " ")}
+              <span className="text-zinc-400 font-normal"> at {bestShot._score}% confidence</span>
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-heading font-bold text-lime-300 leading-none">{bestShot._score}</p>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 mt-0.5">% sure</p>
           </div>
         </div>
       )}
 
-      {/* Stat tiles — 2×2 on mobile, up to 4-col on desktop */}
-      {tiles.length > 0 && (
-        <div className={`mt-3 grid gap-2 ${
-          tiles.length >= 3 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2"
-        }`}>
-          {tiles.map((t) => {
+      {/* ── Headline tiles: Level / What's working / Top fix / Consistency ──
+          These previously lived as a separate row inside MatchInsights.
+          Consolidated here so the user gets the at-a-glance "how am I
+          doing" answer in the first card. */}
+      {headlineTiles.length > 0 && (
+        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+          {headlineTiles.map((t) => {
             const Icon = t.icon;
             const toneClass = {
-              lime: "border-lime-400/30 text-lime-200",
-              amber: "border-amber-400/30 text-amber-200",
-              sky: "border-sky-400/30 text-sky-200",
-              purple: "border-purple-400/30 text-purple-200",
-            }[t.tone] || "border-zinc-700 text-zinc-200";
+              lime: "border-lime-400/30",
+              amber: "border-amber-400/30",
+              sky: "border-sky-400/30",
+              purple: "border-purple-400/30",
+              muted: "border-zinc-800",
+            }[t.tone] || "border-zinc-800";
+            const valueColor = {
+              lime: "text-lime-300",
+              amber: "text-amber-300",
+              sky: "text-sky-300",
+              purple: "text-purple-200",
+              muted: "text-zinc-500",
+            }[t.tone] || "text-white";
             return (
               <div
                 key={t.key}
                 className={`bg-zinc-950/60 border ${toneClass} rounded-xl p-2.5 min-w-0`}
               >
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Icon className="w-3 h-3 opacity-80" />
-                  <p className="text-[9.5px] uppercase tracking-wider opacity-80 truncate">
+                  <Icon className="w-3 h-3 text-zinc-400" />
+                  <p className="text-[9.5px] uppercase tracking-wider text-zinc-400 truncate">
                     {t.label}
                   </p>
                 </div>
-                <p className="text-sm font-semibold text-white leading-tight truncate">
+                <p className={`font-semibold leading-tight ${
+                  t.multiline ? "text-[12px] line-clamp-2" : "text-base"
+                } ${valueColor}`}>
                   {t.value}
                 </p>
                 {t.sub && (
-                  <p className="text-[10px] text-zinc-400 mt-0.5 truncate">{t.sub}</p>
+                  <p className="text-[10px] text-zinc-500 mt-0.5 truncate">{t.sub}</p>
                 )}
               </div>
             );
@@ -367,36 +456,51 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
         </div>
       )}
 
-      {/* Highlight tags — strengths in lime, weaknesses in amber. */}
-      {highlightTags.length > 0 && (
-        <div className="mt-3">
-          <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold mb-1.5">
-            Highlights
+      {/* ── Match metrics row ──────────────────────────────────────────
+          Tempo / Aggression / Variety / Recovery / FH vs BH. Previously
+          rendered as MatchMetricsPanel deeper in the page; brought up
+          here per the user's request. */}
+      {matchMetricTiles.length > 0 && (
+        <div className="mt-3 bg-zinc-950/40 border border-zinc-800 rounded-xl p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold mb-2 flex items-center gap-1.5">
+            <BarChart3 className="w-3 h-3 text-zinc-400" /> Match metrics
+            <span className="text-zinc-600 font-normal normal-case tracking-normal">· {sessionType} session</span>
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {highlightTags.map((t, i) => (
-              <span
-                key={`${t.label}-${i}`}
-                className={`text-[11px] px-2 py-1 rounded-full border ${
-                  t.kind === "strength"
-                    ? "bg-lime-400/10 text-lime-300 border-lime-400/30"
-                    : "bg-amber-400/10 text-amber-300 border-amber-400/30"
-                }`}
-              >
-                {t.label}
-              </span>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            {matchMetricTiles.map((t) => {
+              const Icon = t.icon;
+              const accent = {
+                lime: "text-lime-300",
+                amber: "text-amber-300",
+                sky: "text-sky-300",
+                purple: "text-purple-300",
+              }[t.tone] || "text-white";
+              return (
+                <div key={t.key} className="bg-zinc-900/70 border border-zinc-800 rounded-lg p-2 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Icon className={`w-3 h-3 ${accent} opacity-90`} />
+                    <p className="text-[9.5px] uppercase tracking-wider text-zinc-500 truncate">
+                      {t.label}
+                    </p>
+                  </div>
+                  <p className={`text-sm font-bold leading-tight truncate ${accent}`}>
+                    {t.value}
+                  </p>
+                  {t.sub && (
+                    <p className="text-[9.5px] text-zinc-500 mt-0.5 truncate">{t.sub}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Shot count footer — small, only when we have shots. Keeps the
-          card honest about the sample size behind the stats. */}
-      {total > 0 && (
-        <p className="mt-3 text-[10px] text-zinc-500">
-          Based on {total} detected {total === 1 ? "shot" : "shots"}.
-        </p>
-      )}
+      {/* Removed (per user feedback): the "Top detected shots" chip
+          row, the "Highlights" tag row, and the "Based on N detected
+          shot" footer. The first card is now a clean overview hero —
+          the per-shot identification + chip drilldown lives in the
+          Coaching Insights block below (Shot Mix + per-shot cards). */}
     </motion.section>
   );
 }

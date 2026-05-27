@@ -3274,6 +3274,11 @@ export default function AnalyzePage() {
             // target-pick can be subtle.
             targetPlayerThumbnail={result._target_player_thumbnail || null}
             targetPlayerDescription={result._target_player_description || null}
+            // When PlayerDetectionCard renders above (universal mode),
+            // it already shows the best-shot hero + 4 tiles +
+            // match-metrics row. Hide them inside MatchInsights so
+            // users don't see the same content twice.
+            hideOverviewBlocks={!!result._universal}
           />
         )}
 
