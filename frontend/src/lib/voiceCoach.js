@@ -30,16 +30,35 @@ export function pickVoice(voices, pref = "auto") {
   if (!voices?.length) return null;
   const en = voices.filter((v) => /^en[-_]?/i.test(v.lang || ""));
   const pool = en.length ? en : voices;
+  // Note: localService voices are offline-only and tend to be the
+  // ROBOTIC defaults on most platforms. Prefer NETWORK voices because
+  // those are the higher-quality cloud-backed Aria/Jenny/Eddy/Ava set.
+  // Falls back to local when no network voices are exposed (offline
+  // mode or some Linux configs).
+  const network = pool.filter((v) => !v.localService);
   const local = pool.filter((v) => v.localService);
-  const base = local.length ? local : pool;
-  const isPremium = (v) =>
-    /(natural|neural|premium|enhanced|siri|aria|jenny|guy)/i.test(v.name || "");
+  const base = network.length ? network : local.length ? local : pool;
+
+  // Tier-by-tier name matching. Ordered from most-natural to most-robotic.
+  // We score every voice by which tier matches first and return the
+  // highest-tier candidate. Names taken from real exposed voices on
+  // Windows/Edge/macOS/Chrome 2024-2026.
+  const TIERS = [
+    // Tier 0 — the brand-new neural voices that sound nearly human.
+    /(microsoft\s+(ava|aria|jenny|guy|emma|brian|christopher|eric|liam|michelle|nancy|sara|sonia|libby|tony|amber|ana|davis|jane|jason|monica|noah|olivia|tina)).*online.*natural/i,
+    // Tier 1 — older "natural" / "neural" / "premium" tagged voices
+    // (Google's "google uk english female", Microsoft's pre-2024 line,
+    // Siri Voice 2 / Voice 3 on macOS).
+    /(natural|neural|premium|enhanced|siri\s+voice|google\s+(uk|us)\s+english)/i,
+    // Tier 2 — flagship platform voices by recognizable name.
+    /(samantha|karen|moira|fiona|tessa|aria|jenny|guy|allison|ava|eddy|grandma|grandpa|reed|rocko|shelley)/i,
+    // Tier 3 — common but more robotic platform voices.
+    /(zira|david|mark|alex|daniel|fred|tom|oliver|susan|kate)/i,
+  ];
   const isFemale = (v) =>
-    /(female|woman|aria|jenny|samantha|zira|allison|susan|tessa|kate|moira|fiona|google us english)/i.test(
-      v.name || ""
-    );
+    /(female|woman|aria|jenny|samantha|zira|allison|ava|emma|monica|sara|sonia|libby|amber|ana|jane|olivia|tina|karen|moira|fiona|tessa|nancy|michelle|google.*english)/i.test(v.name || "");
   const isMale = (v) =>
-    /(male|man|guy|david|mark|alex|daniel|fred|tom|oliver)/i.test(v.name || "");
+    /(male|man|guy|david|mark|alex|daniel|fred|tom|oliver|brian|christopher|eric|liam|noah|reed|rocko|davis|jason|tony|eddy)/i.test(v.name || "");
 
   let candidates = base;
   if (pref === "female") {
@@ -49,8 +68,14 @@ export function pickVoice(voices, pref = "auto") {
     const m = base.filter(isMale);
     if (m.length) candidates = m;
   }
-  const premium = candidates.filter(isPremium);
-  return premium[0] || candidates[0] || base[0];
+
+  // Walk tiers top-down; first non-empty match wins. Falls back to the
+  // raw candidate list and finally to anything in base.
+  for (const tierRx of TIERS) {
+    const hit = candidates.find((v) => tierRx.test(v.name || ""));
+    if (hit) return hit;
+  }
+  return candidates[0] || base[0];
 }
 
 export function cleanForSpeech(text) {

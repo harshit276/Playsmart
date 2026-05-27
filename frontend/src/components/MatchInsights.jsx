@@ -214,6 +214,12 @@ export default function MatchInsights({
   // children don't need prop drilling.
   targetPlayerThumbnail = null,
   targetPlayerDescription = null,
+  // When PlayerDetectionCard above us already renders the best-shot
+  // hero + 4-tile (Level/Working/Fix/Consistency) row + match-metrics
+  // panel, we skip those blocks here to avoid duplicating content. The
+  // per-shot detail + pose extraction + video player + improvement
+  // cards + drill recs still render as usual.
+  hideOverviewBlocks = false,
 }) {
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -607,8 +613,10 @@ export default function MatchInsights({
           {/* Hero badge — always celebrate the strongest moment of the
               session so the user gets a reward, even on slower shots.
               Lower thresholds = "Peak ... km/h", above thresholds gets
-              "Top-tier" framing, max-power gets the gold treatment. */}
-          {(() => {
+              "Top-tier" framing, max-power gets the gold treatment.
+              Hidden when the parent's PlayerDetectionCard already shows
+              this. */}
+          {!hideOverviewBlocks && (() => {
             const maxShot = perShot.reduce((best, s) => {
               const speed = Number(s.speed) || 0;
               const isMax = s.powerLevel === "max";
@@ -662,8 +670,9 @@ export default function MatchInsights({
           {/* Quick Summary — three signals the player actually cares about,
               stacked horizontally. Replaces the confusing "Overall technique
               consistency 78%" headline. All three come from VLM data when
-              available, with sane fallbacks. */}
-          {perShot.length >= 1 ? (
+              available, with sane fallbacks. Hidden when PlayerDetectionCard
+              already renders the headline tiles. */}
+          {!hideOverviewBlocks && (perShot.length >= 1 ? (
             (() => {
               const levels = perShot.map((s) => s.vlmSkill).filter((s) => s && s !== "Unknown" && s !== "unknown");
               const counts = levels.reduce((a, l) => { a[l] = (a[l] || 0) + 1; return a; }, {});
@@ -756,7 +765,7 @@ export default function MatchInsights({
                 upload a longer rally for a full consistency score.
               </p>
             </div>
-          )}
+          ))}
 
           {/* Coach-style metrics — tempo, aggression, variety, recovery,
               side balance, and a quality-over-time sparkline. Pure math
@@ -770,24 +779,26 @@ export default function MatchInsights({
               through here; the panel falls back to its own client-side
               math when the narrative hasn't loaded yet or the response
               shape is an older cached version. */}
-          <div id="analysis-section-metrics-dashboard" className="scroll-mt-24">
-            <MatchMetricsPanel
-              perShot={perShot}
-              // Real clip length — live videoEl.duration first, then the
-              // backend's saved video_info for historical replays. Falls back
-              // to (max ts + 1) inside computeMatchMetrics only as a last
-              // resort. Without this the 17s/10-shot bug surfaced as 375
-              // shots/min because shot timestamps clustered in <2s.
-              durationSec={
-                videoDuration
-                ?? (videoInfo && (videoInfo.duration_sec ?? videoInfo.duration))
-                ?? null
-              }
-              sport={sport}
-              sessionType={narrative?.session_type}
-              contextualBenchmarks={narrative?.contextual_benchmarks}
-            />
-          </div>
+          {!hideOverviewBlocks && (
+            <div id="analysis-section-metrics-dashboard" className="scroll-mt-24">
+              <MatchMetricsPanel
+                perShot={perShot}
+                // Real clip length — live videoEl.duration first, then the
+                // backend's saved video_info for historical replays. Falls back
+                // to (max ts + 1) inside computeMatchMetrics only as a last
+                // resort. Without this the 17s/10-shot bug surfaced as 375
+                // shots/min because shot timestamps clustered in <2s.
+                durationSec={
+                  videoDuration
+                  ?? (videoInfo && (videoInfo.duration_sec ?? videoInfo.duration))
+                  ?? null
+                }
+                sport={sport}
+                sessionType={narrative?.session_type}
+                contextualBenchmarks={narrative?.contextual_benchmarks}
+              />
+            </div>
+          )}
 
           {/* Per-type quality — consistency for n≥2, form score for n=1 */}
           {populatedTypes.length > 0 && (
