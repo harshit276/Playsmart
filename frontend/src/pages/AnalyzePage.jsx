@@ -33,6 +33,7 @@ import SessionSummaryHero from "@/components/SessionSummaryHero";
 import GeminiDebugPanel from "@/components/GeminiDebugPanel";
 import CoachNarrativeCard from "@/components/CoachNarrativeCard";
 import AnalysisScroller from "@/components/AnalysisScroller";
+import AnalysisQuickNav from "@/components/AnalysisQuickNav";
 import PlayerDetectionCard from "@/components/PlayerDetectionCard";
 
 const CLIENT_LOADING_STEPS = [
@@ -2688,12 +2689,20 @@ export default function AnalyzePage() {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 md:pr-16 lg:pr-48">
 
-        {/* Floating section nav. Only renders when there's a result with
-            shots, and only lists sections whose target element is
-            actually mounted in the DOM (so a missing pro panel or audio
-            coach button doesn't leave a broken link in the rail). */}
+        {/* Floating section nav (desktop/tablet right-rail or mobile
+            bottom-sheet). Lives in `fixed` layout — invisible if the
+            user has DevTools docked over the corner OR an extension
+            overlay covering it. The in-flow QuickNav below is the
+            always-visible fallback. */}
         {result?.shots?.length > 0 && (
           <AnalysisScroller sections={analysisScrollerSections} />
+        )}
+
+        {/* In-flow sticky quick-nav — always visible because it's part
+            of the document flow, not `fixed` positioned. Sticks to the
+            top of the viewport as the user scrolls past the hero. */}
+        {result?.shots?.length > 0 && (
+          <AnalysisQuickNav sections={analysisScrollerSections} />
         )}
 
         {/* Progress comparison — rich multi-section card surfaced after a

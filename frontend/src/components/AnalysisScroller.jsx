@@ -176,7 +176,7 @@ export default function AnalysisScroller({ sections = [] }) {
          ──────────────────────────────────────────────────────────── */}
       <nav
         aria-label="Analysis sections"
-        className="hidden md:flex fixed right-3 lg:right-5 top-[28%] z-40 max-h-[70vh] overflow-y-auto pr-1"
+        className="hidden sm:flex fixed right-2 md:right-3 lg:right-5 top-[18%] z-40 max-h-[78vh] overflow-y-auto pr-1"
       >
         <ul className="flex flex-col gap-1 bg-zinc-900/85 backdrop-blur-md border border-zinc-800 rounded-2xl p-1.5 shadow-xl">
           {items.map((s) => {
@@ -233,7 +233,7 @@ export default function AnalysisScroller({ sections = [] }) {
       {/* ────────────────────────────────────────────────────────────
          Mobile pill + bottom-sheet (<md)
          ──────────────────────────────────────────────────────────── */}
-      <div className="md:hidden fixed left-1/2 -translate-x-1/2 bottom-4 z-40 pointer-events-none">
+      <div className="sm:hidden fixed left-1/2 -translate-x-1/2 bottom-4 z-40 pointer-events-none">
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
@@ -256,7 +256,7 @@ export default function AnalysisScroller({ sections = [] }) {
         {sheetOpen && (
           <motion.div
             key="analysis-scroller-sheet"
-            className="md:hidden fixed inset-0 z-50 flex flex-col justify-end"
+            className="sm:hidden fixed inset-0 z-50 flex flex-col justify-end"
             initial={{ backgroundColor: "rgba(0,0,0,0)" }}
             animate={{ backgroundColor: "rgba(0,0,0,0.6)" }}
             exit={{ backgroundColor: "rgba(0,0,0,0)" }}
