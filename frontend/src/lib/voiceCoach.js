@@ -123,6 +123,19 @@ export function sttSupported() {
 // The controller (mutated on the returned object) exposes .cancel().
 // We keep speak() synchronous from the click handler to satisfy
 // iOS Safari, but the actual Promise wraps onend/onerror.
+//
+// Chrome cut-off workaround:
+//   The Chrome SpeechSynthesis engine on desktop stops playback after
+//   ~15 seconds — a long-known bug (crbug.com/679437) that surfaces as
+//   "the coach reads two sentences then goes silent". Mitigation: while
+//   the utterance is speaking, periodically `pause()` + immediately
+//   `resume()`. That keeps the engine's internal timer from expiring.
+//   Mobile/iOS aren't affected by the timer but the pause/resume is a
+//   harmless no-op there (we still guard against double-pause).
+//
+//   For very long utterances (>200 chars) we also split into sentence
+//   chunks and queue them sequentially. Each chunk is well under the
+//   timer limit, and queuing is reliable across browsers.
 export function speak(text, opts = {}) {
   const controller = {
     cancel: () => {
@@ -150,18 +163,43 @@ export function speak(text, opts = {}) {
   const voices = window.speechSynthesis.getVoices() || [];
   const voice = opts.voice || pickVoice(voices, pref);
 
-  const u = new SpeechSynthesisUtterance(cleaned);
-  if (voice) u.voice = voice;
-  u.lang = voice?.lang || "en-US";
-  u.rate = typeof opts.rate === "number" ? opts.rate : 1.0;
-  u.pitch = typeof opts.pitch === "number" ? opts.pitch : 1.0;
-  u.volume = typeof opts.volume === "number" ? opts.volume : 1.0;
+  // Split long text into sentence chunks. Each chunk gets its own
+  // utterance queued back-to-back — gives the engine a chance to
+  // recover between chunks and dodges the Chrome 15s cap.
+  const chunks = _chunkForSpeech(cleaned, 200);
+
+  let onStartFired = false;
+  let chunkIndex = 0;
+  let keepAliveTimer = null;
+
+  // The Chrome pause/resume heartbeat. Fires every 5s while speaking
+  // to keep the engine's internal timer from expiring. Harmless on
+  // browsers that don't have the bug.
+  const startKeepAlive = () => {
+    if (keepAliveTimer) return;
+    keepAliveTimer = setInterval(() => {
+      try {
+        if (!window.speechSynthesis.speaking) return;
+        if (window.speechSynthesis.paused) return;
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      } catch {
+        /* noop */
+      }
+    }, 5000);
+  };
+  const stopKeepAlive = () => {
+    if (!keepAliveTimer) return;
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+  };
 
   const promise = new Promise((resolve) => {
     let done = false;
     const finish = () => {
       if (done) return;
       done = true;
+      stopKeepAlive();
       try {
         opts.onEnd?.();
       } catch {
@@ -169,24 +207,84 @@ export function speak(text, opts = {}) {
       }
       resolve();
     };
-    u.onstart = () => {
+
+    const speakChunk = () => {
+      if (chunkIndex >= chunks.length) {
+        finish();
+        return;
+      }
+      const chunkText = chunks[chunkIndex];
+      const u = new SpeechSynthesisUtterance(chunkText);
+      if (voice) u.voice = voice;
+      u.lang = voice?.lang || "en-US";
+      u.rate = typeof opts.rate === "number" ? opts.rate : 1.0;
+      u.pitch = typeof opts.pitch === "number" ? opts.pitch : 1.0;
+      u.volume = typeof opts.volume === "number" ? opts.volume : 1.0;
+
+      u.onstart = () => {
+        if (!onStartFired) {
+          onStartFired = true;
+          try { opts.onStart?.(); } catch { /* noop */ }
+        }
+        startKeepAlive();
+      };
+      u.onend = () => {
+        chunkIndex += 1;
+        speakChunk();
+      };
+      u.onerror = (e) => {
+        // Cancel = expected (user/cancel button). Anything else: log
+        // once and stop, don't keep trying further chunks.
+        if (e && e.error && e.error !== "canceled" && e.error !== "interrupted") {
+          // eslint-disable-next-line no-console
+          console.warn("[speak] utterance error:", e.error);
+        }
+        finish();
+      };
+
       try {
-        opts.onStart?.();
+        window.speechSynthesis.speak(u);
       } catch {
-        /* noop */
+        finish();
       }
     };
-    u.onend = finish;
-    u.onerror = finish;
+
+    speakChunk();
   });
 
-  // Synchronous speak() — required for iOS Safari to actually fire.
-  try {
-    window.speechSynthesis.speak(u);
-  } catch {
-    /* noop — promise still resolves via onerror */
-  }
   return Object.assign(promise, controller);
+}
+
+// Split text into ≤maxLen-character chunks, breaking at sentence
+// boundaries where possible. Each chunk becomes its own utterance —
+// keeping individual playbacks short enough to dodge the Chrome 15s
+// cutoff bug AND gives a natural pause between sentences.
+function _chunkForSpeech(text, maxLen = 200) {
+  const out = [];
+  // Split on sentence-terminating punctuation, keeping the punctuation
+  // with the preceding clause.
+  const sentences = String(text).match(/[^.!?]+[.!?]+["')\]]*\s*|[^.!?]+$/g) || [text];
+  let buf = "";
+  for (const s of sentences) {
+    const trimmed = s.trim();
+    if (!trimmed) continue;
+    if (!buf) {
+      buf = trimmed;
+    } else if (buf.length + 1 + trimmed.length <= maxLen) {
+      buf += " " + trimmed;
+    } else {
+      out.push(buf);
+      buf = trimmed;
+    }
+    // If a SINGLE sentence is itself longer than maxLen, push it
+    // anyway — better one over-long chunk than a hard split mid-word.
+    if (buf.length > maxLen * 1.5) {
+      out.push(buf);
+      buf = "";
+    }
+  }
+  if (buf) out.push(buf);
+  return out.length ? out : [text];
 }
 
 // ─── SpeechRecognizer ───────────────────────────────────────────────
