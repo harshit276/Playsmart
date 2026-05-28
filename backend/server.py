@@ -12064,8 +12064,11 @@ Shots I saw, in order:
 STYLE RULES (these are non-negotiable):
 1. Speak in second person: "you", "your smash", "your footwork". Never
    refer to "the player" — you're talking TO them.
-2. Keep replies SHORT for voice playback: 1-3 sentences normally, 4-5
-   only when explaining technique. Cap at ~120 words total.
+2. Keep replies SHORT for voice playback: 1-3 sentences MAXIMUM. Cap at
+   80 words total. ALWAYS finish your final sentence — if you're about
+   to run out of room, stop the previous sentence and end cleanly.
+   Never trail off mid-clause. Voice replies that cut off mid-word feel
+   broken to the user.
 3. Reference SPECIFIC observations from above when the question is about
    their gameplay (e.g., a particular shot label, or the
    improvements_paragraph). Don't paraphrase the entire narrative — pull
@@ -12231,6 +12234,30 @@ async def coach_voice_chat(
             thread = _th.Thread(target=_runner, daemon=True)
             thread.start()
 
+            # Sentence-boundary buffer. Gemini emits tokens word-by-word
+            # (or in tiny fragments), but the frontend's streaming-TTS
+            # only starts speaking when a complete sentence is available.
+            # We mirror that boundary on the server: chunks are buffered
+            # until we hit `.`/`!`/`?` followed by whitespace, then the
+            # whole complete-sentence prefix is sent as one chunk.
+            #
+            # Critical side-effect: if Gemini stops mid-sentence (token
+            # cap, timeout, error), the partial trailing fragment NEVER
+            # gets emitted — so users never see "...non-" half-words.
+            import re as _re
+            _SENT_END_RX = _re.compile(r"[.!?][\"')\]]*(?=\s|$)")
+            text_buffer = ""
+
+            def _drain_complete(buf: str):
+                """Return (complete_prefix, remainder). The prefix ends
+                at the last sentence terminator; remainder is held."""
+                last_end = -1
+                for m in _SENT_END_RX.finditer(buf):
+                    last_end = m.end()
+                if last_end <= 0:
+                    return ("", buf)
+                return (buf[:last_end], buf[last_end:])
+
             while True:
                 if _time.time() - started > TIMEOUT_SEC:
                     yield _sse_event({
@@ -12251,10 +12278,23 @@ async def coach_voice_chat(
                     break
                 if isinstance(item, dict):
                     if "chunk" in item and item["chunk"]:
-                        emitted_anything = True
-                        yield _sse_event({"chunk": item["chunk"]})
+                        text_buffer += item["chunk"]
+                        prefix, rest = _drain_complete(text_buffer)
+                        if prefix:
+                            emitted_anything = True
+                            yield _sse_event({"chunk": prefix})
+                            text_buffer = rest
                     elif "error" in item:
                         yield _sse_event({"error": item["error"]})
+
+            # Trailing buffer: only emit if it ends cleanly with terminal
+            # punctuation (rare — usually `_drain_complete` already
+            # consumed it). Otherwise drop the partial — better that the
+            # reply be one sentence shorter than that it cut off mid-word.
+            trail = text_buffer.strip()
+            if trail and trail[-1] in ".!?":
+                yield _sse_event({"chunk": trail})
+                emitted_anything = True
 
             # Terminal frame — delivered inside try so a client disconnect
             # mid-stream raises GeneratorExit and complete_delivered stays
