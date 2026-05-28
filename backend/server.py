@@ -3372,7 +3372,7 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
-    PROMPT_VERSION = "v2026-05-24-coach-narrative-paragraphs"
+    PROMPT_VERSION = "v2026-05-29-doubles-partner-rules"
     video_hash = hashlib.sha256(video_bytes).hexdigest()[:32]
     cache_key = f"{PROMPT_VERSION}:{video_hash}:{req.tier}:{(req.target_player_description or '')[:80]}"
     try:

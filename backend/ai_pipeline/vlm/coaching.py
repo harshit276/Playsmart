@@ -54,7 +54,7 @@ def _parse_json_safe(raw: str) -> dict:
 
 
 def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes: bytes,
-                       mime_type: str, fps: float = 3.0) -> list:
+                       mime_type: str, fps: float = 4.0) -> list:
     """Build the parts list for a Gemini whole-video call with explicit
     FPS sampling. Tries the SDK's proto types first (where the
     video_metadata.fps field is supported), falls back to plain dict
@@ -632,7 +632,7 @@ def analyze_video_full(
         # ~258 tokens/sec to ~774 tokens/sec — still cheap (~$0.005-0.02
         # per analysis on Flash). Falls back to default sampling if the
         # SDK version doesn't expose VideoMetadata.
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=3.0)
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=4.0)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -765,31 +765,53 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         f"\n"
         f"HARD RULES — these override every other instruction in this prompt:\n"
         f"\n"
-        f"1. ONLY include events performed by the target person. Skip every "
-        f"   event performed by anyone else in the frame (opponent, doubles "
-        f"   partner, coach, feeder, bystander). Quality > quantity. It is "
-        f"   better to return 2 confirmed target-person events than 8 "
-        f"   events of mixed provenance.\n"
+        f"1. ONLY include events performed by the target person. Skip events "
+        f"   performed by the opponent, doubles partner, coach, feeder, or "
+        f"   bystander. Quality matters — but DO NOT be so cautious that you "
+        f"   drop the target's actual shots. When you can see the target make "
+        f"   contact, include the event even if you're 70% sure rather than "
+        f"   100%; just lower `confidence` accordingly. Missing real shots is "
+        f"   as bad as inventing fake ones.\n"
         f"\n"
-        f"2. In EVERY event's `reasoning` field, you must explicitly reference "
-        f"   the target person and what makes you confident this event was "
-        f"   theirs (e.g. 'Target player in red shirt swings the racket and "
-        f"   makes contact at 0:04'). If your reasoning cannot name the target "
-        f"   in this way, DROP that event from the array.\n"
+        f"2. In EVERY event's `reasoning` field, explicitly reference the "
+        f"   target and what makes you think the event was theirs (e.g. "
+        f"   'Target in red shirt swings the racket and makes contact at "
+        f"   0:04', or 'Player on near side in foreground hits forehand at "
+        f"   0:08'). If you genuinely cannot pin the event to the target — "
+        f"   even with low confidence — drop it.\n"
         f"\n"
-        f"3. In rally / two-player sports (badminton, tennis, TT, pickleball, "
-        f"   squash), opponents will hit shots too. NEVER attribute opponent "
-        f"   shots to the target person. If an attacking shot (smash, kill, "
-        f"   winner) is hit AT the target person, it belongs to the opponent — "
-        f"   skip it. The target's response (block, return, lift) is what "
-        f"   counts as the target's event.\n"
+        f"3. In rally / two-player sports (badminton singles, tennis, TT, "
+        f"   pickleball, squash), opponents will hit shots too. NEVER "
+        f"   attribute opponent shots to the target. If a smash/kill/winner "
+        f"   is hit AT the target, it belongs to the opponent — skip it. "
+        f"   The target's response (block, return, lift) is what counts as "
+        f"   the target's event.\n"
         f"\n"
-        f"4. If a moment is ambiguous (camera angle hides the contact, multiple "
-        f"   players in frame, motion blur), SKIP it. Do not guess.\n"
+        f"4. DOUBLES MATCHES (2 players per side — badminton doubles, tennis "
+        f"   doubles, padel, pickleball doubles): the target has a PARTNER on "
+        f"   the SAME side. Partner shots are NOT target shots, even if the "
+        f"   partner wears similar team kit. Use COURT POSITION to "
+        f"   disambiguate — if both wear the same colour, the target is the "
+        f"   player who matches the `target` description's position cue "
+        f"   ({described}). When you cannot tell partner from target on a "
+        f"   given shot, drop that shot. Rally cadence in doubles is fast — "
+        f"   target and partner often alternate every 0.5-1s, so DO NOT merge "
+        f"   shots within 1.5s if they come from visibly different players on "
+        f"   the same side. The merge-within-1.5s rule (see CRITICAL section "
+        f"   below) only applies to the SAME player's phases of one motion.\n"
         f"\n"
-        f"5. After producing the events array, re-read each one and ask 'am I "
-        f"   100% sure this was the target person?' — if no, delete it. The "
-        f"   final array should contain ONLY events you would defend to a coach.\n"
+        f"5. If a moment is truly ambiguous (camera fully hides the contact, "
+        f"   multiple players overlap, total motion blur), then SKIP it. But "
+        f"   'I'm not 100% certain' is NOT ambiguous — that's just normal "
+        f"   coaching uncertainty, emit it with `confidence` 0.5-0.7.\n"
+        f"\n"
+        f"6. If the camera angle / lighting / occlusion means you can only "
+        f"   confirm a fraction of the target's actual shots, say so "
+        f"   explicitly in the top-level `summary` (e.g. 'Some of the "
+        f"   target's shots in the back-court are obscured by the net post, "
+        f"   so the events list captures roughly 60% of their action.'). "
+        f"   This is more useful to the user than silently emitting fewer "
+        f"   events with no explanation.\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     )
 
@@ -843,11 +865,15 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         "A single physical motion (windup/contact/follow-through, or one "
         "full stroke cycle in swimming) is ONE event at the moment of "
         "execution. Do NOT emit multiple entries for phases of the same "
-        "motion. If two consecutive timestamps are within ~1.5 seconds "
-        "AND the same shot_category, they are almost certainly the same "
-        "physical motion — merge them into one entry at the contact "
-        "moment. If the athlete performed 3 reps/shots/strokes, the "
-        "events array must have 3 entries, not 9.\n\n"
+        "motion. If two consecutive timestamps are within ~1.5 seconds, "
+        "the same shot_category, AND clearly from the SAME player, they "
+        "are almost certainly the same physical motion — merge them into "
+        "one entry at the contact moment. If the athlete performed 3 "
+        "reps/shots/strokes, the events array must have 3 entries, not 9.\n"
+        "EXCEPTION: in DOUBLES rallies, target and partner often hit shots "
+        "<1.5s apart in alternating drives or defence. Two contact moments "
+        "<1.5s apart from VISIBLY DIFFERENT players are TWO events — never "
+        "merge across players.\n\n"
         "CRITICAL — DO NOT DEFAULT TO 'SERVE' FOR RALLY-STARTING SHOTS:\n"
         "A SERVE has ALL of these traits:\n"
         "  1. Ball/shuttle starts STATIONARY in the player's non-racket hand,\n"
@@ -873,7 +899,26 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         "well above the players) into the back court. No high arc + no "
         "overhead contact = NOT a clear, even if the shuttle eventually "
         "reaches a deep landing zone. Use the actual shuttle path, not "
-        "the landing depth, to decide.\n"
+        "the landing depth, to decide.\n\n"
+        "BADMINTON DOUBLES SHOT VOCABULARY (use these terms when "
+        "applicable — rally cadence is faster than singles and the "
+        "common shot mix is different):\n"
+        "  • flat_drive     — chest-height, flat trajectory just over net\n"
+        "  • push           — soft drop into mid-court (between net and\n"
+        "                     back tram-line), often the doubles serve\n"
+        "                     return\n"
+        "  • block          — short defensive return of a smash, back to\n"
+        "                     net area\n"
+        "  • defensive_lift — high lift to back court when under attack\n"
+        "  • body_smash     — smash aimed at the opponent's body\n"
+        "  • stick_smash    — overhead steep smash from mid/back court\n"
+        "  • net_kill       — short, downward put-away from net\n"
+        "  • backhand_drive — flat drive on backhand side\n"
+        "Doubles serves are almost always BACKHAND LOW SERVES from a "
+        "short stance close to the front service line — short, just over "
+        "the net, dropping in front of the opponent. High serves are "
+        "rare in doubles. If you see this pattern, call it "
+        "`backhand_serve` even though many drills look similar.\n"
         f"{box_hint}\n\n"
         "Respond with valid JSON ONLY (no markdown):\n"
         '{\n'
@@ -1209,7 +1254,7 @@ def analyze_video_universal(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=3.0)
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=4.0)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -1427,7 +1472,7 @@ def stream_analyze_video_universal(
             model = genai.GenerativeModel(backend_obj.model_name)
         parts = _build_video_parts(
             sys_prompt, user_msg, video_bytes,
-            mime_type or "video/mp4", fps=3.0,
+            mime_type or "video/mp4", fps=4.0,
         )
         try:
             stream_iter = model.generate_content(
