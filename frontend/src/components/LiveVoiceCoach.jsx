@@ -884,7 +884,7 @@ export default function LiveVoiceCoach({ result }) {
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
           </span>
           <span className="relative text-sm font-bold whitespace-nowrap">
-            Talk to Your Coach
+            Talk to Virtual Coach
           </span>
         </button>
       </>

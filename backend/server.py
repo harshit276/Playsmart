@@ -3308,10 +3308,10 @@ async def analyze_video_direct_endpoint(
                 target_player=req.target_player, target_box=req.target_box,
                 backend=req.backend,
             )),
-            timeout=55.0,
+            timeout=110.0,
         )
     except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="Video analysis timed out (>55s)")
+        raise HTTPException(status_code=504, detail="Video analysis timed out (>110s)")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Video analysis failed: {exc}")
 
@@ -3404,7 +3404,7 @@ async def analyze_video_universal_endpoint(
             timeout=55.0,
         )
     except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="Universal analysis timed out (>55s)")
+        raise HTTPException(status_code=504, detail="Universal analysis timed out (>110s)")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Universal analysis failed: {exc}")
 
@@ -3568,7 +3568,12 @@ async def analyze_video_stream_endpoint(
         thread = _th.Thread(target=_runner, daemon=True)
         thread.start()
 
-        TIMEOUT_SEC = 60.0
+        # Bumped 60 → 110s. Big phone clips (>30MB raw, even after
+        # compression) routinely took 50-90s in Gemini Pro because of
+        # higher input token counts on longer/denser footage. The old
+        # cap was firing right as a complete event was about to land,
+        # which is what users felt as "stuck/failing at the end".
+        TIMEOUT_SEC = 110.0
         shot_count = 0
         final_payload: dict | None = None
         # Tracks whether the client actually received the complete event.

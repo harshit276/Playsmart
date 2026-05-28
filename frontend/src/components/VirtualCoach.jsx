@@ -113,8 +113,12 @@ export default function VirtualCoach() {
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Hide on routes where it would be in the way
-  const HIDDEN_ROUTES = ["/auth", "/label", "/test-model"];
+  // Hide on routes where it would be in the way.
+  // /analyze hides it because the LiveVoiceCoach pill is the dedicated
+  // session-grounded coach there — having two coach buttons (text "Ask
+  // Coach" + voice "Talk to Virtual Coach") confused users into picking
+  // the wrong one.
+  const HIDDEN_ROUTES = ["/auth", "/label", "/test-model", "/analyze"];
   const hidden = HIDDEN_ROUTES.some((p) => location.pathname.startsWith(p));
 
   useEffect(() => { saveHistory(messages); }, [messages]);

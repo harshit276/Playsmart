@@ -1794,6 +1794,11 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     // most of the time it wasn't even saving meaningful bytes. Raised from
     // 3 MB → 15 MB.
     skipBelowBytes = 15 * 1024 * 1024,
+    // playbackRate controls wall-clock compression speed. Higher = faster
+    // but some Android browsers cap it (we detect + fall back below).
+    // 4x is the safe default; AnalyzePage bumps this to 6x for >30MB
+    // input files where wall-time matters more than perfect frame fidelity.
+    playbackRate = 4.0,
   } = options;
 
   // Fast exit: file is already small enough — Vercel accepts up to 25 MB.
@@ -1857,7 +1862,7 @@ export async function compressVideoForUpload(videoFile, options = {}) {
   // the canvas in real time. Wall time: duration_sec / playback_rate ≈
   // 4-8s for a 30s source. Frames are drawn via requestAnimationFrame
   // (paced by the video itself, not manual seeking).
-  const PLAYBACK_RATE = 4.0;
+  const PLAYBACK_RATE = playbackRate;
   const canvas = document.createElement("canvas");
   canvas.width = outW;
   canvas.height = outH;
@@ -2020,13 +2025,22 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
     bitrate = 800_000,
     maxDurationSec = 30,
     onProgress,
+    playbackRate,  // optional override; auto-picked below when undefined
   } = options;
 
+  // Auto-pick playbackRate based on input file size: bigger files get
+  // faster compression at the cost of slightly less smooth motion in
+  // the encoded output. Gemini analyses key frames so this trade is
+  // fine for shot detection. Manual override still wins.
+  const inputMb = (videoFile?.size || 0) / (1024 * 1024);
+  const autoRate = inputMb > 60 ? 8.0 : inputMb > 30 ? 6.0 : 4.0;
+  const effectiveRate = typeof playbackRate === "number" ? playbackRate : autoRate;
+
   const rungs = [
-    { maxDim, bitrate, maxDurationSec },
-    { maxDim, bitrate: Math.round(bitrate * 0.7), maxDurationSec },
-    { maxDim: Math.round(maxDim * 0.8), bitrate: Math.round(bitrate * 0.5), maxDurationSec },
-    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.4), maxDurationSec: Math.max(10, Math.round(maxDurationSec * 0.8)) },
+    { maxDim, bitrate, maxDurationSec, playbackRate: effectiveRate },
+    { maxDim, bitrate: Math.round(bitrate * 0.7), maxDurationSec, playbackRate: effectiveRate },
+    { maxDim: Math.round(maxDim * 0.8), bitrate: Math.round(bitrate * 0.5), maxDurationSec, playbackRate: effectiveRate },
+    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.4), maxDurationSec: Math.max(10, Math.round(maxDurationSec * 0.8)), playbackRate: effectiveRate },
   ];
 
   let best = null;
