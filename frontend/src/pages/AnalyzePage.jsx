@@ -314,17 +314,15 @@ export default function AnalyzePage() {
   const [previousScore, setPreviousScore] = useState(null);
   const [file, setFile] = useState(null);
   const [analysisMode, setAnalysisMode] = useState(searchParams.get("mode") || "full");
-  // Accuracy mode: "keyframes" (default, fast, ~$0.001) vs "video"
-  // (high-accuracy whole-video Gemini analysis, slower, ~$0.005-0.02).
-  // Stored separately from analysisMode so users can compare both paths.
-  const [accuracyMode, setAccuracyMode] = useState(() => {
-    // Default to "premium" (whole-video deep analysis) so every user gets
-    // the best shot identification by default. Old localStorage values for
-    // hidden modes ("video", "universal") also map to premium.
-    const raw = searchParams.get("accuracy") || localStorage.getItem("playsmart_accuracy_mode") || "premium";
-    if (raw === "video" || raw === "universal" || raw === "keyframes") return "premium";
-    return raw;
-  });
+  // Accuracy mode: locked to "premium" — every video goes through the
+  // whole-video Gemini pipeline. The old Standard/Premium toggle was
+  // confusing users (Standard ran a less accurate path that often
+  // missed shots on phone-recorded clips) and the mapper at the bottom
+  // of this block was already silently upgrading Standard → Premium on
+  // refresh anyway. Keeping the state variable (instead of removing
+  // every conditional reference) so the existing premium branches
+  // stay live without a full sweep of the file.
+  const [accuracyMode] = useState("premium");
   const [selectedSport, setSelectedSport] = useState(null);
 
   // Set page title
@@ -2416,56 +2414,6 @@ export default function AnalyzePage() {
           </div>
         </motion.div>
       )}
-
-      {/* Accuracy mode toggle — opt-in whole-video Gemini analysis.
-          Two tiers only: Standard (Flash, 100 tok) and Premium (Pro,
-          250 tok). The previous "High accuracy" and "Universal" modes
-          are still functional under the hood (premium uses the
-          universal flow with the Pro model) but hidden from the UI
-          per user feedback that 4 tiles was confusing. */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium">Accuracy Mode</p>
-          <Link to="/pricing" className="text-[10px] text-lime-400 hover:text-lime-300 font-medium">
-            View plans →
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => { setAccuracyMode("keyframes"); try { localStorage.setItem("playsmart_accuracy_mode", "keyframes"); } catch {} }}
-            className={`text-left rounded-xl border p-3 transition-all ${
-              accuracyMode === "keyframes"
-                ? "border-lime-400/50 bg-lime-400/5"
-                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
-            }`}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-white">Standard</span>
-              <span className="text-[10px] text-zinc-500">~6s · ~$0.001</span>
-            </div>
-            <p className="text-[11px] text-zinc-400">Browser finds shots + measures angles. Fast, low cost.</p>
-          </button>
-          {/* "High accuracy" and "Universal" modes hidden per user
-              feedback. Premium covers both (whole-video + any sport).
-              To re-enable, search for accuracyMode === "video" and
-              "universal" — the runtime paths are intact. */}
-          <button
-            type="button"
-            onClick={() => { setAccuracyMode("premium"); try { localStorage.setItem("playsmart_accuracy_mode", "premium"); } catch {} }}
-            className={`text-left rounded-xl border p-3 transition-all relative ${
-              accuracyMode === "premium"
-                ? "border-amber-400/50 bg-amber-400/5"
-                : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
-            }`}>
-            <div className="absolute -top-2 right-2 bg-amber-400 text-black text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">Pro</div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-sm font-semibold text-white">Premium</span>
-              <span className="text-[10px] text-zinc-500">~15s · 250 tok</span>
-            </div>
-            <p className="text-[11px] text-zinc-400">AthlyticAI Pro engine — catches every shot on tough phone-recorded clips.</p>
-          </button>
-        </div>
-      </div>
 
       {/* Tips for best results */}
       <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 mb-4">
