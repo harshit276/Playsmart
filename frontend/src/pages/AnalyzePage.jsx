@@ -1035,7 +1035,13 @@ export default function AnalyzePage() {
           // any overshoot, which surfaced as "compressed video too large
           // (5.5 MB)" for moderately long phone clips. Now we step down
           // bitrate + dims + duration before giving up.
-          uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
+          // Target raised from 4MB → 8MB. The backend (Railway) and
+          // Cloudflare edge accept 8MB easily; the old 4MB cap forced
+          // every phone clip > 4MB to spend 5-15s re-encoding. Most
+          // typical 20-30s phone videos sit in the 4-8MB range, so
+          // raising the cap means they skip compression entirely and
+          // upload directly. Net 5-10s saved per analysis on average.
+          uploadFile = await vp.compressUnderSize(file, 8 * 1024 * 1024, {
             maxDim: 480, bitrate: 800_000, maxDurationSec: 20,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
@@ -1375,7 +1381,10 @@ export default function AnalyzePage() {
               // "compressed video still too large".
               let uploadFile;
               try {
-                uploadFile = await mod.compressUnderSize(file, 4 * 1024 * 1024, {
+                // 8MB target — see comment on the universal path above.
+                // Same Railway+Cloudflare limits; saves ~5-15s of
+                // compression for moderate-sized phone clips.
+                uploadFile = await mod.compressUnderSize(file, 8 * 1024 * 1024, {
                   maxDim: 540,
                   bitrate: 1_000_000,
                   maxDurationSec: 30,
