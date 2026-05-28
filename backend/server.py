@@ -12007,35 +12007,43 @@ def _coach_voice_system_prompt(ctx: VoiceChatContext) -> str:
     """Build a sport-specific coach system prompt grounded in this user's
     analysis. We keep grounding conservative — the model is repeatedly
     told to refer to OBSERVATIONS from the clip, not invent metrics, and
-    to decline anything off-coaching politely."""
+    to decline anything off-coaching politely.
+
+    Sized for fast first-token latency: ~2.5KB total grounding is enough
+    to answer well, and roughly halves the input vs the original 6KB
+    prompt which was visibly slowing time-to-first-audio."""
     sport = (ctx.sport or "").strip() or "the sport"
     skill = (ctx.overall_skill_level or "").strip()
     cn = ctx.coach_narrative or {}
-    intro = str(cn.get("intro", "") or "")[:600]
-    strengths = str(cn.get("strengths_paragraph", "") or "")[:600]
-    improvements = str(cn.get("improvements_paragraph", "") or "")[:600]
-    takeaway = str(cn.get("takeaway", "") or "")[:600]
+    # Tighter narrative caps — these used to be 600 chars each, which
+    # was redundant grounding the model rarely needed.
+    intro = str(cn.get("intro", "") or "")[:280]
+    strengths = str(cn.get("strengths_paragraph", "") or "")[:300]
+    improvements = str(cn.get("improvements_paragraph", "") or "")[:300]
+    takeaway = str(cn.get("takeaway", "") or "")[:200]
 
     shots = ctx.shots or []
     shot_lines = []
-    for s in shots[:8]:
+    # 5 shots is enough context for the model to answer about any specific
+    # shot the user references; was 8 (twice the typical reply needs).
+    for s in shots[:5]:
         try:
-            label = str(s.get("label") or "").strip()[:60]
+            label = str(s.get("label") or "").strip()[:40]
             ts = s.get("timestamp_sec")
             ts_str = f" @ {ts:.1f}s" if isinstance(ts, (int, float)) else ""
-            top_fix = str(s.get("top_fix") or "").strip()[:180]
-            reasoning = str(s.get("reasoning") or "").strip()[:200]
+            top_fix = str(s.get("top_fix") or "").strip()[:120]
+            reasoning = str(s.get("reasoning") or "").strip()[:120]
             line = f"- {label or 'shot'}{ts_str}"
             if top_fix:
                 line += f" — fix: {top_fix}"
             if reasoning:
-                line += f" | what I saw: {reasoning}"
+                line += f" | saw: {reasoning}"
             shot_lines.append(line)
         except Exception:
             continue
     shots_block = "\n".join(shot_lines) if shot_lines else "(no per-shot details)"
 
-    tpd = (ctx.target_player_description or "").strip()[:240]
+    tpd = (ctx.target_player_description or "").strip()[:180]
 
     return f"""You are AthlyticAI's live voice coach speaking directly to the player
 about the {sport} clip you just analysed. You are NOT a generic chatbot — you
@@ -12206,19 +12214,41 @@ async def coach_voice_chat(
 
             def _runner():
                 try:
-                    stream_iter = model.generate_content(
-                        user_msg,
-                        stream=True,
-                        generation_config={
-                            "temperature": 0.4,
-                            # No JSON response — we want spoken prose.
-                            # 320 was clipping replies mid-sentence on
-                            # multi-paragraph coaching answers ("...because
-                            # of what your non-" then EOF). 700 is enough
-                            # for ~5 sentences of natural coach voice.
-                            "max_output_tokens": 700,
-                        },
-                    )
+                    # Disable Gemini 2.5's thinking mode for voice chat.
+                    # Coach replies are 1-3 sentences — deep reasoning
+                    # adds 500-1500ms of latency before the first token
+                    # without improving quality for this conversational
+                    # use case. Older SDK versions ignore unknown keys
+                    # so this is safe across `google-generativeai`
+                    # releases.
+                    _gen_config = {
+                        "temperature": 0.4,
+                        # No JSON response — we want spoken prose.
+                        # 320 was clipping replies mid-sentence on
+                        # multi-paragraph coaching answers ("...because
+                        # of what your non-" then EOF). 700 is enough
+                        # for ~5 sentences of natural coach voice.
+                        "max_output_tokens": 700,
+                        "thinking_config": {"thinking_budget": 0},
+                    }
+                    try:
+                        stream_iter = model.generate_content(
+                            user_msg,
+                            stream=True,
+                            generation_config=_gen_config,
+                        )
+                    except Exception as cfg_exc:
+                        # Some SDK versions reject thinking_config; retry
+                        # without it. Keep the rest of the config intact.
+                        if "thinking" in str(cfg_exc).lower():
+                            _gen_config.pop("thinking_config", None)
+                            stream_iter = model.generate_content(
+                                user_msg,
+                                stream=True,
+                                generation_config=_gen_config,
+                            )
+                        else:
+                            raise
                     for chunk in stream_iter:
                         try:
                             txt = chunk.text or ""
@@ -12362,6 +12392,33 @@ _COACH_VOICE_PRESETS = {
 _DEFAULT_COACH_VOICE = "aria"
 
 
+# Pooled httpx client for TTS calls. Creating a fresh AsyncClient per
+# request burned ~150-300ms on the TCP + TLS handshake every time —
+# meaningful on the streaming-TTS path because each sentence is a
+# separate request. Reusing the client keeps the connection warm.
+_TTS_HTTP_CLIENT: Optional[httpx.AsyncClient] = None
+
+async def _get_tts_http_client() -> httpx.AsyncClient:
+    """Lazy module-level httpx client for TTS providers. Reused across
+    requests so we don't pay the handshake on every call. FastAPI tears
+    it down implicitly at process shutdown; we also guard against the
+    client being closed (e.g. a reload in dev)."""
+    global _TTS_HTTP_CLIENT
+    if _TTS_HTTP_CLIENT is None or _TTS_HTTP_CLIENT.is_closed:
+        _TTS_HTTP_CLIENT = httpx.AsyncClient(
+            timeout=60.0,
+            # http2=True needs the `h2` package; keep HTTP/1.1 for now
+            # since both providers serve fine over 1.1 and we avoid a
+            # new dep. Keep-alive is on by default.
+            limits=httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=40,
+                keepalive_expiry=120.0,
+            ),
+        )
+    return _TTS_HTTP_CLIENT
+
+
 def _coach_tts_provider() -> str:
     """Returns 'sarvam' | 'elevenlabs' | 'none'. Explicit TTS_PROVIDER
     env var wins; otherwise Sarvam beats ElevenLabs when both keys are
@@ -12384,25 +12441,26 @@ async def _sarvam_tts_synthesize(text: str, speaker: str):
     if not api_key:
         return None
     try:
-        async with httpx.AsyncClient(timeout=30.0) as hc:
-            r = await hc.post(
-                "https://api.sarvam.ai/text-to-speech",
-                headers={
-                    "api-subscription-key": api_key,
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "text": text,
-                    "target_language_code": "en-IN",
-                    "speaker": speaker,
-                    "model": "bulbul:v2",
-                    "pitch": 0,
-                    "pace": 1.0,
-                    "loudness": 1.0,
-                    "speech_sample_rate": 22050,
-                    "enable_preprocessing": True,
-                },
-            )
+        hc = await _get_tts_http_client()
+        r = await hc.post(
+            "https://api.sarvam.ai/text-to-speech",
+            headers={
+                "api-subscription-key": api_key,
+                "Content-Type": "application/json",
+            },
+            json={
+                "text": text,
+                "target_language_code": "en-IN",
+                "speaker": speaker,
+                "model": "bulbul:v2",
+                "pitch": 0,
+                "pace": 1.0,
+                "loudness": 1.0,
+                "speech_sample_rate": 22050,
+                "enable_preprocessing": True,
+            },
+            timeout=30.0,
+        )
     except httpx.RequestError as exc:
         logging.warning("[sarvam-tts] network: %s", exc)
         return None
@@ -12434,25 +12492,26 @@ async def _elevenlabs_tts_synthesize(text: str, el_voice_id: str):
     if not api_key:
         return None
     try:
-        async with httpx.AsyncClient(timeout=60.0) as hc:
-            r = await hc.post(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{el_voice_id}",
-                headers={
-                    "xi-api-key": api_key,
-                    "accept": "audio/mpeg",
-                    "Content-Type": "application/json",
+        hc = await _get_tts_http_client()
+        r = await hc.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{el_voice_id}",
+            headers={
+                "xi-api-key": api_key,
+                "accept": "audio/mpeg",
+                "Content-Type": "application/json",
+            },
+            json={
+                "text": text,
+                "model_id": "eleven_flash_v2_5",
+                "voice_settings": {
+                    "stability": 0.45,
+                    "similarity_boost": 0.75,
+                    "style": 0.25,
+                    "use_speaker_boost": True,
                 },
-                json={
-                    "text": text,
-                    "model_id": "eleven_flash_v2_5",
-                    "voice_settings": {
-                        "stability": 0.45,
-                        "similarity_boost": 0.75,
-                        "style": 0.25,
-                        "use_speaker_boost": True,
-                    },
-                },
-            )
+            },
+            timeout=60.0,
+        )
     except httpx.RequestError as exc:
         logging.warning("[elevenlabs-tts] network: %s", exc)
         return None

@@ -732,6 +732,37 @@ export default function LiveVoiceCoach({ result }) {
     }, 250);
   }, [continuousMode, interimText, sendUserMessage]);
 
+  // Global pointer-up listener while the mic is held. The button's
+  // own onPointerUp handler can miss the release event when:
+  //   - finger slides off the button before lifting (mobile)
+  //   - touch is cancelled by OS gesture (notification, call, etc.)
+  //   - user clicks elsewhere while mouse button still down
+  // Without this, the recognizer would stay listening indefinitely and
+  // the UI would look frozen. We tear down on ANY release event while
+  // listening, then let the existing handleMicUp handle the send.
+  useEffect(() => {
+    if (!listening || continuousMode) return undefined;
+    const onAnyUp = () => {
+      handleMicUp();
+    };
+    // 8-second hard cap. Speech-recognition timeouts vary by browser
+    // (Chrome ~10s, Safari ~5s, sometimes infinite on iOS), so we own
+    // the upper bound. If the user is still actively dictating after
+    // 8s we'll have already received final results piecemeal.
+    const watchdog = setTimeout(() => {
+      handleMicUp();
+    }, 8000);
+    window.addEventListener("pointerup", onAnyUp);
+    window.addEventListener("pointercancel", onAnyUp);
+    window.addEventListener("blur", onAnyUp);
+    return () => {
+      window.removeEventListener("pointerup", onAnyUp);
+      window.removeEventListener("pointercancel", onAnyUp);
+      window.removeEventListener("blur", onAnyUp);
+      clearTimeout(watchdog);
+    };
+  }, [listening, continuousMode, handleMicUp]);
+
   const toggleContinuous = useCallback(() => {
     setContinuousMode((prev) => {
       const next = !prev;
@@ -836,8 +867,13 @@ export default function LiveVoiceCoach({ result }) {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Talk to your coach"
-          className="fixed z-40 group inline-flex items-center gap-2 bg-lime-400 hover:bg-lime-300 text-black rounded-full pl-3 pr-4 py-3 shadow-2xl shadow-lime-400/50 transition-all hover:scale-105 active:scale-95
-                     left-5 bottom-5
+          // Mobile: anchor well above the safe-area / browser chrome
+          // (iOS Safari URL bar + home indicator combined eat ~80-120px
+          // off the bottom; bottom-5 was hiding the pill behind them).
+          // Desktop: original bottom-left position.
+          style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+          className="fixed z-50 group inline-flex items-center gap-2 bg-lime-400 hover:bg-lime-300 text-black rounded-full pl-3 pr-4 py-3 shadow-2xl shadow-lime-400/50 transition-all hover:scale-105 active:scale-95
+                     left-4 bottom-24
                      sm:left-5 sm:bottom-5"
         >
           {/* Pulse halo behind the button — pointer-events-none so it
@@ -1117,28 +1153,38 @@ export default function LiveVoiceCoach({ result }) {
               ) : (
                 <button
                   type="button"
-                  onMouseDown={handleMicDown}
-                  onMouseUp={handleMicUp}
-                  onMouseLeave={listening ? handleMicUp : undefined}
-                  onTouchStart={(e) => {
+                  // Pointer events unify mouse / touch / pen with a
+                  // single code path — much more reliable than
+                  // onMouse* + onTouch* duplication, especially on
+                  // mobile Safari where touch handlers occasionally
+                  // dropped onTouchEnd and left the mic stuck on.
+                  // The window-level pointerup listener (declared
+                  // above) covers releases that happen off-button.
+                  onPointerDown={(e) => {
                     e.preventDefault();
                     handleMicDown();
                   }}
-                  onTouchEnd={(e) => {
+                  onPointerUp={(e) => {
                     e.preventDefault();
                     handleMicUp();
                   }}
+                  onPointerCancel={() => handleMicUp()}
+                  // Touch fallback for browsers (rare) that don't
+                  // synthesize pointer events. preventDefault stops
+                  // iOS double-tap-zoom from firing.
+                  onTouchStart={(e) => e.preventDefault()}
+                  onTouchEnd={(e) => e.preventDefault()}
                   disabled={!supported || streaming}
-                  className={`flex items-center gap-2 px-4 h-12 rounded-full font-bold transition-all select-none ${
+                  className={`flex items-center gap-2 px-4 h-12 rounded-full font-bold transition-all select-none touch-none ${
                     listening
                       ? "bg-lime-400 text-black ring-4 ring-lime-400/30 scale-105"
                       : "bg-lime-400 hover:bg-lime-300 text-black"
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  aria-label="Press and hold to talk"
-                  title="Press and hold to talk"
+                  aria-label={listening ? "Tap to stop and send" : "Hold to talk, or tap to start"}
+                  title="Hold to talk · or tap to start / stop"
                 >
                   <Mic className="w-4 h-4" />
-                  {listening ? "Listening…" : "Hold to Talk"}
+                  {listening ? "Listening… (tap to send)" : "Hold to Talk"}
                 </button>
               )}
 
