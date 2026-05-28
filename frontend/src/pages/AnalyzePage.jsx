@@ -2377,12 +2377,28 @@ export default function AnalyzePage() {
         <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelect} />
       </div>
 
-      {/* File size warning */}
-      {file && file.size > 100 * 1024 * 1024 && (
+      {/* File size warning. Two tiers:
+          - 30-80 MB → just a heads-up; compression is real but tolerable
+          - >80 MB   → louder warning; we may have to trim duration to fit */}
+      {file && file.size > 30 * 1024 * 1024 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="mb-3 bg-amber-400/5 border border-amber-400/20 rounded-xl p-3 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <p className="text-xs text-amber-400">Large file ({(file.size / (1024 * 1024)).toFixed(0)} MB). Upload may take longer.</p>
+          className={`mb-3 rounded-xl p-3 flex items-start gap-2 ${
+            file.size > 80 * 1024 * 1024
+              ? "bg-amber-400/10 border border-amber-400/30"
+              : "bg-amber-400/5 border border-amber-400/20"
+          }`}>
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-300 leading-relaxed">
+            <p className="font-semibold">
+              Large file: {(file.size / (1024 * 1024)).toFixed(0)} MB
+            </p>
+            <p className="text-amber-300/80 mt-0.5">
+              Compression takes ~20-40s in the browser before upload starts.
+              The analysis takes another 30-60s after that. Total wait:
+              roughly 1-2 minutes — your phone screen needs to stay on the
+              page the whole time, don&apos;t switch apps.
+            </p>
+          </div>
         </motion.div>
       )}
 

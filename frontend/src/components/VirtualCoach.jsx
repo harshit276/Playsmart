@@ -169,14 +169,14 @@ export default function VirtualCoach() {
     return (
       <button
         onClick={() => setOpen(true)}
-        aria-label="Open Virtual Coach"
+        aria-label="Open Coach Chat"
         className="fixed bottom-5 right-5 z-40 group flex items-center gap-2 bg-lime-400 hover:bg-lime-300 text-black rounded-full pl-3 pr-4 py-3 shadow-2xl shadow-lime-400/30 transition-all hover:scale-105 active:scale-95"
       >
         <div className="relative">
           <Sparkles className="w-5 h-5" />
           <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
         </div>
-        <span className="text-sm font-semibold hidden sm:inline">Ask Coach</span>
+        <span className="text-sm font-semibold hidden sm:inline">Coach Chat</span>
       </button>
     );
   }

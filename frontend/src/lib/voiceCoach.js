@@ -472,6 +472,96 @@ export function speakWithCoachVoice(text, opts = {}) {
   return Object.assign(promise, controller);
 }
 
+// ─── Pre-fetch remote audio (no play) ────────────────────────────────
+// Splits the "fetch" and "play" phases of remote TTS so the streaming
+// coach can pre-fetch sentence N+1 while sentence N is still playing,
+// eliminating the inter-sentence gap that used to feel like "the coach
+// stopped". Returns a controller with:
+//   - .ready  — Promise<HTMLAudioElement | null> that resolves once
+//               audio is downloaded and ready to .play(). Resolves to
+//               null on any failure (caller should fall back to
+//               browser TTS for this sentence).
+//   - .play() — Plays the prefetched audio and resolves on natural end.
+//   - .cancel() — Aborts download / playback.
+function _prefetchRemoteAudio(text, opts = {}) {
+  const audio = new Audio();
+  audio.preload = "auto";
+  let cancelled = false;
+  let urlToRevoke = null;
+
+  const cleanup = () => {
+    if (urlToRevoke) {
+      try { URL.revokeObjectURL(urlToRevoke); } catch { /* noop */ }
+      urlToRevoke = null;
+    }
+  };
+
+  const ready = (async () => {
+    const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+    const token = (() => {
+      try { return localStorage.getItem("playsmart_token"); } catch { return null; }
+    })();
+    try {
+      const res = await fetch(`${backendUrl}/api/coach/voice-tts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          text,
+          voice_id: opts.voiceKey || getCoachVoicePref(),
+        }),
+      });
+      if (!res.ok) return null;
+      if (cancelled) return null;
+      const blob = await res.blob();
+      if (cancelled) return null;
+      urlToRevoke = URL.createObjectURL(blob);
+      audio.src = urlToRevoke;
+      // Wait for the browser to acknowledge metadata is loaded so the
+      // subsequent .play() call has zero-buffering latency.
+      await new Promise((resolve) => {
+        if (audio.readyState >= 2) { resolve(); return; }
+        audio.addEventListener("loadeddata", resolve, { once: true });
+        audio.addEventListener("error", resolve, { once: true });
+      });
+      return cancelled ? null : audio;
+    } catch {
+      return null;
+    }
+  })();
+
+  return {
+    ready,
+    play: async () => {
+      const a = await ready;
+      if (cancelled || !a) {
+        cleanup();
+        return false;
+      }
+      try {
+        try { opts.onStart?.(); } catch { /* noop */ }
+        await new Promise((resolve, reject) => {
+          a.onended = () => resolve();
+          a.onerror = () => reject(new Error("audio_play_error"));
+          a.play().catch(reject);
+        });
+        try { opts.onEnd?.(); } catch { /* noop */ }
+        return true;
+      } finally {
+        cleanup();
+      }
+    },
+    cancel: () => {
+      cancelled = true;
+      try { audio.pause(); audio.src = ""; } catch { /* noop */ }
+      cleanup();
+    },
+  };
+}
+
 // ─── Sentence-streaming TTS ──────────────────────────────────────────
 // The Live Coach used to wait for the full SSE reply before speaking,
 // which left a 2-3 second silent gap between the text appearing and
@@ -480,10 +570,10 @@ export function speakWithCoachVoice(text, opts = {}) {
 // sentences on the fly and queue each one for playback, so the user
 // hears the first sentence within ~1-2s of typing showing up.
 //
-// Playback is strictly sequential per call: sentence N never starts
-// until sentence N-1 finishes. We accept the inter-sentence latency
-// (one TTS round-trip per sentence) in exchange for much earlier
-// first-audio.
+// Each sentence's audio is FETCHED in parallel the moment the sentence
+// lands (via _prefetchRemoteAudio), but playback is strictly sequential.
+// Net effect: the only inter-sentence gap is the time to swap audio
+// elements (~milliseconds), not the previous TTS network round-trip.
 //
 // `flush()` flushes any trailing buffer (sentence the LLM didn't quite
 // terminate with punctuation) as the final spoken chunk.
@@ -533,22 +623,46 @@ export function createStreamingCoachVoice(opts = {}) {
   const enqueueOne = (sentence) => {
     if (!sentence || cancelled) return;
     pendingCount += 1;
+
+    // Kick off prefetch IMMEDIATELY (in parallel with any other queued
+    // sentences). Playback waits on the previous sentence's audio to
+    // finish via the `chain` promise — so two requests in flight + one
+    // playing back covers the gap that used to feel like a pause.
+    const prefetch = _prefetchRemoteAudio(sentence, {
+      voiceKey: opts.voiceKey,
+    });
+
     chain = chain.then(async () => {
       if (cancelled) {
+        try { prefetch.cancel(); } catch { /* noop */ }
         pendingCount = Math.max(0, pendingCount - 1);
         return;
       }
       maybeStartSpeaking();
-      activeController = speakWithCoachVoice(sentence, {
-        voiceKey: opts.voiceKey,
-        onEngineFallback: opts.onEngineFallback,
-      });
+      activeController = prefetch;
+      let played = false;
       try {
-        await activeController;
+        played = await prefetch.play();
       } catch {
-        /* swallow — already logged inside */
+        played = false;
       }
       activeController = null;
+
+      // Prefetch returned null (no API key / network failure / 503) →
+      // fall back to browser TTS for this single sentence. The whole
+      // session's engine flips to "browser" for the badge.
+      if (!played && !cancelled) {
+        try { opts.onEngineFallback?.(); } catch { /* noop */ }
+        const ctrl = speak(sentence, { voiceKey: opts.voiceKey });
+        activeController = ctrl;
+        try {
+          await ctrl;
+        } catch {
+          /* noop */
+        }
+        activeController = null;
+      }
+
       pendingCount = Math.max(0, pendingCount - 1);
       if (finished && pendingCount === 0) {
         maybeStopSpeaking();

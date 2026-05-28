@@ -13327,10 +13327,17 @@ def _fallback_narrative(
             f"overall consistency {req.overall_consistency:.0%}"
         )
         if populated_dist:
-            weakest_name = min(
-                populated_dist,
-                key=lambda n: ptq[n].consistency if n in ptq else 1.0,
-            )
+            # consistency can be None for single-sample shot types (stddev
+            # of one is meaningless). Comparing None with floats raised
+            # TypeError → endpoint 500'd whenever every shot type had only
+            # 1 sample. Coerce None → 1.0 in the key so those types just
+            # rank last for "weakest".
+            def _weakness_key(n):
+                if n not in ptq:
+                    return 1.0
+                c = ptq[n].consistency
+                return 1.0 if c is None else c
+            weakest_name = min(populated_dist, key=_weakness_key)
             next_focus = f"Drill {weakest_name} reps for 10 minutes to lift consistency"
         else:
             next_focus = "Pick one shot type and drill it for 15 minutes"

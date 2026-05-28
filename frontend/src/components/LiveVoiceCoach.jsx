@@ -866,7 +866,7 @@ export default function LiveVoiceCoach({ result }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Talk to your coach"
+          aria-label="Open Voice Coach (live voice conversation about this analysis)"
           // Mobile: anchor well above the safe-area / browser chrome
           // (iOS Safari URL bar + home indicator combined eat ~80-120px
           // off the bottom; bottom-5 was hiding the pill behind them).
@@ -884,7 +884,7 @@ export default function LiveVoiceCoach({ result }) {
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
           </span>
           <span className="relative text-sm font-bold whitespace-nowrap">
-            Talk to Your Coach
+            Voice Coach
           </span>
         </button>
       </>
@@ -1262,7 +1262,7 @@ export default function LiveVoiceCoach({ result }) {
                     </span>
                   </span>
                   <span className="text-[9px] uppercase tracking-wider text-lime-300/80">
-                    Premium ▾
+                    {providerLabel || "Premium"} ▾
                   </span>
                 </button>
                 {showVoiceMenu && (
