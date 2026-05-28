@@ -472,6 +472,150 @@ export function speakWithCoachVoice(text, opts = {}) {
   return Object.assign(promise, controller);
 }
 
+// ─── Sentence-streaming TTS ──────────────────────────────────────────
+// The Live Coach used to wait for the full SSE reply before speaking,
+// which left a 2-3 second silent gap between the text appearing and
+// audio starting. This factory wraps speakWithCoachVoice so the caller
+// can `.append(chunk)` as SSE chunks arrive — we extract complete
+// sentences on the fly and queue each one for playback, so the user
+// hears the first sentence within ~1-2s of typing showing up.
+//
+// Playback is strictly sequential per call: sentence N never starts
+// until sentence N-1 finishes. We accept the inter-sentence latency
+// (one TTS round-trip per sentence) in exchange for much earlier
+// first-audio.
+//
+// `flush()` flushes any trailing buffer (sentence the LLM didn't quite
+// terminate with punctuation) as the final spoken chunk.
+// `cancel()` aborts any pending playback and prevents further append.
+// `done()` returns a promise that resolves once everything queued has
+// played to completion — the Live Coach awaits this to know when to
+// clear the talking indicator.
+export function createStreamingCoachVoice(opts = {}) {
+  let buffer = "";
+  let cancelled = false;
+  let finished = false;
+  let pendingCount = 0;
+  let isSpeaking = false;
+  let activeController = null;
+  let chain = Promise.resolve();
+  let resolveAllDone;
+  const allDonePromise = new Promise((r) => {
+    resolveAllDone = r;
+  });
+
+  // Matches a complete sentence ending in . ! or ? (optionally followed
+  // by closing punctuation), and crucially requires whitespace or EOF
+  // AFTER the terminal punctuation so we don't false-fire on "Dr. Smith".
+  const sentenceRx = /[^.!?]+[.!?]+["')\]]*(?=\s|$)/g;
+
+  const maybeStartSpeaking = () => {
+    if (!isSpeaking) {
+      isSpeaking = true;
+      try {
+        opts.onStart?.();
+      } catch {
+        /* noop */
+      }
+    }
+  };
+  const maybeStopSpeaking = () => {
+    if (isSpeaking && pendingCount === 0) {
+      isSpeaking = false;
+      try {
+        opts.onEnd?.();
+      } catch {
+        /* noop */
+      }
+    }
+  };
+
+  const enqueueOne = (sentence) => {
+    if (!sentence || cancelled) return;
+    pendingCount += 1;
+    chain = chain.then(async () => {
+      if (cancelled) {
+        pendingCount = Math.max(0, pendingCount - 1);
+        return;
+      }
+      maybeStartSpeaking();
+      activeController = speakWithCoachVoice(sentence, {
+        voiceKey: opts.voiceKey,
+        onEngineFallback: opts.onEngineFallback,
+      });
+      try {
+        await activeController;
+      } catch {
+        /* swallow — already logged inside */
+      }
+      activeController = null;
+      pendingCount = Math.max(0, pendingCount - 1);
+      if (finished && pendingCount === 0) {
+        maybeStopSpeaking();
+        resolveAllDone();
+      }
+    });
+  };
+
+  const extractAndQueue = () => {
+    let m;
+    let lastEnd = 0;
+    sentenceRx.lastIndex = 0;
+    while ((m = sentenceRx.exec(buffer)) !== null) {
+      enqueueOne(m[0].trim());
+      lastEnd = m.index + m[0].length;
+    }
+    if (lastEnd > 0) {
+      buffer = buffer.slice(lastEnd).replace(/^\s+/, "");
+    }
+  };
+
+  return {
+    append(text) {
+      if (cancelled || finished) return;
+      if (!text) return;
+      buffer += text;
+      extractAndQueue();
+    },
+    flush() {
+      if (cancelled) return;
+      finished = true;
+      const tail = buffer.trim();
+      buffer = "";
+      // Speak whatever's left even if it lacks terminal punctuation
+      // (Gemini sometimes ends a reply mid-clause; backend trim should
+      // catch most cases, but this is a final safety net).
+      if (tail) enqueueOne(tail);
+      // If nothing was ever queued, resolve immediately so the caller
+      // doesn't hang waiting on done().
+      if (pendingCount === 0 && !isSpeaking) {
+        resolveAllDone();
+      }
+    },
+    cancel() {
+      cancelled = true;
+      finished = true;
+      buffer = "";
+      try {
+        activeController?.cancel?.();
+      } catch {
+        /* noop */
+      }
+      activeController = null;
+      maybeStopSpeaking();
+      resolveAllDone();
+    },
+    done() {
+      return allDonePromise;
+    },
+    get engine() {
+      // The streamer doesn't have a single engine — each sentence may
+      // pick differently. We surface whatever the most recent one used.
+      return activeController?.engine || "remote";
+    },
+  };
+}
+
 // Split text into ≤maxLen-character chunks, breaking at sentence
 // boundaries where possible. Each chunk becomes its own utterance —
 // keeping individual playbacks short enough to dodge the Chrome 15s

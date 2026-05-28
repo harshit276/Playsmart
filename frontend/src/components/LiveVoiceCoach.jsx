@@ -9,6 +9,7 @@ import {
 import {
   SpeechRecognizer,
   speakWithCoachVoice,
+  createStreamingCoachVoice,
   sttSupported,
   ttsSupported,
   saveTranscript,
@@ -507,6 +508,18 @@ export default function LiveVoiceCoach({ result }) {
         }
       })();
 
+      // Sentence-streaming TTS: each completed sentence in the SSE
+      // chunks is queued for playback the moment it lands. This kills
+      // the 2-3s gap between text appearing and audio starting that
+      // came from waiting for the full reply before calling TTS.
+      const streamer = createStreamingCoachVoice({
+        voiceKey: coachVoiceKey,
+        onStart: () => setCoachTalking(true),
+        onEnd: () => setCoachTalking(false),
+        onEngineFallback: () => setLastEngine("browser"),
+      });
+      ttsControllerRef.current = streamer;
+
       let fullText = "";
       let httpStatus = 0;
       try {
@@ -566,6 +579,13 @@ export default function LiveVoiceCoach({ result }) {
               }
               if (typeof evt.chunk === "string" && evt.chunk) {
                 fullText += evt.chunk;
+                // Feed the streaming TTS — it will buffer until a
+                // complete sentence is available, then start playback.
+                try {
+                  streamer.append(evt.chunk);
+                } catch {
+                  /* noop — streamer cancelled or already done */
+                }
                 setMessages((prev) => {
                   const copy = prev.slice();
                   for (let i = copy.length - 1; i >= 0; i--) {
@@ -590,6 +610,19 @@ export default function LiveVoiceCoach({ result }) {
           e?.name === "AbortError"
             ? "Stopped."
             : e?.message || "Coach unavailable. Try again in a moment.";
+        // Stream broke — flush whatever sentences already buffered so
+        // the user still hears the partial reply, but don't queue any
+        // tail fragment (the mid-sentence truncation is exactly what we
+        // want to avoid speaking).
+        try {
+          if (fullText) {
+            streamer.flush();
+          } else {
+            streamer.cancel();
+          }
+        } catch {
+          /* noop */
+        }
         setMessages((prev) => {
           const copy = prev.slice();
           for (let i = copy.length - 1; i >= 0; i--) {
@@ -631,29 +664,18 @@ export default function LiveVoiceCoach({ result }) {
       setStreaming(false);
       abortControllerRef.current = null;
 
-      // Trigger TTS only once the full reply landed. The unified
-      // speakWithCoachVoice() tries the backend ElevenLabs proxy first
-      // and silently falls back to browser speechSynthesis when the
-      // backend can't deliver (no key, quota exhausted, 5xx). Engine
-      // used is read off the controller after the call settles to
-      // drive the "Premium voice" / "Device voice" badge.
-      if (finalText) {
-        setCoachTalking(true);
-        const controller2 = speakWithCoachVoice(finalText, {
-          voiceKey: coachVoiceKey,
-          onStart: () => setCoachTalking(true),
-          onEnd: () => setCoachTalking(false),
-          onEngineFallback: () => setLastEngine("browser"),
-        });
-        ttsControllerRef.current = controller2;
-        try {
-          await controller2;
-          setLastEngine(controller2.engine || null);
-        } finally {
-          setCoachTalking(false);
-          if (ttsControllerRef.current === controller2) {
-            ttsControllerRef.current = null;
-          }
+      // Flush the streamer — any trailing buffer (sentence the LLM
+      // ended without terminal punctuation) gets queued as the final
+      // utterance. Then wait for everything queued to finish playing
+      // before we clear the talking indicator.
+      try {
+        streamer.flush();
+        await streamer.done();
+        setLastEngine(streamer.engine || null);
+      } finally {
+        setCoachTalking(false);
+        if (ttsControllerRef.current === streamer) {
+          ttsControllerRef.current = null;
         }
       }
     },
