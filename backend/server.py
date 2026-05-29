@@ -3343,6 +3343,38 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     # most clips are singles or solo drills where the target-player
     # filter is what users want.
     doubles_mode: bool = False
+    # Maps Gemini's timestamps (measured in the COMPRESSED clip's time domain)
+    # back to the ORIGINAL clip the user views. The frontend speeds up capture
+    # for big files to halve encode time, which shortens the encoded clip; it
+    # sends the measured original/compressed duration ratio here so we can
+    # multiply each event's timestamp back into the original timeline. 1.0 =
+    # no scaling (small clips captured at real-time).
+    time_scale: float = 1.0
+
+
+def _apply_time_scale(events: list, time_scale: float) -> list:
+    """Multiply each event's timestamp into the original clip's timeline.
+
+    Gemini sees a (possibly sped-up) compressed clip, so its timestamps live
+    in that shorter domain. The user's video player shows the ORIGINAL clip,
+    so a marker at Gemini's 5s must be moved to 5s*time_scale. No-op when
+    time_scale is ~1. Defensive against bad/missing values so a stray scale
+    can never blow up the response."""
+    try:
+        ts = float(time_scale)
+    except (TypeError, ValueError):
+        return events
+    if not events or ts <= 1.001:
+        return events
+    ts = min(4.0, max(1.0, ts))
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        for key in ("timestamp_sec", "timestamp", "time_sec", "end_sec", "start_sec"):
+            v = ev.get(key)
+            if isinstance(v, (int, float)):
+                ev[key] = round(v * ts, 3)
+    return events
 
 
 @api_router.post("/analyze-video-universal")
@@ -3431,6 +3463,11 @@ async def analyze_video_universal_endpoint(
         "_meta": result.get("_meta") or {},
     }
 
+    # Map Gemini's (possibly sped-up) timestamps back to the original clip's
+    # timeline before caching — same compressed bytes always yield the same
+    # time_scale, so the cached scaled result stays correct.
+    payload["events"] = _apply_time_scale(payload["events"], req.time_scale)
+
     # ─── Cache write (best-effort) ───────────────────────────────────
     try:
         from datetime import timedelta as _td
@@ -3473,6 +3510,10 @@ async def analyze_video_stream_endpoint(
     # to off; singles + drill clips don't need it. Accepted as a form
     # string (multipart) so the frontend doesn't need to JSON-encode.
     doubles_mode: str = "false",
+    # Original/compressed duration ratio — maps Gemini's timestamps back to
+    # the clip the user views (see _apply_time_scale + AnalyzeVideoUniversal
+    # Request.time_scale). Form string; "1.0" = no scaling.
+    time_scale: str = "1.0",
     authorization: str = Header(None),
 ):
     """Stream a video analysis as Server-Sent Events.
@@ -3565,6 +3606,10 @@ async def analyze_video_stream_endpoint(
         SENTINEL = object()
 
         _doubles_flag = str(doubles_mode or "false").strip().lower() in ("1", "true", "yes")
+        try:
+            _ts = float(time_scale)
+        except (TypeError, ValueError):
+            _ts = 1.0
 
         def _runner():
             try:
@@ -3618,9 +3663,14 @@ async def analyze_video_stream_endpoint(
                 kind = item.get("kind") if isinstance(item, dict) else None
                 if kind == "shot":
                     shot_count += 1
+                    _shot = item.get("event")
+                    # Scale the live badge's timestamp into the original
+                    # timeline too, so the per-shot marker matches the video.
+                    if isinstance(_shot, dict):
+                        _apply_time_scale([_shot], _ts)
                     yield _sse_event({
                         "phase": "shot_detected",
-                        "shot": item.get("event"),
+                        "shot": _shot,
                         "index": item.get("index", shot_count - 1),
                         "total_seen": shot_count,
                     })
@@ -3634,6 +3684,8 @@ async def analyze_video_stream_endpoint(
             # complete_delivered stays False → no charge.
             if final_payload is not None:
                 events = final_payload.get("events") or []
+                # Map all final timestamps into the original clip's timeline.
+                events = _apply_time_scale(events, _ts)
                 yield _sse_event({
                     "phase": "complete",
                     # Alias events → shots so the frontend's existing
