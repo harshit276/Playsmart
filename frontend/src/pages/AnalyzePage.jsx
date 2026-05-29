@@ -1037,17 +1037,21 @@ export default function AnalyzePage() {
           // Cloudflare edge accept 8MB easily; the old 4MB cap forced
           // every phone clip > 4MB to spend 5-15s re-encoding. Most
           // typical 20-30s phone videos sit in the 4-8MB range, so
-          // raising the cap means they skip compression entirely and
-          // upload directly. Net 5-10s saved per analysis on average.
-          // For genuinely large inputs (>30MB raw), tighten maxDuration
-          // so we encode 15s instead of 20s — saves ~25% wall-time on
-          // the slowest step and Gemini doesn't lose useful signal
-          // since 15s is still plenty of shots. compressUnderSize
-          // auto-picks a higher playbackRate (6x/8x) for these too.
-          const _sizeMb = (file.size || 0) / (1024 * 1024);
-          const _durCap = _sizeMb > 30 ? 15 : 20;
-          uploadFile = await vp.compressUnderSize(file, 8 * 1024 * 1024, {
-            maxDim: 480, bitrate: 800_000, maxDurationSec: _durCap,
+          // CRITICAL: target stays under Vercel's 4.5MB serverless cap.
+          // /api/* on the custom domain routes through Vercel before
+          // Railway — anything bigger gets 413'd at the edge. A previous
+          // raise to 8MB caused exactly that on 4-8MB phone clips.
+          //
+          // Duration NOT capped here on purpose. Earlier code set
+          // maxDurationSec to 20s (15s for >30MB) which silently cut
+          // off the END of any longer video — users reported "Gemini
+          // saw the preparation but not the actual shot" on basketball
+          // clips where the action lands at second 22+. Now the full
+          // clip up to 90s (compressVideoForUpload default) is encoded,
+          // and the retry ladder drops bitrate/resolution to fit the
+          // 4MB cap instead of trimming the back end.
+          uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
+            maxDim: 480, bitrate: 800_000,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
           const buf = await uploadFile.arrayBuffer();
@@ -1386,18 +1390,13 @@ export default function AnalyzePage() {
               // "compressed video still too large".
               let uploadFile;
               try {
-                // 8MB target — see comment on the universal path above.
-                // Same Railway+Cloudflare limits; saves ~5-15s of
-                // compression for moderate-sized phone clips.
-                // Tighter duration cap for big inputs — same rationale
-                // as the universal path. compressUnderSize auto-bumps
-                // playbackRate for >30MB files.
-                const _sz = (file.size || 0) / (1024 * 1024);
-                const _dur = _sz > 30 ? 22 : 30;
-                uploadFile = await mod.compressUnderSize(file, 8 * 1024 * 1024, {
+                // 4MB target — Vercel edge cap. See universal-path
+                // comment above. Duration not capped here on purpose:
+                // we were silently trimming long clips and Gemini was
+                // missing the back-end action.
+                uploadFile = await mod.compressUnderSize(file, 4 * 1024 * 1024, {
                   maxDim: 540,
                   bitrate: 1_000_000,
-                  maxDurationSec: _dur,
                   onProgress: (pct) => setLoadingText(`Preparing video... ${pct}%`),
                 });
               } catch (compErr) {
