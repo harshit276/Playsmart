@@ -3440,10 +3440,15 @@ async def analyze_video_universal_endpoint(
                 tier=req.tier,
                 doubles_mode=req.doubles_mode,
             )),
-            timeout=110.0,
+            # 180s: dense doubles clips (both near-court players, many events)
+            # routinely need 110-160s of Gemini generation. The old 110s cap
+            # made these false-fail, and the frontend then RE-RAN this same
+            # endpoint (another 110s) — users saw ~200s "stuck at 78%". One
+            # generous attempt beats two short ones.
+            timeout=180.0,
         )
     except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="Universal analysis timed out (>110s)")
+        raise HTTPException(status_code=504, detail="Universal analysis timed out (>180s)")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Universal analysis failed: {exc}")
 
@@ -3628,12 +3633,15 @@ async def analyze_video_stream_endpoint(
         thread = _th.Thread(target=_runner, daemon=True)
         thread.start()
 
-        # Bumped 60 → 110s. Big phone clips (>30MB raw, even after
-        # compression) routinely took 50-90s in Gemini Pro because of
-        # higher input token counts on longer/denser footage. The old
-        # cap was firing right as a complete event was about to land,
-        # which is what users felt as "stuck/failing at the end".
-        TIMEOUT_SEC = 110.0
+        # Bumped 110 → 180s. Dense doubles clips (both near-court players,
+        # many events + multi-paragraph coach narrative) push Gemini Pro
+        # generation to 110-160s. At 110s the stream fired a timeout error,
+        # the client fell back to the JSON endpoint (ALSO 110s), and a clip
+        # that needed ~150s timed out TWICE → ~200s "stuck at 78%". A single
+        # generous streaming attempt (with live shot badges the whole time)
+        # is both faster end-to-end and far less confusing than two short
+        # ones. The per-read keepalive below keeps proxies from idle-closing.
+        TIMEOUT_SEC = 180.0
         shot_count = 0
         final_payload: dict | None = None
         # Tracks whether the client actually received the complete event.
@@ -3646,7 +3654,7 @@ async def analyze_video_stream_endpoint(
         try:
             while True:
                 if _time.time() - started > TIMEOUT_SEC:
-                    yield _sse_event({"phase": "error", "msg": "analysis_timeout_60s"})
+                    yield _sse_event({"phase": "error", "msg": "analysis_timeout_180s"})
                     break
                 # Pop one item from the bridge queue without blocking the loop
                 try:
@@ -3738,6 +3746,267 @@ def _sse_headers() -> dict:
         "X-Accel-Buffering": "no",  # nginx
         "Content-Encoding": "identity",  # don't compress; defeats SSE
     }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Async analysis job queue  (submit → poll, user can leave the page)
+# ──────────────────────────────────────────────────────────────────────
+# Video analysis takes 30s-3min on Gemini. Holding the connection open that
+# whole time forces the user to stare at a spinner AND ties up a thread +
+# the video bytes in RAM per request — a handful of concurrent uploads can
+# OOM the single Railway process. This subsystem decouples the wait from the
+# connection:
+#   POST /analyze-video-async   → enqueue, return {job_id} instantly
+#   GET  /analyze-jobs/{job_id} → poll status / queue position / result
+#
+# A fixed pool of N worker coroutines pulls from a PRIORITY queue (paid
+# users first). The pool size IS the concurrency cap (the semaphore) — only
+# N Gemini calls run at once, so load spikes queue instead of crashing the
+# box. Gemini calls retry on 429 / RESOURCE_EXHAUSTED with backoff.
+#
+# Single-process scope: the queue + video buffer live in THIS process's
+# memory (the Dockerfile runs one uvicorn worker). Job RECORDS live in Mongo
+# so status polling is durable across reloads. If you later run multiple
+# replicas, move the in-memory dispatch to a shared broker (Redis / Mongo
+# change stream) — the Mongo records already make polling replica-safe.
+import uuid as _uuid
+
+_JOB_CONCURRENCY = int(os.environ.get("ANALYSIS_CONCURRENCY", "4"))
+_job_queue = None          # asyncio.PriorityQueue, created on startup
+_job_videos: dict = {}     # job_id -> raw video bytes (freed after the run)
+_job_seq = 0               # monotonic tiebreaker so equal priority = FIFO
+_job_workers_started = False
+
+_PRIORITY_PAID = 0         # lower number = served first
+_PRIORITY_FREE = 10
+
+
+def _gemini_is_rate_limit(exc: Exception) -> bool:
+    s = str(exc).lower()
+    return any(t in s for t in ("429", "resource_exhausted", "rate limit",
+                                "ratelimit", "quota", "exhausted"))
+
+
+def _run_universal_with_retry(video_bytes, mime_type, **kwargs):
+    """Sync Gemini analysis with 429 backoff. Runs inside a thread executor.
+    Only rate-limit errors are retried; everything else raises immediately."""
+    from ai_pipeline.vlm import analyze_video_universal
+    import time as _t
+    delays = [3, 8, 18]  # backoff between attempts; total worst-case ~30s
+    for attempt in range(len(delays) + 1):
+        try:
+            return analyze_video_universal(video_bytes, mime_type, **kwargs)
+        except Exception as exc:
+            if attempt < len(delays) and _gemini_is_rate_limit(exc):
+                logger.warning(f"[jobs] Gemini rate-limited, retry {attempt + 1} in {delays[attempt]}s")
+                _t.sleep(delays[attempt])
+                continue
+            raise
+
+
+async def _update_job(job_id: str, **fields):
+    fields["updated_at"] = datetime.now(timezone.utc)
+    try:
+        await asyncio.wait_for(
+            db.analysis_jobs.update_one({"job_id": job_id}, {"$set": fields}),
+            timeout=3.0,
+        )
+    except (Exception, asyncio.TimeoutError):
+        pass
+
+
+async def _process_job(job: dict):
+    job_id = job["job_id"]
+    video_bytes = _job_videos.get(job_id)
+    if not video_bytes:
+        await _update_job(job_id, status="error", error="video_expired")
+        return
+    await _update_job(job_id, status="running",
+                      started_at=datetime.now(timezone.utc))
+    loop = asyncio.get_event_loop()
+    try:
+        result = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: _run_universal_with_retry(
+                video_bytes, job["mime_type"],
+                target_player_description=job.get("target_player_description"),
+                backend=job.get("backend", "auto"),
+                tier=job.get("tier", "premium"),
+                doubles_mode=job.get("doubles_mode", False),
+            )),
+            timeout=200.0,
+        )
+    except asyncio.TimeoutError:
+        await _update_job(job_id, status="error", error="analysis_timeout")
+        return
+    except Exception as exc:
+        await _update_job(job_id, status="error",
+                          error=f"analysis_failed: {str(exc)[:200]}")
+        return
+    finally:
+        _job_videos.pop(job_id, None)  # free RAM regardless of outcome
+
+    payload = {
+        "sport_detected": result.get("sport_detected", "unknown"),
+        "summary": result.get("summary", ""),
+        "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
+        "coach_narrative": result.get("coach_narrative") or {},
+        "target_mismatch_warning": result.get("target_mismatch_warning") or None,
+        "events": result.get("events") or [],
+        "_debug": result.get("_debug") or {},
+        "_meta": {**(result.get("_meta") or {}), "async_job": True},
+    }
+    payload["events"] = _apply_time_scale(payload["events"], job.get("time_scale", 1.0))
+    await _update_job(job_id, status="complete", result=payload,
+                      finished_at=datetime.now(timezone.utc))
+
+    # Charge tokens on success only (mirrors the streaming endpoint — never
+    # bill for a failed or abandoned analysis).
+    if job.get("user_id"):
+        try:
+            await _spend_tokens(
+                job["user_id"], "analysis_spend",
+                abs(TOKEN_RULES.get("analysis_spend", -100)),
+                {"endpoint": "analyze-video-async", "tier": job.get("tier")},
+            )
+        except Exception:
+            pass
+
+
+async def _job_worker(worker_id: int):
+    while True:
+        try:
+            _prio, _seq, job = await _job_queue.get()
+        except Exception:
+            await asyncio.sleep(0.5)
+            continue
+        try:
+            await _process_job(job)
+        except Exception as exc:
+            try:
+                await _update_job(job.get("job_id", ""), status="error",
+                                  error=f"worker_crash: {str(exc)[:200]}")
+            except Exception:
+                pass
+        finally:
+            try:
+                _job_queue.task_done()
+            except Exception:
+                pass
+
+
+@app.on_event("startup")
+async def _start_job_workers():
+    global _job_queue, _job_workers_started
+    if _job_workers_started:
+        return
+    _job_queue = asyncio.PriorityQueue()
+    for i in range(max(1, _JOB_CONCURRENCY)):
+        asyncio.create_task(_job_worker(i))
+    _job_workers_started = True
+    try:
+        logger.info(f"[jobs] started {_JOB_CONCURRENCY} analysis workers")
+    except Exception:
+        pass
+
+
+@api_router.post("/analyze-video-async")
+async def analyze_video_async_submit(
+    req: AnalyzeVideoUniversalRequest, authorization: str = Header(None),
+):
+    """Enqueue a video analysis and return a job_id immediately so the client
+    can navigate away and poll /analyze-jobs/{job_id} for the result."""
+    user = await get_current_user_or_none(authorization)
+    if not req.video_b64:
+        raise HTTPException(status_code=400, detail="No video provided")
+    import base64
+    try:
+        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+        video_bytes = base64.b64decode(b64)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+    if len(video_bytes) < 1000:
+        raise HTTPException(status_code=400, detail="Video too small")
+    if len(video_bytes) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
+
+    is_guest = user is None
+    cost = abs(TOKEN_RULES.get("analysis_spend", -100))
+    if not is_guest:
+        try:
+            bal = await _get_balance(user["id"])
+        except Exception:
+            bal = 0
+        if bal < cost:
+            raise HTTPException(status_code=402, detail="insufficient_tokens")
+
+    if _job_queue is None:
+        raise HTTPException(status_code=503, detail="analysis queue not ready — retry shortly")
+
+    global _job_seq
+    job_id = _uuid.uuid4().hex
+    # Paid/signed-in users get queue priority over guests. (Balance is a
+    # decent proxy until an explicit subscription flag exists.)
+    priority = _PRIORITY_FREE if is_guest else _PRIORITY_PAID
+    now = datetime.now(timezone.utc)
+    job = {
+        "job_id": job_id,
+        "user_id": (user["id"] if user else None),
+        "is_guest": is_guest,
+        "status": "queued",
+        "mime_type": req.mime_type or "video/mp4",
+        "target_player_description": req.target_player_description,
+        "backend": req.backend,
+        "tier": req.tier,
+        "doubles_mode": req.doubles_mode,
+        "time_scale": req.time_scale,
+        "priority": priority,
+        "created_at": now,
+        "updated_at": now,
+    }
+    try:
+        await asyncio.wait_for(db.analysis_jobs.insert_one(dict(job)), timeout=3.0)
+    except (Exception, asyncio.TimeoutError):
+        # If the record write fails the client can't poll — fail loudly rather
+        # than silently dropping the job.
+        raise HTTPException(status_code=503, detail="could not create job — retry shortly")
+    _job_videos[job_id] = video_bytes
+    _job_seq += 1
+    await _job_queue.put((priority, _job_seq, job))
+    return {"job_id": job_id, "status": "queued"}
+
+
+@api_router.get("/analyze-jobs/{job_id}")
+async def analyze_job_status(job_id: str, authorization: str = Header(None)):
+    """Poll a job's status / queue position / result. Signed-in users may
+    only read their own jobs; guest jobs are reachable by job_id (it's an
+    unguessable capability token)."""
+    user = await get_current_user_or_none(authorization)
+    try:
+        job = await asyncio.wait_for(db.analysis_jobs.find_one({"job_id": job_id}), timeout=3.0)
+    except (Exception, asyncio.TimeoutError):
+        job = None
+    if not job:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    if job.get("user_id") and (not user or user.get("id") != job["user_id"]):
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    out = {"job_id": job_id, "status": job.get("status"), "error": job.get("error")}
+    if job.get("status") == "queued":
+        try:
+            ahead = await asyncio.wait_for(db.analysis_jobs.count_documents({
+                "status": "queued",
+                "$or": [
+                    {"priority": {"$lt": job.get("priority", _PRIORITY_FREE)}},
+                    {"priority": job.get("priority", _PRIORITY_FREE),
+                     "created_at": {"$lt": job.get("created_at")}},
+                ],
+            }), timeout=2.0)
+            out["queue_position"] = ahead  # number of jobs ahead of this one
+        except Exception:
+            pass
+    if job.get("status") == "complete":
+        out["result"] = job.get("result")
+    return out
 
 
 # ──────────────────────────────────────────────────────────────────────
