@@ -324,6 +324,23 @@ export default function AnalyzePage() {
   // stay live without a full sweep of the file.
   const [accuracyMode] = useState("premium");
   const [selectedSport, setSelectedSport] = useState(null);
+  // Doubles toggle. When ON, backend analyses BOTH near-court players
+  // and tags each event with player_role (you|partner). Persists in
+  // localStorage so doubles players don't have to flip it every upload.
+  const [doublesMode, setDoublesMode] = useState(() => {
+    try {
+      return localStorage.getItem("playsmart_doubles_mode") === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("playsmart_doubles_mode", doublesMode ? "1" : "0");
+    } catch {
+      /* noop */
+    }
+  }, [doublesMode]);
 
   // Set page title
   useEffect(() => { document.title = "Analyze | AthlyticAI"; }, []);
@@ -1033,20 +1050,23 @@ export default function AnalyzePage() {
           // any overshoot, which surfaced as "compressed video too large
           // (5.5 MB)" for moderately long phone clips. Now we step down
           // bitrate + dims + duration before giving up.
-          // Target raised from 4MB → 8MB. The backend (Railway) and
-          // Cloudflare edge accept 8MB easily; the old 4MB cap forced
-          // every phone clip > 4MB to spend 5-15s re-encoding. Most
-          // typical 20-30s phone videos sit in the 4-8MB range, so
-          // raising the cap means they skip compression entirely and
-          // upload directly. Net 5-10s saved per analysis on average.
+          // CRITICAL: target must stay under Vercel's 4.5 MB serverless
+          // body cap. The frontend's `REACT_APP_BACKEND_URL` is the
+          // custom domain which routes /api/* through Vercel before
+          // reaching Railway — any request body >4.5 MB gets a 413 at
+          // the Vercel edge before it ever hits FastAPI. A previous
+          // change raised this to 8 MB on the assumption that requests
+          // went straight to Railway; that broke uploads for every
+          // 4-8 MB phone clip (the file would skip compression and
+          // hit Vercel's cap raw).
+          //
           // For genuinely large inputs (>30MB raw), tighten maxDuration
           // so we encode 15s instead of 20s — saves ~25% wall-time on
-          // the slowest step and Gemini doesn't lose useful signal
-          // since 15s is still plenty of shots. compressUnderSize
-          // auto-picks a higher playbackRate (6x/8x) for these too.
+          // the slowest step. compressUnderSize auto-picks a higher
+          // playbackRate (6x/8x) for these too.
           const _sizeMb = (file.size || 0) / (1024 * 1024);
           const _durCap = _sizeMb > 30 ? 15 : 20;
-          uploadFile = await vp.compressUnderSize(file, 8 * 1024 * 1024, {
+          uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
             maxDim: 480, bitrate: 800_000, maxDurationSec: _durCap,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
@@ -1136,6 +1156,10 @@ export default function AnalyzePage() {
             fd.append("sport", sportToAnalyze || "badminton");
             fd.append("tier", "premium");
             if (targetDesc) fd.append("target_player_description", targetDesc);
+            // Doubles flag forwarded to backend — flips the prompt to
+            // analyse-both-near-court mode and tags each event with
+            // player_role.
+            if (doublesMode) fd.append("doubles_mode", "true");
             const token = localStorage.getItem("playsmart_token");
             const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
             // NOTE: do NOT set Content-Type — fetch sets it (with the
@@ -1241,6 +1265,7 @@ export default function AnalyzePage() {
             video_b64: b64,
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
+            doubles_mode: doublesMode,
             // Bumped to 180s/210s so we don't false-fail when Gemini has
             // a slow moment. The backend itself caps Gemini at 55s and
             // returns 504 if it overruns — these are upper bounds for
@@ -1389,12 +1414,12 @@ export default function AnalyzePage() {
                 // 8MB target — see comment on the universal path above.
                 // Same Railway+Cloudflare limits; saves ~5-15s of
                 // compression for moderate-sized phone clips.
-                // Tighter duration cap for big inputs — same rationale
-                // as the universal path. compressUnderSize auto-bumps
-                // playbackRate for >30MB files.
+                // 4MB target — same Vercel 4.5MB edge cap applies on
+                // this path. Tighter duration cap for big inputs and
+                // compressUnderSize auto-bumps playbackRate for >30MB.
                 const _sz = (file.size || 0) / (1024 * 1024);
                 const _dur = _sz > 30 ? 22 : 30;
-                uploadFile = await mod.compressUnderSize(file, 8 * 1024 * 1024, {
+                uploadFile = await mod.compressUnderSize(file, 4 * 1024 * 1024, {
                   maxDim: 540,
                   bitrate: 1_000_000,
                   maxDurationSec: _dur,
@@ -2388,6 +2413,39 @@ export default function AnalyzePage() {
         </p>
         <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFileSelect} />
       </div>
+
+      {/* Doubles toggle. ONLY shown before a file is picked / mid-flow
+          — once analysis is running, the flag is locked in. Persists
+          via localStorage so doubles players don't have to re-flip on
+          every upload. */}
+      {!analyzing && !result && (
+        <div className="mb-3 flex items-center justify-between gap-3 bg-zinc-900/60 border border-zinc-800 rounded-xl px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold text-white uppercase tracking-wide">
+              Doubles match
+            </p>
+            <p className="text-[11px] text-zinc-500 leading-snug mt-0.5">
+              Analyse BOTH near-court players (you + partner) and tag each shot.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={doublesMode}
+            aria-label="Doubles match toggle"
+            onClick={() => setDoublesMode((v) => !v)}
+            className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+              doublesMode ? "bg-lime-400" : "bg-zinc-700"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                doublesMode ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      )}
 
       {/* File size warning */}
       {file && file.size > 100 * 1024 * 1024 && (

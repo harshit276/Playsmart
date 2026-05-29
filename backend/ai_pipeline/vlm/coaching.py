@@ -751,15 +751,75 @@ def analyze_video_full(
     }
 
 
-def _build_universal_prompt(target_player_description: str | None = None) -> tuple[str, str]:
+def _build_universal_prompt(
+    target_player_description: str | None = None,
+    doubles_mode: bool = False,
+) -> tuple[str, str]:
     """Build the (sys_prompt, user_msg) for the universal sport-agnostic
     analysis call. Extracted so the streaming variant can reuse it without
-    duplicating ~150 lines of prompt text."""
+    duplicating ~150 lines of prompt text.
+
+    `doubles_mode=True` switches the target-player filter from
+    "single player only" to "both near-court players, tagged per-event"
+    — see the DOUBLES section of the box_hint."""
     # If no target description, default to "the player closest to the
     # camera / in the foreground" — gives Gemini a deterministic anchor
     # in 2-player clips so it doesn't randomly mix shots from both sides.
     described = target_player_description or "the player closest to the camera (foreground)"
-    box_hint = (
+
+    # DOUBLES MODE — when the user opted in via the doubles toggle, we
+    # REPLACE the single-target box_hint with a doubles-aware one. The
+    # rest of the prompt is unchanged; the events schema below already
+    # includes a `player_role` field that's IGNORED in singles mode and
+    # required in doubles. This is the cleanest way to keep both modes
+    # on one prompt skeleton.
+    box_hint_doubles = (
+        f"\n\n━━━ DOUBLES — ANALYSE BOTH NEAR-COURT PLAYERS ━━━\n"
+        f"This is a DOUBLES match. There are two players on the near "
+        f"side of the court (closer to the camera) and typically two "
+        f"on the far side. The user explicitly asked to see BOTH "
+        f"near-court players' shots.\n"
+        f"\n"
+        f"Target anchor (the user themselves): {described}.\n"
+        f"The OTHER near-court player is their PARTNER.\n"
+        f"\n"
+        f"HARD RULES:\n"
+        f"\n"
+        f"1. Emit events for BOTH near-court players (target + partner). "
+        f"Skip events for the far-side opponents — they're too far from "
+        f"the camera to grade reliably and aren't what the user is here "
+        f"to study.\n"
+        f"\n"
+        f"2. In EVERY event, set `player_role` to one of:\n"
+        f"   • \"you\"      — the target who matches `{described}`\n"
+        f"   • \"partner\"  — the OTHER near-court player\n"
+        f"   • \"opponent\" — a far-side player (rare; only emit if it "
+        f"     teaches the user something, like a textbook smash)\n"
+        f"\n"
+        f"3. Use COURT POSITION + CLOTHING to keep target vs partner "
+        f"straight. Partners often wear matching team kit — if both are "
+        f"in identical colours, fall back to the position cue in "
+        f"`{described}` (e.g. 'left side', 'foreground right'). When you "
+        f"genuinely cannot tell target from partner on a given shot, tag "
+        f"it `partner` (better to over-attribute to partner than "
+        f"mis-attribute to target).\n"
+        f"\n"
+        f"4. Doubles rally cadence is fast — target and partner often "
+        f"alternate every 0.5-1s. Do NOT merge contacts <1.5s apart if "
+        f"they come from visibly DIFFERENT players. The merge rule "
+        f"applies only to phases of the same player's single motion.\n"
+        f"\n"
+        f"5. In `reasoning`, name which player ('Target in red drives "
+        f"flat at 0:04' / 'Partner in red blocks at 0:05'). The role "
+        f"tag must agree with reasoning.\n"
+        f"\n"
+        f"6. If a player's coverage is partial (occluded, off-frame), "
+        f"say so in the top-level `summary` with the role name "
+        f"('partner is off-frame for the second half of the rally').\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    )
+
+    box_hint_singles = (
         f"\n\n━━━ TARGET PERSON (STRICT) ━━━\n"
         f"You are analyzing ONLY this person: {described}.\n"
         f"\n"
@@ -874,7 +934,7 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         "overhead contact = NOT a clear, even if the shuttle eventually "
         "reaches a deep landing zone. Use the actual shuttle path, not "
         "the landing depth, to decide.\n"
-        f"{box_hint}\n\n"
+        f"{box_hint_doubles if doubles_mode else box_hint_singles}\n\n"
         "Respond with valid JSON ONLY (no markdown):\n"
         '{\n'
         '  "sport_detected": "<sport name in your own words>",\n'
@@ -914,7 +974,13 @@ def _build_universal_prompt(target_player_description: str | None = None) -> tup
         '      "weaknesses": ["<bullet>", "..."],\n'
         '      "tip": "<one actionable improvement>",\n'
         '      "confidence": <0-1 — how sure are you about this event>,\n'
-        '      "skill_level": "<Beginner|Intermediate|Advanced|Pro>"\n'
+        '      "skill_level": "<Beginner|Intermediate|Advanced|Pro>",\n'
+        + (
+            '      "player_role": "<you|partner|opponent — which '
+            'near-court player; required in doubles mode>"\n'
+            if doubles_mode else
+            '      "player_role": "you"\n'
+        ) +
         '    }\n'
         '  ]\n'
         '}\n\n'
@@ -1099,10 +1165,17 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
     streaming variant can normalize per-event as objects stream in."""
     if not isinstance(e, dict):
         return None
-    # Strict filter — drop events the target person clearly didn't perform.
-    # Permissive when no target description: returns True.
-    if not _belongs_to_target(e, target_player_description):
-        return None
+    # Doubles bypass: when Gemini tagged the event with player_role
+    # `partner` or `opponent`, the user explicitly asked for both sides
+    # (or beyond), so the singles-mode target filter does not apply.
+    # When the tag is `you` (the default singles tag), we still want the
+    # strict heuristic filter to catch hallucinated target-attribution.
+    _role = str(e.get("player_role", "you")).strip().lower()
+    if _role not in ("partner", "opponent"):
+        # Strict filter — drop events the target person clearly didn't perform.
+        # Permissive when no target description: returns True.
+        if not _belongs_to_target(e, target_player_description):
+            return None
     try:
         ts = float(e.get("timestamp_sec") or 0.0)
     except Exception:
@@ -1160,6 +1233,13 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
         "tip": str(e.get("tip", ""))[:300],
         "confidence": conf,
         "skill_level": skill,
+        # Doubles tag. Default "you" in singles mode (the strict target
+        # filter above already guarantees we kept only target events).
+        "player_role": (
+            str(e.get("player_role", "you")).strip().lower()
+            if str(e.get("player_role", "you")).strip().lower() in ("you", "partner", "opponent")
+            else "you"
+        ),
     }
 
 
@@ -1177,6 +1257,7 @@ def analyze_video_universal(
     target_player_description: str | None = None,
     backend: str = "auto",
     tier: str = "standard",
+    doubles_mode: bool = False,
 ) -> dict:
     """Sport-agnostic whole-video analysis. Sends the video to Gemini with
     an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
@@ -1191,7 +1272,7 @@ def analyze_video_universal(
                 description, technique_observations, strength, weakness,
                 tip, skill_level}], summary, _meta}.
     """
-    sys_prompt, user_msg = _build_universal_prompt(target_player_description)
+    sys_prompt, user_msg = _build_universal_prompt(target_player_description, doubles_mode=doubles_mode)
 
     # Premium tier swaps Gemini Flash → a Pro model for sharper detection
     # on noisy / fast-action / multi-shot clips. Costs more in tokens but
@@ -1275,6 +1356,14 @@ def analyze_video_universal(
         if outcome not in ("winner", "forced_error", "continued_rally", "lost_point", "unknown"):
             outcome = "unknown"
         quality_observation = str(e.get("quality_observation", ""))[:400].strip()
+        # Doubles-mode player tag. Pass through Gemini's role label;
+        # normalise to one of three values + default to "you" so legacy
+        # singles-mode events keep a stable shape. Frontend treats "you"
+        # as "no doubles tag, just the target" so the singles experience
+        # is unchanged.
+        role_raw = str(e.get("player_role", "you")).strip().lower()
+        if role_raw not in ("you", "partner", "opponent"):
+            role_raw = "you"
         events_out.append({
             "timestamp_sec": ts,
             # Backward compat: shot_type / event_type mirror shot_category so
@@ -1292,6 +1381,7 @@ def analyze_video_universal(
             "tip": str(e.get("tip", ""))[:300],
             "confidence": conf,
             "skill_level": skill,
+            "player_role": role_raw,
         })
     raw_events_total = len(data.get("events") or [])
     # Sanitize Gemini's coach_narrative — strings only, length-capped so a
@@ -1397,6 +1487,7 @@ def stream_analyze_video_universal(
     target_player_description: str | None = None,
     backend: str = "auto",
     tier: str = "standard",
+    doubles_mode: bool = False,
 ):
     """Generator wrapper around analyze_video_universal that yields
     progress dicts as the Gemini response streams in.
@@ -1411,7 +1502,7 @@ def stream_analyze_video_universal(
     `complete` event carries the same shape the non-streaming endpoint
     returns so downstream consumers get the exact same data.
     """
-    sys_prompt, user_msg = _build_universal_prompt(target_player_description)
+    sys_prompt, user_msg = _build_universal_prompt(target_player_description, doubles_mode=doubles_mode)
     model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
     backend_obj = (
         pick_backend(backend, model=model_override) if model_override
