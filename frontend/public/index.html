@@ -4,21 +4,21 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="theme-color" content="#0a0a0a" />
-        <meta name="description" content="AthlyticAI - AI-Powered Sports Video Analysis, Training & Coaching" />
-        <meta name="keywords" content="AI sports coach, video analysis, badminton, tennis, table tennis, training plans, equipment recommendations" />
+        <meta name="description" content="AthlyticAI is an AI-powered sports coach for badminton, tennis, cricket, swimming, football, table tennis and pickleball. Get instant AI video analysis, personalized training plans, equipment recommendations and progress tracking." />
+        <meta name="keywords" content="AI sports coach, ai video analysis, badminton, tennis, cricket, swimming, football, table tennis, pickleball, training plans, equipment recommendations, technique analysis" />
         <link rel="canonical" href="https://athlyticai.com/" />
 
         <!-- Open Graph -->
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://athlyticai.com/" />
         <meta property="og:title" content="AthlyticAI - AI-Powered Sports Coach" />
-        <meta property="og:description" content="Get AI-powered video analysis, personalized training plans, and smart equipment recommendations for badminton, tennis, and table tennis." />
+        <meta property="og:description" content="AI video analysis, personalized training plans and smart equipment recommendations for badminton, tennis, cricket, swimming, football, table tennis and pickleball." />
         <meta property="og:image" content="https://athlyticai.com/icons/icon-512.png" />
 
         <!-- Twitter Card -->
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="AthlyticAI - AI-Powered Sports Coach" />
-        <meta name="twitter:description" content="Get AI-powered video analysis, personalized training plans, and smart equipment recommendations for badminton, tennis, and table tennis." />
+        <meta name="twitter:description" content="AI video analysis, personalized training plans and smart equipment recommendations for badminton, tennis, cricket, swimming, football, table tennis and pickleball." />
         <meta name="twitter:image" content="https://athlyticai.com/icons/icon-512.png" />
 
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -43,7 +43,7 @@
         work correctly both with client-side routing and a non-root public URL.
         Learn how to configure a non-root public URL by running `npm run build`.
         -->
-        <title>AthlyticAI</title>
+        <title>AthlyticAI — AI Sports Coach: Video Analysis, Training & Equipment</title>
 
         <!-- Structured Data (JSON-LD) -->
         <script type="application/ld+json">
@@ -69,13 +69,121 @@
             ]
         }
         </script>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "AthlyticAI",
+            "url": "https://athlyticai.com",
+            "logo": "https://athlyticai.com/icons/icon-512.png",
+            "description": "AI-powered multi-sport coaching platform offering video analysis, training plans, equipment recommendations and progress tracking."
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "AthlyticAI",
+            "url": "https://athlyticai.com",
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://athlyticai.com/blog?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+            }
+        }
+        </script>
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": "What is AthlyticAI?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "AthlyticAI is an AI-powered sports coaching platform. Upload a video to get instant AI technique analysis, and access personalized training plans, equipment recommendations, skill assessments and progress tracking for badminton, tennis, cricket, swimming, football, table tennis and pickleball." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Which sports does AthlyticAI support?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "AthlyticAI supports badminton, tennis, cricket, swimming, football, table tennis and pickleball, with more sports being added." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "How does AI video analysis work?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "AthlyticAI uses pose-detection AI to track your body movements, identify your shots, measure speed and technique, and give personalized improvement tips — directly in your browser." }
+                },
+                {
+                    "@type": "Question",
+                    "name": "Is AthlyticAI free?",
+                    "acceptedAnswer": { "@type": "Answer", "text": "Yes. You can analyze videos, get equipment recommendations, training plans and create highlight reels for free." }
+                }
+            ]
+        }
+        </script>
         <!-- Umami Analytics (privacy-friendly, no cookies) -->
         <script defer src="https://cloud.umami.is/script.js" data-website-id="45d99737-960b-408c-989d-2f9d7a38dffc"></script>
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
     </head>
     <body>
-        <noscript>You need to enable JavaScript to run this app.</noscript>
-        <div id="root"></div>
+        <div id="root" data-render="fallback">
+            <!--
+              Static SEO fallback. This is the HTML that search engines, social
+              scrapers and no-JS clients see on first load. React (createRoot)
+              replaces these children with the live app the moment the bundle
+              mounts, so users never get stuck here. Keep the copy truthful and
+              in sync with the real product. Do NOT remove — without it the
+              served page is an empty shell and cannot rank (not even for the
+              brand name).
+            -->
+            <main style="max-width:880px;margin:0 auto;padding:48px 20px;font-family:Inter,system-ui,sans-serif;color:#e5e5e5;background:#0a0a0a;min-height:100vh">
+                <h1 style="font-size:2rem;line-height:1.2;color:#fff">AthlyticAI — Your AI Sports Coach</h1>
+                <p style="font-size:1.05rem;color:#cfcfcf">
+                    AthlyticAI is an AI-powered multi-sport coaching platform. Upload a match or
+                    practice video to get instant, frame-by-frame technique analysis, then follow
+                    personalized training plans, get smart equipment recommendations, take skill
+                    assessments and track your progress over time.
+                </p>
+
+                <h2 style="color:#fff;margin-top:32px">Sports we coach</h2>
+                <ul style="line-height:1.9">
+                    <li><a href="/badminton" style="color:#a3e635">Badminton</a> — smash speed, footwork and serve analysis</li>
+                    <li><a href="/tennis" style="color:#a3e635">Tennis</a> — serve, forehand and backhand technique</li>
+                    <li><a href="/table-tennis" style="color:#a3e635">Table Tennis</a> — serve, spin and stroke technique</li>
+                    <li><a href="/pickleball" style="color:#a3e635">Pickleball</a> — technique and strategy for beginners</li>
+                    <li>Cricket — batting and bowling technique analysis</li>
+                    <li>Football — dribbling, shooting and ball control</li>
+                    <li>Swimming — freestyle and stroke technique</li>
+                </ul>
+
+                <h2 style="color:#fff;margin-top:32px">What you get</h2>
+                <ul style="line-height:1.9">
+                    <li><strong>AI Video Analysis</strong> — frame-by-frame technique feedback powered by pose-detection computer vision.</li>
+                    <li><strong>Smart Training Plans</strong> — personalized weekly programs for your level, goals and time.</li>
+                    <li><strong>Equipment Recommendations</strong> — AI gear suggestions for your playing style, level and budget.</li>
+                    <li><strong>Skill Assessments</strong> — measure your level and find what to improve.</li>
+                    <li><strong>Progress Tracking</strong> — stats, streaks and skill-development charts over time.</li>
+                </ul>
+
+                <h2 style="color:#fff;margin-top:32px">Explore</h2>
+                <p style="line-height:1.9">
+                    <a href="/analyze" style="color:#a3e635">Analyze a video</a> ·
+                    <a href="/training" style="color:#a3e635">Training plans</a> ·
+                    <a href="/marketplace" style="color:#a3e635">Equipment</a> ·
+                    <a href="/blog" style="color:#a3e635">Coaching guides &amp; blog</a> ·
+                    <a href="/pricing" style="color:#a3e635">Pricing</a>
+                </p>
+
+                <h2 style="color:#fff;margin-top:32px">Frequently asked questions</h2>
+                <h3 style="color:#fff;font-size:1rem">What is AthlyticAI?</h3>
+                <p>AthlyticAI is an AI sports coach. Upload a video for instant technique analysis and get training plans, equipment picks and progress tracking across multiple sports.</p>
+                <h3 style="color:#fff;font-size:1rem">Is AthlyticAI free?</h3>
+                <p>Yes — you can analyze videos, get equipment recommendations, training plans and highlight reels for free.</p>
+                <h3 style="color:#fff;font-size:1rem">How does AI video analysis work?</h3>
+                <p>It uses pose-detection AI to track your movements, identify your shots, measure speed and technique, and give personalized tips — right in your browser.</p>
+
+                <noscript><p style="color:#fbbf24">Enable JavaScript for the full interactive AthlyticAI experience.</p></noscript>
+            </main>
+        </div>
         <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

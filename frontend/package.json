@@ -75,6 +75,8 @@
     "start": "craco start",
     "build": "CI=false craco build",
     "build:snap": "CI=false craco build && react-snap",
+    "prerender": "node scripts/prerender.mjs",
+    "build:prerender": "CI=false craco build && node scripts/prerender.mjs",
     "test": "craco test",
     "cap:sync": "CI=false craco build && cap sync android",
     "cap:open": "cap open android",

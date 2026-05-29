@@ -4,7 +4,13 @@ import "@/index.css";
 import App from "@/App";
 
 const rootElement = document.getElementById("root");
-if (rootElement.hasChildNodes()) {
+// Hydrate ONLY genuine prerendered markup (whose DOM matches <App/>'s output).
+// The static SEO fallback in index.html is tagged data-render="fallback" — it
+// deliberately does NOT match <App/>, so we clear it and mount fresh with
+// createRoot instead of hydrating (a mismatch would corrupt the live UI).
+const isPrerendered =
+  rootElement.hasChildNodes() && rootElement.dataset.render !== "fallback";
+if (isPrerendered) {
   ReactDOM.hydrateRoot(
     rootElement,
     <React.StrictMode>
@@ -12,6 +18,7 @@ if (rootElement.hasChildNodes()) {
     </React.StrictMode>,
   );
 } else {
+  rootElement.innerHTML = "";
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <App />
