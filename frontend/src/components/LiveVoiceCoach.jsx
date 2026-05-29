@@ -9,7 +9,6 @@ import {
 import {
   SpeechRecognizer,
   speakWithCoachVoice,
-  createStreamingCoachVoice,
   sttSupported,
   ttsSupported,
   saveTranscript,
@@ -508,18 +507,13 @@ export default function LiveVoiceCoach({ result }) {
         }
       })();
 
-      // Sentence-streaming TTS: each completed sentence in the SSE
-      // chunks is queued for playback the moment it lands. This kills
-      // the 2-3s gap between text appearing and audio starting that
-      // came from waiting for the full reply before calling TTS.
-      const streamer = createStreamingCoachVoice({
-        voiceKey: coachVoiceKey,
-        onStart: () => setCoachTalking(true),
-        onEnd: () => setCoachTalking(false),
-        onEngineFallback: () => setLastEngine("browser"),
-      });
-      ttsControllerRef.current = streamer;
-
+      // Audio strategy: stream the TEXT (so users see it appearing as
+      // Gemini types) but speak the WHOLE reply in a single TTS call
+      // once it's complete. Previously each sentence was its own TTS
+      // request which left an audible gap after every full stop while
+      // the next sentence's audio downloaded — users perceived it as
+      // "the coach stopped". One call = the TTS engine handles all
+      // internal punctuation with native prosody, zero seams.
       let fullText = "";
       let httpStatus = 0;
       try {
@@ -579,13 +573,6 @@ export default function LiveVoiceCoach({ result }) {
               }
               if (typeof evt.chunk === "string" && evt.chunk) {
                 fullText += evt.chunk;
-                // Feed the streaming TTS — it will buffer until a
-                // complete sentence is available, then start playback.
-                try {
-                  streamer.append(evt.chunk);
-                } catch {
-                  /* noop — streamer cancelled or already done */
-                }
                 setMessages((prev) => {
                   const copy = prev.slice();
                   for (let i = copy.length - 1; i >= 0; i--) {
@@ -610,19 +597,6 @@ export default function LiveVoiceCoach({ result }) {
           e?.name === "AbortError"
             ? "Stopped."
             : e?.message || "Coach unavailable. Try again in a moment.";
-        // Stream broke — flush whatever sentences already buffered so
-        // the user still hears the partial reply, but don't queue any
-        // tail fragment (the mid-sentence truncation is exactly what we
-        // want to avoid speaking).
-        try {
-          if (fullText) {
-            streamer.flush();
-          } else {
-            streamer.cancel();
-          }
-        } catch {
-          /* noop */
-        }
         setMessages((prev) => {
           const copy = prev.slice();
           for (let i = copy.length - 1; i >= 0; i--) {
@@ -664,18 +638,26 @@ export default function LiveVoiceCoach({ result }) {
       setStreaming(false);
       abortControllerRef.current = null;
 
-      // Flush the streamer — any trailing buffer (sentence the LLM
-      // ended without terminal punctuation) gets queued as the final
-      // utterance. Then wait for everything queued to finish playing
-      // before we clear the talking indicator.
-      try {
-        streamer.flush();
-        await streamer.done();
-        setLastEngine(streamer.engine || null);
-      } finally {
-        setCoachTalking(false);
-        if (ttsControllerRef.current === streamer) {
-          ttsControllerRef.current = null;
+      // Speak the entire reply as a single TTS call. The engine's own
+      // prosody handles internal periods/commas with natural pacing
+      // and zero "gap" between sentences.
+      if (finalText) {
+        setCoachTalking(true);
+        const ctrl = speakWithCoachVoice(finalText, {
+          voiceKey: coachVoiceKey,
+          onStart: () => setCoachTalking(true),
+          onEnd: () => setCoachTalking(false),
+          onEngineFallback: () => setLastEngine("browser"),
+        });
+        ttsControllerRef.current = ctrl;
+        try {
+          await ctrl;
+          setLastEngine(ctrl.engine || null);
+        } finally {
+          setCoachTalking(false);
+          if (ttsControllerRef.current === ctrl) {
+            ttsControllerRef.current = null;
+          }
         }
       }
     },

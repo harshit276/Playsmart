@@ -256,26 +256,88 @@ export default function FormComparisonModal({
   // controls=0 so users don't see YT's "3:00 / 10:22" full-length
   // progress bar. We render our own minimal segment indicator below.
   // showinfo=0 hides the title bar; iv_load_policy=3 disables overlay
-  // annotations. The autoplay loop is achieved via &loop=1&playlist=ID.
+  // annotations.
+  //
+  // IMPORTANT — segment looping. We deliberately DO NOT pass
+  // `loop=1&playlist=ID` here, because YouTube's looper restarts from
+  // t=0 on each loop instead of honoring `start`. That's exactly why
+  // users were seeing the FULL Axelsen video after the first segment
+  // played: loop=1 was rewinding the whole match instead of just the
+  // smash window. Instead, we enable the postMessage API
+  // (`enablejsapi=1`) and the segmentLoop effect below polls the
+  // player and seeks back to `start` each time it crosses `end`.
+  const proStart = useMemo(() => {
+    if (!hasPro) return 0;
+    return Math.max(0, Math.round(proReference.start_sec || 0));
+  }, [hasPro, proReference]);
+  const proEnd = useMemo(() => {
+    if (!hasPro) return 0;
+    return Math.max(proStart + 1, Math.round(proReference.end_sec || proStart + 5));
+  }, [hasPro, proStart, proReference]);
   const ytSrc = useMemo(() => {
     if (!hasPro) return null;
     const id = proReference.youtube_id;
-    const start = Math.max(0, Math.round(proReference.start_sec || 0));
-    const end = Math.max(start + 1, Math.round(proReference.end_sec || start + 5));
     return `https://www.youtube-nocookie.com/embed/${id}`
-      + `?start=${start}&end=${end}`
-      + `&autoplay=1&mute=1&loop=1&playlist=${id}`
+      + `?start=${proStart}&end=${proEnd}`
+      + `&autoplay=1&mute=1`
+      + `&enablejsapi=1`
       + `&controls=0&modestbranding=1&rel=0&disablekb=1&iv_load_policy=3`
       + `&showinfo=0&fs=0`
       + `&playsinline=1`;
-  }, [hasPro, proReference]);
+  }, [hasPro, proReference, proStart, proEnd]);
+
+  // Segment loop enforcer. The YouTube IFrame postMessage API accepts
+  // `seekTo` commands without needing the full IFrame Player script.
+  // We fire a seekTo(proStart) every (segment + 0.3s) so the player
+  // rewinds JUST before it would otherwise hit `end` and stop — gives
+  // the user a continuous loop of just the curated clip.
+  const proIframeRef = useRef(null);
+  useEffect(() => {
+    if (!hasPro || !ytSrc) return undefined;
+    const segmentSec = Math.max(1, proEnd - proStart);
+    const tick = () => {
+      const iframe = proIframeRef.current;
+      if (!iframe?.contentWindow) return;
+      try {
+        iframe.contentWindow.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: "seekTo",
+            args: [proStart, true],
+          }),
+          "*",
+        );
+        // playVideo is a safety: if the player paused on its own end
+        // (when end= triggers natively), this kicks it back to playing.
+        iframe.contentWindow.postMessage(
+          JSON.stringify({ event: "command", func: "playVideo", args: [] }),
+          "*",
+        );
+      } catch {
+        /* noop — iframe still loading or cross-origin hiccup */
+      }
+    };
+    // First seek a bit before the natural end so we don't flash to the
+    // "video ended" state. Subsequent seeks fire every segment length.
+    const initialDelay = Math.max(500, segmentSec * 1000 - 300);
+    const loopInterval = Math.max(1500, segmentSec * 1000);
+    const t0 = setTimeout(() => {
+      tick();
+      const iv = setInterval(tick, loopInterval);
+      // Stash on the timeout id so the outer cleanup can clear it too.
+      // eslint-disable-next-line no-param-reassign
+      t0._loopId = iv;
+    }, initialDelay);
+    return () => {
+      clearTimeout(t0);
+      if (t0._loopId) clearInterval(t0._loopId);
+    };
+  }, [hasPro, ytSrc, proStart, proEnd]);
 
   const proSegmentSec = useMemo(() => {
     if (!hasPro) return 0;
-    const s = Math.max(0, proReference.start_sec || 0);
-    const e = Math.max(s + 1, proReference.end_sec || s + 5);
-    return Math.round(e - s);
-  }, [hasPro, proReference]);
+    return Math.round(proEnd - proStart);
+  }, [hasPro, proStart, proEnd]);
 
   if (!open) return null;
 
@@ -456,6 +518,7 @@ export default function FormComparisonModal({
               <div className="aspect-video bg-zinc-950 relative">
                 {ytSrc ? (
                   <iframe
+                    ref={proIframeRef}
                     src={ytSrc}
                     title={`${proReference?.player || "Pro"} reference`}
                     allow="accelerometer; autoplay; encrypted-media; picture-in-picture"

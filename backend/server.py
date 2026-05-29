@@ -3337,6 +3337,12 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     # tokens). Premium catches more shots on noisy clips but costs ~5×
     # more per analysis — quota check happens in the endpoint body.
     tier: str = "standard"
+    # Doubles mode — when True, analysis treats both NEAR-COURT players
+    # (target + partner on the same side) as in-scope and tags each
+    # event with `player_role: "you"|"partner"|"opponent"`. Default off;
+    # most clips are singles or solo drills where the target-player
+    # filter is what users want.
+    doubles_mode: bool = False
 
 
 @api_router.post("/analyze-video-universal")
@@ -3400,8 +3406,9 @@ async def analyze_video_universal_endpoint(
                 target_player_description=req.target_player_description,
                 backend=req.backend,
                 tier=req.tier,
+                doubles_mode=req.doubles_mode,
             )),
-            timeout=55.0,
+            timeout=110.0,
         )
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Universal analysis timed out (>110s)")
@@ -3461,6 +3468,11 @@ async def analyze_video_stream_endpoint(
     target_player_description: str | None = None,
     tier: str = "premium",
     backend: str = "auto",
+    # Optional doubles mode — when "true"/"1", backend analyses both
+    # near-court players and tags each event with player_role. Defaults
+    # to off; singles + drill clips don't need it. Accepted as a form
+    # string (multipart) so the frontend doesn't need to JSON-encode.
+    doubles_mode: str = "false",
     authorization: str = Header(None),
 ):
     """Stream a video analysis as Server-Sent Events.
@@ -3552,12 +3564,15 @@ async def analyze_video_stream_endpoint(
         q: "_queue.Queue[object]" = _queue.Queue(maxsize=64)
         SENTINEL = object()
 
+        _doubles_flag = str(doubles_mode or "false").strip().lower() in ("1", "true", "yes")
+
         def _runner():
             try:
                 for ev in stream_analyze_video_universal(
                     video_bytes, mime_type,
                     target_player_description=target_player_description,
                     backend=backend, tier=tier,
+                    doubles_mode=_doubles_flag,
                 ):
                     q.put(ev)
             except Exception as exc:
