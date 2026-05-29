@@ -321,16 +321,19 @@ export default function FormComparisonModal({
     // "video ended" state. Subsequent seeks fire every segment length.
     const initialDelay = Math.max(500, segmentSec * 1000 - 300);
     const loopInterval = Math.max(1500, segmentSec * 1000);
+    // setTimeout/setInterval return numbers in the browser, so we can't
+    // stash the interval id on the timeout id (that throws "Cannot create
+    // property '_loopId' on number" and kills the whole effect, leaving the
+    // pro clip un-looped). Hold the interval id in a closure variable that
+    // the cleanup closes over instead.
+    let loopId = null;
     const t0 = setTimeout(() => {
       tick();
-      const iv = setInterval(tick, loopInterval);
-      // Stash on the timeout id so the outer cleanup can clear it too.
-      // eslint-disable-next-line no-param-reassign
-      t0._loopId = iv;
+      loopId = setInterval(tick, loopInterval);
     }, initialDelay);
     return () => {
       clearTimeout(t0);
-      if (t0._loopId) clearInterval(t0._loopId);
+      if (loopId) clearInterval(loopId);
     };
   }, [hasPro, ytSrc, proStart, proEnd]);
 
