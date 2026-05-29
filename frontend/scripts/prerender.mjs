@@ -41,6 +41,7 @@ const ROUTES = [
   "/cricket",
   "/swimming",
   "/football",
+  "/basketball",
   "/training",
   "/pricing",
   "/privacy",

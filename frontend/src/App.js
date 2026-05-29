@@ -29,6 +29,7 @@ const PickleballPage = lazy(() => import("@/pages/PickleballPage"));
 const CricketPage = lazy(() => import("@/pages/CricketPage"));
 const SwimmingPage = lazy(() => import("@/pages/SwimmingPage"));
 const FootballPage = lazy(() => import("@/pages/FootballPage"));
+const BasketballPage = lazy(() => import("@/pages/BasketballPage"));
 const LabelPage = lazy(() => import("@/pages/LabelPage"));
 const TestModelPage = lazy(() => import("@/pages/TestModelPage"));
 const TestAiGenPage = lazy(() => import("@/pages/TestAiGenPage"));
@@ -208,6 +209,7 @@ function AppRoutes() {
       <Route path="/cricket" element={<CricketPage />} />
       <Route path="/swimming" element={<SwimmingPage />} />
       <Route path="/football" element={<FootballPage />} />
+      <Route path="/basketball" element={<BasketballPage />} />
       <Route path="/assessment" element={<AssessmentPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/wallet" element={<WalletPage />} />

@@ -10,6 +10,7 @@ export const SPORT_EMOJI = {
   cricket: "🏏",
   football: "⚽",
   swimming: "🏊",
+  basketball: "🏀",
 };
 
 export const SPORT_LABEL = {
@@ -20,6 +21,7 @@ export const SPORT_LABEL = {
   cricket: "Cricket",
   football: "Football",
   swimming: "Swimming",
+  basketball: "Basketball",
 };
 
 export const SPORT_COLOR = {
@@ -30,6 +32,7 @@ export const SPORT_COLOR = {
   cricket: { bg: "bg-blue-400", text: "text-blue-400", border: "border-blue-400/30" },
   football: { bg: "bg-green-400", text: "text-green-400", border: "border-green-400/30" },
   swimming: { bg: "bg-cyan-400", text: "text-cyan-400", border: "border-cyan-400/30" },
+  basketball: { bg: "bg-orange-400", text: "text-orange-400", border: "border-orange-400/30" },
 };
 
 /** Sports that currently support AI video analysis */
