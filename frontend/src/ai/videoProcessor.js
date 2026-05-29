@@ -1786,7 +1786,14 @@ export async function compressVideoForUpload(videoFile, options = {}) {
   const {
     maxDim = 480,
     bitrate = 800_000,
-    maxDurationSec = 30,
+    // Was 30 (and AnalyzePage was overriding to 20, sometimes 15 for
+    // big inputs) which silently cut off the END of any video longer
+    // than the cap — users reported "Gemini only saw the prep, not
+    // the shot" for clips where the action lands late. 90s is long
+    // enough for full coaching clips while still bounded; the retry
+    // ladder in compressUnderSize will drop quality (not duration)
+    // first to fit Vercel's 4.5MB body cap.
+    maxDurationSec = 90,
     onProgress,
     // Skip compression for any file below this size — modern phones produce
     // 6-12 MB for a short clip, well under Vercel's 25 MB cap. Compression
@@ -2023,7 +2030,13 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
   const {
     maxDim = 480,
     bitrate = 800_000,
-    maxDurationSec = 30,
+    // Default raised from 30 to 90. Users reported the back end of
+    // their clips being cut off ("Gemini saw the prep but not the
+    // shot"), which traced back to compressVideoForUpload's hardcoded
+    // duration cap. We now preserve full video duration up to 90s and
+    // only fall back to trimming on the LOWEST retry rung when every
+    // bitrate/resolution shrink has already overshot the size cap.
+    maxDurationSec = 90,
     onProgress,
     playbackRate,  // optional override; auto-picked below when undefined
   } = options;
@@ -2036,11 +2049,21 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
   const autoRate = inputMb > 60 ? 8.0 : inputMb > 30 ? 6.0 : 4.0;
   const effectiveRate = typeof playbackRate === "number" ? playbackRate : autoRate;
 
+  // Retry ladder: drop bitrate/resolution FIRST, never duration, so a
+  // clip's action at the end never gets cut off. Only the lowest rung
+  // shrinks duration — and only by ~20%, as a last resort to fit the
+  // 4MB Vercel cap. If even that overshoots we throw COMPRESSION_OVERSHOOT
+  // so the user is told to trim manually rather than silently losing
+  // the last few seconds.
   const rungs = [
     { maxDim, bitrate, maxDurationSec, playbackRate: effectiveRate },
     { maxDim, bitrate: Math.round(bitrate * 0.7), maxDurationSec, playbackRate: effectiveRate },
     { maxDim: Math.round(maxDim * 0.8), bitrate: Math.round(bitrate * 0.5), maxDurationSec, playbackRate: effectiveRate },
-    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.4), maxDurationSec: Math.max(10, Math.round(maxDurationSec * 0.8)), playbackRate: effectiveRate },
+    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.4), maxDurationSec, playbackRate: effectiveRate },
+    // Final fallback only — strictly the duration trim, retain everything
+    // else at the lowest-quality settings. Users see the COMPRESSION
+    // _OVERSHOOT error message above this rung's threshold.
+    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.35), maxDurationSec: Math.max(20, Math.round(maxDurationSec * 0.8)), playbackRate: effectiveRate },
   ];
 
   let best = null;
