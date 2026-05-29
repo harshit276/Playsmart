@@ -13347,10 +13347,19 @@ def _fallback_narrative(
             f"overall consistency {req.overall_consistency:.0%}"
         )
         if populated_dist:
-            weakest_name = min(
-                populated_dist,
-                key=lambda n: ptq[n].consistency if n in ptq else 1.0,
-            )
+            # consistency is None for single-sample shot types. The old key
+            # `ptq[n].consistency if n in ptq else 1.0` only guarded the
+            # not-in-ptq case — when a type WAS in ptq with consistency=None
+            # (every shot type in a 1-shot-each clip), the key returned None
+            # and min() did `None < None` → TypeError → 500. Coerce None to
+            # 1.0 (treat "unknown" as "fully consistent" so it's not picked
+            # as the weakest).
+            def _consistency_or_default(n):
+                q = ptq.get(n)
+                if q is None or q.consistency is None:
+                    return 1.0
+                return q.consistency
+            weakest_name = min(populated_dist, key=_consistency_or_default)
             next_focus = f"Drill {weakest_name} reps for 10 minutes to lift consistency"
         else:
             next_focus = "Pick one shot type and drill it for 15 minutes"
