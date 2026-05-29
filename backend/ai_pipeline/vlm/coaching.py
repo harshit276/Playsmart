@@ -54,7 +54,7 @@ def _parse_json_safe(raw: str) -> dict:
 
 
 def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes: bytes,
-                       mime_type: str, fps: float = 3.0) -> list:
+                       mime_type: str, fps: float = 4.0) -> list:
     """Build the parts list for a Gemini whole-video call with explicit
     FPS sampling. Tries the SDK's proto types first (where the
     video_metadata.fps field is supported), falls back to plain dict
@@ -632,7 +632,7 @@ def analyze_video_full(
         # ~258 tokens/sec to ~774 tokens/sec — still cheap (~$0.005-0.02
         # per analysis on Flash). Falls back to default sampling if the
         # SDK version doesn't expose VideoMetadata.
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=3.0)
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=4.0)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -899,15 +899,30 @@ def _build_universal_prompt(
         "restating the category). GOOD: 'Contact slightly late, ball "
         "floated above net height' or 'Hips fully rotated, clean punch "
         "through the line.'\n\n"
-        "CRITICAL — ONE TECHNIQUE = ONE EVENT:\n"
+        "CRITICAL — ONE TECHNIQUE = ONE EVENT (but DO NOT UNDER-COUNT):\n"
         "A single physical motion (windup/contact/follow-through, or one "
         "full stroke cycle in swimming) is ONE event at the moment of "
         "execution. Do NOT emit multiple entries for phases of the same "
         "motion. If two consecutive timestamps are within ~1.5 seconds "
-        "AND the same shot_category, they are almost certainly the same "
-        "physical motion — merge them into one entry at the contact "
-        "moment. If the athlete performed 3 reps/shots/strokes, the "
-        "events array must have 3 entries, not 9.\n\n"
+        "AND the same shot_category AND clearly from the same player, "
+        "they are almost certainly the same physical motion — merge them "
+        "into one entry at the contact moment.\n"
+        "\n"
+        "ANTI-UNDERCOUNT RULE — equally important: do NOT collapse "
+        "SEPARATE attempts into one event. If the athlete performs the "
+        "same shot type repeatedly (5 chip shots, 3 free throws, 4 "
+        "drives), the events array MUST contain that many entries — "
+        "one per visible contact moment. Each repetition is its own "
+        "event, even if outwardly identical. Distinguish them by "
+        "shot_label (e.g. 'Chip shot 1 — clean strike', 'Chip shot 2 "
+        "— wider stance', 'Chip shot 3 — leaned back'). When the video "
+        "shows N visible contacts of the same motion, emit N events.\n"
+        "\n"
+        "Sanity check before responding: count the number of distinct "
+        "contact moments in the video. Your `events` array length "
+        "should equal that count. If you emitted fewer events than the "
+        "number of contacts you can see, you are wrong — add the "
+        "missing ones with lower `confidence` rather than dropping them.\n\n"
         "CRITICAL — DO NOT DEFAULT TO 'SERVE' FOR RALLY-STARTING SHOTS:\n"
         "A SERVE has ALL of these traits:\n"
         "  1. Ball/shuttle starts STATIONARY in the player's non-racket hand,\n"
@@ -1274,6 +1289,17 @@ def analyze_video_universal(
     """
     sys_prompt, user_msg = _build_universal_prompt(target_player_description, doubles_mode=doubles_mode)
 
+    # Diagnostic log — lets us see, in Railway logs, EXACTLY what we
+    # handed to Gemini and what came back. The recurring "Gemini only
+    # saw the first half" reports are very hard to debug without this.
+    import logging as _logging
+    _log = _logging.getLogger("athlytic.vlm")
+    _log.info(
+        "[universal] starting — bytes=%d, mime=%s, tier=%s, doubles=%s, target=%r",
+        len(video_bytes), mime_type, tier, doubles_mode,
+        (target_player_description or "")[:80],
+    )
+
     # Premium tier swaps Gemini Flash → a Pro model for sharper detection
     # on noisy / fast-action / multi-shot clips. Costs more in tokens but
     # typically catches every shot vs Flash sometimes missing.
@@ -1290,7 +1316,7 @@ def analyze_video_universal(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=3.0)
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=4.0)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -1384,6 +1410,28 @@ def analyze_video_universal(
             "player_role": role_raw,
         })
     raw_events_total = len(data.get("events") or [])
+
+    # Post-Gemini diagnostic — pairs with the pre-call log so we can
+    # tell whether under-counting came from Gemini emitting few events
+    # OR from the target-player filter dropping them. The TS range
+    # gives a quick sniff test for "did Gemini watch the full video":
+    # if max_ts on a 30s clip is 5.2, Gemini stopped early.
+    try:
+        _ts_values = [
+            float(e.get("timestamp_sec") or 0.0)
+            for e in (data.get("events") or [])
+        ]
+        _ts_min = min(_ts_values) if _ts_values else None
+        _ts_max = max(_ts_values) if _ts_values else None
+    except Exception:
+        _ts_min = _ts_max = None
+    _log.info(
+        "[universal] gemini returned raw=%d, kept=%d, ts_range=[%.2f, %.2f], sport=%r",
+        raw_events_total, len(events_out),
+        (_ts_min or 0.0), (_ts_max or 0.0),
+        str(data.get("sport_detected", ""))[:30],
+    )
+
     # Sanitize Gemini's coach_narrative — strings only, length-capped so a
     # runaway Gemini response can't blow the response payload.
     cn_raw = data.get("coach_narrative") or {}
@@ -1416,6 +1464,14 @@ def analyze_video_universal(
             "filtered_event_count": len(events_out),
             "events_dropped": max(0, raw_events_total - len(events_out)),
             "target_player_description": target_player_description,
+            # Coverage sniff: highest timestamp Gemini emitted. If a 30s
+            # clip comes back with ts_max=5.0 the model only saw the
+            # beginning — points at compression cutoff or Gemini being
+            # lazy. Frontend can compare against the player's measured
+            # video duration to surface a warning.
+            "gemini_ts_min_sec": _ts_min,
+            "gemini_ts_max_sec": _ts_max,
+            "input_bytes": len(video_bytes),
         },
         "_meta": {
             "backend": backend_obj.name, "model": backend_obj.model_name,
@@ -1518,7 +1574,7 @@ def stream_analyze_video_universal(
             model = genai.GenerativeModel(backend_obj.model_name)
         parts = _build_video_parts(
             sys_prompt, user_msg, video_bytes,
-            mime_type or "video/mp4", fps=3.0,
+            mime_type or "video/mp4", fps=4.0,
         )
         try:
             stream_iter = model.generate_content(

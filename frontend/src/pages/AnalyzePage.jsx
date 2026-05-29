@@ -1067,6 +1067,37 @@ export default function AnalyzePage() {
             maxDim: 480, bitrate: 800_000,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
+          // Diagnostic: log the duration the COMPRESSED clip actually
+          // contains, so when users report "Gemini missed the back
+          // half" we can compare this to the response's
+          // _debug.gemini_ts_max_sec. If the compressed clip is 30s but
+          // ts_max is 12s, Gemini stopped early — not compression.
+          try {
+            const _dur = await new Promise((resolve) => {
+              const v = document.createElement("video");
+              v.preload = "metadata";
+              v.muted = true;
+              const objUrl = URL.createObjectURL(uploadFile);
+              const cleanup = () => { try { URL.revokeObjectURL(objUrl); } catch {} };
+              v.onloadedmetadata = () => {
+                const d = Number.isFinite(v.duration) ? v.duration : null;
+                cleanup();
+                resolve(d);
+              };
+              v.onerror = () => { cleanup(); resolve(null); };
+              v.src = objUrl;
+              // Hard fallback so this never blocks the upload.
+              setTimeout(() => { cleanup(); resolve(null); }, 4000);
+            });
+            // eslint-disable-next-line no-console
+            console.info(
+              `[upload] compressed=${(uploadFile.size / 1024).toFixed(0)}KB, `
+              + `duration=${_dur ? _dur.toFixed(1) + 's' : 'unknown'}, `
+              + `original=${(file.size / 1024 / 1024).toFixed(1)}MB`,
+            );
+          } catch {
+            /* noop — diagnostic only */
+          }
           const buf = await uploadFile.arrayBuffer();
           const bytes = new Uint8Array(buf);
           let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
