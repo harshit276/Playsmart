@@ -2311,7 +2311,12 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   // so the "Replay this shot" button replayed the wrong instant. We now
   // show ONLY the shot type + aggregated coaching content.
   const sample = groupShots[0];
-  const name = sample.name?.replace(/_/g, " ") || groupKey;
+  // Title is the canonical category (groupKey, e.g. "Backhand Drive"), not the
+  // first rep's unique descriptive label — the card now consolidates N reps of
+  // the same technique, so a single rep's label would misrepresent the group.
+  const name = groupKey && groupKey !== "unknown"
+    ? groupKey
+    : (sample.name?.replace(/_/g, " ") || "Shot");
 
   // Aggregate stats (still useful — kept the avg confidence + peak speed
   // because they describe the group, not the count)
@@ -2962,7 +2967,10 @@ function PerShotCoachSection({ perShot, sport }) {
   if (shouldGroup) {
     const groups = {};
     usable.forEach(({ shot, originalIdx }) => {
-      const key = shot.label || shot.name || "unknown";
+      // Group by canonical category (humanized) so 5 backhand drives form ONE
+      // card with 5 reps, not 5 separate cards. The per-rep descriptive label
+      // is still shown inside the card.
+      const key = groupKeyFor(shot);
       if (!groups[key]) groups[key] = [];
       groups[key].push({ ...shot, _shotId: originalIdx });
     });
@@ -3092,10 +3100,27 @@ function extractPoseQuality(poseSeq, frameW, frameH, durationSec) {
   return { speed, extension, smoothness };
 }
 
+// Canonical grouping key for the aggregate panels ("Technique by shot type",
+// rally breakdown, distribution sent to the narrative endpoint). We group by
+// the coarse shot_category ("backhand_drive"), NOT the per-rep descriptive
+// shot_label ("Backhand drive - compact punch"). Gemini emits a UNIQUE label
+// for every rep (so users can tell repeats apart), which previously made each
+// shot its own one-row group — 8 reps showed as 8 "1 shot" rows. The category
+// is the right altitude for aggregation; the descriptive label is still shown
+// per rep inside each card. Humanize snake_case → "Title Case" for display.
+function groupKeyFor(s) {
+  const raw = s.category || s.label || "unknown";
+  if (raw === "unknown") return "unknown";
+  return String(raw)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
 function groupByType(shots) {
   const out = {};
   for (const s of shots) {
-    const k = s.label || "unknown";
+    const k = groupKeyFor(s);
     out[k] = (out[k] || 0) + 1;
   }
   return out;
@@ -3105,7 +3130,7 @@ function buildPerTypeQuality(shots) {
   const groups = {};
   for (const s of shots) {
     if (!s.pose) continue;
-    const k = s.label || "unknown";
+    const k = groupKeyFor(s);
     (groups[k] = groups[k] || []).push(s.pose);
   }
   const out = {};
