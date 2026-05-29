@@ -329,9 +329,13 @@ export default function AnalyzePage() {
   // localStorage so doubles players don't have to flip it every upload.
   const [doublesMode, setDoublesMode] = useState(() => {
     try {
-      return localStorage.getItem("playsmart_doubles_mode") === "1";
+      // Default ON: most users upload doubles footage, and with doubles off
+      // the strict single-target filter drops every near-court player's shots
+      // (reported "3 shots, only 1 detected"). Only an explicit "0" (user
+      // turned it off) disables it; absence of a stored pref => on.
+      return localStorage.getItem("playsmart_doubles_mode") !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
   useEffect(() => {
@@ -1030,9 +1034,16 @@ export default function AnalyzePage() {
         // skip straight to the analysis call with the stored compressed
         // video. Otherwise: compress + describe players + show picker.
         let uploadFile, b64;
+        // timeScale maps Gemini's timestamps (measured in the COMPRESSED
+        // clip's time domain) back to the ORIGINAL clip the user views. It's
+        // 1.0 unless we sped up capture for a big file (see below), in which
+        // case the compressed clip is shorter and every event timestamp must
+        // be multiplied by origDuration/compressedDuration before display.
+        let timeScale = 1;
         if (options.universalPick && universalUploadData) {
           uploadFile = universalUploadData.uploadFile;
           b64 = universalUploadData.b64;
+          timeScale = universalUploadData.timeScale || 1;
         } else {
           setLoadingText("Preparing video for Universal AI Coach...");
           setProgress(15);
@@ -1063,37 +1074,60 @@ export default function AnalyzePage() {
           // clip up to 90s (compressVideoForUpload default) is encoded,
           // and the retry ladder drops bitrate/resolution to fit the
           // 4MB cap instead of trimming the back end.
+          // Big-file speed-up: for sources over 30 MB, capture at 2x so the
+          // real-time encode finishes in half the wall-clock time. This DOES
+          // shorten the encoded clip's duration (it records in wall-clock),
+          // so Gemini's timestamps come back in the sped-up domain — we undo
+          // that below with timeScale (measured, not assumed). Small clips
+          // stay at 1x (perfect frame fidelity, no scaling needed).
+          const origMb = file.size / 1024 / 1024;
+          const captureRate = origMb > 30 ? 2.0 : 1.0;
           uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
             maxDim: 480, bitrate: 800_000,
+            playbackRate: captureRate,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
-          // Diagnostic: log the duration the COMPRESSED clip actually
-          // contains, so when users report "Gemini missed the back
-          // half" we can compare this to the response's
-          // _debug.gemini_ts_max_sec. If the compressed clip is 30s but
-          // ts_max is 12s, Gemini stopped early — not compression.
+          // Measure BOTH the original and compressed durations. timeScale is
+          // derived from the actual measured ratio — robust even if the
+          // browser capped playbackRate or fell back to the seek-loop (either
+          // of which changes the real output duration). Also doubles as the
+          // diagnostic: compare compressed duration to the response's
+          // _debug.gemini_ts_max_sec to tell "Gemini stopped early" apart
+          // from "compression cut the tail".
+          const _measureDur = (blobOrFile) => new Promise((resolve) => {
+            const v = document.createElement("video");
+            v.preload = "metadata";
+            v.muted = true;
+            const objUrl = URL.createObjectURL(blobOrFile);
+            const cleanup = () => { try { URL.revokeObjectURL(objUrl); } catch {} };
+            v.onloadedmetadata = () => {
+              const d = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : null;
+              cleanup();
+              resolve(d);
+            };
+            v.onerror = () => { cleanup(); resolve(null); };
+            v.src = objUrl;
+            setTimeout(() => { cleanup(); resolve(null); }, 4000);
+          });
           try {
-            const _dur = await new Promise((resolve) => {
-              const v = document.createElement("video");
-              v.preload = "metadata";
-              v.muted = true;
-              const objUrl = URL.createObjectURL(uploadFile);
-              const cleanup = () => { try { URL.revokeObjectURL(objUrl); } catch {} };
-              v.onloadedmetadata = () => {
-                const d = Number.isFinite(v.duration) ? v.duration : null;
-                cleanup();
-                resolve(d);
-              };
-              v.onerror = () => { cleanup(); resolve(null); };
-              v.src = objUrl;
-              // Hard fallback so this never blocks the upload.
-              setTimeout(() => { cleanup(); resolve(null); }, 4000);
-            });
+            const [origDur, compDur] = await Promise.all([
+              _measureDur(file),
+              _measureDur(uploadFile),
+            ]);
+            if (origDur && compDur && origDur / compDur > 1.1) {
+              // Clamp to [1, 4] so a bad measurement can't wildly mis-scale.
+              timeScale = Math.min(4, Math.max(1, origDur / compDur));
+            } else if (captureRate > 1) {
+              // Measurement failed but we explicitly sped up — best estimate
+              // is the rate we requested.
+              timeScale = captureRate;
+            }
             // eslint-disable-next-line no-console
             console.info(
               `[upload] compressed=${(uploadFile.size / 1024).toFixed(0)}KB, `
-              + `duration=${_dur ? _dur.toFixed(1) + 's' : 'unknown'}, `
-              + `original=${(file.size / 1024 / 1024).toFixed(1)}MB`,
+              + `duration=${compDur ? compDur.toFixed(1) + 's' : 'unknown'}, `
+              + `original=${origMb.toFixed(1)}MB`
+              + `${timeScale !== 1 ? `, timeScale=${timeScale.toFixed(2)}x (capture ${captureRate}x)` : ''}`,
             );
           } catch {
             /* noop — diagnostic only */
@@ -1140,7 +1174,7 @@ export default function AnalyzePage() {
             }
             if (players.length >= 2) {
               // Multiple athletes visible → show picker and pause.
-              setUniversalUploadData({ uploadFile, b64, midFrame });
+              setUniversalUploadData({ uploadFile, b64, midFrame, timeScale });
               setUniversalPlayers(players);
               setAnalyzing(false);
               setProgress(0);
@@ -1188,6 +1222,9 @@ export default function AnalyzePage() {
             // analyse-both-near-court mode and tags each event with
             // player_role.
             if (doublesMode) fd.append("doubles_mode", "true");
+            // Tell the backend how to map Gemini's (possibly sped-up)
+            // timestamps back to the original clip the user views.
+            if (timeScale && timeScale !== 1) fd.append("time_scale", String(timeScale));
             const token = localStorage.getItem("playsmart_token");
             const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
             // NOTE: do NOT set Content-Type — fetch sets it (with the
@@ -1294,6 +1331,7 @@ export default function AnalyzePage() {
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: doublesMode,
+            time_scale: timeScale,
             // Bumped to 180s/210s so we don't false-fail when Gemini has
             // a slow moment. The backend itself caps Gemini at 55s and
             // returns 504 if it overruns — these are upper bounds for
