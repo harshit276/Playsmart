@@ -65,7 +65,7 @@ function _openDb() {
  * @param {number} [ttlMs=3600000] — how long the entry is valid.
  * @returns {Promise<boolean>} true on success, false on any failure.
  */
-export async function saveVideo(blob, ttlMs = 60 * 60 * 1000) {
+export async function saveVideo(blob, ttlMs = 60 * 60 * 1000, key = KEY) {
   if (!blob || (typeof blob.size === "number" && blob.size === 0)) return false;
   try {
     const db = await _openDb();
@@ -81,7 +81,7 @@ export async function saveVideo(blob, ttlMs = 60 * 60 * 1000) {
     };
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).put(entry, KEY);
+      tx.objectStore(STORE).put(entry, key);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error || new Error("idb put failed"));
       tx.onabort = () => reject(tx.error || new Error("idb tx aborted"));
@@ -104,19 +104,19 @@ export async function saveVideo(blob, ttlMs = 60 * 60 * 1000) {
  *   so the UI can show "expires in N min". Null when nothing is cached,
  *   the entry expired, or IndexedDB is unavailable.
  */
-export async function loadVideo() {
+export async function loadVideo(key = KEY) {
   try {
     const db = await _openDb();
     const entry = await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readonly");
-      const req = tx.objectStore(STORE).get(KEY);
+      const req = tx.objectStore(STORE).get(key);
       req.onsuccess = () => resolve(req.result || null);
       req.onerror = () => reject(req.error || new Error("idb get failed"));
     });
     if (!entry) return null;
     if (typeof entry.expiresAt === "number" && Date.now() > entry.expiresAt) {
       // Lazy purge so an expired entry doesn't keep eating quota.
-      purgeVideo().catch(() => {});
+      purgeVideo(key).catch(() => {});
       return null;
     }
     if (!entry.blob) return null;
@@ -141,12 +141,12 @@ export async function loadVideo() {
  * Delete the cached video. Called on explicit "start over" gestures so
  * a refresh doesn't restore the user's last clip.
  */
-export async function purgeVideo() {
+export async function purgeVideo(key = KEY) {
   try {
     const db = await _openDb();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).delete(KEY);
+      tx.objectStore(STORE).delete(key);
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error || new Error("idb delete failed"));
     });

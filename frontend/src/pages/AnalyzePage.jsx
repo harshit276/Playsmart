@@ -300,6 +300,65 @@ const DRILL_DIFFICULTY_STYLE = {
   hard: "bg-red-500/10 text-red-400 border-red-500/30",
 };
 
+// localStorage key for an in-flight async analysis job so the user can leave
+// the page (or reload) and we resume polling / show the result on return.
+const ACTIVE_JOB_KEY = "playsmart_active_analysis_job";
+// localStorage key for the PRE-analysis "pick a player" stage, so a refresh
+// or returning to the page lands the user back on the player picker instead
+// of losing the upload. The compressed clip itself is too big for
+// localStorage, so it's kept in IndexedDB under INFLIGHT_VIDEO_KEY.
+const PICKER_SESSION_KEY = "playsmart_picker_session";
+const INFLIGHT_VIDEO_KEY = "analysis_inflight";
+
+// Build the universal-mode result object the UI renders, from the raw backend
+// `data` (events + narrative + sport). Extracted to module scope so BOTH the
+// live analyze flow and the resume-on-return path produce identical results.
+function buildUniversalResult(data, targetDesc, pickedPlayer) {
+  const events = data?.events || [];
+  return {
+    success: true,
+    _universal: true,
+    _target_player_description: targetDesc,
+    _target_player_thumbnail: pickedPlayer?.thumbnail || null,
+    _target_player: pickedPlayer || null,
+    _meta: data?._meta || null,
+    _debug: data?._debug || data?._meta || null,
+    coach_narrative: data?.coach_narrative || null,
+    target_mismatch_warning: data?.target_mismatch_warning || null,
+    sport: data?.sport_detected || "unknown",
+    skill_level: data?.overall_skill_level || "Intermediate",
+    quick_summary: data?.summary || "",
+    coach_feedback: { summary: data?.summary || "", encouragement: "" },
+    shots: events.map((e) => ({
+      type: (e.event_type || "event").toLowerCase().replace(/\s+/g, "_"),
+      name: e.shot_label || e.event_type || "Event",
+      shot_label: e.shot_label || e.event_type || null,
+      shot_category: e.shot_category || e.event_type || null,
+      intent: e.intent || null,
+      outcome: e.outcome || null,
+      quality_observation: e.quality_observation || null,
+      confidence: e.confidence ?? 0.7,
+      timestamp: Math.round((e.timestamp_sec || 0) * 10) / 10,
+      grade: (e.confidence ?? 0.7) >= 0.7 ? "A" : (e.confidence ?? 0) >= 0.5 ? "B" : "C",
+      score: Math.round((e.confidence ?? 0.7) * 100),
+      reasoning: e.description || "",
+      formFeedback: { strengths: e.strengths || [], weaknesses: e.weaknesses || [], tip: e.tip || "" },
+      vlmSkill: e.skill_level || "Intermediate",
+      powerLevel: null,
+      speed: null,
+      thumbnail: null,
+    })),
+    total_shots_detected: events.length,
+    multi_shot: events.length > 1,
+    shot_distribution: events.reduce((d, e) => {
+      const k = (e.event_type || "event").toLowerCase().replace(/\s+/g, "_");
+      d[k] = (d[k] || 0) + 1;
+      return d;
+    }, {}),
+    _accuracy_mode: "universal",
+  };
+}
+
 export default function AnalyzePage() {
   const { user, profile, refreshProfile, login, tokens, refreshTokens, updateTokens } = useAuth();
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
@@ -660,6 +719,196 @@ export default function AnalyzePage() {
     const id = setInterval(() => _setElapsedTick((t) => t + 1), 1000);
     return () => clearInterval(id);
   }, [analyzing]);
+
+  // ─── Async analysis job (submit → poll; user can leave the page) ──────
+  // analysisJobId drives the "you can leave, we'll notify you" banner.
+  const [analysisJobId, setAnalysisJobId] = useState(null);
+  // Tracks whether THIS component is still mounted, so a poll loop that
+  // resolves after the user navigated away doesn't clear the persisted job
+  // (the resume effect on return needs it) or setState on an unmounted tree.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // Ask for notification permission lazily, only when a job actually starts.
+  const requestAnalysisNotifyPermission = useCallback(() => {
+    try {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+    } catch { /* unsupported */ }
+  }, []);
+
+  // Fire a local notification when the result lands — only useful if the tab
+  // is backgrounded (phone locked / switched tabs), which is the common
+  // "I left the page" case while the SPA stays mounted.
+  const notifyAnalysisReady = useCallback((sport, count) => {
+    try {
+      if ("Notification" in window && Notification.permission === "granted"
+          && typeof document !== "undefined" && document.hidden) {
+        const n = new Notification("Your analysis is ready 🎉", {
+          body: `${sport} — ${count} event${count === 1 ? "" : "s"} analyzed. Tap to view.`,
+          icon: "/logo192.png",
+          tag: "playsmart-analysis",
+        });
+        n.onclick = () => { try { window.focus(); n.close(); } catch {} };
+      }
+    } catch { /* noop */ }
+  }, []);
+
+  // Poll a job until it reaches a terminal state. Returns the result payload
+  // on success; throws on error/timeout. Updates progress + queue messaging.
+  const pollAnalysisJob = useCallback(async (jobId) => {
+    let waited = 0;
+    // ~6 min ceiling so a stuck job can't poll forever.
+    while (waited < 360) {
+      await new Promise((r) => setTimeout(r, 3000));
+      waited += 3;
+      let s;
+      try {
+        const resp = await api.get(`/analyze-jobs/${jobId}`, { timeout: 15000 });
+        s = resp.data;
+      } catch (e) {
+        // Transient network blip — keep trying for a while before giving up.
+        if (waited > 90 && e?.response?.status === 404) throw new Error("job_not_found");
+        continue;
+      }
+      if (s.status === "complete") return s.result;
+      if (s.status === "error") throw new Error(s.error || "analysis_error");
+      if (!mountedRef.current) continue; // keep polling but don't touch UI
+      if (s.status === "queued" && typeof s.queue_position === "number") {
+        setLoadingText(
+          s.queue_position > 0
+            ? `In queue — ${s.queue_position} ${s.queue_position === 1 ? "person" : "people"} ahead. You can leave; we'll notify you.`
+            : "Next up — starting your analysis…",
+        );
+      } else if (s.status === "running") {
+        setProgress((p) => Math.min(92, Math.max(p, 72)));
+        setLoadingText("AI Coach is analyzing your video — feel free to leave; we'll notify you when it's ready.");
+      }
+    }
+    throw new Error("poll_timeout");
+  }, []);
+
+  // Clear the persisted picker stage (localStorage + the IndexedDB clip).
+  const clearPickerSession = useCallback(() => {
+    try { localStorage.removeItem(PICKER_SESSION_KEY); } catch {}
+    import("@/lib/videoStore").then((vs) => vs.purgeVideo(INFLIGHT_VIDEO_KEY)).catch(() => {});
+  }, []);
+
+  // Notify the user to come back and pick a player, if they wandered off
+  // while the picker was open. Clicking focuses the tab — the picker is
+  // still there (or restored on reload via the resume effect below).
+  const notifyPickPlayer = useCallback(() => {
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        const n = new Notification("Pick a player to analyze 🎯", {
+          body: "We spotted multiple players — tap to choose who to coach.",
+          icon: "/logo192.png",
+          tag: "playsmart-pick",
+        });
+        n.onclick = () => { try { window.focus(); n.close(); } catch {} };
+      }
+    } catch { /* noop */ }
+  }, []);
+
+  // While the picker is open, fire the "pick a player" nudge the moment the
+  // user backgrounds the tab (switches away / locks phone) without choosing.
+  useEffect(() => {
+    if (!universalPlayers || universalPlayers.length < 2) return;
+    const onHide = () => { if (document.hidden) notifyPickPlayer(); };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [universalPlayers, notifyPickPlayer]);
+
+  // Resume the PICKER stage after a reload / returning to the page: restore
+  // the compressed clip from IndexedDB + the detected players so the user
+  // lands back on the picker instead of losing their upload. Skipped when a
+  // running job exists (that resume takes precedence below).
+  useEffect(() => {
+    let cancelled = false;
+    let sess = null;
+    try {
+      if (localStorage.getItem(ACTIVE_JOB_KEY)) return; // running job wins
+      const raw = localStorage.getItem(PICKER_SESSION_KEY);
+      if (raw) sess = JSON.parse(raw);
+    } catch { /* ignore */ }
+    if (!sess?.players?.length) return;
+    if (Date.now() - (sess.savedAt || 0) > 30 * 60 * 1000) {
+      clearPickerSession();
+      return;
+    }
+    (async () => {
+      try {
+        const vs = await import("@/lib/videoStore");
+        const cached = await vs.loadVideo(INFLIGHT_VIDEO_KEY);
+        if (cancelled || !cached?.file) { clearPickerSession(); return; }
+        // Recompute b64 from the restored clip (cheaper to recompute than to
+        // also persist the ~5MB base64 string).
+        const buf = await cached.file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        const b64 = btoa(bin);
+        if (cancelled || !mountedRef.current) return;
+        setFile(cached.file);
+        setSelectedSport(sess.sport || selectedSport);
+        setUniversalUploadData({
+          uploadFile: cached.file, b64, midFrame: sess.midFrame || null,
+          timeScale: sess.timeScale || 1,
+        });
+        setUniversalPlayers(sess.players);
+        toast("Picked up where you left off — choose a player to analyze.", { icon: "🎯" });
+      } catch {
+        clearPickerSession();
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Resume an in-flight job after a reload or returning to the analyze page.
+  // The job record + result live in Mongo, so re-polling returns the finished
+  // result even if the original poll loop was torn down on navigation.
+  useEffect(() => {
+    let cancelled = false;
+    let stash = null;
+    try {
+      const raw = localStorage.getItem(ACTIVE_JOB_KEY);
+      if (raw) stash = JSON.parse(raw);
+    } catch { /* ignore */ }
+    if (!stash?.jobId) return;
+    if (Date.now() - (stash.savedAt || 0) > 15 * 60 * 1000) {
+      try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
+      return;
+    }
+    (async () => {
+      setAnalyzing(true);
+      setAnalysisJobId(stash.jobId);
+      setProgress(65);
+      setLoadingText("Resuming your analysis…");
+      try {
+        const result = await pollAnalysisJob(stash.jobId);
+        if (cancelled || !mountedRef.current) return;
+        const universalResult = buildUniversalResult(result, stash.targetDesc, stash.pickedPlayer);
+        setResult(universalResult);
+        setActiveTab("results");
+        setProgress(100);
+        notifyAnalysisReady(universalResult.sport, universalResult.total_shots_detected);
+      } catch {
+        // Errored / expired — drop it silently; the user can re-upload.
+      } finally {
+        try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
+        if (!cancelled && mountedRef.current) {
+          setAnalyzing(false);
+          setAnalysisJobId(null);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Post-login replay: if the user signed in mid-analysis (guest path),
   // re-send the result to /analyze-client-results so it lands in their
@@ -1178,6 +1427,22 @@ export default function AnalyzePage() {
               setUniversalPlayers(players);
               setAnalyzing(false);
               setProgress(0);
+              // Persist the picker stage so a refresh / returning to the page
+              // lands back here instead of losing the upload. The compressed
+              // clip goes to IndexedDB (too big for localStorage); the player
+              // list + midFrame go to localStorage.
+              try {
+                const vs = await import("@/lib/videoStore");
+                await vs.saveVideo(uploadFile, 30 * 60 * 1000, INFLIGHT_VIDEO_KEY);
+                localStorage.setItem(PICKER_SESSION_KEY, JSON.stringify({
+                  players, midFrame, timeScale,
+                  sport: sportToAnalyze || null,
+                  savedAt: Date.now(),
+                }));
+              } catch { /* persistence is best-effort */ }
+              // Ask for notify permission now so the "pick a player" nudge can
+              // fire if the user wanders off before selecting.
+              requestAnalysisNotifyPermission();
               return;
             }
             if (players.length === 1) {
@@ -1210,7 +1475,45 @@ export default function AnalyzePage() {
         );
         let data = null;
         let streamFailed = false;
-        if (useStream) {
+        let streamTimedOut = false;
+
+        // ─── Async job path (primary) ─────────────────────────────────
+        // Submit the analysis as a background job and poll it. This frees the
+        // user to leave the page / lock their phone — we persist the job id,
+        // notify on completion, and resume on return — instead of pinning
+        // them to a spinner for 1-3 min. Only if the SUBMIT itself fails
+        // (network / older backend without the endpoint) do we fall through
+        // to the streaming + JSON paths below.
+        try {
+          const submitResp = await api.post("/analyze-video-async", {
+            mime_type: uploadFile.type || file.type || "video/mp4",
+            video_b64: b64,
+            target_player_description: targetDesc,
+            tier: accuracyMode === "premium" ? "premium" : "standard",
+            doubles_mode: doublesMode,
+            time_scale: timeScale,
+          }, { timeout: 45000 });
+          const jobId = submitResp.data?.job_id;
+          if (jobId) {
+            try {
+              localStorage.setItem(ACTIVE_JOB_KEY, JSON.stringify({
+                jobId, savedAt: Date.now(), targetDesc,
+                pickedPlayer: options.universalPick || null,
+              }));
+            } catch { /* storage full / private mode — non-fatal */ }
+            setAnalysisJobId(jobId);
+            requestAnalysisNotifyPermission();
+            setProgress(62);
+            setLoadingText("Analysis started — you can leave this page; we'll notify you when it's ready.");
+            data = await pollAnalysisJob(jobId);
+          }
+        } catch (asyncErr) {
+          console.warn("[universal] async submit/poll failed, falling back:",
+                       asyncErr?.response?.data?.detail || asyncErr?.message);
+          // data stays null → streaming/JSON fallback runs below.
+        }
+
+        if (!data && useStream) {
           setLiveShots([]);
           try {
             const fd = new FormData();
@@ -1318,13 +1621,30 @@ export default function AnalyzePage() {
               _meta: { ...(final._meta || {}), streamed: true },
             };
           } catch (streamExc) {
-            console.warn("[universal] stream failed, falling back to base64:", streamExc?.message);
+            const m = streamExc?.message || "";
+            console.warn("[universal] stream failed, falling back to base64:", m);
             streamFailed = true;
+            // Was a backend analysis timeout (Gemini genuinely slow on a
+            // busy/doubles clip) — the JSON re-run hits the SAME Gemini
+            // budget and would just double the wait. Flag it so we don't
+            // pretend the re-run is quick.
+            streamTimedOut = /timeout/i.test(m);
             data = null;
             setLiveShots([]);
           }
         }
         if (!data) {
+          // The JSON fallback is a plain POST with no progress events, so the
+          // bar would otherwise sit frozen at ~78% for the whole call. Set an
+          // honest, moving message so the user knows it's still working and
+          // shouldn't leave — this was the #1 confusion ("stuck, no idea if I
+          // should wait").
+          setProgress(80);
+          setLoadingText(
+            streamTimedOut
+              ? "This clip is dense — finalizing the deep analysis. Busy doubles rallies can take 2-3 min. Keep this page open…"
+              : "Finalizing analysis — almost there, keep this page open…",
+          );
           const resp = await api.post("/analyze-video-universal", {
             mime_type: uploadFile.type || file.type || "video/mp4",
             video_b64: b64,
@@ -1332,8 +1652,8 @@ export default function AnalyzePage() {
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: doublesMode,
             time_scale: timeScale,
-            // Bumped to 180s/210s so we don't false-fail when Gemini has
-            // a slow moment. The backend itself caps Gemini at 55s and
+            // Bumped to 210s so we don't false-fail when Gemini has a slow
+            // moment on a dense clip. The backend caps Gemini at 180s and
             // returns 504 if it overruns — these are upper bounds for
             // upload + processing + transit combined.
           }, { timeout: accuracyMode === "premium" ? 210000 : 180000 });
@@ -1344,70 +1664,21 @@ export default function AnalyzePage() {
         }
         setProgress(95);
         setLoadingText("Building results...");
-        // Build a minimal result object the existing UI can render.
         const events = data?.events || [];
-        const universalResult = {
-          success: true,
-          _universal: true,
-          _target_player_description: targetDesc,
-          _target_player_thumbnail: options.universalPick?.thumbnail || null,
-          // Full picked-player descriptor — PlayerDetectionCard reads
-          // clothing/court_position/id from here when available so the
-          // universal-mode card can render richer metadata than just the
-          // raw thumbnail + description.
-          _target_player: options.universalPick || null,
-          // Forward the backend's debug surface so the in-app debug
-          // panel can show raw Gemini output + filtered/dropped counts.
-          // _meta is the stream path's debug carrier; _debug is the
-          // non-stream path's. Both should ride through unchanged.
-          _meta: data?._meta || null,
-          _debug: data?._debug || data?._meta || null,
-          // The Gemini-Studio-grade narrative paragraphs. Top-of-page
-          // CoachNarrativeCard renders these verbatim.
-          coach_narrative: data?.coach_narrative || null,
-          // Player-pick mismatch surface — forwarded so the banner can
-          // render at the top of the result page when the user-picked
-          // description doesn't line up with Gemini's described subject.
-          target_mismatch_warning: data?.target_mismatch_warning || null,
-          sport: data?.sport_detected || "unknown",
-          skill_level: data?.overall_skill_level || "Intermediate",
-          quick_summary: data?.summary || "",
-          coach_feedback: { summary: data?.summary || "", encouragement: "" },
-          shots: events.map((e, i) => ({
-            type: (e.event_type || "event").toLowerCase().replace(/\s+/g, "_"),
-            name: e.shot_label || e.event_type || "Event",
-            // Pass through the richer per-shot labels & intent/outcome
-            // fields so downstream cards (PlayerDetectionCard, MatchInsights)
-            // can read them without a second backend round-trip.
-            shot_label: e.shot_label || e.event_type || null,
-            shot_category: e.shot_category || e.event_type || null,
-            intent: e.intent || null,
-            outcome: e.outcome || null,
-            quality_observation: e.quality_observation || null,
-            confidence: e.confidence ?? 0.7,
-            timestamp: Math.round((e.timestamp_sec || 0) * 10) / 10,
-            grade: (e.confidence ?? 0.7) >= 0.7 ? "A" : (e.confidence ?? 0) >= 0.5 ? "B" : "C",
-            score: Math.round((e.confidence ?? 0.7) * 100),
-            reasoning: e.description || "",
-            formFeedback: { strengths: e.strengths || [], weaknesses: e.weaknesses || [], tip: e.tip || "" },
-            vlmSkill: e.skill_level || "Intermediate",
-            powerLevel: null,
-            speed: null,
-            thumbnail: null,
-          })),
-          total_shots_detected: events.length,
-          multi_shot: events.length > 1,
-          shot_distribution: events.reduce((d, e) => {
-            const k = (e.event_type || "event").toLowerCase().replace(/\s+/g, "_");
-            d[k] = (d[k] || 0) + 1;
-            return d;
-          }, {}),
-          _accuracy_mode: "universal",
-          _meta: data?._meta || {},
-        };
-        setResult(universalResult);
-        setProgress(100);
-        setLoadingText("Complete!");
+        const universalResult = buildUniversalResult(data, targetDesc, options.universalPick);
+        notifyAnalysisReady(universalResult.sport, events.length);
+        // If the user navigated away mid-job, DON'T clear the persisted job
+        // here — this poll resolved on an unmounted tree, so setResult is a
+        // no-op and the result would be lost. Leave the breadcrumb so the
+        // resume effect re-polls (Mongo still holds the finished result) when
+        // they return. Only clear + show when we're still mounted.
+        if (mountedRef.current) {
+          setResult(universalResult);
+          setProgress(100);
+          setLoadingText("Complete!");
+          try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
+          setAnalysisJobId(null);
+        }
         toast.success(`Detected: ${universalResult.sport} — ${events.length} events analyzed`);
         setActiveTab("results");
         // Clear cached upload data so a follow-up run starts fresh.
@@ -1418,7 +1689,12 @@ export default function AnalyzePage() {
         console.error("[universal]", msg);
         setError(msg);
         toast.error(`Universal mode failed: ${msg.slice(0, 80)}`);
+        try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
+        setAnalysisJobId(null);
       } finally {
+        // If the user navigated away mid-job, leave the persisted job in
+        // place so the resume effect can recover it; only the mounted path
+        // clears it (above). Always release the spinner.
         setAnalyzing(false);
       }
       return;
@@ -2349,6 +2625,17 @@ export default function AnalyzePage() {
               </div>
             </div>
 
+            {/* "You can leave" banner — shown once the analysis is a queued
+                background job. Reassures the user they don't have to wait. */}
+            {analysisJobId && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl bg-lime-400/10 border border-lime-400/30 px-3 py-2">
+                <CheckCircle2 className="w-4 h-4 text-lime-400 flex-shrink-0 mt-0.5" />
+                <p className="text-lime-200/90 text-[11px] leading-snug">
+                  Analysis is running in the background — <span className="font-semibold">you can leave this page or lock your phone.</span> We'll notify you and keep your result ready when it's done.
+                </p>
+              </div>
+            )}
+
             {/* Progress bar with continuous shimmer overlay so it never looks frozen */}
             <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden mb-4">
               <motion.div
@@ -2408,9 +2695,13 @@ export default function AnalyzePage() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center text-zinc-600 text-[10px] mt-2"
+                className={`text-center text-[10px] mt-2 ${elapsed > 90 ? "text-amber-400/80" : "text-zinc-600"}`}
               >
-                Longer videos take a bit more time — hang tight, this won't fail silently.
+                {elapsed > 150
+                  ? "Still working — busy doubles rallies are the slowest to analyze. It won't fail silently; please keep this page open."
+                  : elapsed > 90
+                  ? "Deep analysis of a dense clip can take up to 2-3 minutes. Hang tight — keep this page open and it'll finish on its own."
+                  : "Longer videos take a bit more time — hang tight, this won't fail silently."}
               </motion.p>
             )}
 
@@ -4494,6 +4785,9 @@ export default function AnalyzePage() {
       {universalPlayers && universalPlayers.length > 0 && (() => {
         const onPick = (picked) => {
           setUniversalPlayers(null);
+          // Picker stage is done — the analysis job is about to be submitted
+          // (which persists its own resumable job id).
+          clearPickerSession();
           setAnalyzing(true);
           setProgress(50);
           runClientAnalysis(
@@ -4513,7 +4807,7 @@ export default function AnalyzePage() {
         const midFrame = universalUploadData?.midFrame;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-            onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); }}>
+            onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); clearPickerSession(); }}>
             <div onClick={(e) => e.stopPropagation()}
               className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 max-w-2xl w-full max-h-[90vh] overflow-auto">
               <div className="flex items-center gap-2 mb-1">
@@ -4525,9 +4819,15 @@ export default function AnalyzePage() {
               <p className="text-sm text-zinc-400 mb-1">
                 Tap the player you want to analyze. We'll focus the AI Coach on them.
               </p>
-              <p className="text-[11px] text-zinc-500 mb-4">
+              <p className="text-[11px] text-zinc-500 mb-2">
                 Boxes are approximate — if one looks off, pick by clothing color or court position from the list below.
               </p>
+              <div className="flex items-start gap-2 rounded-lg bg-lime-400/10 border border-lime-400/30 px-2.5 py-1.5 mb-4">
+                <CheckCircle2 className="w-3.5 h-3.5 text-lime-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-lime-200/90 leading-snug">
+                  Your upload is saved — you can leave and come back. We'll remind you to pick a player.
+                </p>
+              </div>
 
               {/* Full-frame keyframe with Gemini bboxes overlaid as
                   clickable buttons — same pattern as the old MoveNet
@@ -4595,7 +4895,7 @@ export default function AnalyzePage() {
 
               <div className="flex items-center justify-between gap-2">
                 <button
-                  onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); setAnalyzing(false); setProgress(0); }}
+                  onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); setAnalyzing(false); setProgress(0); clearPickerSession(); }}
                   className="text-xs text-zinc-500 hover:text-zinc-300 py-1.5"
                 >
                   Cancel
