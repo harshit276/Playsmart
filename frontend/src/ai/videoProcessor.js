@@ -1801,11 +1801,23 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     // most of the time it wasn't even saving meaningful bytes. Raised from
     // 3 MB → 15 MB.
     skipBelowBytes = 15 * 1024 * 1024,
-    // playbackRate controls wall-clock compression speed. Higher = faster
-    // but some Android browsers cap it (we detect + fall back below).
-    // 4x is the safe default; AnalyzePage bumps this to 6x for >30MB
-    // input files where wall-time matters more than perfect frame fidelity.
-    playbackRate = 4.0,
+    // playbackRate MUST be 1.0 for correct output.
+    //
+    // Strategy A records the canvas in WALL-CLOCK time while the source
+    // plays at `playbackRate`. So the encoded file's duration =
+    // sourceDuration / playbackRate. A 4x rate turned a real 10s clip into
+    // a 2.7s file where everything moves 4x faster. Two things broke:
+    //   1. Gemini saw ~4x fewer frames of each shot — the racket/ball
+    //      contact moment blurred across 1-2 frames and got missed
+    //      (the "5 chip shots, only 1 detected" undercount).
+    //   2. Gemini timestamped events in the 2.7s sped-up domain, but the
+    //      analysis page plays the ORIGINAL clip — so every "0:01" landed
+    //      ~4x too early ("timestamp in the video is wrong").
+    // Size is controlled entirely by bitrate + resolution (480p/800kbps ≈
+    // 100 KB per real second), so the speed-up never helped the file cap —
+    // it only corrupted time. Real-time capture is slightly slower to
+    // encode but keeps timestamps and frame coverage truthful.
+    playbackRate = 1.0,
   } = options;
 
   // Fast exit: file is already small enough — Vercel accepts up to 25 MB.
@@ -2041,13 +2053,15 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
     playbackRate,  // optional override; auto-picked below when undefined
   } = options;
 
-  // Auto-pick playbackRate based on input file size: bigger files get
-  // faster compression at the cost of slightly less smooth motion in
-  // the encoded output. Gemini analyses key frames so this trade is
-  // fine for shot detection. Manual override still wins.
-  const inputMb = (videoFile?.size || 0) / (1024 * 1024);
-  const autoRate = inputMb > 60 ? 8.0 : inputMb > 30 ? 6.0 : 4.0;
-  const effectiveRate = typeof playbackRate === "number" ? playbackRate : autoRate;
+  // playbackRate is forced to 1.0 (real-time capture). The old size-based
+  // auto-speedup (4x/6x/8x) compressed the output's TIME axis, not just its
+  // bytes — a 10s clip became a 2.7s file with everything sped up 4x, which
+  // made Gemini miss fast shots and report timestamps in the wrong (sped-up)
+  // domain. See the long note in compressVideoForUpload. Bitrate/resolution
+  // alone (dropped across the retry ladder below) handle the size cap.
+  // A manual override is still honored for callers that knowingly accept the
+  // temporal distortion, but nothing in the app sets it anymore.
+  const effectiveRate = typeof playbackRate === "number" ? playbackRate : 1.0;
 
   // Retry ladder: drop bitrate/resolution FIRST, never duration, so a
   // clip's action at the end never gets cut off. Only the lowest rung
