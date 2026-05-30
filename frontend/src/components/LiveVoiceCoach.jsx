@@ -226,11 +226,15 @@ function WaveformCanvas({ analyser, active }) {
 }
 
 // ─── Main component ────────────────────────────────────────────────
-export default function LiveVoiceCoach({ result }) {
+export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
   const supported = useMemo(
     () => sttSupported() && ttsSupported(),
     [],
   );
+  // Allow ONE coach-triggered re-analysis per result, when the user says the
+  // sport/shots were misidentified.
+  const reanalyzeFiredRef = useRef(false);
+  useEffect(() => { reanalyzeFiredRef.current = false; }, [result]);
 
   const [open, setOpen] = useState(false);
   const [listening, setListening] = useState(false);
@@ -473,6 +477,30 @@ export default function LiveVoiceCoach({ result }) {
       if (!text) return;
       if (streaming) return; // Don't pile up requests; coach is mid-reply.
 
+      // Coach-triggered re-analysis: if the user says the sport or the shots
+      // were misidentified, RE-RUN the full Gemini analysis once (the chat
+      // alone can't change the detected sport). Fires at most once per result.
+      if (
+        onRequestReanalyze && !reanalyzeFiredRef.current &&
+        (
+          /\b(re-?analy[sz]e|analy[sz]e again|scan again|check again|try again|do it again|watch again|look again)\b/i.test(text) ||
+          (/(wrong|incorrect|not right|mis-?identif|mis-?label|that'?s not|this is ?n'?t|isn'?t)/i.test(text) &&
+           /(sport|shot|shots|game|badminton|swimming|swim|basketball|tennis|football|soccer|cricket|volleyball|table[ -]?tennis|pickleball|squash|golf)/i.test(text))
+        )
+      ) {
+        reanalyzeFiredRef.current = true;
+        cancelTts();
+        const ack = "Good catch — let me re-watch the full video and analyze it again from scratch. One moment…";
+        setMessages((prev) => [
+          ...prev,
+          { role: "user", text, t: Date.now() },
+          { role: "coach", text: ack, t: Date.now() },
+        ]);
+        try { speakWithCoachVoice(ack); } catch {}
+        onRequestReanalyze();
+        return;
+      }
+
       // Cancel any in-flight TTS so we hear the new reply, not the old one.
       cancelTts();
       setError("");
@@ -668,6 +696,7 @@ export default function LiveVoiceCoach({ result }) {
       streaming,
       cancelTts,
       coachVoiceKey,
+      onRequestReanalyze,
     ],
   );
 
