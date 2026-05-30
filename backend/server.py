@@ -3859,6 +3859,20 @@ async def _process_job(job: dict):
     await _update_job(job_id, status="complete", result=payload,
                       finished_at=datetime.now(timezone.utc))
 
+    # Web Push so the user is pinged even if the tab is backgrounded / closed
+    # (a local Notification can't fire while mobile suspends the tab's JS).
+    try:
+        sport = payload.get("sport_detected", "your")
+        n = len(payload.get("events") or [])
+        await _notify_job_done(job, {
+            "title": "Your analysis is ready 🎉",
+            "body": f"{sport} — {n} event{'' if n == 1 else 's'} analyzed. Tap to view.",
+            "url": "/analyze",
+            "job_id": job_id,
+        })
+    except Exception:
+        pass
+
     # Charge tokens on success only (mirrors the streaming endpoint — never
     # bill for a failed or abandoned analysis).
     if job.get("user_id"):
@@ -4007,6 +4021,119 @@ async def analyze_job_status(job_id: str, authorization: str = Header(None)):
     if job.get("status") == "complete":
         out["result"] = job.get("result")
     return out
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Web Push  (notify the user when a background job finishes, even if the
+# tab is closed / the phone is locked — a local Notification can't)
+# ──────────────────────────────────────────────────────────────────────
+# Setup (one-time): generate a VAPID keypair with `npx web-push
+# generate-vapid-keys` and set on the backend:
+#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (e.g. mailto:you@x.com)
+# The frontend fetches the public key from /api/push/vapid-public-key, so no
+# rebuild is needed when keys rotate. Push is a no-op if keys are unset.
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:support@athlyticai.com").strip()
+
+
+class PushSubscribeRequest(BaseModel):
+    subscription: dict  # the raw PushSubscription JSON from the browser
+
+
+@api_router.get("/push/vapid-public-key")
+async def push_vapid_public_key():
+    """Public VAPID key for the browser's pushManager.subscribe(). Empty
+    string when push isn't configured — the frontend then skips subscribing."""
+    return {"key": VAPID_PUBLIC_KEY}
+
+
+@api_router.post("/push/subscribe")
+async def push_subscribe(req: PushSubscribeRequest, authorization: str = Header(None)):
+    """Store a browser push subscription so we can notify this user when a
+    job finishes. Keyed by the subscription endpoint so re-subscribing the
+    same browser upserts rather than duplicates."""
+    user = await get_current_user_or_none(authorization)
+    sub = req.subscription or {}
+    endpoint = sub.get("endpoint")
+    if not endpoint:
+        raise HTTPException(status_code=400, detail="missing subscription endpoint")
+    try:
+        await asyncio.wait_for(db.push_subscriptions.update_one(
+            {"endpoint": endpoint},
+            {"$set": {
+                "endpoint": endpoint,
+                "subscription": sub,
+                "user_id": (user["id"] if user else None),
+                "updated_at": datetime.now(timezone.utc),
+            }},
+            upsert=True,
+        ), timeout=3.0)
+    except (Exception, asyncio.TimeoutError):
+        raise HTTPException(status_code=503, detail="could not save subscription")
+    return {"ok": True}
+
+
+def _send_web_push_sync(subscription: dict, payload: dict) -> bool:
+    """Blocking single push send — runs in a thread executor. Returns False
+    on a permanent failure (404/410 = subscription gone) so the caller can
+    prune it."""
+    try:
+        from pywebpush import webpush, WebPushException
+    except Exception:
+        return True  # library missing — treat as non-fatal, skip
+    try:
+        webpush(
+            subscription_info=subscription,
+            data=json.dumps(payload),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims={"sub": VAPID_SUBJECT},
+            timeout=10,
+        )
+        return True
+    except WebPushException as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if status in (404, 410):
+            return False  # subscription expired — signal pruning
+        logger.warning(f"[push] send failed: {str(exc)[:160]}")
+        return True
+    except Exception as exc:
+        logger.warning(f"[push] send error: {str(exc)[:160]}")
+        return True
+
+
+async def _notify_job_done(job: dict, payload: dict):
+    """Push 'analysis ready' to every subscription belonging to the job's
+    user. No-op for guests (no stable user_id) or when VAPID isn't set."""
+    if not (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY):
+        return
+    user_id = job.get("user_id")
+    if not user_id:
+        return
+    try:
+        subs = await asyncio.wait_for(
+            db.push_subscriptions.find({"user_id": user_id}).to_list(length=20),
+            timeout=3.0,
+        )
+    except (Exception, asyncio.TimeoutError):
+        return
+    if not subs:
+        return
+    loop = asyncio.get_event_loop()
+    dead = []
+    for s in subs:
+        sub = s.get("subscription")
+        if not sub:
+            continue
+        ok = await loop.run_in_executor(None, _send_web_push_sync, sub, payload)
+        if not ok:
+            dead.append(s.get("endpoint"))
+    # Prune expired subscriptions so we don't keep pushing to dead endpoints.
+    if dead:
+        try:
+            await db.push_subscriptions.delete_many({"endpoint": {"$in": dead}})
+        except Exception:
+            pass
 
 
 # ──────────────────────────────────────────────────────────────────────
