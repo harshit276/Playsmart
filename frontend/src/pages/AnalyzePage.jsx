@@ -517,6 +517,10 @@ export default function AnalyzePage() {
         if (!Array.isArray(saved.result.shots)) return;
         if (saved.sport) setSelectedSport(saved.sport);
         setResult(saved.result);
+        // Land directly on the results view so a return visit (incl. tapping
+        // a "your analysis is ready" notification) shows the last analysis
+        // instead of the empty upload screen. It stays until a new run.
+        setActiveTab("results");
 
         // Try to rehydrate the original video from IndexedDB. If it's
         // there and not expired, we get the full slow-mo experience
@@ -732,13 +736,22 @@ export default function AnalyzePage() {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // Ask for notification permission lazily, only when a job actually starts.
+  // Ask for notification permission lazily (only when a job/picker starts),
+  // then register a Web Push subscription so we can ping the user even when
+  // the tab is closed / phone locked. Fire-and-forget — never blocks the flow.
   const requestAnalysisNotifyPermission = useCallback(() => {
-    try {
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission().catch(() => {});
-      }
-    } catch { /* unsupported */ }
+    (async () => {
+      try {
+        if (!("Notification" in window)) return;
+        if (Notification.permission === "default") {
+          await Notification.requestPermission();
+        }
+        if (Notification.permission === "granted") {
+          const m = await import("@/lib/push");
+          await m.subscribeToPush(api);
+        }
+      } catch { /* unsupported / denied — local notification still works in-app */ }
+    })();
   }, []);
 
   // Fire a local notification when the result lands — only useful if the tab

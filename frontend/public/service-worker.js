@@ -1,6 +1,6 @@
 // Bump CACHE_VERSION whenever cache strategy or shell assets change.
 // On version bump, old caches are deleted on activate.
-const CACHE_VERSION = 'v23';
+const CACHE_VERSION = 'v24';
 const SHELL_CACHE = `athlyticai-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `athlyticai-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `athlyticai-data-${CACHE_VERSION}`;
@@ -41,6 +41,41 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+// ─── Web Push: "your analysis is ready" while the tab is closed/backgrounded ─
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
+  const title = data.title || 'AthlyticAI';
+  const options = {
+    body: data.body || 'Your analysis is ready.',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: data.job_id ? `analysis-${data.job_id}` : 'analysis',
+    renotify: true,
+    data: { url: data.url || '/analyze' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Tapping the notification focuses an existing tab (or opens one) at the URL.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/analyze';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        // Focus an already-open app tab and route it to the result.
+        if ('focus' in w) {
+          w.focus();
+          if ('navigate' in w) { try { w.navigate(target); } catch {} }
+          return;
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(target);
+    })
+  );
 });
 
 // Fetch routing
