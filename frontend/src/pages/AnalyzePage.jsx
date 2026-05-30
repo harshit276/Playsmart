@@ -736,9 +736,15 @@ export default function AnalyzePage() {
     return () => { mountedRef.current = false; };
   }, []);
 
-  // Ask for notification permission lazily (only when a job/picker starts),
-  // then register a Web Push subscription so we can ping the user even when
-  // the tab is closed / phone locked. Fire-and-forget — never blocks the flow.
+  // Current notification permission, for the "Notify me" control's label.
+  const [notifyPermission, setNotifyPermission] = useState(
+    typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported",
+  );
+
+  // Ask for notification permission lazily (only when a job/picker starts, or
+  // from the explicit "Notify me" button), then register a Web Push
+  // subscription so we can ping the user even when the tab is closed / phone
+  // locked. Fire-and-forget — never blocks the flow.
   const requestAnalysisNotifyPermission = useCallback(() => {
     (async () => {
       try {
@@ -746,6 +752,7 @@ export default function AnalyzePage() {
         if (Notification.permission === "default") {
           await Notification.requestPermission();
         }
+        setNotifyPermission(Notification.permission);
         if (Notification.permission === "granted") {
           const m = await import("@/lib/push");
           await m.subscribeToPush(api);
@@ -1140,6 +1147,13 @@ export default function AnalyzePage() {
       return;
     }
 
+    // iOS requires Notification.requestPermission() to be called DIRECTLY in
+    // a user-gesture (before any await), or it's silently ignored and push
+    // never gets granted. This runs synchronously inside the button tap that
+    // invoked analyze(), so the prompt actually appears on iPhone. The push
+    // subscription itself is registered once permission is granted.
+    requestAnalysisNotifyPermission();
+
     // Guests get ONE free analysis. After that, force sign-up — they can
     // claim 300 tokens for free which unlocks ~3 more analyses.
     if (!user) {
@@ -1498,6 +1512,8 @@ export default function AnalyzePage() {
         // (network / older backend without the endpoint) do we fall through
         // to the streaming + JSON paths below.
         try {
+          let pushEndpoint = null;
+          try { pushEndpoint = localStorage.getItem("playsmart_push_endpoint"); } catch {}
           const submitResp = await api.post("/analyze-video-async", {
             mime_type: uploadFile.type || file.type || "video/mp4",
             video_b64: b64,
@@ -1505,6 +1521,7 @@ export default function AnalyzePage() {
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: doublesMode,
             time_scale: timeScale,
+            push_endpoint: pushEndpoint,
           }, { timeout: 45000 });
           const jobId = submitResp.data?.job_id;
           if (jobId) {
@@ -2847,6 +2864,42 @@ export default function AnalyzePage() {
               )}
             </Button>
           </div>
+
+          {/* Background-analysis + notifications explainer. Lets the user opt
+              into push up front and know they can leave the page. */}
+          {typeof window !== "undefined" && "Notification" in window && (
+            <div className="mt-3 rounded-xl bg-sky-500/5 border border-sky-500/20 p-3">
+              <div className="flex items-start gap-2">
+                <Bell className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" strokeWidth={1.75} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-sky-300">Leave anytime — we'll ping you</p>
+                  <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">
+                    Your analysis runs in the background (about 30s–3 min for longer clips). Turn on notifications and you can switch apps or lock your phone — we'll alert you the moment your coaching report is ready.
+                  </p>
+                  {notifyPermission === "granted" ? (
+                    <p className="text-[11px] text-lime-400 mt-1.5 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Notifications on — you're all set.
+                    </p>
+                  ) : notifyPermission === "denied" ? (
+                    <p className="text-[11px] text-amber-400/90 mt-1.5 leading-snug">
+                      Notifications are blocked. Enable them for this app in your browser/phone settings to get alerted when it's done.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={requestAnalysisNotifyPermission}
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-sky-400/15 border border-sky-400/30 text-sky-300 text-[11px] font-medium px-2.5 py-1 hover:bg-sky-400/25 transition-colors"
+                    >
+                      <Bell className="w-3 h-3" /> Notify me when ready
+                    </button>
+                  )}
+                  <p className="text-[10px] text-zinc-600 mt-1.5 leading-snug">
+                    On iPhone: add this app to your Home Screen first (Safari → Share → Add to Home Screen), then notifications work even when it's closed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -4797,6 +4850,8 @@ export default function AnalyzePage() {
           person. */}
       {universalPlayers && universalPlayers.length > 0 && (() => {
         const onPick = (picked) => {
+          // Prime notification permission within this tap (iOS gesture rule).
+          requestAnalysisNotifyPermission();
           setUniversalPlayers(null);
           // Picker stage is done — the analysis job is about to be submitted
           // (which persists its own resumable job id).
