@@ -3350,6 +3350,10 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     # multiply each event's timestamp back into the original timeline. 1.0 =
     # no scaling (small clips captured at real-time).
     time_scale: float = 1.0
+    # Web Push subscription endpoint of the submitting browser, so we can
+    # notify THIS device when the job finishes regardless of whether it's
+    # tied to a signed-in account (covers guests + avoids user-id mismatch).
+    push_endpoint: str | None = None
 
 
 def _apply_time_scale(events: list, time_scale: float) -> list:
@@ -3973,6 +3977,7 @@ async def analyze_video_async_submit(
         "tier": req.tier,
         "doubles_mode": req.doubles_mode,
         "time_scale": req.time_scale,
+        "push_endpoint": req.push_endpoint,
         "priority": priority,
         "created_at": now,
         "updated_at": now,
@@ -4103,22 +4108,34 @@ def _send_web_push_sync(subscription: dict, payload: dict) -> bool:
 
 
 async def _notify_job_done(job: dict, payload: dict):
-    """Push 'analysis ready' to every subscription belonging to the job's
-    user. No-op for guests (no stable user_id) or when VAPID isn't set."""
+    """Push 'analysis ready' to the submitting browser and (if signed in) the
+    user's other devices. No-op when VAPID isn't set. Works for guests too —
+    the job carries the submitting browser's push_endpoint."""
     if not (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY):
         return
     user_id = job.get("user_id")
-    if not user_id:
+    endpoint = job.get("push_endpoint")
+    # Build the OR query: the exact submitting browser (endpoint) plus, when
+    # signed in, all the user's registered devices.
+    ors = []
+    if endpoint:
+        ors.append({"endpoint": endpoint})
+    if user_id:
+        ors.append({"user_id": user_id})
+    if not ors:
         return
     try:
         subs = await asyncio.wait_for(
-            db.push_subscriptions.find({"user_id": user_id}).to_list(length=20),
+            db.push_subscriptions.find({"$or": ors}).to_list(length=20),
             timeout=3.0,
         )
     except (Exception, asyncio.TimeoutError):
         return
     if not subs:
         return
+    # Dedup by endpoint (a subscription can match both branches).
+    seen = set()
+    subs = [s for s in subs if not (s.get("endpoint") in seen or seen.add(s.get("endpoint")))]
     loop = asyncio.get_event_loop()
     dead = []
     for s in subs:

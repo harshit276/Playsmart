@@ -53,6 +53,9 @@ export async function subscribeToPush(api) {
       });
     }
     await api.post("/push/subscribe", { subscription: sub.toJSON ? sub.toJSON() : sub }, { timeout: 8000 });
+    // Remember this browser's endpoint so the analysis job can be tagged with
+    // it — that's how the backend notifies THIS device even for guests.
+    try { localStorage.setItem("playsmart_push_endpoint", sub.endpoint); } catch {}
     return true;
   } catch (e) {
     // VAPID key mismatch, denied permission mid-flow, etc. — non-fatal.
