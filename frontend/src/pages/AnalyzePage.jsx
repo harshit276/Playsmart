@@ -4362,7 +4362,16 @@ export default function AnalyzePage() {
             inside the component, but we gate here too so the heavier
             recognizer setup isn't even mounted on empty results). */}
         {result?.shots?.length > 0 && (
-          <LiveVoiceCoach result={result} />
+          <LiveVoiceCoach
+            result={result}
+            onRequestReanalyze={() => {
+              // Coach detected "wrong sport / wrong shots" — re-run the full
+              // Gemini analysis on the same clip (fresh sport + shot detection).
+              if (!file) { toast.error("Re-upload the clip so I can re-analyze it."); return; }
+              try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
+              analyze();
+            }}
+          />
         )}
 
         {/* Share + Analyze another */}
