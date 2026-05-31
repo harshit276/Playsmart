@@ -2561,6 +2561,33 @@ export default function AnalyzePage() {
         )}
       </div>
 
+      {/* Notify-me — at the top so users opt in before analyzing. Simple,
+          one line + action. Analysis runs in the background; this is just
+          how we ping them when it's done. */}
+      {typeof window !== "undefined" && "Notification" in window && (
+        <div className="mb-4 rounded-2xl border border-sky-400/30 bg-sky-400/5 p-3 sm:p-4 flex items-center gap-3">
+          <Bell className="w-5 h-5 text-sky-400 shrink-0" strokeWidth={1.75} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Leave anytime — we'll ping you</p>
+            <p className="text-[11px] text-zinc-400">
+              {notifyPermission === "denied"
+                ? "Notifications are blocked — enable them in settings to get pinged."
+                : "We'll notify you when your report is ready. iPhone: add to Home Screen first."}
+            </p>
+          </div>
+          {notifyPermission === "granted" ? (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-lime-400 shrink-0">
+              <CheckCircle2 className="w-4 h-4" /> On
+            </span>
+          ) : notifyPermission !== "denied" ? (
+            <button type="button" onClick={requestAnalysisNotifyPermission}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-400/15 hover:bg-sky-400/25 text-sky-200 border border-sky-400/30 transition-colors shrink-0">
+              <Bell className="w-3 h-3" /> Notify me
+            </button>
+          ) : null}
+        </div>
+      )}
+
       {/* Reanalysis baseline banner — pinned above the loading panel
           when a reanalysis is in flight. Shows the previous analysis
           we're comparing against so the user understands the
@@ -2865,41 +2892,6 @@ export default function AnalyzePage() {
             </Button>
           </div>
 
-          {/* Background-analysis + notifications explainer. Lets the user opt
-              into push up front and know they can leave the page. */}
-          {typeof window !== "undefined" && "Notification" in window && (
-            <div className="mt-3 rounded-xl bg-sky-500/5 border border-sky-500/20 p-3">
-              <div className="flex items-start gap-2">
-                <Bell className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" strokeWidth={1.75} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-sky-300">Leave anytime — we'll ping you</p>
-                  <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug">
-                    Your analysis runs in the background (about 30s–3 min for longer clips). Turn on notifications and you can switch apps or lock your phone — we'll alert you the moment your coaching report is ready.
-                  </p>
-                  {notifyPermission === "granted" ? (
-                    <p className="text-[11px] text-lime-400 mt-1.5 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Notifications on — you're all set.
-                    </p>
-                  ) : notifyPermission === "denied" ? (
-                    <p className="text-[11px] text-amber-400/90 mt-1.5 leading-snug">
-                      Notifications are blocked. Enable them for this app in your browser/phone settings to get alerted when it's done.
-                    </p>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={requestAnalysisNotifyPermission}
-                      className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-sky-400/15 border border-sky-400/30 text-sky-300 text-[11px] font-medium px-2.5 py-1 hover:bg-sky-400/25 transition-colors"
-                    >
-                      <Bell className="w-3 h-3" /> Notify me when ready
-                    </button>
-                  )}
-                  <p className="text-[10px] text-zinc-600 mt-1.5 leading-snug">
-                    On iPhone: add this app to your Home Screen first (Safari → Share → Add to Home Screen), then notifications work even when it's closed.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </motion.div>
       )}
 
@@ -3570,6 +3562,13 @@ export default function AnalyzePage() {
             </motion.div>
           );
         })()}
+
+        {/* Voice coach — auto-narrates the summary the moment results load,
+            so it sits at the TOP. Browser TTS, zero cost; hidden on
+            unsupported browsers. */}
+        <div id="analysis-section-audio-coaching" className="scroll-mt-24 mb-4">
+          <VoiceCoachButton result={result} narrative={null} />
+        </div>
 
         {/* Universal-mode player detection card — replaces the old
             "Analyzing: …" banner with a richer, premium card that shows
@@ -4349,11 +4348,6 @@ export default function AnalyzePage() {
               </Link>
             </motion.div>
           )}
-        </div>
-
-        {/* Voice coach — browser TTS, zero cost. Hidden on unsupported browsers. */}
-        <div id="analysis-section-audio-coaching" className="scroll-mt-24">
-          <VoiceCoachButton result={result} narrative={null} />
         </div>
 
         {/* Live two-way voice coach — browser STT + TTS, streaming Gemini
