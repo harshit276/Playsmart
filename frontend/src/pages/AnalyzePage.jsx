@@ -1413,14 +1413,20 @@ export default function AnalyzePage() {
           let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
           b64 = btoa(bin);
 
-          // Pass 1 — let Gemini identify the visible players.
-          setLoadingText("AI Coach is identifying players in the video...");
+          // Pass 1 — let Gemini identify the visible players (optional).
+          // 25s cap (was 45s): this is just the player-PICKER pre-pass. On a
+          // cold serverless start or a Gemini latency spike it would hang the
+          // whole flow for 45s and then skip anyway — so fail fast and move
+          // straight to analysis. The full analysis still identifies the
+          // player itself (and doubles mode covers both near-court players),
+          // so skipping the picker is a graceful degrade, not a failure.
+          setLoadingText("AI Coach is spotting players (skips automatically if slow)...");
           setProgress(35);
           try {
             const { data: descData } = await api.post("/describe-players", {
               mime_type: uploadFile.type || file.type || "video/mp4",
               video_b64: b64,
-            }, { timeout: 45000 });
+            }, { timeout: 25000 });
             let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
             // Also extract a single mid-frame keyframe of the whole
             // video — used as the BACKGROUND of the player picker so
