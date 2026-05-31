@@ -2063,46 +2063,59 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
   // temporal distortion, but nothing in the app sets it anymore.
   const effectiveRate = typeof playbackRate === "number" ? playbackRate : 1.0;
 
-  // Retry ladder: drop bitrate/resolution FIRST, never duration, so a
-  // clip's action at the end never gets cut off. Only the lowest rung
-  // shrinks duration — and only by ~20%, as a last resort to fit the
-  // 4MB Vercel cap. If even that overshoots we throw COMPRESSION_OVERSHOOT
-  // so the user is told to trim manually rather than silently losing
-  // the last few seconds.
-  const rungs = [
-    { maxDim, bitrate, maxDurationSec, playbackRate: effectiveRate },
-    { maxDim, bitrate: Math.round(bitrate * 0.7), maxDurationSec, playbackRate: effectiveRate },
-    { maxDim: Math.round(maxDim * 0.8), bitrate: Math.round(bitrate * 0.5), maxDurationSec, playbackRate: effectiveRate },
-    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.4), maxDurationSec, playbackRate: effectiveRate },
-    // Final fallback only — strictly the duration trim, retain everything
-    // else at the lowest-quality settings. Users see the COMPRESSION
-    // _OVERSHOOT error message above this rung's threshold.
-    { maxDim: Math.round(maxDim * 0.66), bitrate: Math.round(bitrate * 0.35), maxDurationSec: Math.max(20, Math.round(maxDurationSec * 0.8)), playbackRate: effectiveRate },
-  ];
+  // Size-estimate convergence (replaces the old fixed rung ladder).
+  //
+  // The killer on iPhone: Safari's MediaRecorder frequently IGNORES the
+  // bitrate setting, so lowering bitrate alone doesn't shrink the file
+  // ("still too large after compression" → upload exceeds the cap → the
+  // universal timeout/error users hit on iOS while Android works). The lever
+  // that ALWAYS reduces size is RESOLUTION (and, last resort, duration).
+  //
+  // So instead of stepping through many fixed rungs (each a slow full
+  // re-encode that compounds into a timeout on iOS), we measure the first
+  // result and jump straight to the resolution that should fit: encoded size
+  // scales ~ with pixel count, so scale maxDim by sqrt(target/actual) with a
+  // safety margin. Converges in ~2 attempts; only trims duration once the
+  // resolution is already small (i.e. the clip is genuinely too long).
+  const attempt = (dim, br, dur, withProgress) =>
+    compressVideoForUpload(videoFile, {
+      maxDim: Math.max(180, Math.round(dim)),
+      bitrate: Math.max(220_000, Math.round(br)),
+      maxDurationSec: dur,
+      playbackRate: effectiveRate,
+      skipBelowBytes: targetBytes,
+      onProgress: withProgress ? onProgress : undefined,
+    });
 
   let best = null;
-  for (let i = 0; i < rungs.length; i++) {
-    const r = rungs[i];
-    // Forced compression: don't skip for files between targetBytes and 15 MB.
-    // We also forward onProgress on the FIRST attempt only — re-firing 0→100
-    // for each retry confuses the UI.
-    const result = await compressVideoForUpload(videoFile, {
-      ...r,
-      skipBelowBytes: targetBytes,
-      onProgress: i === 0 ? onProgress : undefined,
-    });
+  let dim = maxDim;
+  let br = bitrate;
+  let dur = maxDurationSec;
+  for (let i = 0; i < 5; i++) {
+    const result = await attempt(dim, br, dur, i === 0);
     if (!best || result.size < best.size) best = result;
     if (result.size <= targetBytes) {
-      if (i > 0) console.info(`[compress-fit] fit on rung ${i + 1}/${rungs.length} (${(result.size / 1024).toFixed(0)} KB)`);
+      if (i > 0) {
+        console.info(`[compress-fit] fit on attempt ${i + 1} (${(result.size / 1024).toFixed(0)} KB @ ${Math.round(dim)}px, ${dur}s)`);
+      }
       return result;
     }
-    console.warn(`[compress-fit] rung ${i + 1} overshot: ${(result.size / 1024).toFixed(0)} KB > ${(targetBytes / 1024).toFixed(0)} KB — retrying tighter`);
+    const overshoot = result.size / targetBytes; // > 1
+    console.warn(`[compress-fit] attempt ${i + 1} over by ${overshoot.toFixed(1)}x: ${(result.size / 1024).toFixed(0)} KB @ ${Math.round(dim)}px`);
+    // Drop resolution by sqrt(overshoot) (size ~ pixel count) + a 10% margin.
+    dim = (dim / Math.sqrt(overshoot)) * 0.9;
+    br = br * 0.6;
+    // Once we're already small and STILL over, the clip is just too long —
+    // start trimming duration as well.
+    if (dim < 280 && dur > 18) {
+      dur = Math.max(12, Math.round(dur * 0.6));
+    }
   }
 
-  // Every rung overshot. Surface a specific, actionable error.
+  // Couldn't fit even tiny — surface a clear, actionable error.
   const sizeMb = (best?.size || videoFile.size) / 1024 / 1024;
   const capMb = targetBytes / 1024 / 1024;
-  const e = new Error(`Even at lowest quality, the clip is ${sizeMb.toFixed(1)} MB (cap ${capMb.toFixed(1)} MB). Trim to ~15 seconds and try again.`);
+  const e = new Error(`This clip is ${sizeMb.toFixed(1)} MB even after compression (cap ${capMb.toFixed(1)} MB). Record a shorter clip (~10–15s) or at a lower resolution and try again.`);
   e.code = "COMPRESSION_OVERSHOOT";
   e.bestResult = best;
   throw e;
