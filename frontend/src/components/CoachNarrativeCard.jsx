@@ -23,18 +23,28 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
   if (!narrative || typeof narrative !== "object") return null;
 
   const intro = (narrative.intro || "").trim();
-  const strengths = (narrative.strengths_paragraph || "").trim();
-  const improvements = (narrative.improvements_paragraph || "").trim();
   const takeaway = (narrative.takeaway || "").trim();
 
+  // Prefer the new bullet arrays; for older/cached responses that only have
+  // prose paragraphs, split into sentences so they still render as bullets.
+  const toPoints = (arr, paragraph) => {
+    if (Array.isArray(arr) && arr.length) {
+      return arr.map((s) => String(s).trim()).filter(Boolean);
+    }
+    const p = (paragraph || "").trim();
+    if (!p) return [];
+    return p.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  };
+  const strengthsPoints = toPoints(narrative.strengths_points, narrative.strengths_paragraph);
+  const improvementsPoints = toPoints(narrative.improvements_points, narrative.improvements_paragraph);
+
   // If Gemini gave us nothing, render nothing — better than an empty
-  // skeleton card. The skinny SessionSummaryHero below us still anchors
-  // the result with the at-a-glance shot mix chips.
-  if (!intro && !strengths && !improvements && !takeaway) return null;
+  // skeleton card.
+  if (!intro && !strengthsPoints.length && !improvementsPoints.length && !takeaway) return null;
 
   // Stitch together the spoken version so the Listen button reads the
   // whole debrief, not just one section.
-  const speakScript = [intro, strengths, improvements, takeaway]
+  const speakScript = [intro, ...strengthsPoints, ...improvementsPoints, takeaway]
     .filter(Boolean)
     .join(" ");
 
@@ -66,21 +76,21 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
           </p>
         )}
 
-        {strengths && (
+        {strengthsPoints.length > 0 && (
           <Section
             label="What's working"
             color="lime"
             icon={Sparkles}
-            body={strengths}
+            points={strengthsPoints}
           />
         )}
 
-        {improvements && (
+        {improvementsPoints.length > 0 && (
           <Section
             label="Where to focus"
             color="amber"
             icon={AlertTriangle}
-            body={improvements}
+            points={improvementsPoints}
           />
         )}
 
@@ -100,45 +110,25 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
   );
 }
 
-// Color-tinted section block. Renders Gemini's paragraph as prose, with
-// a light label above it. We split paragraphs on \n\n so multi-paragraph
-// outputs render with vertical breathing room instead of one wall of
-// text, but we don't bullet-ify single paragraphs (that's the whole
-// point — keep the coach voice intact).
-function Section({ label, color, icon: Icon, body }) {
+// Color-tinted section block. Renders the coach's points as a scannable
+// bullet list (each point one actionable line), with a light label above.
+function Section({ label, color, icon: Icon, points }) {
   const palette = {
     lime: {
-      bg: "bg-lime-400/5",
-      border: "border-lime-400/25",
-      ring: "border-lime-400/40",
-      label: "text-lime-300",
-      iconBg: "bg-lime-400/15",
-      iconBorder: "border-lime-400/40",
-      iconColor: "text-lime-300",
+      bg: "bg-lime-400/5", border: "border-lime-400/25", label: "text-lime-300",
+      iconBg: "bg-lime-400/15", iconBorder: "border-lime-400/40", iconColor: "text-lime-300",
+      dot: "bg-lime-400",
     },
     amber: {
-      bg: "bg-amber-400/5",
-      border: "border-amber-400/25",
-      ring: "border-amber-400/40",
-      label: "text-amber-300",
-      iconBg: "bg-amber-400/15",
-      iconBorder: "border-amber-400/40",
-      iconColor: "text-amber-300",
+      bg: "bg-amber-400/5", border: "border-amber-400/25", label: "text-amber-300",
+      iconBg: "bg-amber-400/15", iconBorder: "border-amber-400/40", iconColor: "text-amber-300",
+      dot: "bg-amber-400",
     },
   }[color] || {
-    bg: "bg-zinc-800/30",
-    border: "border-zinc-800",
-    ring: "border-zinc-700",
-    label: "text-zinc-300",
-    iconBg: "bg-zinc-800",
-    iconBorder: "border-zinc-700",
-    iconColor: "text-zinc-300",
+    bg: "bg-zinc-800/30", border: "border-zinc-800", label: "text-zinc-300",
+    iconBg: "bg-zinc-800", iconBorder: "border-zinc-700", iconColor: "text-zinc-300",
+    dot: "bg-zinc-500",
   };
-
-  const paragraphs = body
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
 
   return (
     <div className={`${palette.bg} border ${palette.border} rounded-lg p-2.5 flex items-start gap-2`}>
@@ -149,11 +139,14 @@ function Section({ label, color, icon: Icon, body }) {
         <p className={`text-[10px] uppercase tracking-wider font-bold ${palette.label} mb-1`}>
           {label}
         </p>
-        <div className="space-y-1.5 text-[12.5px] text-zinc-100 leading-snug">
-          {paragraphs.map((p, i) => (
-            <p key={i}>{p}</p>
+        <ul className="space-y-1 text-[12.5px] text-zinc-100 leading-snug">
+          {points.map((p, i) => (
+            <li key={i} className="flex items-start gap-1.5">
+              <span className={`mt-[6px] w-1 h-1 rounded-full ${palette.dot} shrink-0`} />
+              <span className="min-w-0">{p}</span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   );

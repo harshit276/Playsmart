@@ -751,6 +751,24 @@ def analyze_video_full(
     }
 
 
+def _clean_bullet_points(raw, max_pts: int = 4, max_len: int = 240) -> list:
+    """Coerce a coach-narrative section into a list of clean bullet strings.
+
+    Accepts the new array form (`strengths_points`) OR the old prose form
+    (`strengths_paragraph`) — for prose we split into sentences so cached/old
+    responses still render as bullets. Strips any leading bullet characters.
+    """
+    if isinstance(raw, (list, tuple)):
+        parts = [str(p).strip().lstrip("•-*–▪◦ ").strip() for p in raw]
+    elif isinstance(raw, str) and raw.strip():
+        import re as _re
+        parts = [p.strip() for p in _re.split(r"(?<=[.!?])\s+", raw.strip())]
+    else:
+        parts = []
+    parts = [p[:max_len] for p in parts if p]
+    return parts[:max_pts]
+
+
 def _build_universal_prompt(
     target_player_description: str | None = None,
     doubles_mode: bool = False,
@@ -981,16 +999,16 @@ def _build_universal_prompt(
         'Drives are the bread and butter of fast-paced doubles play — '
         'practicing them like this is essential for reaction time, racket '
         'control, and grip transitions.\'>",\n'
-        '    "strengths_paragraph": "<3-5 sentences describing what the '
-        'target player is doing well. Be SPECIFIC — name body parts, grip, '
-        'contact point, court position, racket carriage. Each observation '
-        'should reference what you actually saw in the video, not a generic '
-        'platitude. Format as flowing prose, not a bulleted list.>",\n'
-        '    "improvements_paragraph": "<4-6 sentences identifying 2-3 '
-        'specific corrections, each in OBSERVATION → CORRECTION form. '
-        'Anchor each on a visual cue (stance width, knee bend, weight '
-        'transfer, contact height, follow-through). Like a real coach '
-        'standing on the sideline pointing at things.>",\n'
+        '    "strengths_points": ["<2-4 SHORT bullet points, one specific '
+        'thing the target player does well per bullet. Be SPECIFIC — name '
+        'body parts, grip, contact point, court position, racket carriage, '
+        'and reference what you actually saw, not generic platitudes. One '
+        'concise sentence per bullet, no bullet character.>", "..."],\n'
+        '    "improvements_points": ["<2-3 SHORT bullet points, one '
+        'correction per bullet in OBSERVATION → FIX form, anchored on a '
+        'visual cue (stance width, knee bend, weight transfer, contact '
+        'height, follow-through). One concise sentence per bullet, no bullet '
+        'character.>", "..."],\n'
         '    "takeaway": "<1-2 sentence forward-looking close. Name the '
         'ONE thing this player should work on next session.>"\n'
         '  },\n'
@@ -1456,10 +1474,16 @@ def analyze_video_universal(
     cn_raw = data.get("coach_narrative") or {}
     if not isinstance(cn_raw, dict):
         cn_raw = {}
+    _str_pts = _clean_bullet_points(cn_raw.get("strengths_points") or cn_raw.get("strengths_paragraph"), max_pts=4)
+    _imp_pts = _clean_bullet_points(cn_raw.get("improvements_points") or cn_raw.get("improvements_paragraph"), max_pts=3)
     coach_narrative = {
         "intro": str(cn_raw.get("intro", ""))[:800].strip(),
-        "strengths_paragraph": str(cn_raw.get("strengths_paragraph", ""))[:1500].strip(),
-        "improvements_paragraph": str(cn_raw.get("improvements_paragraph", ""))[:1500].strip(),
+        # New bullet form (rendered as lists) + paragraph form kept for the
+        # voice coach context and any older consumer.
+        "strengths_points": _str_pts,
+        "improvements_points": _imp_pts,
+        "strengths_paragraph": (" ".join(_str_pts) or str(cn_raw.get("strengths_paragraph", "")))[:1500].strip(),
+        "improvements_paragraph": (" ".join(_imp_pts) or str(cn_raw.get("improvements_paragraph", "")))[:1500].strip(),
         "takeaway": str(cn_raw.get("takeaway", ""))[:500].strip(),
     }
     # Detect "user picked Player A but Gemini described Player B" cases —
@@ -1706,10 +1730,14 @@ def stream_analyze_video_universal(
     cn_raw_stream = data.get("coach_narrative") or {}
     if not isinstance(cn_raw_stream, dict):
         cn_raw_stream = {}
+    _str_pts_s = _clean_bullet_points(cn_raw_stream.get("strengths_points") or cn_raw_stream.get("strengths_paragraph"), max_pts=4)
+    _imp_pts_s = _clean_bullet_points(cn_raw_stream.get("improvements_points") or cn_raw_stream.get("improvements_paragraph"), max_pts=3)
     coach_narrative_stream = {
         "intro": str(cn_raw_stream.get("intro", ""))[:800].strip(),
-        "strengths_paragraph": str(cn_raw_stream.get("strengths_paragraph", ""))[:1500].strip(),
-        "improvements_paragraph": str(cn_raw_stream.get("improvements_paragraph", ""))[:1500].strip(),
+        "strengths_points": _str_pts_s,
+        "improvements_points": _imp_pts_s,
+        "strengths_paragraph": (" ".join(_str_pts_s) or str(cn_raw_stream.get("strengths_paragraph", "")))[:1500].strip(),
+        "improvements_paragraph": (" ".join(_imp_pts_s) or str(cn_raw_stream.get("improvements_paragraph", "")))[:1500].strip(),
         "takeaway": str(cn_raw_stream.get("takeaway", ""))[:500].strip(),
     }
     target_mismatch_warning_stream = _detect_target_mismatch(
