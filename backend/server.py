@@ -3983,6 +3983,9 @@ async def _start_job_workers():
     # "queued"/"running" gets re-enqueued (its clip was persisted) so it
     # finishes server-side instead of leaving the client polling forever.
     asyncio.create_task(_requeue_orphaned_jobs())
+    # Retention loop: ping users 3/7/14/30 days after a session to come back
+    # and measure progress (Web Push, templated copy, no Gemini cost).
+    asyncio.create_task(_reengagement_loop())
 
 
 async def _requeue_orphaned_jobs():
@@ -4240,6 +4243,146 @@ async def _notify_job_done(job: dict, payload: dict):
             await db.push_subscriptions.delete_many({"endpoint": {"$in": dead}})
         except Exception:
             pass
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Smart re-engagement notifications (the retention loop)
+# ──────────────────────────────────────────────────────────────────────
+# Bring users back to MEASURE PROGRESS. A background loop scans saved
+# analyses and, at 3 / 7 / 14 / 30 days after a session the user hasn't
+# followed up on, sends a Web Push using that session's sport + weakness
+# ("Last time we flagged 'slow recovery' — upload a new clip and let's
+# measure it"). Reuses the existing push delivery + subscriptions; no Gemini
+# cost (copy is templated). Deduped per (analysis, milestone), and skipped
+# entirely once the user uploads a newer video (they're already active).
+_REENGAGE_MILESTONES = [3, 7, 14, 30]
+
+
+def _reengage_copy(analysis: dict, milestone_days: int) -> dict:
+    sport = (analysis.get("sport") or "").replace("_", " ").strip()
+    sport_title = sport.title() if sport else "your sport"
+    shot = _primary_shot_type(analysis)
+    weaknesses = sorted(_shot_set(analysis))
+    weak = weaknesses[0] if weaknesses else None
+    focus = shot if (shot and shot != "shot") else (sport.lower() or "technique")
+    title = f"Ready to see if your {focus} improved?"
+    if weak:
+        body = (f'Last time we flagged "{weak}". Have you worked on it? '
+                f"Upload a new {sport_title} clip and let's measure your progress.")
+    else:
+        body = (f"It's been a few days — upload a new {sport_title} clip and "
+                f"we'll measure how much you've improved since last time.")
+    return {
+        "title": title,
+        "body": body[:180],
+        "url": "/analyze",
+        "job_id": f"reengage-{analysis.get('id')}-{milestone_days}",
+    }
+
+
+async def _send_reengage_to_user(user_id: str, payload: dict) -> bool:
+    try:
+        subs = await asyncio.wait_for(
+            db.push_subscriptions.find({"user_id": user_id}).to_list(length=10),
+            timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        return False
+    if not subs:
+        return False
+    loop = asyncio.get_event_loop()
+    dead, ok_any = [], False
+    for s in subs:
+        sub = s.get("subscription")
+        if not sub:
+            continue
+        ok = await loop.run_in_executor(None, _send_web_push_sync, sub, payload)
+        if ok:
+            ok_any = True
+        else:
+            dead.append(s.get("endpoint"))
+    if dead:
+        try:
+            await db.push_subscriptions.delete_many({"endpoint": {"$in": dead}})
+        except Exception:
+            pass
+    return ok_any
+
+
+async def _scan_and_send_reengagement():
+    if not (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY):
+        return
+    from datetime import timedelta as _td
+    now = datetime.now(timezone.utc)
+    sent = 0
+    for d in _REENGAGE_MILESTONES:
+        lo = (now - _td(days=d, hours=12)).isoformat()
+        hi = (now - _td(days=d) + _td(hours=12)).isoformat()
+        try:
+            candidates = await asyncio.wait_for(
+                db.video_analyses.find(
+                    {"date": {"$gte": lo, "$lte": hi}},
+                    {"id": 1, "user_id": 1, "sport": 1, "date": 1,
+                     "shot_analysis": 1, "shots": 1},
+                ).to_list(length=500),
+                timeout=10.0)
+        except (Exception, asyncio.TimeoutError):
+            continue
+        for a in candidates:
+            uid, aid = a.get("user_id"), a.get("id")
+            if not (uid and aid):
+                continue
+            try:
+                if await db.reengagement_log.find_one({"analysis_id": aid, "milestone": d}):
+                    continue
+                # Active user (uploaded something newer)? Don't nag them.
+                if await db.video_analyses.find_one(
+                        {"user_id": uid, "date": {"$gt": a.get("date")}}, {"_id": 1}):
+                    continue
+            except Exception:
+                continue
+            ok = await _send_reengage_to_user(uid, _reengage_copy(a, d))
+            if ok:
+                try:
+                    await db.reengagement_log.insert_one(
+                        {"analysis_id": aid, "user_id": uid, "milestone": d, "sent_at": now})
+                except Exception:
+                    pass
+                sent += 1
+    if sent:
+        try:
+            logger.info(f"[reengage] sent {sent} re-engagement push(es)")
+        except Exception:
+            pass
+
+
+async def _reengagement_loop():
+    await asyncio.sleep(180)  # let startup settle
+    while True:
+        try:
+            await _scan_and_send_reengagement()
+        except Exception as exc:
+            try:
+                logger.warning(f"[reengage] loop error: {str(exc)[:160]}")
+            except Exception:
+                pass
+        await asyncio.sleep(6 * 3600)  # every 6h (±12h window catches each milestone)
+
+
+@api_router.post("/reengagement/test")
+async def reengagement_test(authorization: str = Header(None)):
+    """Send a re-engagement push for the caller's latest analysis right now —
+    lets you verify copy + delivery without waiting days."""
+    user = await get_current_user(authorization)
+    try:
+        latest = await db.video_analyses.find_one({"user_id": user["id"]}, sort=[("date", -1)])
+    except Exception:
+        latest = None
+    if not latest:
+        raise HTTPException(status_code=404, detail="No analysis to re-engage on yet")
+    payload = _reengage_copy(latest, 7)
+    ok = await _send_reengage_to_user(user["id"], payload)
+    return {"sent": ok, "payload": payload,
+            "note": None if ok else "No active push subscription on this account — enable notifications first."}
 
 
 # ──────────────────────────────────────────────────────────────────────
