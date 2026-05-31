@@ -242,6 +242,18 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
   const [interimText, setInterimText] = useState("");
   const [coachTalking, setCoachTalking] = useState(false);
   const [streaming, setStreaming] = useState(false);
+  // Read coach replies aloud? Default OFF — replies are shown as text, so we
+  // don't spend TTS (Sarvam/ElevenLabs) on every chat turn. Users can flip it
+  // on for hands-free, and the first-time auto-narration still speaks. Pref
+  // persists across sessions.
+  const [readAloud, setReadAloud] = useState(() => {
+    try { return localStorage.getItem("playsmart_coach_read_aloud") === "1"; }
+    catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("playsmart_coach_read_aloud", readAloud ? "1" : "0"); }
+    catch { /* noop */ }
+  }, [readAloud]);
   const [messages, setMessages] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyEntries, setHistoryEntries] = useState([]);
@@ -496,7 +508,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
           { role: "user", text, t: Date.now() },
           { role: "coach", text: ack, t: Date.now() },
         ]);
-        try { speakWithCoachVoice(ack); } catch {}
+        if (readAloud) { try { speakWithCoachVoice(ack); } catch {} }
         onRequestReanalyze();
         return;
       }
@@ -666,10 +678,9 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
       setStreaming(false);
       abortControllerRef.current = null;
 
-      // Speak the entire reply as a single TTS call. The engine's own
-      // prosody handles internal periods/commas with natural pacing
-      // and zero "gap" between sentences.
-      if (finalText) {
+      // Speak the reply ONLY if the user turned "Read aloud" on. Default off:
+      // the reply is already on screen as text, so we skip TTS to save cost.
+      if (finalText && readAloud) {
         setCoachTalking(true);
         const ctrl = speakWithCoachVoice(finalText, {
           voiceKey: coachVoiceKey,
@@ -697,6 +708,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
       cancelTts,
       coachVoiceKey,
       onRequestReanalyze,
+      readAloud,
     ],
   );
 
@@ -1198,6 +1210,23 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
                   {listening ? "Listening… (tap to send)" : "Hold to Talk"}
                 </button>
               )}
+
+              {/* Read-aloud toggle — default OFF: replies are shown as text,
+                  so we don't spend TTS on every turn. Flip on for hands-free. */}
+              <button
+                type="button"
+                onClick={() => { if (readAloud) cancelTts(); setReadAloud((v) => !v); }}
+                aria-pressed={readAloud}
+                title={readAloud ? "Coach reads replies aloud" : "Replies are text only"}
+                className={`flex items-center gap-1.5 px-3 h-10 rounded-full text-xs font-semibold border transition-colors ${
+                  readAloud
+                    ? "bg-lime-400/15 border-lime-400/40 text-lime-200"
+                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                <Volume2 className="w-4 h-4" />
+                {readAloud ? "Voice on" : "Voice off"}
+              </button>
 
               {/* Coach interrupt */}
               {coachTalking && (

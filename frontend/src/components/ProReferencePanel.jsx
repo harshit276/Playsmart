@@ -242,41 +242,10 @@ export default function ProReferencePanel({ shots, sport }) {
     return cb - ca;
   });
 
-  // Empty-state: ZERO curated refs for ANY shot the player produced.
-  // Still useful to surface so the user knows the feature exists +
-  // understands which sports are covered.
-  if (cards.length === 0) {
-    // Count distinct shot types the player produced so the message is
-    // honest about what we tried and didn't find.
-    const uncuredTypes = Array.from(groups.keys()).slice(0, 4);
-    if (uncuredTypes.length === 0) return null;
-    return (
-      <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-center justify-center shrink-0">
-            <Inbox className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="flex-1">
-            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-1">
-              VS Pro Reference
-            </p>
-            <p className="text-sm text-zinc-200 leading-snug">
-              We don't have curated pro references for{" "}
-              <span className="text-white font-semibold capitalize">
-                {uncuredTypes.map(_titleCase).join(", ")}
-              </span>{" "}
-              yet.
-            </p>
-            <p className="text-[11px] text-zinc-500 mt-1 leading-snug">
-              We curate one pro clip per shot type per sport so the comparison stays accurate.
-              Want this shot covered? <a href="mailto:hello@athlyticai.com?subject=Pro+reference+request"
-                className="text-sky-400 hover:text-sky-300 font-medium">Vote for it ↗</a>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // No curated pro reference for any of the player's shot types → render
+  // NOTHING. (We used to show a "we don't have this yet — vote for it" card,
+  // but it's just noise at the bottom of the results; hide it entirely.)
+  if (cards.length === 0) return null;
 
   return (
     <motion.div
