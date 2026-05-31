@@ -310,6 +310,29 @@ const ACTIVE_JOB_KEY = "playsmart_active_analysis_job";
 const PICKER_SESSION_KEY = "playsmart_picker_session";
 const INFLIGHT_VIDEO_KEY = "analysis_inflight";
 
+// Base64-encode a Blob/File the FAST way. The old approach built a string
+// char-by-char (`bin += String.fromCharCode(bytes[i])`) which is O(n²) and
+// memory-heavy — a few seconds on desktop but 30-60s (or an out-of-memory
+// crash) on iPhone for a multi-MB clip, which surfaced as "universal mode
+// timeout" on iOS while PC worked. FileReader.readAsDataURL does the encoding
+// natively in O(n); we just strip the "data:<mime>;base64," prefix.
+function fileToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = String(reader.result || "");
+        const comma = res.indexOf(",");
+        resolve(comma >= 0 ? res.slice(comma + 1) : res);
+      };
+      reader.onerror = () => reject(reader.error || new Error("FileReader failed"));
+      reader.readAsDataURL(blob);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 // Build the universal-mode result object the UI renders, from the raw backend
 // `data` (events + narrative + sport). Extracted to module scope so BOTH the
 // live analyze flow and the resume-on-return path produce identical results.
@@ -867,10 +890,7 @@ export default function AnalyzePage() {
         if (cancelled || !cached?.file) { clearPickerSession(); return; }
         // Recompute b64 from the restored clip (cheaper to recompute than to
         // also persist the ~5MB base64 string).
-        const buf = await cached.file.arrayBuffer();
-        const bytes = new Uint8Array(buf);
-        let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        const b64 = btoa(bin);
+        const b64 = await fileToBase64(cached.file);
         if (cancelled || !mountedRef.current) return;
         setFile(cached.file);
         setSelectedSport(sess.sport || selectedSport);
@@ -1408,10 +1428,7 @@ export default function AnalyzePage() {
           } catch {
             /* noop — diagnostic only */
           }
-          const buf = await uploadFile.arrayBuffer();
-          const bytes = new Uint8Array(buf);
-          let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-          b64 = btoa(bin);
+          b64 = await fileToBase64(uploadFile);
 
           // Pass 1 — let Gemini identify the visible players (optional).
           // 25s cap (was 45s): this is just the player-PICKER pre-pass. On a
@@ -1805,11 +1822,7 @@ export default function AnalyzePage() {
                 return;
               }
               setLoadingText("Sending video to AI Coach for full analysis...");
-              const buf = await uploadFile.arrayBuffer();
-              const bytes = new Uint8Array(buf);
-              let bin = "";
-              for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-              const b64 = btoa(bin);
+              const b64 = await fileToBase64(uploadFile);
               console.info(`[video-direct] uploading ${(file.size / 1024).toFixed(0)} KB to Gemini...`);
               const { data } = await api.post("/analyze-video-direct", {
                 sport: sportToAnalyze,
