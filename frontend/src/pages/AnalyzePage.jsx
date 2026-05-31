@@ -759,6 +759,20 @@ export default function AnalyzePage() {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // Re-register the push subscription on every app open (if already granted).
+  // iOS rotates/expires push subscriptions; when ours goes stale the backend
+  // pushes to a dead endpoint, prunes it, and the device silently stops
+  // getting notifications ("worked in the afternoon, then nothing on the same
+  // phone"). Re-subscribing on open keeps a fresh, valid endpoint registered.
+  // Cheap + idempotent (reuses the existing subscription when still valid).
+  useEffect(() => {
+    try {
+      if ("Notification" in window && Notification.permission === "granted") {
+        import("@/lib/push").then((m) => m.subscribeToPush(api)).catch(() => {});
+      }
+    } catch { /* unsupported */ }
+  }, []);
+
   // Current notification permission, for the "Notify me" control's label.
   const [notifyPermission, setNotifyPermission] = useState(
     typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported",
@@ -1510,6 +1524,13 @@ export default function AnalyzePage() {
         const targetDesc = options.universalPick
           ? `${options.universalPick.description} (${options.universalPick.clothing}, ${options.universalPick.court_position})`.replace(/\(\s*,\s*\)/g, "").trim()
           : null;
+        // When the user explicitly PICKED one player from the multi-player
+        // picker, analyze ONLY that player (doubles-both off) — otherwise a
+        // doubles clip with 4 people would mix several players' shots into one
+        // confusing list. doubles_mode stays on only when no specific player
+        // was chosen (so a clip the user didn't disambiguate still covers both
+        // near-court players).
+        const effectiveDoubles = options.fromPicker ? false : doublesMode;
         // ─── Streaming-first path (premium tier only) ─────────────────
         // Default-enabled for premium: gets the user perceived progress
         // (uploaded / analyzing / per-shot badges) while Gemini is still
@@ -1542,7 +1563,7 @@ export default function AnalyzePage() {
             video_b64: b64,
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
-            doubles_mode: doublesMode,
+            doubles_mode: effectiveDoubles,
             time_scale: timeScale,
             push_endpoint: pushEndpoint,
           }, { timeout: 45000 });
@@ -1577,7 +1598,7 @@ export default function AnalyzePage() {
             // Doubles flag forwarded to backend — flips the prompt to
             // analyse-both-near-court mode and tags each event with
             // player_role.
-            if (doublesMode) fd.append("doubles_mode", "true");
+            if (effectiveDoubles) fd.append("doubles_mode", "true");
             // Tell the backend how to map Gemini's (possibly sped-up)
             // timestamps back to the original clip the user views.
             if (timeScale && timeScale !== 1) fd.append("time_scale", String(timeScale));
@@ -1703,7 +1724,7 @@ export default function AnalyzePage() {
             video_b64: b64,
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
-            doubles_mode: doublesMode,
+            doubles_mode: effectiveDoubles,
             time_scale: timeScale,
             // Bumped to 210s so we don't false-fail when Gemini has a slow
             // moment on a dense clip. The backend caps Gemini at 180s and
@@ -2708,6 +2729,18 @@ export default function AnalyzePage() {
                 <CheckCircle2 className="w-4 h-4 text-lime-400 flex-shrink-0 mt-0.5" />
                 <p className="text-lime-200/90 text-[11px] leading-snug">
                   Analysis is running in the background — <span className="font-semibold">you can leave this page or lock your phone.</span> We'll notify you and keep your result ready when it's done.
+                </p>
+              </div>
+            )}
+
+            {/* Pre-handoff phase (uploading on the phone) — this part runs in
+                the browser and PAUSES if you background the app on iOS, so
+                tell the user to stay until the green "you can leave" banner. */}
+            {!analysisJobId && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl bg-amber-400/10 border border-amber-400/30 px-3 py-2">
+                <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-amber-200/90 text-[11px] leading-snug">
+                  Preparing your video on this device — <span className="font-semibold">please keep this page open until the green "you can leave" message appears.</span> After that, you can switch apps or lock your phone.
                 </p>
               </div>
             )}
@@ -4883,7 +4916,7 @@ export default function AnalyzePage() {
           runClientAnalysis(
             result?.sport || selectedSport || "unknown",
             null,
-            { universalPick: picked },
+            { universalPick: picked, fromPicker: true },
           );
         };
         const BOX_COLORS = [
