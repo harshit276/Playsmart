@@ -3819,11 +3819,62 @@ async def _update_job(job_id: str, **fields):
         pass
 
 
+# ── Durable video storage so jobs survive a process restart (deploy) ──
+# The in-memory _job_videos + _job_queue are wiped on every redeploy. Without
+# persistence, any job in flight at restart is orphaned: its Mongo record
+# stays "queued"/"running" forever and the client polls indefinitely
+# ("stuck loading in the background"). We persist the compressed clip in a
+# side collection and re-enqueue stuck jobs on startup so they actually finish
+# server-side regardless of the tab or a redeploy.
+async def _persist_job_video(job_id: str, b64: str):
+    try:
+        await asyncio.wait_for(db.analysis_job_videos.update_one(
+            {"job_id": job_id},
+            {"$set": {"job_id": job_id, "video_b64": b64,
+                      "created_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        ), timeout=8.0)
+        return True
+    except (Exception, asyncio.TimeoutError):
+        return False
+
+
+async def _load_persisted_video(job_id: str):
+    try:
+        doc = await asyncio.wait_for(
+            db.analysis_job_videos.find_one({"job_id": job_id}), timeout=8.0)
+        if doc and doc.get("video_b64"):
+            import base64 as _b64
+            return _b64.b64decode(doc["video_b64"])
+    except (Exception, asyncio.TimeoutError):
+        pass
+    return None
+
+
+async def _delete_persisted_video(job_id: str):
+    try:
+        await asyncio.wait_for(
+            db.analysis_job_videos.delete_one({"job_id": job_id}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        pass
+
+
+def _enqueue_job(job: dict):
+    global _job_seq
+    _job_seq += 1
+    _job_queue.put_nowait((job.get("priority", _PRIORITY_FREE), _job_seq, job))
+
+
 async def _process_job(job: dict):
     job_id = job["job_id"]
     video_bytes = _job_videos.get(job_id)
     if not video_bytes:
+        # In-memory copy gone (process restarted) — reload the persisted clip
+        # so the job still completes instead of dying as "video_expired".
+        video_bytes = await _load_persisted_video(job_id)
+    if not video_bytes:
         await _update_job(job_id, status="error", error="video_expired")
+        await _delete_persisted_video(job_id)
         return
     await _update_job(job_id, status="running",
                       started_at=datetime.now(timezone.utc))
@@ -3848,6 +3899,9 @@ async def _process_job(job: dict):
         return
     finally:
         _job_videos.pop(job_id, None)  # free RAM regardless of outcome
+        # Gemini has the bytes now — drop the durable copy too (the result is
+        # what we keep). On the error/timeout returns above this also runs.
+        await _delete_persisted_video(job_id)
 
     payload = {
         "sport_detected": result.get("sport_detected", "unknown"),
@@ -3925,6 +3979,38 @@ async def _start_job_workers():
         logger.info(f"[jobs] started {_JOB_CONCURRENCY} analysis workers")
     except Exception:
         pass
+    # Recover jobs orphaned by the restart that just happened: anything still
+    # "queued"/"running" gets re-enqueued (its clip was persisted) so it
+    # finishes server-side instead of leaving the client polling forever.
+    asyncio.create_task(_requeue_orphaned_jobs())
+
+
+async def _requeue_orphaned_jobs():
+    try:
+        from datetime import timedelta as _td
+        cutoff = datetime.now(timezone.utc) - _td(minutes=30)
+        stuck = await asyncio.wait_for(db.analysis_jobs.find({
+            "status": {"$in": ["queued", "running"]},
+            "created_at": {"$gte": cutoff},
+        }).to_list(length=100), timeout=8.0)
+    except (Exception, asyncio.TimeoutError):
+        return
+    requeued = 0
+    for job in stuck:
+        job.pop("_id", None)
+        # _process_job reloads the persisted clip; if it's gone it self-marks
+        # the job as errored rather than hanging.
+        try:
+            await _update_job(job["job_id"], status="queued")
+            _enqueue_job(job)
+            requeued += 1
+        except Exception:
+            pass
+    if requeued:
+        try:
+            logger.info(f"[jobs] re-enqueued {requeued} orphaned job(s) after restart")
+        except Exception:
+            pass
 
 
 @api_router.post("/analyze-video-async")
@@ -3988,9 +4074,12 @@ async def analyze_video_async_submit(
         # If the record write fails the client can't poll — fail loudly rather
         # than silently dropping the job.
         raise HTTPException(status_code=503, detail="could not create job — retry shortly")
+    # Persist the clip so the job survives a redeploy/restart (durable
+    # background processing). Best-effort: if it fails, the in-memory copy
+    # still runs the job as long as the process doesn't restart mid-flight.
+    await _persist_job_video(job_id, b64)
     _job_videos[job_id] = video_bytes
-    _job_seq += 1
-    await _job_queue.put((priority, _job_seq, job))
+    _enqueue_job(job)
     return {"job_id": job_id, "status": "queued"}
 
 
