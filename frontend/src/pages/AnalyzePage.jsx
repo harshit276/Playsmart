@@ -15,7 +15,7 @@ import {
   ChevronDown, ChevronUp, ExternalLink, ThumbsUp, Calendar,
   Bot, Lightbulb, Youtube, Download, Share2, Film, Scissors, Copy,
   Users, Cpu, Cloud, Lock, Footprints, Wind, Activity, Flame, Crosshair,
-  Eye, BarChart2, Volume2, AlertCircle, MessageCircle, GitCompare
+  Eye, BarChart2, Volume2, AlertCircle, MessageCircle, GitCompare, Bell
 } from "lucide-react";
 import api from "@/lib/api";
 import InsufficientTokensModal from "@/components/InsufficientTokensModal";
