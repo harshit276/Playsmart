@@ -250,6 +250,8 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
     try { return localStorage.getItem("playsmart_coach_read_aloud") === "1"; }
     catch { return false; }
   });
+  // Text-to-coach input (alternative to the mic).
+  const [typedText, setTypedText] = useState("");
   useEffect(() => {
     try { localStorage.setItem("playsmart_coach_read_aloud", readAloud ? "1" : "0"); }
     catch { /* noop */ }
@@ -972,13 +974,8 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
                 )}
               </div>
               <div>
-                <p className="text-sm font-semibold leading-tight flex items-center gap-1.5">
+                <p className="text-sm font-semibold leading-tight">
                   Live Coach
-                  {premiumAvailable && (
-                    <span className="text-[9px] uppercase tracking-wider font-bold text-lime-300 bg-lime-400/10 border border-lime-400/30 px-1.5 py-0.5 rounded">
-                      HD Voice
-                    </span>
-                  )}
                 </p>
                 <p className="text-[10px] text-zinc-500 leading-tight">
                   {sportLabel ? `${sportLabel} · ` : ""}
@@ -1278,60 +1275,35 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
               )}
             </div>
 
-            {/* Voice picker — only renders when the backend has
-                ElevenLabs configured AND no premium reply is in flight.
-                Closing the menu via outside-click is implicit since the
-                next mic press will steal focus. */}
-            {premiumAvailable && (
-              <div className="mt-3 relative">
-                <button
-                  type="button"
-                  onClick={() => setShowVoiceMenu((v) => !v)}
-                  className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-lime-400/10 to-emerald-400/5 border border-lime-400/30 text-[11px] font-semibold text-lime-200 hover:from-lime-400/15 transition-colors"
-                  aria-expanded={showVoiceMenu}
-                  aria-label="Choose coach voice"
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <Headphones className="w-3.5 h-3.5" />
-                    Voice:
-                    <span className="text-white">
-                      {COACH_VOICE_PRESETS.find((p) => p.key === coachVoiceKey)?.label || "Aria"}
-                    </span>
-                    <span className="text-zinc-400 font-normal">
-                      · {COACH_VOICE_PRESETS.find((p) => p.key === coachVoiceKey)?.blurb || "Warm coach"}
-                    </span>
-                  </span>
-                  <span className="text-[9px] uppercase tracking-wider text-lime-300/80">
-                    Premium ▾
-                  </span>
-                </button>
-                {showVoiceMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute z-10 left-0 right-0 bottom-full mb-1 rounded-xl border border-zinc-700 bg-zinc-900 shadow-xl shadow-black/40 overflow-hidden"
-                  >
-                    {COACH_VOICE_PRESETS.map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => handleSelectVoice(p.key)}
-                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-zinc-800 ${
-                          p.key === coachVoiceKey
-                            ? "bg-lime-400/10 text-lime-200"
-                            : "text-zinc-200"
-                        }`}
-                      >
-                        <span className="font-semibold">{p.label}</span>
-                        <span className="text-[10px] text-zinc-500">
-                          {p.blurb}
-                        </span>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </div>
-            )}
+            {/* Type-to-coach: a text box so users can chat without using the
+                mic at all (mic STT is unreliable on first press in some
+                browsers; typing always works). */}
+            <form
+              className="mt-3 flex items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const t = (typedText || "").trim();
+                if (!t || streaming) return;
+                setTypedText("");
+                sendUserMessage(t);
+              }}
+            >
+              <input
+                type="text"
+                value={typedText}
+                onChange={(e) => setTypedText(e.target.value)}
+                placeholder="Type a question for your coach…"
+                className="flex-1 min-w-0 h-10 px-3 rounded-full bg-zinc-800/80 border border-zinc-700 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime-400/50"
+                disabled={streaming}
+              />
+              <button
+                type="submit"
+                disabled={streaming || !typedText.trim()}
+                className="h-10 px-4 rounded-full bg-lime-400 text-black font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed hover:bg-lime-500"
+              >
+                Send
+              </button>
+            </form>
 
             {/* Mode + secondary controls */}
             <div className="mt-3 flex items-center justify-between gap-2">
@@ -1382,9 +1354,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
               </div>
             </div>
             <p className="mt-2 text-[10px] text-zinc-600 leading-relaxed">
-              {premiumAvailable
-                ? `HD voice powered by ${providerLabel || "HD TTS"} · Mic runs on-device · 5 tokens per reply.`
-                : "Voice runs on your device · Coach answers stream from AthlyticAI · 5 tokens per reply."}
+              Type or talk to your coach · 5 tokens per reply.
             </p>
           </div>
         </motion.div>
