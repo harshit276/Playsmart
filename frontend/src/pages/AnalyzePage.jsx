@@ -950,6 +950,22 @@ export default function AnalyzePage() {
         setActiveTab("results");
         setProgress(100);
         notifyAnalysisReady(universalResult.sport, universalResult.total_shots_detected);
+        // Save to history too — the inline completion was skipped because the
+        // page was unmounted (user navigated away), so without this the
+        // analysis they see on return wouldn't land in their history/timeline.
+        try {
+          const { data: saved } = await api.post("/save-universal-analysis", {
+            sport: universalResult.sport,
+            skill_level: universalResult.skill_level,
+            quick_summary: universalResult.quick_summary,
+            coach_narrative: universalResult.coach_narrative,
+            shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
+          }, { timeout: 20000 });
+          if (saved?.analysis_id && mountedRef.current) {
+            setResult((prev) => (prev ? { ...prev, analysis_id: saved.analysis_id } : prev));
+            try { loadHistory(); } catch {}
+          }
+        } catch { /* best-effort */ }
       } catch {
         // Errored / expired — drop it silently; the user can re-upload.
       } finally {
