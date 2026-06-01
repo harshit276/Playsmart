@@ -1268,21 +1268,18 @@ export default function AnalyzePage() {
       }
     }
 
-    // Reanalyze sport-mismatch guard. If the user picked a Badminton card
-    // as the baseline and is now uploading a Table Tennis clip, the
-    // comparison is meaningless (shuttle vs ball speed live on different
-    // scales, smash vs loop are different shots, etc.). Ask the user
-    // explicitly: continue without comparison, or cancel.
-    if (reanalyzeContext?.sport && sportToAnalyze && reanalyzeContext.sport !== sportToAnalyze) {
-      setAnalyzing(false);
-      setReanalyzeMismatch({
-        oldSport: reanalyzeContext.sport,
-        oldShot: reanalyzeContext.shot_analysis?.shot_name,
-        oldDate: reanalyzeContext.date,
-        newSport: sportToAnalyze,
-        confidence: detected?.confidence ?? null,
-      });
-      return; // halts analysis until user resolves via the modal
+    // Reanalyze: TRUST the baseline sport the user explicitly picked.
+    // The single-keyframe /detect-sport-vlm is flaky — it has misread a clear
+    // basketball clip as "badminton (conf 1.00)", which then tripped a false
+    // "sport mismatch" error and blocked the whole re-analysis (even though
+    // analyzing the same clip standalone correctly returns basketball, because
+    // the FULL universal analysis is reliable). So in compare mode we force the
+    // baseline sport and no longer hard-block on the keyframe guess. The
+    // universal pass still detects the true sport, and the comparison's
+    // session_mismatch flag warns (reliably, post-analysis) if the two sessions
+    // genuinely differ.
+    if (reanalyzeContext?.sport) {
+      sportToAnalyze = reanalyzeContext.sport;
     }
 
     // Universal AND Premium modes skip the MoveNet pre-scan — Gemini

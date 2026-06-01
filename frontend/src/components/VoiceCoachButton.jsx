@@ -97,7 +97,16 @@ export default function VoiceCoachButton({ result, narrative }) {
   useEffect(() => {
     if (!summary) return undefined;
     if (firedRef.current) return undefined;
+    // Auto-narrate ONLY the first time ever — the very first analysis result
+    // (and first time opening a result) gets the spoken intro so the user
+    // discovers the voice coach. After that it stays silent (no auto-TTS on
+    // every result) — saves cost and isn't intrusive. Users can still tap to
+    // play, and the Talk-to-Coach has its own voice toggle.
+    let alreadyNarrated = false;
+    try { alreadyNarrated = localStorage.getItem("playsmart_auto_narration_done") === "1"; } catch {}
+    if (alreadyNarrated) { setState("done"); return undefined; }
     firedRef.current = true;
+    try { localStorage.setItem("playsmart_auto_narration_done", "1"); } catch {}
 
     setState("playing");
     const ctrl = speakWithCoachVoice(summary, {
