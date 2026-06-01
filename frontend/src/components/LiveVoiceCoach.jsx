@@ -721,21 +721,25 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
   }, [sendUserMessage]);
 
   // ─── Push-to-talk handlers ───────────────────────────────────────
-  const handleMicDown = useCallback(async () => {
+  const handleMicDown = useCallback(() => {
     if (!supported || streaming) return;
     cancelTts();
     setError("");
     setInterimText("");
     lastFinalRef.current = "";
-    const ok = await startMicAnalyser();
-    if (!ok) return;
     const rec = ensureRecognizer();
     if (!rec || !rec.isSupported()) {
       setError("Speech recognition unavailable in this browser.");
       return;
     }
-    rec.start();
+    // Start recognition SYNCHRONOUSLY inside the tap gesture. Previously we
+    // `await startMicAnalyser()` first, which yielded to the event loop and
+    // dropped the user-gesture context — so the first press silently did
+    // nothing and only the 2nd worked. The waveform analyser is cosmetic, so
+    // we kick it off (fire-and-forget) AFTER recognition has started.
+    try { rec.start(); } catch { /* already running */ }
     setListening(true);
+    startMicAnalyser().catch(() => {});
   }, [supported, streaming, cancelTts, startMicAnalyser, ensureRecognizer]);
 
   const handleMicUp = useCallback(() => {

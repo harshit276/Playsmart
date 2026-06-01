@@ -4368,21 +4368,64 @@ async def _reengagement_loop():
         await asyncio.sleep(6 * 3600)  # every 6h (±12h window catches each milestone)
 
 
+def _send_web_push_detail(subscription: dict, payload: dict):
+    """Like _send_web_push_sync but returns (ok, detail) for diagnostics —
+    surfaces the exact FCM/Apple status so we can tell why Android vs iOS
+    differs (e.g. fcm.googleapis.com 401 = VAPID subject/key mismatch)."""
+    try:
+        from pywebpush import webpush, WebPushException
+    except Exception as e:
+        return (False, f"pywebpush import failed: {e}")
+    try:
+        webpush(subscription_info=subscription, data=json.dumps(payload),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_SUBJECT}, timeout=10)
+        return (True, "ok")
+    except WebPushException as exc:
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        body = ""
+        try:
+            body = (exc.response.text or "")[:200]
+        except Exception:
+            pass
+        return (False, f"WebPushException status={status} {body}".strip())
+    except Exception as exc:
+        return (False, f"error: {str(exc)[:200]}")
+
+
 @api_router.post("/reengagement/test")
 async def reengagement_test(authorization: str = Header(None)):
-    """Send a re-engagement push for the caller's latest analysis right now —
-    lets you verify copy + delivery without waiting days."""
+    """Fire a test push to THIS device's account + return per-subscription
+    diagnostics. Call it on each device (iPhone/Android) to see whether the
+    device registered a subscription and the exact send result — that's how we
+    diagnose 'works on iPhone, not Android'."""
     user = await get_current_user(authorization)
+    if not (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY):
+        return {"sent": False, "error": "VAPID keys not configured on the server"}
     try:
         latest = await db.video_analyses.find_one({"user_id": user["id"]}, sort=[("date", -1)])
     except Exception:
         latest = None
-    if not latest:
-        raise HTTPException(status_code=404, detail="No analysis to re-engage on yet")
-    payload = _reengage_copy(latest, 7)
-    ok = await _send_reengage_to_user(user["id"], payload)
-    return {"sent": ok, "payload": payload,
-            "note": None if ok else "No active push subscription on this account — enable notifications first."}
+    payload = (_reengage_copy(latest, 7) if latest else
+               {"title": "AthlyticAI", "body": "Push test — you're all set.",
+                "url": "/analyze", "job_id": "test"})
+    try:
+        subs = await db.push_subscriptions.find({"user_id": user["id"]}).to_list(length=10)
+    except Exception:
+        subs = []
+    if not subs:
+        return {"sent": False, "subscriptions": 0,
+                "note": "No push subscription registered on this account. Open the app ON THIS DEVICE, allow notifications, then retry — if it stays 0 the device never subscribed (the real bug)."}
+    loop = asyncio.get_event_loop()
+    results = []
+    for s in subs:
+        sub = s.get("subscription") or {}
+        endpoint = sub.get("endpoint") or ""
+        host = endpoint.split("/")[2] if "://" in endpoint else (endpoint[:40] or "?")
+        ok, detail = await loop.run_in_executor(None, _send_web_push_detail, sub, payload)
+        results.append({"endpoint_host": host, "ok": ok, "detail": detail})
+    return {"sent": any(r["ok"] for r in results), "subscriptions": len(subs),
+            "results": results, "payload": payload}
 
 
 # ──────────────────────────────────────────────────────────────────────
