@@ -2,6 +2,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import api from "@/lib/api";
 import {
   Mic, MicOff, X, ChevronDown, Sparkles, StopCircle,
   Download, RefreshCw, Trash2, Radio, Volume2, History, Headphones,
@@ -512,6 +513,26 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
         ]);
         if (readAloud) { try { speakWithCoachVoice(ack); } catch {} }
         onRequestReanalyze();
+        return;
+      }
+
+      // Support / help / report-a-problem intent → forward to the support team
+      // (Telegram admin alert + support@athlyticai.com) instead of trying to
+      // answer it as a coaching question. Tight phrasing so normal "help me
+      // improve my smash" doesn't trigger it.
+      if (
+        /\b(report (a |this )?(bug|problem|issue|error)|contact (support|a human|someone)|talk to (a )?(human|support|someone|person|agent)|customer (support|service|care)|raise a (ticket|complaint)|file a complaint|refund|money back|reach support|email support|app (is )?(not working|broken|crashing|down)|payment (issue|problem|failed|not working)|charged.*(twice|wrong|fail)|lost my tokens|tokens.*(missing|deducted|not added))\b/i.test(text)
+      ) {
+        cancelTts();
+        const ctx = `sport=${analysisContext?.sport || ""}; shots=${Array.isArray(result?.shots) ? result.shots.length : 0}`;
+        api.post("/support-request", { message: text, context: ctx }).catch(() => {});
+        const ack = "I've passed this to our support team — they'll follow up at support@athlyticai.com. Is there anything about your analysis I can help with in the meantime?";
+        setMessages((prev) => [
+          ...prev,
+          { role: "user", text, t: Date.now() },
+          { role: "coach", text: ack, t: Date.now() },
+        ]);
+        if (readAloud) { try { speakWithCoachVoice(ack); } catch {} }
         return;
       }
 

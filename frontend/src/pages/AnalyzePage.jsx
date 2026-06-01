@@ -28,6 +28,7 @@ import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
+import AnalysisFeedback from "@/components/AnalysisFeedback";
 import LiveVoiceCoach from "@/components/LiveVoiceCoach";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
 import GeminiDebugPanel from "@/components/GeminiDebugPanel";
@@ -4496,6 +4497,12 @@ export default function AnalyzePage() {
             }}
           />
         )}
+
+        {/* Post-analysis feedback — rate accuracy (once per analysis) */}
+        <AnalysisFeedback
+          analysisId={result.analysis_id || result._analysis_id || null}
+          sport={result.sport || result.sport_detected || selectedSport}
+        />
 
         {/* Share + Analyze another */}
         <div className="flex gap-3">
