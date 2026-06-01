@@ -5426,6 +5426,98 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
     return {"success": True, "comparison": comparison, "comparison_id": record["id"]}
 
 
+# ──────────────────────────────────────────────────────────────────────
+# Save a universal/premium analysis to history (Progress Review integration)
+# ──────────────────────────────────────────────────────────────────────
+# The universal path produces qualitative coaching but no history record and
+# no 0-100 score, so nothing landed in the Progress timeline and comparisons
+# had nothing to diff. This SAVE-ONLY endpoint maps a completed universal
+# result into the same video_analyses shape the history cards + comparison
+# engine read, derives a session score, and returns the analysis_id. No
+# Gemini, no token charge (the async job already charged).
+class SaveUniversalAnalysisRequest(BaseModel):
+    sport: str | None = None
+    skill_level: str | None = None
+    quick_summary: str | None = None
+    coach_narrative: dict | None = None
+    shots: list = []
+
+
+def _grade_from_score(s: float) -> str:
+    return "A" if s >= 80 else "B" if s >= 65 else "C" if s >= 50 else "D"
+
+
+def _derive_universal_score(skill_level: str, n_strengths: int, n_improvements: int) -> int:
+    base = {"beginner": 55, "intermediate": 70, "advanced": 82, "pro": 92}.get(
+        (skill_level or "").lower(), 68)
+    # Move with the balance of what's working vs what to fix so the score
+    # rises across sessions as weaknesses get resolved.
+    adj = (n_strengths - n_improvements) * 3
+    return max(40, min(98, base + adj))
+
+
+@api_router.post("/save-universal-analysis")
+async def save_universal_analysis(req: SaveUniversalAnalysisRequest, authorization: str = Header(None)):
+    user = await get_current_user(authorization)
+    cn = req.coach_narrative or {}
+    strengths = [s for s in (cn.get("strengths_points") or []) if isinstance(s, str) and s.strip()]
+    improvements = [s for s in (cn.get("improvements_points") or []) if isinstance(s, str) and s.strip()]
+    # The comparison engine also reads per-shot form_feedback weaknesses.
+    for s in (req.shots or []):
+        ff = (s.get("formFeedback") or s.get("form_feedback") or {})
+        for w in (ff.get("weaknesses") or []):
+            if isinstance(w, str) and w.strip() and w not in improvements:
+                improvements.append(w)
+
+    from collections import Counter as _Counter
+    cats = _Counter(
+        (s.get("shot_category") or s.get("type") or "").strip().lower()
+        for s in (req.shots or []) if (s.get("shot_category") or s.get("type")))
+    cats.pop("", None)
+    cats.pop("unknown", None)
+    dom = cats.most_common(1)[0][0] if cats else "shot"
+    shot_name = (dom.replace("_", " ").title() if dom != "shot"
+                 else (req.sport or "Analysis").replace("_", " ").title())
+    score = _derive_universal_score(req.skill_level, len(strengths), len(improvements))
+
+    file_id = str(uuid.uuid4())
+    analysis_record = {
+        "id": file_id,
+        "user_id": user["id"],
+        "sport": req.sport or "unknown",
+        "date": datetime.now(timezone.utc).isoformat(),
+        "analysis_mode": "universal",
+        "skill_level": req.skill_level or "Intermediate",
+        "shot_analysis": {
+            "shot_name": shot_name,
+            "shot_type": dom,
+            "score": score,
+            "grade": _grade_from_score(score),
+            "weaknesses": improvements[:8],
+            "strengths": strengths[:8],
+        },
+        "coach_feedback": {"summary": req.quick_summary or "", "encouragement": ""},
+        "quick_summary": req.quick_summary or "",
+        "shots": [{k: v for k, v in s.items() if k != "thumbnail"} for s in (req.shots or [])],
+        # Drives drill attribution in /compare-analyses.
+        "vlm_coaching": {"key_focus_areas": improvements[:3]},
+        "_meta": {"source": "universal", "save_only": True},
+    }
+    try:
+        await asyncio.wait_for(db.video_analyses.insert_one(dict(analysis_record)), timeout=10.0)
+    except (Exception, asyncio.TimeoutError) as exc:
+        logger.warning(f"[save-universal] insert failed: {exc}")
+        return {"success": False, "saved_to_history": False, "error": str(exc)[:120]}
+    new_badges = []
+    try:
+        analysis_record.pop("_id", None)
+        new_badges = await check_and_award_badges(user["id"], analysis_record) or []
+    except Exception:
+        pass
+    return {"success": True, "saved_to_history": True, "analysis_id": file_id,
+            "score": score, "new_badges": new_badges}
+
+
 # ─── Phase E: smart reanalysis suggestions ───
 @api_router.get("/reanalysis-suggestions/{user_id}")
 async def reanalysis_suggestions(user_id: str, authorization: str = Header(None)):

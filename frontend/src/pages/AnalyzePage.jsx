@@ -1770,6 +1770,33 @@ export default function AnalyzePage() {
           setLoadingText("Complete!");
           try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
           setAnalysisJobId(null);
+          // Persist to history + (if this was a Progress Review) run the
+          // comparison. The universal path did NEITHER before — that's why
+          // analyses never showed in Progress and comparisons never fired.
+          // Save-only endpoint: no Gemini, no extra token charge.
+          try {
+            const { data: saved } = await api.post("/save-universal-analysis", {
+              sport: universalResult.sport,
+              skill_level: universalResult.skill_level,
+              quick_summary: universalResult.quick_summary,
+              coach_narrative: universalResult.coach_narrative,
+              shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
+            }, { timeout: 20000 });
+            if (saved?.analysis_id && mountedRef.current) {
+              setResult((prev) => (prev ? { ...prev, analysis_id: saved.analysis_id } : prev));
+              if (Array.isArray(saved.new_badges) && saved.new_badges.length) {
+                setTimeout(() => setNewBadge(saved.new_badges[0]), 1500);
+              }
+              try { loadHistory(); } catch {}
+              // Progress Review: both analyses now exist server-side → compare.
+              if (reanalyzeContext?.id) {
+                fetchComparison(reanalyzeContext.id, saved.analysis_id);
+              }
+            }
+          } catch (saveErr) {
+            console.warn("[universal] history save failed:",
+                         saveErr?.response?.data?.detail || saveErr?.message);
+          }
         }
         toast.success(`Detected: ${universalResult.sport} — ${events.length} events analyzed`);
         setActiveTab("results");
