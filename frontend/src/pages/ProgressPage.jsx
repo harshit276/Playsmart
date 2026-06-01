@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,28 @@ import ScoreChart, { ComparisonBars, JourneyTimeline } from "@/components/ScoreC
 import { BadgeGrid } from "@/components/BadgeDisplay";
 import ShareModal from "@/components/ShareModal";
 
+// Stash a baseline analysis and jump to the analyze page in "Progress Review"
+// mode (the AnalyzePage reads this on mount → shows the compare banner → after
+// the new upload analyzes, it auto-runs /compare-analyses and shows the report).
+export const PROGRESS_BASELINE_KEY = "playsmart_progress_baseline";
+
 export default function ProgressPage() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const startProgressReview = (a) => {
+    try {
+      const shot = a.shot_analysis || {};
+      sessionStorage.setItem(PROGRESS_BASELINE_KEY, JSON.stringify({
+        id: a.id,
+        sport: a.sport || null,
+        date: a.date || null,
+        skill_level: a.skill_level || null,
+        quick_summary: a.quick_summary || null,
+        shot_analysis: { shot_name: shot.shot_name || null, score: shot.score ?? null, grade: shot.grade || null },
+      }));
+    } catch { /* storage full / private mode — flow still works, just no banner */ }
+    navigate("/analyze");
+  };
   const [data, setData] = useState(null);
   const [analysisHistory, setAnalysisHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -392,6 +412,21 @@ export default function ProgressPage() {
                               {a.quick_summary && (
                                 <p className="text-xs text-zinc-400 mt-2 line-clamp-2">{a.quick_summary}</p>
                               )}
+                              {/* Prominent Progress Review entry — THE way to
+                                  start a comparison (was buried in /analyze). */}
+                              <div className="mt-3 flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => startProgressReview(a)}
+                                  className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-4 h-9"
+                                >
+                                  <TrendingUp className="w-3.5 h-3.5 mr-1.5" /> Check My Progress
+                                </Button>
+                                <Link to={`/analyze?view=${a.id}`}
+                                  className="text-xs text-zinc-400 hover:text-lime-400 font-medium px-2 py-1.5">
+                                  View analysis
+                                </Link>
+                              </div>
                             </div>
                           </motion.div>
                         );

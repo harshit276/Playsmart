@@ -1147,6 +1147,24 @@ export default function AnalyzePage() {
     try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
   };
 
+  // Progress Review entry from the History/Progress page: a baseline analysis
+  // was stashed in sessionStorage by the "Check My Progress" button → enter
+  // compare mode so the next upload is measured against it. This is now the
+  // PRIMARY, discoverable way to start a progress review (the old in-page
+  // baseline picker was buried and nobody found it).
+  useEffect(() => {
+    let baseline = null;
+    try {
+      const raw = sessionStorage.getItem("playsmart_progress_baseline");
+      if (raw) {
+        baseline = JSON.parse(raw);
+        sessionStorage.removeItem("playsmart_progress_baseline");
+      }
+    } catch { /* ignore */ }
+    if (baseline?.id) startReanalyze(baseline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Trigger backend comparison and show the result. Called after the new
   // analysis completes when reanalyzeContext is set.
   const fetchComparison = async (oldId, newId) => {
