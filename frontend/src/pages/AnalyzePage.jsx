@@ -2674,9 +2674,28 @@ export default function AnalyzePage() {
             </p>
           </div>
           {notifyPermission === "granted" ? (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-lime-400 shrink-0">
-              <CheckCircle2 className="w-4 h-4" /> On
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-lime-400">
+                <CheckCircle2 className="w-4 h-4" /> On
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const { data } = await api.post("/reengagement/test");
+                    console.info("[push-test]", data);
+                    if (data?.sent) toast.success("Test notification sent — check your tray.");
+                    else if (!data?.subscriptions) toast.error("This device isn't subscribed yet — toggle notifications off/on.");
+                    else toast.error(`Send failed: ${(data?.results?.[0]?.detail || "unknown").slice(0, 90)}`);
+                  } catch (e) {
+                    toast.error("Test failed: " + (e?.response?.data?.detail || e.message));
+                  }
+                }}
+                className="text-[11px] text-sky-300 hover:text-sky-200 underline underline-offset-2"
+              >
+                Send test
+              </button>
+            </div>
           ) : notifyPermission !== "denied" ? (
             <button type="button" onClick={requestAnalysisNotifyPermission}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-400/15 hover:bg-sky-400/25 text-sky-200 border border-sky-400/30 transition-colors shrink-0">
