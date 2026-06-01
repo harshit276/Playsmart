@@ -406,11 +406,27 @@ export default function ProgressPage() {
                                 </div>
                               </div>
                               <p className="text-xs text-zinc-500">
+                                {a.sport && <span className="capitalize text-zinc-400">{String(a.sport).replace(/_/g, " ")}</span>}
+                                {a.sport && " · "}
                                 {new Date(a.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
                                 {a.skill_level && <> &middot; {a.skill_level}</>}
                               </p>
                               {a.quick_summary && (
                                 <p className="text-xs text-zinc-400 mt-2 line-clamp-2">{a.quick_summary}</p>
+                              )}
+                              {/* Improvement areas (spec: card shows what to work on) */}
+                              {Array.isArray(shot.weaknesses) && shot.weaknesses.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {shot.weaknesses.slice(0, 2).map((w, wi) => {
+                                    const label = typeof w === "string" ? w : (w?.issue || w?.area || "");
+                                    if (!label) return null;
+                                    return (
+                                      <span key={wi} className="inline-flex items-center gap-1 text-[10px] text-amber-300/90 bg-amber-400/10 border border-amber-400/25 rounded-full px-2 py-0.5">
+                                        <Target className="w-2.5 h-2.5" /> {label.length > 38 ? label.slice(0, 38) + "…" : label}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               )}
                               {/* Prominent Progress Review entry — THE way to
                                   start a comparison (was buried in /analyze). */}
