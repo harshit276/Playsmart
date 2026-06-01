@@ -1481,6 +1481,14 @@ async def _credit_for_paid_order(user_id: str, order: dict, cf_payment_id: str) 
         "cashfree_order_id": order.get("cashfree_order_id"),
         "cashfree_payment_id": cf_payment_id,
     })
+    # Admin (Telegram) notification — a sale just happened. 💰
+    try:
+        asyncio.create_task(_notify_admin(
+            "💰 Tokens purchased",
+            f"User: {user_id}\nPack: {pack.get('key')} (+{pack.get('tokens')} tokens)\n"
+            f"Amount: ₹{pack.get('price_inr')}\nNew balance: {new_balance}"))
+    except Exception:
+        pass
     # Mark the order paid
     try:
         await asyncio.wait_for(
@@ -3892,10 +3900,22 @@ async def _process_job(job: dict):
         )
     except asyncio.TimeoutError:
         await _update_job(job_id, status="error", error="analysis_timeout")
+        try:
+            asyncio.create_task(_notify_admin(
+                "❌ Analysis FAILED (timeout, not charged)",
+                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nReason: timed out >200s"))
+        except Exception:
+            pass
         return
     except Exception as exc:
         await _update_job(job_id, status="error",
                           error=f"analysis_failed: {str(exc)[:200]}")
+        try:
+            asyncio.create_task(_notify_admin(
+                "❌ Analysis FAILED (not charged)",
+                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nError: {str(exc)[:200]}"))
+        except Exception:
+            pass
         return
     finally:
         _job_videos.pop(job_id, None)  # free RAM regardless of outcome
@@ -3917,31 +3937,51 @@ async def _process_job(job: dict):
     await _update_job(job_id, status="complete", result=payload,
                       finished_at=datetime.now(timezone.utc))
 
+    sport_d = payload.get("sport_detected", "your")
+    n_events = len(payload.get("events") or [])
+
     # Web Push so the user is pinged even if the tab is backgrounded / closed
     # (a local Notification can't fire while mobile suspends the tab's JS).
     try:
-        sport = payload.get("sport_detected", "your")
-        n = len(payload.get("events") or [])
         await _notify_job_done(job, {
             "title": "Your analysis is ready 🎉",
-            "body": f"{sport} — {n} event{'' if n == 1 else 's'} analyzed. Tap to view.",
+            "body": f"{sport_d} — {n_events} event{'' if n_events == 1 else 's'} analyzed. Tap to view.",
             "url": "/analyze",
             "job_id": job_id,
         })
     except Exception:
         pass
 
-    # Charge tokens on success only (mirrors the streaming endpoint — never
-    # bill for a failed or abandoned analysis).
-    if job.get("user_id"):
+    # Charge tokens ONLY for a usable result. If the analysis completed but
+    # produced ZERO events, it gave the user nothing — treat it as a failed
+    # analysis and DON'T bill them (the user explicitly wanted no charge on
+    # failure). Hard errors/timeouts already returned above without charging.
+    charged = False
+    if job.get("user_id") and n_events > 0:
         try:
             await _spend_tokens(
                 job["user_id"], "analysis_spend",
                 abs(TOKEN_RULES.get("analysis_spend", -100)),
                 {"endpoint": "analyze-video-async", "tier": job.get("tier")},
             )
+            charged = True
         except Exception:
             pass
+
+    # Admin (Telegram) notification — every analysis event.
+    try:
+        who = job.get("user_id") or "guest"
+        if n_events > 0:
+            asyncio.create_task(_notify_admin(
+                "✅ Analysis completed",
+                f"User: {who}\nSport: {sport_d}\nEvents: {n_events}\n"
+                f"Tier: {job.get('tier')}\nCharged: {'yes' if charged else 'no'}"))
+        else:
+            asyncio.create_task(_notify_admin(
+                "⚠️ Analysis produced NO result (not charged)",
+                f"User: {who}\nSport: {sport_d}\nTier: {job.get('tier')}"))
+    except Exception:
+        pass
 
 
 async def _job_worker(worker_id: int):
@@ -4426,6 +4466,88 @@ async def reengagement_test(authorization: str = Header(None)):
         results.append({"endpoint_host": host, "ok": ok, "detail": detail})
     return {"sent": any(r["ok"] for r in results), "subscriptions": len(subs),
             "results": results, "payload": payload}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Post-analysis feedback + ratings  (real-time quality signal)
+# ──────────────────────────────────────────────────────────────────────
+class AnalysisFeedbackRequest(BaseModel):
+    analysis_id: str | None = None
+    rating: int = 0          # 1-5 stars
+    comment: str | None = None
+    sport: str | None = None
+
+
+@api_router.post("/analysis-feedback")
+async def analysis_feedback(req: AnalysisFeedbackRequest, authorization: str = Header(None)):
+    """Store a post-analysis rating + optional comment, and ping the admin
+    (Telegram) — low ratings flagged red so we hear about bad analyses fast."""
+    user = await get_current_user_or_none(authorization)
+    rating = max(1, min(5, int(req.rating or 0)))
+    record = {
+        "id": str(uuid.uuid4()),
+        "user_id": (user["id"] if user else None),
+        "analysis_id": req.analysis_id,
+        "rating": rating,
+        "comment": (req.comment or "")[:1000].strip(),
+        "sport": req.sport,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await asyncio.wait_for(db.analysis_feedback.insert_one(dict(record)), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        pass
+    try:
+        stars = "⭐" * rating
+        flag = "🔴 " if rating <= 2 else ""
+        asyncio.create_task(_notify_admin(
+            f"{flag}📝 Analysis feedback: {stars} ({rating}/5)",
+            f"User: {record['user_id'] or 'guest'}\nSport: {req.sport or '—'}\n"
+            f"Comment: {record['comment'] or '—'}"))
+    except Exception:
+        pass
+    return {"success": True}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Support / help requests  (Ask-Coach "report a problem" → support@)
+# ──────────────────────────────────────────────────────────────────────
+class SupportRequestPayload(BaseModel):
+    message: str
+    context: str | None = None
+
+
+@api_router.post("/support-request")
+async def support_request(req: SupportRequestPayload, authorization: str = Header(None)):
+    """A user reported a problem / asked for help via the coach. Persist it and
+    notify the admin (Telegram + admin email via _notify_admin). The UI tells
+    the user we'll follow up at support@athlyticai.com."""
+    user = await get_current_user_or_none(authorization)
+    msg = (req.message or "").strip()[:2000]
+    if not msg:
+        raise HTTPException(status_code=400, detail="empty message")
+    email = (user.get("email") if user else None) or "unknown"
+    record = {
+        "id": str(uuid.uuid4()),
+        "user_id": (user["id"] if user else None),
+        "email": email,
+        "message": msg,
+        "context": (req.context or "")[:500],
+        "status": "open",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        await asyncio.wait_for(db.support_requests.insert_one(dict(record)), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        pass
+    try:
+        asyncio.create_task(_notify_admin(
+            "🆘 Support / help request",
+            f"From: {email} ({record['user_id'] or 'guest'})\n\n{msg}\n\n"
+            f"Context: {record['context'] or '—'}"))
+    except Exception:
+        pass
+    return {"success": True, "support_email": "support@athlyticai.com"}
 
 
 # ──────────────────────────────────────────────────────────────────────
