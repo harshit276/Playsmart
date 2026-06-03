@@ -13149,8 +13149,15 @@ async def coach_voice_chat(
             try:
                 import google.generativeai as genai  # type: ignore
                 import os as _os
+                # Use a DEDICATED, reliable conversational model — NOT the
+                # analysis GEMINI_MODEL. If GEMINI_MODEL is pointed at a newer
+                # model that the old `google.generativeai` SDK can't stream
+                # (e.g. a gemini-3.x premium model used for analysis), every
+                # coach reply was failing with an empty stream ("no reply on
+                # every question"). A flash model is plenty for 1-3 sentence
+                # coach answers and is stable on this SDK.
                 model_name = (
-                    _os.environ.get("GEMINI_MODEL")
+                    _os.environ.get("VOICE_CHAT_MODEL")
                     or "gemini-2.5-flash"
                 )
                 if not _os.environ.get("GEMINI_API_KEY"):
@@ -13160,10 +13167,25 @@ async def coach_voice_chat(
                     yield _sse_event({"done": True})
                     return
                 genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
-                model = genai.GenerativeModel(
-                    model_name,
-                    system_instruction=sys_prompt,
-                )
+                # Relax safety to BLOCK_NONE — sports coaching ("attack the
+                # body", "kill shot", "smash it") sometimes tripped the default
+                # filters, which return NO text + no error → silent empty reply.
+                _safety = [
+                    {"category": c, "threshold": "BLOCK_NONE"} for c in (
+                        "HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH",
+                        "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT",
+                    )
+                ]
+                try:
+                    model = genai.GenerativeModel(
+                        model_name, system_instruction=sys_prompt,
+                        safety_settings=_safety,
+                    )
+                except Exception:
+                    # Older SDKs may reject the safety_settings kwarg here.
+                    model = genai.GenerativeModel(
+                        model_name, system_instruction=sys_prompt,
+                    )
             except Exception as exc:
                 yield _sse_event({
                     "error": f"gemini_init_failed: {str(exc)[:200]}",
@@ -13295,10 +13317,23 @@ async def coach_voice_chat(
             # punctuation (rare — usually `_drain_complete` already
             # consumed it). Otherwise drop the partial — better that the
             # reply be one sentence shorter than that it cut off mid-word.
+            # Emit whatever is left in the buffer. Previously this only fired
+            # when the trailing text ended in .!? — which meant a reply Gemini
+            # emitted WITHOUT terminal punctuation (or any reply that never hit
+            # a sentence boundary) was dropped entirely → "(no reply)" on every
+            # such question. Far better to show the full reply than to silently
+            # drop it for lacking a period.
             trail = text_buffer.strip()
-            if trail and trail[-1] in ".!?":
+            if trail:
                 yield _sse_event({"chunk": trail})
                 emitted_anything = True
+
+            if not emitted_anything:
+                # The model returned no text at all (safety block, empty
+                # response, etc.) — surface it instead of a silent blank.
+                yield _sse_event({
+                    "error": "The coach couldn't generate a reply for that — please try rephrasing.",
+                })
 
             # Terminal frame — delivered inside try so a client disconnect
             # mid-stream raises GeneratorExit and complete_delivered stays
