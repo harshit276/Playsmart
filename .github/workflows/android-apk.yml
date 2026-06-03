@@ -80,6 +80,10 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > frontend/android/app/athlyticai-release.keystore
           echo "Keystore decoded ($(wc -c < frontend/android/app/athlyticai-release.keystore) bytes)"
 
+      - name: Make gradlew executable
+        working-directory: frontend/android
+        run: chmod +x ./gradlew
+
       - name: Build debug APK
         if: ${{ inputs.build_type != 'release' && !startsWith(github.ref, 'refs/tags/v') }}
         working-directory: frontend/android
