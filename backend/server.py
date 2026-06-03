@@ -720,6 +720,9 @@ async def admin_stats(x_admin_key: str = Header(None, alias="X-Admin-Key")):
         "token_transactions":  await _count("token_transactions"),
         "payment_orders":      await _count("payment_orders"),
         "referrals":           await _count("referrals"),
+        "push_subscriptions":  await _count("push_subscriptions"),
+        "analysis_feedback":   await _count("analysis_feedback"),
+        "support_requests":    await _count("support_requests"),
     }
     revenue_inr = 0
     tokens_credited = 0
@@ -733,11 +736,55 @@ async def admin_stats(x_admin_key: str = Header(None, alias="X-Admin-Key")):
                 revenue_inr += int((tx.get("metadata") or {}).get("amount_inr") or 0)
     except Exception:
         pass
+
+    # ── Time-windowed + quality metrics ──
+    from datetime import timedelta as _td
+    now = datetime.now(timezone.utc)
+    iso_24h = (now - _td(days=1)).isoformat()
+    iso_7d = (now - _td(days=7)).isoformat()
+
+    async def _cq(coll, q):
+        try:
+            return await asyncio.wait_for(db[coll].count_documents(q), timeout=4.0)
+        except Exception:
+            return -1
+
+    analysis = {
+        # video_analyses.date is an ISO string → compare as string.
+        "analyses_24h": await _cq("video_analyses", {"date": {"$gte": iso_24h}}),
+        "analyses_7d": await _cq("video_analyses", {"date": {"$gte": iso_7d}}),
+        # analysis_jobs.created_at is a real datetime.
+        "jobs_total": await _cq("analysis_jobs", {}),
+        "jobs_failed": await _cq("analysis_jobs", {"status": "error"}),
+        "jobs_failed_24h": await _cq("analysis_jobs", {"status": "error", "created_at": {"$gte": now - _td(days=1)}}),
+        "support_open": await _cq("support_requests", {"status": "open"}),
+    }
+
+    # Feedback average + distribution.
+    fb_count, fb_sum, fb_low = 0, 0, 0
+    try:
+        async for f in db.analysis_feedback.find({}, {"_id": 0, "rating": 1}):
+            r = int(f.get("rating") or 0)
+            if r:
+                fb_count += 1
+                fb_sum += r
+                if r <= 2:
+                    fb_low += 1
+    except Exception:
+        pass
+    feedback = {
+        "count": fb_count,
+        "avg_rating": round(fb_sum / fb_count, 2) if fb_count else None,
+        "low_ratings": fb_low,
+    }
+
     return {
         "counts": counts,
         "tokens": {"credited": tokens_credited, "spent": tokens_spent,
                    "outstanding": tokens_credited - tokens_spent},
         "revenue_inr": revenue_inr,
+        "analysis": analysis,
+        "feedback": feedback,
     }
 
 

@@ -652,6 +652,19 @@ export default function TrainingPage() {
           </div>
         </motion.div>
 
+        {/* ═══ SPORT + LEVEL filters — moved to TOP so users can switch
+            sport/level before anything else loads below ═══ */}
+        <TrainingFiltersBar
+          sport={sport}
+          level={levelFilter || profileLevel}
+          profileLevel={profileLevel}
+          sportFilter={sportFilter}
+          levelFilter={levelFilter}
+          onSport={setSportFilter}
+          onLevel={setLevelFilter}
+          onReset={() => { setSportFilter(null); setLevelFilter(null); }}
+        />
+
         {/* ═══ TODAY'S WORKOUT - Prominent thumbnail grid ═══ */}
         {todayDrill && (
           <motion.div
@@ -751,18 +764,6 @@ export default function TrainingPage() {
             </div>
           </motion.div>
         )}
-
-        {/* ═══ SPORT + LEVEL filters (always visible, sticky) ═══ */}
-        <TrainingFiltersBar
-          sport={sport}
-          level={levelFilter || profileLevel}
-          profileLevel={profileLevel}
-          sportFilter={sportFilter}
-          levelFilter={levelFilter}
-          onSport={setSportFilter}
-          onLevel={setLevelFilter}
-          onReset={() => { setSportFilter(null); setLevelFilter(null); }}
-        />
 
         {/* ═══ AI Coach personalized drills (based on most recent analysis for this sport) ═══ */}
         {(() => {

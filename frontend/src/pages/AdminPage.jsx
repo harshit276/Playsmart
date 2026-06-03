@@ -178,8 +178,17 @@ function StatsTab({ headers }) {
   if (!data) return null;
   const tiles = [
     { label: "Users", val: data.counts?.users },
+    { label: "Analyses (total)", val: data.counts?.video_analyses },
+    { label: "Analyses · 24h", val: data.analysis?.analyses_24h },
+    { label: "Analyses · 7d", val: data.analysis?.analyses_7d },
+    { label: "Failed · 24h", val: data.analysis?.jobs_failed_24h },
+    { label: "Failed (total)", val: data.analysis?.jobs_failed },
+    { label: "Avg rating", val: data.feedback?.avg_rating != null ? `${data.feedback.avg_rating}★` : "—" },
+    { label: "Feedback", val: data.feedback?.count },
+    { label: "Low ratings", val: data.feedback?.low_ratings },
+    { label: "Support open", val: data.analysis?.support_open },
+    { label: "Push subs", val: data.counts?.push_subscriptions },
     { label: "Profiles", val: data.counts?.player_profiles },
-    { label: "Analyses", val: data.counts?.video_analyses },
     { label: "Games", val: data.counts?.games },
     { label: "Enquiries", val: data.counts?.enquiries },
     { label: "Token Txns", val: data.counts?.token_transactions },
