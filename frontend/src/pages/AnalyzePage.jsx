@@ -1427,8 +1427,15 @@ export default function AnalyzePage() {
           // so Gemini's timestamps come back in the sped-up domain — we undo
           // that below with timeScale (measured, not assumed). Small clips
           // stay at 1x (perfect frame fidelity, no scaling needed).
+          // Heavy sources decode slowly client-side, so the real-time capture
+          // is the bottleneck. Play them back faster so the encode finishes
+          // sooner; timeScale (measured below) undoes the speed-up on Gemini's
+          // timestamps, and the stall-based watchdog still guarantees the
+          // COMPLETE clip is captured even if the decoder can't keep up at the
+          // requested rate. Capped at 3x so we still capture >=4 content-fps
+          // (Gemini's sampling floor) at captureStream's 20 wall-fps.
           const origMb = file.size / 1024 / 1024;
-          const captureRate = origMb > 30 ? 2.0 : 1.0;
+          const captureRate = origMb > 70 ? 3.0 : origMb > 30 ? 2.0 : 1.0;
           uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
             maxDim: 480, bitrate: 800_000,
             playbackRate: captureRate,
