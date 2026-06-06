@@ -3951,6 +3951,10 @@ async def _process_job(job: dict):
             asyncio.create_task(_notify_admin(
                 "❌ Analysis FAILED (timeout, not charged)",
                 f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nReason: timed out >200s"))
+            await _notify_job_done(job, {
+                "title": "Analysis didn't complete",
+                "body": "It took too long — usually a network issue. You weren't charged. Tap to retry.",
+                "url": "/analyze", "job_id": job_id})
         except Exception:
             pass
         return
@@ -3961,6 +3965,10 @@ async def _process_job(job: dict):
             asyncio.create_task(_notify_admin(
                 "❌ Analysis FAILED (not charged)",
                 f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nError: {str(exc)[:200]}"))
+            await _notify_job_done(job, {
+                "title": "Analysis failed",
+                "body": "Something went wrong — usually a network issue. You weren't charged. Tap to retry.",
+                "url": "/analyze", "job_id": job_id})
         except Exception:
             pass
         return
@@ -3989,10 +3997,17 @@ async def _process_job(job: dict):
 
     # Web Push so the user is pinged even if the tab is backgrounded / closed
     # (a local Notification can't fire while mobile suspends the tab's JS).
+    # 0 events = effectively a failed analysis — don't say "ready 🎉".
     try:
-        await _notify_job_done(job, {
+        _push = ({
             "title": "Your analysis is ready 🎉",
             "body": f"{sport_d} — {n_events} event{'' if n_events == 1 else 's'} analyzed. Tap to view.",
+        } if n_events > 0 else {
+            "title": "Couldn't read your clip",
+            "body": "No shots detected — usually a network issue or unclear upload. You weren't charged. Tap to retry.",
+        })
+        await _notify_job_done(job, {
+            **_push,
             "url": "/analyze",
             "job_id": job_id,
         })

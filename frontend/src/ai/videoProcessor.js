@@ -1928,9 +1928,25 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     const playEnded = new Promise((resolve) => {
       const finish = () => { resolve(); };
       video.addEventListener("ended", finish, { once: true });
-      // Defensive timeout: cap at 2x the expected (4x-speed) wall time so a
-      // stuck video doesn't hang the upload forever.
-      setTimeout(finish, Math.max(15000, (duration / PLAYBACK_RATE) * 2000));
+      // STALL-based watchdog (NOT wall-clock). A large / high-bitrate source
+      // (50-100MB, 4K) decodes SLOWER than real time, so currentTime advances
+      // slower than the wall clock. The old fixed wall-clock cap fired early
+      // and TRUNCATED the clip — Gemini then only saw the first few seconds
+      // and returned "no shot detected". Instead we only give up if the
+      // decoder genuinely WEDGES (currentTime stops advancing for ~12s), with
+      // a very generous absolute backstop so the full clip is always captured.
+      let lastT = -1;
+      let stalls = 0;
+      const iv = setInterval(() => {
+        const t = video.currentTime;
+        if (t >= duration - 0.05 || video.ended) { clearInterval(iv); finish(); return; }
+        if (t - lastT < 0.02) {
+          stalls += 1;
+          if (stalls >= 24) { clearInterval(iv); finish(); }  // ~12s no progress
+        } else { stalls = 0; lastT = t; }
+      }, 500);
+      // Absolute backstop — only a truly dead decode reaches this.
+      setTimeout(() => { clearInterval(iv); finish(); }, 8 * 60 * 1000);
     });
     try {
       await video.play();

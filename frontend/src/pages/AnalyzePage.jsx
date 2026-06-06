@@ -946,6 +946,11 @@ export default function AnalyzePage() {
       try {
         const result = await pollAnalysisJob(stash.jobId);
         if (cancelled || !mountedRef.current) return;
+        // 0 events = failed analysis — don't render/save a fake-score result.
+        if (!(result?.events || []).length) {
+          setError("We couldn't detect any shots in that clip — please check your connection and try again.");
+          return;
+        }
         const universalResult = buildUniversalResult(result, stash.targetDesc, stash.pickedPlayer);
         setResult(universalResult);
         setActiveTab("results");
@@ -1771,6 +1776,17 @@ export default function AnalyzePage() {
         setProgress(95);
         setLoadingText("Building results...");
         const events = data?.events || [];
+        // ZERO events = the analysis effectively FAILED (Gemini saw nothing
+        // usable — usually a truncated upload, a network drop, or an unclear
+        // clip). Do NOT fabricate a result: previously this still rendered a
+        // fake score (~70) + "plateau" and saved it to history. Surface a
+        // clear, actionable error instead and let the user retry. No charge
+        // (the backend already skips billing on 0-event jobs).
+        if (events.length === 0) {
+          throw new Error(
+            "We couldn't detect any shots in this clip. This usually means the upload was interrupted or the connection dropped — please check your network and try again."
+          );
+        }
         const universalResult = buildUniversalResult(data, targetDesc, options.universalPick);
         notifyAnalysisReady(universalResult.sport, events.length);
         // If the user navigated away mid-job, DON'T clear the persisted job
@@ -1818,10 +1834,23 @@ export default function AnalyzePage() {
         setUniversalPlayers(null);
         setUniversalUploadData(null);
       } catch (err) {
-        const msg = err?.response?.data?.detail || err.message || "Universal analysis failed";
-        console.error("[universal]", msg);
+        const raw = err?.response?.data?.detail || err.message || "";
+        const status = err?.response?.status;
+        // Translate any failure into a clear, actionable on-screen message
+        // (the user shouldn't see raw codes or a fake result).
+        let msg;
+        if (/couldn't detect any shots|no shots in this clip/i.test(raw)) {
+          msg = raw; // already friendly (the 0-event case)
+        } else if (status === 413 || status === 403 || /too large|413|compress.*large|overshoot/i.test(raw)) {
+          msg = "That video was too large to upload. Record a shorter clip (~10–15s) or at a lower resolution (720p), then try again.";
+        } else if (!status || /timeout|network|aborted|failed to fetch|50[234]|stream_idle|ping_failed/i.test(raw)) {
+          msg = "Your analysis didn't go through — this is usually a network issue. Please check your connection and try again.";
+        } else {
+          msg = "Something went wrong analyzing this clip. Please try again.";
+        }
+        console.error("[universal] failed:", raw || msg);
         setError(msg);
-        toast.error(`Universal mode failed: ${msg.slice(0, 80)}`);
+        toast.error(msg.length > 100 ? msg.slice(0, 100) + "…" : msg);
         try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
         setAnalysisJobId(null);
       } finally {
