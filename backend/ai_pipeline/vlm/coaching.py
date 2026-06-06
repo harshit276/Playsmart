@@ -153,20 +153,14 @@ def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes,
     try:
         import google.generativeai as genai  # type: ignore
         if file_ref is not None:
-            # Files API path — reference by URI, optionally with fps metadata.
-            try:
-                video_meta = genai.protos.VideoMetadata(fps=fps)  # type: ignore[attr-defined]
-                video_part = genai.protos.Part(
-                    file_data=genai.protos.FileData(
-                        file_uri=file_ref.uri, mime_type=mime_type or "video/mp4",
-                    ),
-                    video_metadata=video_meta,
-                )
-                return [{"text": sys_prompt}, {"text": user_msg}, video_part]
-            except (AttributeError, TypeError):
-                # SDK version without proto FileData/VideoMetadata — pass the
-                # handle object straight through (default sampling fps).
-                return [{"text": sys_prompt}, {"text": user_msg}, file_ref]
+            # Files API path — pass the uploaded File handle OBJECT directly.
+            # This is the SDK's documented, reliable way to reference a file
+            # in generate_content. (An earlier attempt that hand-built a proto
+            # FileData Part with explicit fps VideoMetadata caused Gemini to
+            # return ZERO events for every large clip — it apparently didn't
+            # read the video from that part shape. The bare handle works; the
+            # only cost is fps defaults to Gemini's sampling instead of 4 fps.)
+            return [{"text": sys_prompt}, {"text": user_msg}, file_ref]
         # SDK proto-based inline path (preferred — explicit VideoMetadata)
         try:
             video_meta = genai.protos.VideoMetadata(fps=fps)  # type: ignore[attr-defined]
@@ -1651,11 +1645,15 @@ def analyze_video_universal(
             # video duration to surface a warning.
             "gemini_ts_min_sec": _ts_min,
             "gemini_ts_max_sec": _ts_max,
-            "input_bytes": len(video_bytes),
+            # video_bytes is None on the Files API path (we never held the
+            # bytes server-side) — report 0 there instead of crashing on len().
+            "input_bytes": (len(video_bytes) if video_bytes is not None else 0),
         },
         "_meta": {
             "backend": backend_obj.name, "model": backend_obj.model_name,
-            "video_bytes": len(video_bytes), "mime_type": mime_type,
+            "video_bytes": (len(video_bytes) if video_bytes is not None else 0),
+            "via_files_api": bool(file_name),
+            "mime_type": mime_type,
             "mode": "universal", "tier": tier,
         },
     }
