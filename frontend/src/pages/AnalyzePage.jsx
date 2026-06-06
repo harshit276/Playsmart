@@ -1886,6 +1886,22 @@ export default function AnalyzePage() {
         // clear, actionable error instead and let the user retry. No charge
         // (the backend already skips billing on 0-event jobs).
         if (events.length === 0) {
+          // Surface the backend's own diagnostics so a "0 events" failure is
+          // debuggable instead of a black box: did Gemini error? which model?
+          // did it go via the Files API? how long was the raw response?
+          try {
+            // eslint-disable-next-line no-console
+            console.error("[universal] 0-event diagnostic:", {
+              meta: data?._meta || null,
+              gemini_error: data?._meta?.error || data?._debug?.error || null,
+              via_files_api: data?._meta?.via_files_api ?? null,
+              model: data?._meta?.model || null,
+              raw_event_count: data?._debug?.raw_event_count ?? null,
+              raw_response_len: (data?._debug?.raw_gemini_response || "").length,
+              raw_response_head: (data?._debug?.raw_gemini_response || "").slice(0, 400),
+              used_file_name: !!fileName,
+            });
+          } catch { /* diagnostic only */ }
           throw new Error(
             "We couldn't detect any shots in this clip. This usually means the upload was interrupted or the connection dropped — please check your network and try again."
           );
