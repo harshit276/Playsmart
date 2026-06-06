@@ -53,17 +53,121 @@ def _parse_json_safe(raw: str) -> dict:
     return {}
 
 
-def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes: bytes,
-                       mime_type: str, fps: float = 4.0) -> list:
+# ── Gemini Files API ──────────────────────────────────────────────────
+# For large clips (50-100 MB / 4K phone videos) we DON'T inline the bytes:
+# the inline request limit is ~20 MB, and base64-in-JSON also inflates the
+# payload +33% and balloons memory. Instead we upload the ORIGINAL file once
+# to the Files API, get back a lightweight handle (file_uri), and reference
+# it in every Gemini call (player picker + analysis). Benefits:
+#   • No 20 MB inline cap — supports the full-resolution original.
+#   • Better analysis quality (Gemini sees the un-downscaled clip).
+#   • Durable: the handle survives a redeploy (Files API retains 48 h), so we
+#     persist only the tiny file_name in Mongo instead of a 40 MB base64 blob
+#     (which would also blow the 16 MB BSON document limit).
+# Files below this size still go inline (one fewer round-trip, lower latency).
+FILES_API_INLINE_MAX = 18 * 1024 * 1024  # bytes — above this, upload via Files API
+
+
+def files_api_upload(video_bytes: bytes, mime_type: str = "video/mp4",
+                     timeout_sec: float = 120.0):
+    """Upload raw video bytes to the Gemini Files API and block until the
+    file is ACTIVE (Gemini finishes its server-side processing). Returns the
+    file handle object (has .name and .uri). Raises on failure / timeout."""
+    import google.generativeai as genai  # type: ignore
+    import os as _os, time as _t, tempfile as _tmp
+    genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+    # Write to a temp file and upload by path — the most universally-supported
+    # upload_file shape across google-generativeai SDK versions (file-like /
+    # BytesIO handling has varied between releases). /tmp is writable on
+    # Railway; we clean up immediately after the upload registers.
+    suffix = ".mp4"
+    if mime_type and "/" in mime_type:
+        ext = mime_type.split("/", 1)[1].split(";")[0].strip()
+        if ext and ext.isalnum():
+            suffix = "." + ext
+    tmp_path = None
+    try:
+        with _tmp.NamedTemporaryFile(suffix=suffix, delete=False) as tf:
+            tf.write(video_bytes)
+            tmp_path = tf.name
+        f = genai.upload_file(tmp_path, mime_type=mime_type or "video/mp4")
+    finally:
+        if tmp_path:
+            try:
+                _os.unlink(tmp_path)
+            except Exception:
+                pass
+    # Poll until the file leaves PROCESSING — Gemini rejects a file that's
+    # still being processed, and on big clips that can take a few seconds.
+    deadline = _t.monotonic() + timeout_sec
+    while getattr(f.state, "name", str(f.state)) == "PROCESSING":
+        if _t.monotonic() > deadline:
+            raise TimeoutError("files_api_processing_timeout")
+        _t.sleep(1.5)
+        f = genai.get_file(f.name)
+    state = getattr(f.state, "name", str(f.state))
+    if state != "ACTIVE":
+        raise RuntimeError(f"files_api_state_{state}")
+    return f
+
+
+def files_api_get(file_name: str):
+    """Re-fetch an existing Files API handle by name (e.g. inside the job
+    worker, which only persisted the name). Re-validates it's ACTIVE so an
+    expired/deleted handle surfaces as a clean error, not a Gemini 4xx."""
+    import google.generativeai as genai  # type: ignore
+    import os as _os
+    genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+    f = genai.get_file(file_name)
+    state = getattr(f.state, "name", str(f.state))
+    if state != "ACTIVE":
+        raise RuntimeError(f"files_api_state_{state}")
+    return f
+
+
+def files_api_delete(file_name: str) -> None:
+    """Best-effort delete of a Files API handle once we're done with it."""
+    try:
+        import google.generativeai as genai  # type: ignore
+        import os as _os
+        genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+        genai.delete_file(file_name)
+    except Exception:
+        pass
+
+
+def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes,
+                       mime_type: str, fps: float = 4.0, file_ref=None) -> list:
     """Build the parts list for a Gemini whole-video call with explicit
     FPS sampling. Tries the SDK's proto types first (where the
     video_metadata.fps field is supported), falls back to plain dict
     parts if the SDK / API version doesn't support fps override.
     Higher FPS catches short shot contact moments that default 1 fps
-    sampling misses — critical for sports analysis."""
+    sampling misses — critical for sports analysis.
+
+    When `file_ref` (a Files API handle from files_api_upload/get) is given,
+    the video is referenced by URI instead of inlined — used for large clips
+    that exceed the inline request limit. We still try to attach the fps
+    VideoMetadata to the file part; if the SDK can't, we pass the handle
+    object directly (the SDK knows how to serialize it)."""
     try:
         import google.generativeai as genai  # type: ignore
-        # SDK proto-based path (preferred — explicit VideoMetadata)
+        if file_ref is not None:
+            # Files API path — reference by URI, optionally with fps metadata.
+            try:
+                video_meta = genai.protos.VideoMetadata(fps=fps)  # type: ignore[attr-defined]
+                video_part = genai.protos.Part(
+                    file_data=genai.protos.FileData(
+                        file_uri=file_ref.uri, mime_type=mime_type or "video/mp4",
+                    ),
+                    video_metadata=video_meta,
+                )
+                return [{"text": sys_prompt}, {"text": user_msg}, video_part]
+            except (AttributeError, TypeError):
+                # SDK version without proto FileData/VideoMetadata — pass the
+                # handle object straight through (default sampling fps).
+                return [{"text": sys_prompt}, {"text": user_msg}, file_ref]
+        # SDK proto-based inline path (preferred — explicit VideoMetadata)
         try:
             video_meta = genai.protos.VideoMetadata(fps=fps)  # type: ignore[attr-defined]
             video_part = genai.protos.Part(
@@ -84,10 +188,29 @@ def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes: bytes,
         ]
     except Exception:
         # Last resort: default sampling, no fps control.
+        if file_ref is not None:
+            return [{"text": sys_prompt}, {"text": user_msg}, file_ref]
         return [
             {"text": sys_prompt}, {"text": user_msg},
             {"mime_type": mime_type, "data": video_bytes},
         ]
+
+
+def _resolve_video_ref(video_bytes, mime_type: str, file_name: str | None):
+    """Decide how to feed the video to Gemini.
+
+    Returns (file_ref, owns_ref):
+      • file_name given      → re-fetch that Files API handle; owns_ref=False
+                               (the caller/job owns its lifecycle).
+      • bytes > inline limit → upload to Files API now; owns_ref=True
+                               (caller should delete it when done).
+      • small bytes          → (None, False); caller inlines the bytes.
+    """
+    if file_name:
+        return files_api_get(file_name), False
+    if video_bytes is not None and len(video_bytes) > FILES_API_INLINE_MAX:
+        return files_api_upload(video_bytes, mime_type), True
+    return None, False
 
 
 def _summarize_analysis(a: dict) -> dict:
@@ -1305,11 +1428,12 @@ def _get_sport_vocab(detected_sport: str) -> list:
 
 
 def analyze_video_universal(
-    video_bytes: bytes, mime_type: str,
+    video_bytes, mime_type: str,
     target_player_description: str | None = None,
     backend: str = "auto",
     tier: str = "standard",
     doubles_mode: bool = False,
+    file_name: str | None = None,
 ) -> dict:
     """Sport-agnostic whole-video analysis. Sends the video to Gemini with
     an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
@@ -1332,8 +1456,9 @@ def analyze_video_universal(
     import logging as _logging
     _log = _logging.getLogger("athlytic.vlm")
     _log.info(
-        "[universal] starting — bytes=%d, mime=%s, tier=%s, doubles=%s, target=%r",
-        len(video_bytes), mime_type, tier, doubles_mode,
+        "[universal] starting — bytes=%s, file=%s, mime=%s, tier=%s, doubles=%s, target=%r",
+        (len(video_bytes) if video_bytes is not None else "n/a"),
+        file_name or "inline", mime_type, tier, doubles_mode,
         (target_player_description or "")[:80],
     )
 
@@ -1346,6 +1471,8 @@ def analyze_video_universal(
     # env-var change upgrades both tiers); final fallback is gemini-2.5-pro.
     model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
     backend_obj = pick_backend(backend, model=model_override) if model_override else pick_backend(backend)
+    _file_ref = None
+    _owns_ref = False
     try:
         import google.generativeai as genai  # type: ignore
         model = backend_obj._get() if hasattr(backend_obj, "_get") else None
@@ -1353,7 +1480,11 @@ def analyze_video_universal(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=4.0)
+        # Large clips go through the Files API (full-res, no 20 MB inline cap);
+        # small ones inline directly. _resolve_video_ref handles the choice.
+        _file_ref, _owns_ref = _resolve_video_ref(video_bytes, mime_type or "video/mp4", file_name)
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
+                                   mime_type or "video/mp4", fps=4.0, file_ref=_file_ref)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -1364,6 +1495,12 @@ def analyze_video_universal(
             "sport_detected": "unknown", "summary": "",
             "events": [], "_meta": {"error": str(exc)[:300], "backend": backend_obj.name},
         }
+    finally:
+        # Only delete a handle WE created here (large inline bytes). A
+        # file_name passed in is owned by the job/endpoint, which deletes it
+        # after the analysis completes — don't pull it out from under a retry.
+        if _owns_ref and _file_ref is not None:
+            files_api_delete(_file_ref.name)
 
     data = _parse_json_safe(raw)
     events_out = []
@@ -1582,11 +1719,12 @@ def _find_complete_event_objects(buf: str, start_pos: int) -> tuple[list[str], i
 
 
 def stream_analyze_video_universal(
-    video_bytes: bytes, mime_type: str,
+    video_bytes, mime_type: str,
     target_player_description: str | None = None,
     backend: str = "auto",
     tier: str = "standard",
     doubles_mode: bool = False,
+    file_name: str | None = None,
 ):
     """Generator wrapper around analyze_video_universal that yields
     progress dicts as the Gemini response streams in.
@@ -1607,6 +1745,8 @@ def stream_analyze_video_universal(
         pick_backend(backend, model=model_override) if model_override
         else pick_backend(backend)
     )
+    _file_ref = None
+    _owns_ref = False
 
     try:
         import google.generativeai as genai  # type: ignore
@@ -1615,9 +1755,15 @@ def stream_analyze_video_universal(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
+        try:
+            _file_ref, _owns_ref = _resolve_video_ref(
+                video_bytes, mime_type or "video/mp4", file_name)
+        except Exception as exc:
+            yield {"kind": "error", "msg": f"files_api_failed: {str(exc)[:200]}"}
+            return
         parts = _build_video_parts(
             sys_prompt, user_msg, video_bytes,
-            mime_type or "video/mp4", fps=4.0,
+            mime_type or "video/mp4", fps=4.0, file_ref=_file_ref,
         )
         try:
             stream_iter = model.generate_content(
@@ -1629,6 +1775,8 @@ def stream_analyze_video_universal(
                 },
             )
         except Exception as exc:
+            if _owns_ref and _file_ref is not None:
+                files_api_delete(_file_ref.name)
             yield {"kind": "error", "msg": f"gemini_call_failed: {str(exc)[:200]}"}
             return
     except Exception as exc:
@@ -1754,7 +1902,8 @@ def stream_analyze_video_universal(
         "_meta": {
             "backend": backend_obj.name,
             "model": backend_obj.model_name,
-            "video_bytes": len(video_bytes),
+            "video_bytes": (len(video_bytes) if video_bytes is not None else 0),
+            "via_files_api": bool(_file_ref is not None),
             "mime_type": mime_type,
             "mode": "universal_stream",
             "tier": tier,
@@ -1769,12 +1918,17 @@ def stream_analyze_video_universal(
             "target_player_description": target_player_description,
         },
     }
+    # Delete a Files API handle we created here (large inline bytes). A
+    # caller-supplied file_name is owned by the job/endpoint.
+    if _owns_ref and _file_ref is not None:
+        files_api_delete(_file_ref.name)
     yield {"kind": "complete", "result": payload}
 
 
 def describe_players_in_video(
-    video_bytes: bytes, mime_type: str,
+    video_bytes, mime_type: str,
     backend: str = "auto",
+    file_name: str | None = None,
 ) -> dict:
     """List the people in a video with descriptions the user can choose
     between. The user picks one, then we pass that description as the
@@ -1845,12 +1999,18 @@ def describe_players_in_video(
             model = genai.GenerativeModel(backend_obj.model_name)
         # Lower 1.5 fps is plenty for describing static visual features
         # (clothing/position) — players don't change appearance shot-to-shot.
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes, mime_type or "video/mp4", fps=1.5)
+        # Reuse the Files API handle for large clips (same one the analysis
+        # uses) so we upload the original only once.
+        _file_ref, _owns_ref = _resolve_video_ref(video_bytes, mime_type or "video/mp4", file_name)
+        parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
+                                   mime_type or "video/mp4", fps=1.5, file_ref=_file_ref)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
         )
         raw = resp.text
+        if _owns_ref and _file_ref is not None:
+            files_api_delete(_file_ref.name)
     except Exception as exc:
         return {"players": [], "_meta": {"error": str(exc)[:300], "backend": backend_obj.name}}
 

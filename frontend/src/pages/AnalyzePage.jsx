@@ -334,6 +334,51 @@ function fileToBase64(blob) {
   });
 }
 
+// Upload the ORIGINAL clip straight to the backend's Gemini Files API
+// endpoint — no client-side compression. Used for large clips (50-100 MB / 4K)
+// where the old "decode + compress to 4 MB" pass was both the slow part of the
+// pipeline AND a big quality loss. Files API has no ~20 MB inline cap, so
+// Gemini sees the full-resolution original. Returns the file_name handle the
+// analysis endpoints reference, or throws so the caller falls back to compress.
+// Uses XHR (not fetch/axios) purely for real upload-progress events.
+function uploadVideoToFilesApi(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    try {
+      const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+      const token = localStorage.getItem("playsmart_token");
+      const fd = new FormData();
+      fd.append("video", file, file.name || "clip.mp4");
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${baseUrl}/api/upload-video`);
+      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      // The backend has to register the file with Gemini (server-side
+      // processing) before responding — give it room on a big clip.
+      xhr.timeout = 180000;
+      if (xhr.upload && typeof onProgress === "function") {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText || "{}");
+            if (data && data.file_name) resolve(data);
+            else reject(new Error("upload_no_file_name"));
+          } catch (e) { reject(new Error("upload_bad_json")); }
+        } else {
+          reject(new Error(`upload_http_${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error("upload_network_error"));
+      xhr.ontimeout = () => reject(new Error("upload_timeout"));
+      xhr.send(fd);
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 // Build the universal-mode result object the UI renders, from the raw backend
 // `data` (events + narrative + sport). Extracted to module scope so BOTH the
 // live analyze flow and the resume-on-return path produce identical results.
@@ -903,14 +948,18 @@ export default function AnalyzePage() {
         const vs = await import("@/lib/videoStore");
         const cached = await vs.loadVideo(INFLIGHT_VIDEO_KEY);
         if (cancelled || !cached?.file) { clearPickerSession(); return; }
-        // Recompute b64 from the restored clip (cheaper to recompute than to
-        // also persist the ~5MB base64 string).
-        const b64 = await fileToBase64(cached.file);
+        // Files API path: the handle (valid 48 h) is the durable reference, so
+        // we DON'T base64-encode the (full-resolution, possibly 50 MB) clip on
+        // resume. Only the legacy inline path recomputes b64 from the restored
+        // clip (cheaper than persisting the ~5 MB string).
+        const resumedFileName = sess.fileName || null;
+        const b64 = resumedFileName ? null : await fileToBase64(cached.file);
         if (cancelled || !mountedRef.current) return;
         setFile(cached.file);
         setSelectedSport(sess.sport || selectedSport);
         setUniversalUploadData({
-          uploadFile: cached.file, b64, midFrame: sess.midFrame || null,
+          uploadFile: cached.file, b64, fileName: resumedFileName,
+          midFrame: sess.midFrame || null,
           timeScale: sess.timeScale || 1,
         });
         setUniversalPlayers(sess.players);
@@ -1387,14 +1436,49 @@ export default function AnalyzePage() {
         // case the compressed clip is shorter and every event timestamp must
         // be multiplied by origDuration/compressedDuration before display.
         let timeScale = 1;
+        // Gemini Files API handle for the large-clip path (set below when we
+        // upload the original full-res clip directly instead of compressing).
+        // null = legacy inline base64 path.
+        let fileName = null;
         if (options.universalPick && universalUploadData) {
           uploadFile = universalUploadData.uploadFile;
           b64 = universalUploadData.b64;
+          fileName = universalUploadData.fileName || null;
           timeScale = universalUploadData.timeScale || 1;
         } else {
           setLoadingText("Preparing video for Universal AI Coach...");
           setProgress(15);
           const vp = await import("@/ai/videoProcessor");
+          const origMbRaw = file.size / 1024 / 1024;
+          // ─── Large-clip fast path: upload the ORIGINAL to the Files API ──
+          // For clips big enough that client compression would be slow AND
+          // lossy (≥8 MB), skip compression entirely and upload the raw file.
+          // Gemini then analyzes the full-resolution original — faster (no
+          // decode/encode pass) and higher quality. Any failure (older
+          // backend, network) falls straight through to the compress path.
+          const DIRECT_UPLOAD_MIN_MB = 8;
+          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
+            try {
+              setLoadingText("Uploading your video in full quality...");
+              setProgress(15);
+              const up = await uploadVideoToFilesApi(file, (pct) => {
+                setLoadingText(`Uploading video... ${pct}%`);
+                setProgress(15 + Math.round(pct * 0.30));
+              });
+              if (up && up.file_name) {
+                fileName = up.file_name;
+                uploadFile = file;   // keep original for mime + picker keyframes
+                b64 = null;
+                timeScale = 1;       // no speed-up → no timestamp scaling needed
+                // eslint-disable-next-line no-console
+                console.info(`[upload] direct Files API upload: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
+              }
+            } catch (upErr) {
+              console.warn("[universal] direct Files API upload failed, compressing instead:", upErr?.message);
+              fileName = null;
+            }
+          }
+          if (!fileName) {
           // Compression preset: 540p / 1.0 Mbps keeps shuttle/ball visible
           // for shot identification while staying under Vercel's 4.5 MB
           // body cap for a 30s clip. Was 480p / 0.8 Mbps which lost too
@@ -1487,6 +1571,7 @@ export default function AnalyzePage() {
             /* noop — diagnostic only */
           }
           b64 = await fileToBase64(uploadFile);
+          } // ── end !fileName (compress) branch ──
 
           // Pass 1 — let Gemini identify the visible players (optional).
           // 25s cap (was 45s): this is just the player-PICKER pre-pass. On a
@@ -1498,10 +1583,13 @@ export default function AnalyzePage() {
           setLoadingText("AI Coach is spotting players (skips automatically if slow)...");
           setProgress(35);
           try {
-            const { data: descData } = await api.post("/describe-players", {
-              mime_type: uploadFile.type || file.type || "video/mp4",
-              video_b64: b64,
-            }, { timeout: 25000 });
+            // Reference the uploaded handle for big clips; inline base64 for
+            // small ones. Same picker UI either way.
+            const { data: descData } = await api.post("/describe-players",
+              fileName
+                ? { mime_type: uploadFile.type || file.type || "video/mp4", file_name: fileName }
+                : { mime_type: uploadFile.type || file.type || "video/mp4", video_b64: b64 },
+              { timeout: 25000 });
             let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
             // Also extract a single mid-frame keyframe of the whole
             // video — used as the BACKGROUND of the player picker so
@@ -1531,19 +1619,21 @@ export default function AnalyzePage() {
             }
             if (players.length >= 2) {
               // Multiple athletes visible → show picker and pause.
-              setUniversalUploadData({ uploadFile, b64, midFrame, timeScale });
+              setUniversalUploadData({ uploadFile, b64, fileName, midFrame, timeScale });
               setUniversalPlayers(players);
               setAnalyzing(false);
               setProgress(0);
               // Persist the picker stage so a refresh / returning to the page
               // lands back here instead of losing the upload. The compressed
               // clip goes to IndexedDB (too big for localStorage); the player
-              // list + midFrame go to localStorage.
+              // list + midFrame go to localStorage. For the Files API path we
+              // persist the handle name too — it stays valid 48 h, so a
+              // returning user resumes without re-uploading.
               try {
                 const vs = await import("@/lib/videoStore");
                 await vs.saveVideo(uploadFile, 30 * 60 * 1000, INFLIGHT_VIDEO_KEY);
                 localStorage.setItem(PICKER_SESSION_KEY, JSON.stringify({
-                  players, midFrame, timeScale,
+                  players, midFrame, timeScale, fileName: fileName || null,
                   sport: sportToAnalyze || null,
                   savedAt: Date.now(),
                 }));
@@ -1582,8 +1672,13 @@ export default function AnalyzePage() {
         // base64-in-JSON fallback below runs untouched if either:
         //   - user opted out via ?stream=0
         //   - streaming throws for any reason (network, CORS, abort)
+        // Streaming uploads the clip again as multipart over a held
+        // connection — pointless (and slow) when we already uploaded the
+        // original to the Files API. For that path we go async → universal
+        // JSON, both of which just reference the handle.
         const useStream = (
-          accuracyMode === "premium"
+          !fileName
+          && accuracyMode === "premium"
           && new URLSearchParams(window.location.search).get("stream") !== "0"
           && typeof window.fetch === "function"
           && typeof FormData !== "undefined"
@@ -1604,7 +1699,8 @@ export default function AnalyzePage() {
           try { pushEndpoint = localStorage.getItem("playsmart_push_endpoint"); } catch {}
           const submitResp = await api.post("/analyze-video-async", {
             mime_type: uploadFile.type || file.type || "video/mp4",
-            video_b64: b64,
+            // Large clips reference the Files API handle; small clips inline.
+            ...(fileName ? { file_name: fileName } : { video_b64: b64 }),
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: effectiveDoubles,
@@ -1765,7 +1861,7 @@ export default function AnalyzePage() {
           );
           const resp = await api.post("/analyze-video-universal", {
             mime_type: uploadFile.type || file.type || "video/mp4",
-            video_b64: b64,
+            ...(fileName ? { file_name: fileName } : { video_b64: b64 }),
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: effectiveDoubles,

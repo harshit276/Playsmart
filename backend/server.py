@@ -3387,7 +3387,13 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     target_player_description: str | None = None
     backend: str = "auto"
     mime_type: str = "video/mp4"
-    video_b64: str
+    # EITHER inline base64 (small clips, legacy) OR a Gemini Files API handle
+    # (large clips — uploaded once via /upload-video, then referenced by name
+    # so the full-resolution original reaches Gemini without the ~20 MB inline
+    # cap and without storing a 40 MB base64 blob in Mongo). Exactly one is
+    # required; file_name takes precedence when both are sent.
+    video_b64: str | None = None
+    file_name: str | None = None
     # "standard" (Gemini Flash, 100 tokens) | "premium" (Gemini Pro, 250
     # tokens). Premium catches more shots on noisy clips but costs ~5×
     # more per analysis — quota check happens in the endpoint body.
@@ -3450,27 +3456,33 @@ async def analyze_video_universal_endpoint(
     users no longer get "Overhead Smash" one run and "Back Court Smash"
     the next on the same input. 7-day TTL."""
     await get_current_user(authorization)
-    if not req.video_b64:
-        raise HTTPException(status_code=400, detail="No video provided")
 
     import base64, hashlib
-    try:
-        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
-        video_bytes = base64.b64decode(b64)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
-    if len(video_bytes) < 1000:
-        raise HTTPException(status_code=400, detail="Video too small")
-    if len(video_bytes) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
-
-    # ─── Cache lookup ────────────────────────────────────────────────
+    video_bytes = None
     # Bump PROMPT_VERSION whenever the universal-mode system prompt
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
     PROMPT_VERSION = "v2026-06-01-narrative-bullets"
-    video_hash = hashlib.sha256(video_bytes).hexdigest()[:32]
+    if req.file_name:
+        # Files API path — no bytes locally; key the cache off the handle name
+        # (it's content-specific for the life of the upload).
+        video_hash = hashlib.sha256(req.file_name.encode()).hexdigest()[:32]
+    elif req.video_b64:
+        try:
+            b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+            video_bytes = base64.b64decode(b64)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+        if len(video_bytes) < 1000:
+            raise HTTPException(status_code=400, detail="Video too small")
+        if len(video_bytes) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
+        video_hash = hashlib.sha256(video_bytes).hexdigest()[:32]
+    else:
+        raise HTTPException(status_code=400, detail="No video provided")
+
+    # ─── Cache lookup ────────────────────────────────────────────────
     cache_key = f"{PROMPT_VERSION}:{video_hash}:{req.tier}:{(req.target_player_description or '')[:80]}"
     try:
         cached = await asyncio.wait_for(
@@ -3498,6 +3510,7 @@ async def analyze_video_universal_endpoint(
                 backend=req.backend,
                 tier=req.tier,
                 doubles_mode=req.doubles_mode,
+                file_name=req.file_name,
             )),
             # 180s: dense doubles clips (both near-court players, many events)
             # routinely need 110-160s of Gemini generation. The old 110s cap
@@ -3922,15 +3935,19 @@ def _enqueue_job(job: dict):
 
 async def _process_job(job: dict):
     job_id = job["job_id"]
-    video_bytes = _job_videos.get(job_id)
-    if not video_bytes:
-        # In-memory copy gone (process restarted) — reload the persisted clip
-        # so the job still completes instead of dying as "video_expired".
-        video_bytes = await _load_persisted_video(job_id)
-    if not video_bytes:
-        await _update_job(job_id, status="error", error="video_expired")
-        await _delete_persisted_video(job_id)
-        return
+    file_name = job.get("file_name")
+    video_bytes = None
+    if not file_name:
+        video_bytes = _job_videos.get(job_id)
+        if not video_bytes:
+            # In-memory copy gone (process restarted) — reload the persisted
+            # clip so the job still completes instead of dying as
+            # "video_expired".
+            video_bytes = await _load_persisted_video(job_id)
+        if not video_bytes:
+            await _update_job(job_id, status="error", error="video_expired")
+            await _delete_persisted_video(job_id)
+            return
     await _update_job(job_id, status="running",
                       started_at=datetime.now(timezone.utc))
     loop = asyncio.get_event_loop()
@@ -3942,6 +3959,7 @@ async def _process_job(job: dict):
                 backend=job.get("backend", "auto"),
                 tier=job.get("tier", "premium"),
                 doubles_mode=job.get("doubles_mode", False),
+                file_name=file_name,
             )),
             timeout=200.0,
         )
@@ -3977,6 +3995,15 @@ async def _process_job(job: dict):
         # Gemini has the bytes now — drop the durable copy too (the result is
         # what we keep). On the error/timeout returns above this also runs.
         await _delete_persisted_video(job_id)
+        # Files API path: the analysis is done with the handle — delete it so
+        # we don't accumulate uploads (they'd auto-expire in 48 h anyway).
+        if file_name:
+            try:
+                from ai_pipeline.vlm import files_api_delete
+                loop2 = asyncio.get_event_loop()
+                await loop2.run_in_executor(None, lambda: files_api_delete(file_name))
+            except Exception:
+                pass
 
     payload = {
         "sport_detected": result.get("sport_detected", "unknown"),
@@ -4118,25 +4145,93 @@ async def _requeue_orphaned_jobs():
             pass
 
 
+# ──────────────────────────────────────────────────────────────────────
+# Direct full-resolution upload → Gemini Files API.
+# The client posts the ORIGINAL clip here (no aggressive client-side
+# compression, no base64 inflation). We hand it straight to Gemini's Files
+# API and return a lightweight handle. Subsequent /describe-players and
+# /analyze-video-async calls reference that handle by `file_name`, so:
+#   • Gemini analyzes the full-resolution video (better detection).
+#   • No ~20 MB inline request cap and no slow client decode/compress.
+#   • The job persists only the tiny file_name (Files API retains the bytes
+#     for 48 h), so it survives a redeploy without a 40 MB Mongo blob.
+# ──────────────────────────────────────────────────────────────────────
+@api_router.post("/upload-video")
+async def upload_video_to_files_api(
+    video: UploadFile = File(...), authorization: str = Header(None),
+):
+    """Accept a raw video upload (multipart) and register it with the Gemini
+    Files API. Returns {file_name, file_uri, mime_type, size_bytes}. No
+    tokens are charged here — billing stays gated on a successful analysis."""
+    await get_current_user_or_none(authorization)
+    try:
+        video_bytes = await video.read()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"upload_read_failed: {str(exc)[:200]}")
+    size_bytes = len(video_bytes)
+    if size_bytes < 1000:
+        raise HTTPException(status_code=400, detail="Video too small")
+    # Generous ceiling — full-res phone clips are typically 20-80 MB. The
+    # Files API itself supports up to 2 GB; we cap well below that to keep
+    # uploads and Gemini processing times sane.
+    if size_bytes > 200 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video too large (>200 MB)")
+    mime_type = video.content_type or "video/mp4"
+    try:
+        from ai_pipeline.vlm import files_api_upload
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+    loop = asyncio.get_event_loop()
+    try:
+        handle = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: files_api_upload(video_bytes, mime_type)),
+            timeout=150.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Upload processing timed out — please retry")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Files API upload failed: {str(exc)[:200]}")
+    return {
+        "file_name": handle.name,
+        "file_uri": getattr(handle, "uri", None),
+        "mime_type": mime_type,
+        "size_bytes": size_bytes,
+    }
+
+
 @api_router.post("/analyze-video-async")
 async def analyze_video_async_submit(
     req: AnalyzeVideoUniversalRequest, authorization: str = Header(None),
 ):
     """Enqueue a video analysis and return a job_id immediately so the client
-    can navigate away and poll /analyze-jobs/{job_id} for the result."""
+    can navigate away and poll /analyze-jobs/{job_id} for the result.
+
+    Two input shapes:
+      • file_name  → large clip already uploaded to the Files API. We persist
+                     only the handle name (durable, tiny) and the worker
+                     analyzes the full-resolution original.
+      • video_b64  → small inline clip (legacy). Persisted as base64 so the
+                     job survives a redeploy."""
     user = await get_current_user_or_none(authorization)
-    if not req.video_b64:
-        raise HTTPException(status_code=400, detail="No video provided")
     import base64
-    try:
-        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
-        video_bytes = base64.b64decode(b64)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
-    if len(video_bytes) < 1000:
-        raise HTTPException(status_code=400, detail="Video too small")
-    if len(video_bytes) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
+    video_bytes = None
+    b64 = None
+    if req.file_name:
+        # Files API path — no bytes to decode/validate here; the upload
+        # endpoint already validated and registered the file.
+        pass
+    elif req.video_b64:
+        try:
+            b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+            video_bytes = base64.b64decode(b64)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+        if len(video_bytes) < 1000:
+            raise HTTPException(status_code=400, detail="Video too small")
+        if len(video_bytes) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Video too large (>25 MB) — compress first")
+    else:
+        raise HTTPException(status_code=400, detail="No video provided")
 
     is_guest = user is None
     cost = abs(TOKEN_RULES.get("analysis_spend", -100))
@@ -4169,6 +4264,9 @@ async def analyze_video_async_submit(
         "doubles_mode": req.doubles_mode,
         "time_scale": req.time_scale,
         "push_endpoint": req.push_endpoint,
+        # Files API handle for large clips — the worker re-fetches by this name
+        # instead of reloading bytes. None for the legacy inline path.
+        "file_name": req.file_name,
         "priority": priority,
         "created_at": now,
         "updated_at": now,
@@ -4180,10 +4278,12 @@ async def analyze_video_async_submit(
         # than silently dropping the job.
         raise HTTPException(status_code=503, detail="could not create job — retry shortly")
     # Persist the clip so the job survives a redeploy/restart (durable
-    # background processing). Best-effort: if it fails, the in-memory copy
-    # still runs the job as long as the process doesn't restart mid-flight.
-    await _persist_job_video(job_id, b64)
-    _job_videos[job_id] = video_bytes
+    # background processing). Files API jobs need nothing here — the handle in
+    # the job doc IS the durable reference (Gemini keeps the bytes 48 h). Inline
+    # jobs persist the base64 so a redeploy mid-flight can still finish them.
+    if not req.file_name:
+        await _persist_job_video(job_id, b64)
+        _job_videos[job_id] = video_bytes
     _enqueue_job(job)
     return {"job_id": job_id, "status": "queued"}
 
@@ -5379,7 +5479,10 @@ async def test_ai_gen_status(test_id: str):
 class DescribePlayersRequest(BaseModel):
     backend: str = "auto"
     mime_type: str = "video/mp4"
-    video_b64: str
+    # EITHER inline base64 (small clips) OR a Files API handle name (large
+    # clips — reuses the same upload the analysis will use).
+    video_b64: str | None = None
+    file_name: str | None = None
 
 
 @api_router.post("/describe-players")
@@ -5391,19 +5494,23 @@ async def describe_players_endpoint(
     the user explicitly chooses which player Gemini should focus on in
     the subsequent analysis call."""
     await get_current_user(authorization)
-    if not req.video_b64:
-        raise HTTPException(status_code=400, detail="No video provided")
 
     import base64
-    try:
-        b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
-        video_bytes = base64.b64decode(b64)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
-    if len(video_bytes) < 1000:
-        raise HTTPException(status_code=400, detail="Video too small")
-    if len(video_bytes) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Video too large (>25 MB)")
+    video_bytes = None
+    if req.file_name:
+        pass  # Files API path — bytes referenced by handle
+    elif req.video_b64:
+        try:
+            b64 = req.video_b64.split(",", 1)[1] if req.video_b64.startswith("data:") else req.video_b64
+            video_bytes = base64.b64decode(b64)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"bad base64: {exc}")
+        if len(video_bytes) < 1000:
+            raise HTTPException(status_code=400, detail="Video too small")
+        if len(video_bytes) > 25 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Video too large (>25 MB)")
+    else:
+        raise HTTPException(status_code=400, detail="No video provided")
 
     try:
         from ai_pipeline.vlm import describe_players_in_video
@@ -5415,6 +5522,7 @@ async def describe_players_endpoint(
         result = await asyncio.wait_for(
             loop.run_in_executor(None, lambda: describe_players_in_video(
                 video_bytes, req.mime_type, backend=req.backend,
+                file_name=req.file_name,
             )),
             timeout=35.0,
         )
