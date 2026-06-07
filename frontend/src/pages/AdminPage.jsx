@@ -38,7 +38,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(!!adminKey);
   const [tab, setTab] = useState("stats");
 
-  useEffect(() => { document.title = "Admin · AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Admin · Atheonics"; }, []);
 
   const headers = useMemo(() => ({ "X-Admin-Key": adminKey }), [adminKey]);
 

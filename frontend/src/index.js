@@ -40,7 +40,7 @@ if ('serviceWorker' in navigator) {
           if (!navigator.serviceWorker.controller) return;
           // Tiny non-blocking confirm — avoids pulling sonner into the entry chunk
           const accept = window.confirm(
-            'A new version of AthlyticAI is available. Reload to update?'
+            'A new version of Atheonics is available. Reload to update?'
           );
           if (accept) {
             worker.postMessage({ type: 'SKIP_WAITING' });

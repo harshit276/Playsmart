@@ -1,6 +1,6 @@
 /**
  * @module ai
- * AthlyticAI client-side analysis pipeline.
+ * Atheonics client-side analysis pipeline.
  *
  * Re-exports every public symbol from the individual AI modules so
  * consumers can do:

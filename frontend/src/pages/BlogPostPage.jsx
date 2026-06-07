@@ -39,7 +39,7 @@ export default function BlogPostPage() {
     api.get(`/blog/${slug}`)
       .then(({ data }) => {
         setPost(data);
-        document.title = `${data.title} | AthlyticAI Blog`;
+        document.title = `${data.title} | Atheonics Blog`;
         const meta = document.querySelector('meta[name="description"]');
         if (meta) meta.setAttribute("content", data.description);
       })
@@ -98,11 +98,11 @@ export default function BlogPostPage() {
     headline: post.title,
     description: post.description,
     datePublished: post.published_date,
-    author: { "@type": "Organization", "name": "AthlyticAI" },
+    author: { "@type": "Organization", "name": "Atheonics" },
     publisher: {
       "@type": "Organization",
-      name: "AthlyticAI",
-      logo: { "@type": "ImageObject", url: "https://athlyticai.com/icons/icon-512.png" },
+      name: "Atheonics",
+      logo: { "@type": "ImageObject", url: "https://atheonics.com/icons/icon-512.png" },
     },
   };
 
@@ -110,13 +110,13 @@ export default function BlogPostPage() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://athlyticai.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://athlyticai.com/blog" },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://atheonics.com/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://atheonics.com/blog" },
       {
         "@type": "ListItem",
         position: 3,
         name: post.title,
-        item: `https://athlyticai.com/blog/${post.slug || slug}`,
+        item: `https://atheonics.com/blog/${post.slug || slug}`,
       },
     ],
   };
@@ -127,7 +127,7 @@ export default function BlogPostPage() {
         title={post.title}
         description={post.description}
         keywords={post.tags?.join(", ")}
-        url={`https://athlyticai.com/blog/${post.slug || slug}`}
+        url={`https://atheonics.com/blog/${post.slug || slug}`}
         type="article"
         structuredData={[articleStructuredData, breadcrumbStructuredData]}
       />
@@ -252,7 +252,7 @@ export default function BlogPostPage() {
           <Zap className="w-10 h-10 text-lime-400 mx-auto mb-4" />
           <h2 className="text-white font-bold text-2xl sm:text-3xl mb-3">Ready to Improve Your Game?</h2>
           <p className="text-zinc-400 mb-6 max-w-lg mx-auto">
-            Try AthlyticAI free and get AI-powered analysis, personalized training plans, and smart equipment recommendations.
+            Try Atheonics free and get AI-powered analysis, personalized training plans, and smart equipment recommendations.
           </p>
           <Link to="/auth"
             className="inline-flex items-center gap-2 px-6 py-3 bg-lime-400 text-black font-bold rounded-full hover:bg-lime-500 transition-colors">

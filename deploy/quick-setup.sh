@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-echo "=== AthlyticAI Server Setup ==="
+echo "=== Atheonics Server Setup ==="
 echo "1. Checking system..."
 cat /etc/os-release | head -2
 python3 --version 2>/dev/null || echo "python3 not found"

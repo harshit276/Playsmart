@@ -1,5 +1,5 @@
 """
-AthlyticAI Unified Launcher
+Atheonics Unified Launcher
 ==========================
 Run everything with a single command:
 
@@ -103,7 +103,7 @@ def check_npm_installed():
 def start_server():
     """Start the unified FastAPI server."""
     print("=" * 55)
-    print("  AthlyticAI + AI Sports Coach")
+    print("  Atheonics + AI Sports Coach")
     print("  Starting unified server...")
     print("=" * 55)
     print()
@@ -126,7 +126,7 @@ def start_server():
 if __name__ == "__main__":
     print()
     print("=" * 55)
-    print("  AthlyticAI Unified Launcher")
+    print("  Atheonics Unified Launcher")
     print("=" * 55)
     print()
 

@@ -1,5 +1,5 @@
 """
-AthlyticAI Seed Data - Comprehensive badminton equipment, drills, and training data.
+Atheonics Seed Data - Comprehensive badminton equipment, drills, and training data.
 """
 
 RACKETS = [

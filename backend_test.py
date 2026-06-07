@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AthlyticAI Backend API Comprehensive Testing
+Atheonics Backend API Comprehensive Testing
 Tests all backend endpoints for the badminton companion app
 """
 
@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 import uuid
 
-class AthlyticAIAPITester:
+class AtheonicsAPITester:
     def __init__(self, base_url="https://smart-racket-guide.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
@@ -78,7 +78,7 @@ class AthlyticAIAPITester:
             return False
             
         success, data = self.run_test("Root Endpoint", "GET", "", 200)
-        if success and 'AthlyticAI API' in str(data):
+        if success and 'Atheonics API' in str(data):
             self.log("✅ Root endpoint returns correct API name")
         return success
 
@@ -426,7 +426,7 @@ class AthlyticAIAPITester:
 
     def run_all_tests(self):
         """Run complete test suite"""
-        self.log("🚀 Starting AthlyticAI API Test Suite")
+        self.log("🚀 Starting Atheonics API Test Suite")
         self.log(f"Base URL: {self.base_url}")
         self.log(f"Test Email: {self.test_email}")
         
@@ -474,7 +474,7 @@ class AthlyticAIAPITester:
 
 
 def main():
-    tester = AthlyticAIAPITester()
+    tester = AtheonicsAPITester()
     return tester.run_all_tests()
 
 

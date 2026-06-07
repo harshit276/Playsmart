@@ -74,7 +74,7 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "Can AI really analyze table tennis video?",
-    a: "Yes. AthlyticAI's table tennis video analysis detects the ball and both players, classifies every stroke, and provides technique feedback even from a standard phone video filmed from the end of the table.",
+    a: "Yes. Atheonics's table tennis video analysis detects the ball and both players, classifies every stroke, and provides technique feedback even from a standard phone video filmed from the end of the table.",
   },
   {
     q: "How do I generate more spin on my forehand loop?",
@@ -101,13 +101,13 @@ export default function TableTennisPage() {
         title="AI Table Tennis Coach - Stroke Analysis & Training App"
         description="Free AI table tennis coach: analyze every forehand, backhand, loop, and chop from video. Get personalized drills, spin breakdowns, and paddle recommendations."
         keywords="table tennis video analysis, table tennis stroke analyzer, ping pong coach app, best table tennis paddle, table tennis training app, ping pong video analyzer, forehand loop technique"
-        url="https://athlyticai.com/table-tennis"
+        url="https://atheonics.com/table-tennis"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Table Tennis Coach - Stroke Analysis & Training",
           description: "AI-powered table tennis video analysis, stroke classification, spin breakdowns, and training plans.",
-          url: "https://athlyticai.com/table-tennis",
+          url: "https://atheonics.com/table-tennis",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -276,7 +276,7 @@ export default function TableTennisPage() {
               Sample Weekly Table Tennis Training Plan
             </h2>
             <p className="text-zinc-400">
-              Example week for an intermediate looper. AthlyticAI adapts the full plan to your level,
+              Example week for an intermediate looper. Atheonics adapts the full plan to your level,
               schedule, and video analysis.
             </p>
           </div>

@@ -475,7 +475,7 @@ export default function AnalyzePage() {
   }, [doublesMode]);
 
   // Set page title
-  useEffect(() => { document.title = "Analyze | AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Analyze | Atheonics"; }, []);
 
   // Lambda pre-warm: fire-and-forget a ping when the page mounts so the
   // serverless container is hot by the time the user finishes picking a
@@ -4663,8 +4663,8 @@ export default function AnalyzePage() {
               } catch {
                 // Fallback share
                 setShareData({
-                  title: "My AthlyticAI Analysis",
-                  text: `AthlyticAI Analysis: ${result.shot_analysis?.shot_name || "Game"} - Score: ${result.shot_analysis?.score || "N/A"}/100 - ${result.skill_level || ""}`,
+                  title: "My Atheonics Analysis",
+                  text: `Atheonics Analysis: ${result.shot_analysis?.shot_name || "Game"} - Score: ${result.shot_analysis?.score || "N/A"}/100 - ${result.skill_level || ""}`,
                   card: {
                     shot_name: result.shot_analysis?.shot_name,
                     score: result.shot_analysis?.score,
@@ -5366,7 +5366,7 @@ export default function AnalyzePage() {
         title="AI Video Analysis - Analyze Your Badminton, Tennis, Table Tennis Shots"
         description="Upload a video and get instant AI-powered shot analysis. Detect smashes, drives, drops, and more. Get speed estimation, technique scoring, and personalized improvement tips. Free for badminton, tennis, table tennis, and pickleball."
         keywords="badminton shot analysis, tennis video analyzer, table tennis stroke analysis, AI sports video analysis, badminton smash speed, tennis serve analyzer"
-        url="https://athlyticai.com/analyze"
+        url="https://atheonics.com/analyze"
       />
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}

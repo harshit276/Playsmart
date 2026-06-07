@@ -133,7 +133,7 @@ export default function DashboardPage() {
 
   // Set page title
   useEffect(() => {
-    document.title = "Dashboard | AthlyticAI";
+    document.title = "Dashboard | Atheonics";
   }, []);
 
   // Use defaults for guests / users without profile
@@ -204,10 +204,10 @@ export default function DashboardPage() {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <h1 className="font-heading font-bold text-2xl sm:text-3xl md:text-5xl uppercase tracking-tight text-white mb-1" data-testid="dashboard-title">
-            {isGuestMode ? "Welcome to AthlyticAI" : `Welcome Back${user?.name ? `, ${user.name.split(" ")[0]}` : ""}`}
+            {isGuestMode ? "Welcome to Atheonics" : `Welcome Back${user?.name ? `, ${user.name.split(" ")[0]}` : ""}`}
           </h1>
           <p className="text-zinc-400 text-sm sm:text-base">
-            {isGuestMode ? "Explore what AthlyticAI can do for your game." : "Here's your AthlyticAI overview."}
+            {isGuestMode ? "Explore what Atheonics can do for your game." : "Here's your Atheonics overview."}
           </p>
         </motion.div>
 

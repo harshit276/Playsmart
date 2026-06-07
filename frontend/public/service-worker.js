@@ -47,7 +47,7 @@ self.addEventListener('message', (event) => {
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = {}; }
-  const title = data.title || 'AthlyticAI';
+  const title = data.title || 'Atheonics';
   const options = {
     body: data.body || 'Your analysis is ready.',
     icon: '/icons/icon-192.png',

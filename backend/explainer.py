@@ -1,5 +1,5 @@
 """
-AthlyticAI Explanation Layer
+Atheonics Explanation Layer
 
 Uses OpenAI to generate natural language explanations for:
 - Equipment recommendations

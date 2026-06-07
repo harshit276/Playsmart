@@ -68,7 +68,7 @@ export default function ProgressPage() {
 
   // Set page title
   useEffect(() => {
-    document.title = "Progress | AthlyticAI";
+    document.title = "Progress | Atheonics";
   }, []);
 
   if (loading) return (
@@ -669,10 +669,10 @@ export default function ProgressPage() {
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         shareData={{
-          title: "My AthlyticAI Progress",
-          text: `My AthlyticAI Progress:\n${d.completed_days}/${d.total_days} training days completed\n${analysisHistory.length} video analyses\n${d.current_streak} day streak\n${badgesData?.total_earned || 0} badges earned\n\nTrain smarter with AthlyticAI!`,
+          title: "My Atheonics Progress",
+          text: `My Atheonics Progress:\n${d.completed_days}/${d.total_days} training days completed\n${analysisHistory.length} video analyses\n${d.current_streak} day streak\n${badgesData?.total_earned || 0} badges earned\n\nTrain smarter with Atheonics!`,
           card: {
-            player_name: user?.name || "AthlyticAI Player",
+            player_name: user?.name || "Atheonics Player",
             skill_level: analysisHistory[0]?.skill_level || "",
             sport: "",
             badges_count: badgesData?.total_earned || 0,

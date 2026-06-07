@@ -74,18 +74,18 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "How can I analyze my tennis serve with video?",
-    a: "Record your serve from behind the baseline or 45° side view. Upload it to AthlyticAI and our AI tennis coach will break down trophy position, racket drop, contact point, and measure your serve speed.",
+    a: "Record your serve from behind the baseline or 45° side view. Upload it to Atheonics and our AI tennis coach will break down trophy position, racket drop, contact point, and measure your serve speed.",
   },
   {
     q: "How fast is a professional tennis serve?",
-    a: "Top ATP players regularly serve above 200 km/h; the record is around 263 km/h. Club players typically serve 120-160 km/h. AthlyticAI's tennis video analyzer estimates your serve speed from any smartphone footage.",
+    a: "Top ATP players regularly serve above 200 km/h; the record is around 263 km/h. Club players typically serve 120-160 km/h. Atheonics's tennis video analyzer estimates your serve speed from any smartphone footage.",
   },
   {
     q: "What is the best tennis racquet for intermediate players?",
     a: "Most intermediates benefit from 100 sq in heads around 300g strung, like the Babolat Pure Drive, Wilson Clash 100, or Head Speed MP. See full recommendations based on your swing.",
   },
   {
-    q: "Can AthlyticAI coach forehand and backhand technique?",
+    q: "Can Atheonics coach forehand and backhand technique?",
     a: "Yes. Our AI models are trained on professional tennis footage and flag common issues like late prep, collapsed wrist at contact, closing the racket face early, and poor weight transfer.",
   },
   {
@@ -101,13 +101,13 @@ export default function TennisPage() {
         title="AI Tennis Coach - Serve Analysis & Training App"
         description="Free AI tennis coach: measure serve speed, analyze forehand and backhand technique, get personalized training plans, and smart racquet recommendations."
         keywords="tennis video analyzer, tennis serve analysis, AI tennis coach, tennis training app, best tennis racquet, tennis shot analyzer, forehand analysis, backhand technique"
-        url="https://athlyticai.com/tennis"
+        url="https://atheonics.com/tennis"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Tennis Coach - Video Analysis & Training",
           description: "AI-powered tennis video analysis, serve speed measurement, and personalized training plans.",
-          url: "https://athlyticai.com/tennis",
+          url: "https://atheonics.com/tennis",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -173,7 +173,7 @@ export default function TennisPage() {
               Everything a Tennis Player Needs
             </h2>
             <p className="text-zinc-400 mt-3 max-w-2xl mx-auto">
-              From serve speed tracking to shot-by-shot pattern analysis, AthlyticAI is your always-on
+              From serve speed tracking to shot-by-shot pattern analysis, Atheonics is your always-on
               tennis coach.
             </p>
           </div>

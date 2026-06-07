@@ -222,7 +222,7 @@ export default function TrainingPage() {
   const [toggling, setToggling] = useState(null);
 
   // Set page title
-  useEffect(() => { document.title = "Training | AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Training | Atheonics"; }, []);
   const [activeWeek, setActiveWeek] = useState(0);
   const [difficultyFilter, setDifficultyFilter] = useState("All");
   const [focusFilter, setFocusFilter] = useState("All");
@@ -618,7 +618,7 @@ export default function TrainingPage() {
         title="Personalized Sports Training Plans - Drills & Workouts"
         description="Get a personalized training plan with drills, exercises, and video tutorials. Improve your badminton smash, tennis serve, table tennis spin, or pickleball dink with structured weekly workouts."
         keywords="badminton training plan, tennis drills, table tennis exercises, sports workout plan, badminton footwork drills"
-        url="https://athlyticai.com/training"
+        url="https://atheonics.com/training"
       />
       <div className="container mx-auto px-4 max-w-5xl">
 

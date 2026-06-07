@@ -74,11 +74,11 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "How do I improve my basketball shooting form?",
-    a: "Build a repeatable motion: balanced stance, shooting elbow tucked under the ball, a smooth dip-and-rise in one motion powered by your legs, a high release point, and a held follow-through. Shoot close to the basket first to groove the form, then extend range. AthlyticAI's analysis flags form breaks directly from your video.",
+    a: "Build a repeatable motion: balanced stance, shooting elbow tucked under the ball, a smooth dip-and-rise in one motion powered by your legs, a high release point, and a held follow-through. Shoot close to the basket first to groove the form, then extend range. Atheonics's analysis flags form breaks directly from your video.",
   },
   {
     q: "How can I analyze my shooting form at home?",
-    a: "Film yourself shooting from the side with your phone, upload the clip to AthlyticAI, and the AI basketball coach will break down your stance, elbow alignment, release point, and follow-through with frame-by-frame feedback — no trainer required.",
+    a: "Film yourself shooting from the side with your phone, upload the clip to Atheonics, and the AI basketball coach will break down your stance, elbow alignment, release point, and follow-through with frame-by-frame feedback — no trainer required.",
   },
   {
     q: "How do I jump higher for basketball?",
@@ -89,7 +89,7 @@ const FAQS = [
     a: "Beginners should prioritise ankle support, cushioning, and grip for their surface — outdoor courts need a more durable rubber outsole than indoor shoes. A comfortable, well-fitting mid- or high-top in your budget beats an expensive shoe that doesn't fit.",
   },
   {
-    q: "Is the AthlyticAI basketball app free?",
+    q: "Is the Atheonics basketball app free?",
     a: "Yes. You can analyze videos, generate training plans, and browse shoe recommendations for free. No credit card required to get started.",
   },
 ];
@@ -101,13 +101,13 @@ export default function BasketballPage() {
         title="AI Basketball Coach - Shooting Form & Skills Video Analysis"
         description="Free AI basketball coach: analyze your shooting form, dribbling, and vertical, get personalized training plans and shoe recommendations. Upload a video and improve your game fast."
         keywords="basketball video analysis, AI basketball coach, basketball shooting form, how to improve basketball shooting, dribbling drills, vertical jump, basketball training plan, best basketball shoes"
-        url="https://athlyticai.com/basketball"
+        url="https://atheonics.com/basketball"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Basketball Coach - Shooting Form & Skills Video Analysis",
           description: "AI-powered basketball video analysis, shooting-form breakdown, ball-handling feedback, and personalized training plans.",
-          url: "https://athlyticai.com/basketball",
+          url: "https://atheonics.com/basketball",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -173,7 +173,7 @@ export default function BasketballPage() {
               Built for Ballers
             </h2>
             <p className="text-zinc-400 mt-3 max-w-2xl mx-auto">
-              Every tool on AthlyticAI is tuned to the technique, movement, and skills that win on the court.
+              Every tool on Atheonics is tuned to the technique, movement, and skills that win on the court.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

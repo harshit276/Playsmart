@@ -8,4 +8,4 @@ Disallow: /community
 Disallow: /card
 Disallow: /assessment
 
-Sitemap: https://athlyticai.com/sitemap.xml
+Sitemap: https://atheonics.com/sitemap.xml

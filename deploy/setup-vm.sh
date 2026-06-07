@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# AthlyticAI - Oracle Cloud VM Setup Script
+# Atheonics - Oracle Cloud VM Setup Script
 # Run on a fresh Ubuntu 22.04+ VM as root or with sudo
 # Usage: sudo bash setup-vm.sh
 # ============================================================
@@ -13,7 +13,7 @@ PYTHON_VERSION="3.10"
 REPO_URL="${PLAYSMART_REPO_URL:-https://github.com/YOUR_ORG/playsmart.git}"
 
 echo "=========================================="
-echo "  AthlyticAI VM Setup"
+echo "  Atheonics VM Setup"
 echo "=========================================="
 
 # ─── 1. System Update ───

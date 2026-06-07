@@ -539,7 +539,7 @@ export default function FormComparisonModal({
                     <p className="text-[10px] text-zinc-500 leading-snug max-w-[260px]">
                       We hand-pick one clip per shot per sport so comparisons stay accurate.{" "}
                       <a
-                        href="mailto:hello@athlyticai.com?subject=Pro+reference+request"
+                        href="mailto:hello@atheonics.com?subject=Pro+reference+request"
                         className="text-sky-400 hover:text-sky-300"
                       >
                         Vote for it

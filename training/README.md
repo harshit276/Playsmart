@@ -24,7 +24,7 @@ pip install "numpy<2" --force-reinstall
 ## Workflow
 
 ### 1. Label clips on the website
-1. Go to `https://athlyticai.com/label`
+1. Go to `https://atheonics.com/label`
 2. Upload a video, label each shot (or click **Discard** for ambiguous / multi-shot clips)
 3. Click the green **Download labels.json** button
 4. Save the file **next to the source video** (same folder)
@@ -53,7 +53,7 @@ python extract_poses.py \
   --labels "C:/Users/mundr/Videos/badminton_clips/labels_a3f1b2c4.json"
 ```
 
-(Optional: `--api https://athlyticai.com` to pull from the server if you also clicked "Upload to server".)
+(Optional: `--api https://atheonics.com` to pull from the server if you also clicked "Upload to server".)
 
 ### 3. Train the classifier
 ```bash

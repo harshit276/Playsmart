@@ -1,9 +1,9 @@
 /**
- * PostHog reverse proxy — Cloudflare Worker for AthlyticAI.
+ * PostHog reverse proxy — Cloudflare Worker for Atheonics.
  *
  * WHY: ad-blockers block requests to *.i.posthog.com, silently dropping
  * ~10–25% of analytics events. Serving PostHog from a first-party subdomain
- * (ph.athlyticai.com) routes data through our own domain so it isn't blocked.
+ * (ph.atheonics.com) routes data through our own domain so it isn't blocked.
  *
  * ROUTES:
  *   /static/*        -> eu-assets.i.posthog.com   (array.js, recorder bundle, etc.)
@@ -11,9 +11,9 @@
  *
  * DEPLOY: see cloudflare/POSTHOG_REVERSE_PROXY.md
  *
- * After this Worker is live on https://ph.athlyticai.com, the PostHog init in
+ * After this Worker is live on https://ph.atheonics.com, the PostHog init in
  * public/index.html must use:
- *   api_host: "https://ph.athlyticai.com"
+ *   api_host: "https://ph.atheonics.com"
  *   ui_host:  "https://eu.posthog.com"
  *
  * EU PostHog hosts are hardcoded — change only if the PostHog project region changes.

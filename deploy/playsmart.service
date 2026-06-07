@@ -1,5 +1,5 @@
 [Unit]
-Description=AthlyticAI Backend API
+Description=Atheonics Backend API
 After=network.target
 Wants=network-online.target
 

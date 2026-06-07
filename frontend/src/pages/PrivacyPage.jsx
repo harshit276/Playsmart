@@ -17,7 +17,7 @@ export default function PrivacyPage() {
           <Link to="/" className="flex items-center gap-2 text-zinc-400 hover:text-lime-400 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             <Zap className="w-5 h-5 text-lime-400" />
-            <span className="font-heading font-bold text-lg uppercase tracking-tight text-white">AthlyticAI</span>
+            <span className="font-heading font-bold text-lg uppercase tracking-tight text-white">Atheonics</span>
           </Link>
         </div>
       </div>
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
 
         <Section title="1. Introduction">
           <p>
-            AthlyticAI ("we", "our", "us") is an AI-powered sports coaching platform. We are committed to protecting your privacy and being transparent about how we handle your data. This policy explains what information we collect, how we use it, and your rights.
+            Atheonics ("we", "our", "us") is an AI-powered sports coaching platform. We are committed to protecting your privacy and being transparent about how we handle your data. This policy explains what information we collect, how we use it, and your rights.
           </p>
         </Section>
 
@@ -108,13 +108,13 @@ export default function PrivacyPage() {
 
         <Section title="10. Children's Privacy">
           <p>
-            AthlyticAI is intended for users of all ages who participate in sports. If you are under 13, please use our platform with parental guidance. We do not knowingly collect data from children under 13 without parental consent.
+            Atheonics is intended for users of all ages who participate in sports. If you are under 13, please use our platform with parental guidance. We do not knowingly collect data from children under 13 without parental consent.
           </p>
         </Section>
 
         <Section title="11. Changes to This Policy">
           <p>
-            We may update this privacy policy from time to time. We will notify users of any significant changes through the app. Continued use of AthlyticAI after changes constitutes acceptance of the updated policy.
+            We may update this privacy policy from time to time. We will notify users of any significant changes through the app. Continued use of Atheonics after changes constitutes acceptance of the updated policy.
           </p>
         </Section>
 
@@ -123,8 +123,8 @@ export default function PrivacyPage() {
             If you have questions about this privacy policy or your data, contact us at:
           </p>
           <p>
-            <a href="mailto:support@athlyticai.com" className="text-lime-400 hover:text-lime-300 transition-colors font-medium">
-              support@athlyticai.com
+            <a href="mailto:support@atheonics.com" className="text-lime-400 hover:text-lime-300 transition-colors font-medium">
+              support@atheonics.com
             </a>
           </p>
         </Section>

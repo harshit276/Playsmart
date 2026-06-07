@@ -1,5 +1,5 @@
 """
-AthlyticAI Recommendation Rule Engine - Deterministic equipment recommendations.
+Atheonics Recommendation Rule Engine - Deterministic equipment recommendations.
 """
 
 

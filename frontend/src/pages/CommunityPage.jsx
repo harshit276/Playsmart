@@ -138,7 +138,7 @@ export default function CommunityPage() {
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
-  useEffect(() => { document.title = "Community | AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Community | Atheonics"; }, []);
 
   // Auto-open host modal when navigated from "Host Game" nav item
   const [searchParams, setSearchParams] = useSearchParams();
@@ -473,7 +473,7 @@ export default function CommunityPage() {
                 <EmptyState
                   icon={<Search className="w-10 h-10 text-zinc-600" strokeWidth={1.5} />}
                   title="No other players found yet"
-                  body="Share AthlyticAI with friends — every new signup grows the local community."
+                  body="Share Atheonics with friends — every new signup grows the local community."
                 />
               ) : (
                 players.map((p, i) => (
@@ -540,7 +540,7 @@ function GameCard({ game, userId, onJoin, onLeave, delay = 0 }) {
       `📍 ${game.venue}, ${game.city}\n` +
       `🗓 ${friendlyDate(game.date)} ${friendlyTime(game.time)}\n` +
       `${spotsNeeded > 0 ? `⚡ ${spotsNeeded} ${spotsNeeded === 1 ? "spot" : "spots"} left` : "Full"}\n\n` +
-      `Join via AthlyticAI: ${window.location.origin}/community`;
+      `Join via Atheonics: ${window.location.origin}/community`;
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };

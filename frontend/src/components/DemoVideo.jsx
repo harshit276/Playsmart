@@ -27,7 +27,7 @@ export default function DemoVideo() {
         <div className="text-center mb-8">
           <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold mb-2">See it in action</p>
           <h2 className="font-heading font-bold text-3xl sm:text-4xl uppercase tracking-tight text-white">
-            60 seconds — what AthlyticAI does
+            60 seconds — what Atheonics does
           </h2>
         </div>
 
@@ -36,7 +36,7 @@ export default function DemoVideo() {
             {videoId ? (
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
-                title="AthlyticAI demo"
+                title="Atheonics demo"
                 className="w-full h-full"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

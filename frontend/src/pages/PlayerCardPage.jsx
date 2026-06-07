@@ -20,7 +20,7 @@ export default function PlayerCardPage() {
 
   // Set page title
   useEffect(() => {
-    document.title = "Player Card | AthlyticAI";
+    document.title = "Player Card | Atheonics";
   }, []);
 
   useEffect(() => {
@@ -45,14 +45,14 @@ export default function PlayerCardPage() {
     } catch {
       // Fallback share
       const shareText = card
-        ? `My AthlyticAI Profile:\nSport: ${(card.active_sport || "").replace("_", " ")}\nSkill: ${card.skill_level}\nStyle: ${card.play_style}\nGoal: ${card.primary_goal}\n\nTrain smarter with AthlyticAI!`
-        : "Check out AthlyticAI!";
+        ? `My Atheonics Profile:\nSport: ${(card.active_sport || "").replace("_", " ")}\nSkill: ${card.skill_level}\nStyle: ${card.play_style}\nGoal: ${card.primary_goal}\n\nTrain smarter with Atheonics!`
+        : "Check out Atheonics!";
 
       setShareData({
-        title: "My AthlyticAI Card",
+        title: "My Atheonics Card",
         text: shareText,
         card: {
-          player_name: user?.name || "AthlyticAI Player",
+          player_name: user?.name || "Atheonics Player",
           skill_level: card?.skill_level,
           play_style: card?.play_style,
           sport: card?.active_sport?.replace("_", " "),
@@ -108,7 +108,7 @@ export default function PlayerCardPage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-lime-400/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="flex items-center gap-3 mb-4">
               <Zap className="w-6 h-6 text-lime-400" />
-              <span className="font-heading font-bold text-sm uppercase tracking-wider text-lime-400">AthlyticAI</span>
+              <span className="font-heading font-bold text-sm uppercase tracking-wider text-lime-400">Atheonics</span>
             </div>
 
             <div className="flex items-center justify-between">

@@ -26,7 +26,7 @@ jobs:
           # continue — a flaky single call shouldn't fail the workflow.
           STATUS=$(curl -s -o /tmp/health.json -w "%{http_code}" \
                         --max-time 30 \
-                        https://athlyticai.com/api/health || echo "000")
+                        https://atheonics.com/api/health || echo "000")
           echo "Status: $STATUS"
           if [ "$STATUS" = "200" ]; then
             # Pretty-print env state for the run log so we can audit which

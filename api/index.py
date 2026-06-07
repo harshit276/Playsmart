@@ -1,5 +1,5 @@
 """
-Vercel serverless entry point for AthlyticAI API.
+Vercel serverless entry point for Atheonics API.
 """
 import sys
 import os
@@ -19,7 +19,7 @@ os.environ.setdefault("VERCEL", "1")
 os.environ.setdefault("DB_NAME", "athlyticai")
 
 # Default app in case import fails
-app = FastAPI(title="AthlyticAI API")
+app = FastAPI(title="Atheonics API")
 
 try:
     if os.path.isdir(backend_dir):

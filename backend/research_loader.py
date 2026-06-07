@@ -1,5 +1,5 @@
 """
-Research Data Loader for AthlyticAI.
+Research Data Loader for Atheonics.
 Loads and indexes research JSON data (skills, videos, equipment) for all sports.
 Data is loaded once at import time and cached in memory for fast lookups.
 """

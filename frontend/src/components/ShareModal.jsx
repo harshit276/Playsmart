@@ -34,7 +34,7 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
     if (navigator.share) {
       try {
         await navigator.share({
-          title: shareData?.title || "AthlyticAI",
+          title: shareData?.title || "Atheonics",
           text: shareData?.text || "",
           url: shareData?.url || window.location.href,
         });
@@ -82,13 +82,13 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
       // Title
       ctx.fillStyle = "#bef264";
       ctx.font = "bold 12px sans-serif";
-      ctx.fillText("ATHLYTICAI", 20, y);
+      ctx.fillText("ATHEONICS", 20, y);
       y += 28;
 
       // Player name
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 20px sans-serif";
-      ctx.fillText(d.player_name || d.shot_name || "AthlyticAI Player", 20, y);
+      ctx.fillText(d.player_name || d.shot_name || "Atheonics Player", 20, y);
       y += 24;
 
       // Sport
@@ -140,7 +140,7 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
       // Footer
       ctx.fillStyle = "#3f3f46";
       ctx.font = "10px sans-serif";
-      ctx.fillText("athlyticai.com", 20, y + 10);
+      ctx.fillText("atheonics.com", 20, y + 10);
 
       // Convert to downloadable image
       canvas.toBlob((blob) => {
@@ -151,7 +151,7 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `athlyticai-${cardType}-card.png`;
+        a.download = `atheonics-${cardType}-card.png`;
         a.click();
         URL.revokeObjectURL(url);
         toast.success("Image downloaded!");
@@ -209,7 +209,7 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
               >
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-4 h-4 text-lime-400" />
-                  <span className="text-xs font-bold text-lime-400 uppercase tracking-wider">AthlyticAI</span>
+                  <span className="text-xs font-bold text-lime-400 uppercase tracking-wider">Atheonics</span>
                 </div>
 
                 {cardType === "analysis" ? (

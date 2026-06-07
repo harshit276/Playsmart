@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# AthlyticAI - Update/Deploy Script
+# Atheonics - Update/Deploy Script
 # Pulls latest code, installs deps, restarts service
 # Usage: sudo bash update.sh [--skip-deps]
 # ============================================================
@@ -19,7 +19,7 @@ for arg in "$@"; do
 done
 
 echo "=========================================="
-echo "  AthlyticAI Update"
+echo "  Atheonics Update"
 echo "  $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=========================================="
 

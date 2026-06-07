@@ -1,4 +1,4 @@
-package com.athlyticai.app;
+package com.atheonics.app;
 
 import com.getcapacitor.BridgeActivity;
 

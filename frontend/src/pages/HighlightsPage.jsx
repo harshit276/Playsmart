@@ -36,7 +36,7 @@ export default function HighlightsPage() {
   const recordedChunksRef = useRef([]);
   const fileRef = useRef(null);
 
-  useEffect(() => { document.title = "Highlights | AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Highlights | Atheonics"; }, []);
 
   const activeSport = profile?.active_sport || "badminton";
   useEffect(() => { if (!selectedSport) setSelectedSport(activeSport); }, [activeSport, selectedSport]);
@@ -528,7 +528,7 @@ export default function HighlightsPage() {
               {reelUrl && (
                 <a
                   href={reelUrl}
-                  download="athlyticai_highlights.mp4"
+                  download="atheonics_highlights.mp4"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full inline-flex items-center justify-center gap-2 bg-lime-400 text-black hover:bg-lime-500 font-bold h-11 rounded-md mb-3"

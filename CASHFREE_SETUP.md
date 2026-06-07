@@ -30,7 +30,7 @@ Cashfree dashboard → **Developers** → **Webhooks** → **Add webhook**.
 
 | Field | Value |
 |---|---|
-| URL | `https://athlyticai.com/api/payments/webhook` |
+| URL | `https://atheonics.com/api/payments/webhook` |
 | Events | ✅ `PAYMENT_SUCCESS_WEBHOOK` (required). Others optional. |
 | API version | `2023-08-01` |
 
@@ -54,7 +54,7 @@ After deploying with the env vars set:
 **Option B — curl:**
 ```bash
 curl -H "X-Admin-Key: $ADMIN_WIPE_KEY" \
-  https://athlyticai.com/api/admin/cashfree-ping
+  https://atheonics.com/api/admin/cashfree-ping
 ```
 
 What it does: hits Cashfree's `/orders` endpoint with `order_amount: 0.01` (which Cashfree rejects). A 400 response from Cashfree means your keys auth'd correctly. A 401/403 means bad keys. No real order is created.

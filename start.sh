@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AthlyticAI — Production startup script
+# Atheonics — Production startup script
 # Works with or without Docker.
 # Usage:  chmod +x start.sh && ./start.sh
 
@@ -35,7 +35,7 @@ if [ -z "${DB_NAME:-}" ]; then
     exit 1
 fi
 
-echo "Starting AthlyticAI API on port ${PORT} ..."
+echo "Starting Atheonics API on port ${PORT} ..."
 
 exec python -m uvicorn backend.server:app \
     --host 0.0.0.0 \

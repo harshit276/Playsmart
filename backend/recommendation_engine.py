@@ -1,5 +1,5 @@
 """
-AthlyticAI Recommendation Engine
+Atheonics Recommendation Engine
 
 Centralizes all personalization logic. Uses the full quiz/profile data to derive:
 - Play identity (who you are as a player)

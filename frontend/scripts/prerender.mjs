@@ -1,5 +1,5 @@
 /**
- * Static prerenderer for AthlyticAI's public routes.
+ * Static prerenderer for Atheonics's public routes.
  *
  * WHY: the app is a client-side React SPA — `build/index.html` is an empty
  * shell, so search engines and social scrapers see no content. react-snap was

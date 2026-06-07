@@ -27,7 +27,7 @@ export default function ProfilePage() {
   const { user, profile, tokens, logout } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => { document.title = "Profile · AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Profile · Atheonics"; }, []);
 
   if (!user) {
     return (
@@ -49,7 +49,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO title="Profile · AthlyticAI" description="Manage your AthlyticAI profile and preferences." />
+      <SEO title="Profile · Atheonics" description="Manage your Atheonics profile and preferences." />
       <div className="container mx-auto px-4 max-w-3xl">
         {/* Header card */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}

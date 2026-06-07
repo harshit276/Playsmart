@@ -23,7 +23,7 @@ Run examples:
   python extract_poses.py --videos-dir "./videos" --labels "./labels_abc.json"
 
   # API-backed
-  python extract_poses.py --videos-dir "./videos" --api https://athlyticai.com
+  python extract_poses.py --videos-dir "./videos" --api https://atheonics.com
 """
 from __future__ import annotations
 
@@ -247,7 +247,7 @@ def main():
         print("[error] no labeled sessions found. Either:", file=sys.stderr)
         print("        1) Drop labels_*.json into the videos folder and re-run", file=sys.stderr)
         print("        2) Pass --labels FILE explicitly", file=sys.stderr)
-        print("        3) Use --api https://athlyticai.com if you uploaded labels", file=sys.stderr)
+        print("        3) Use --api https://atheonics.com if you uploaded labels", file=sys.stderr)
         sys.exit(2)
 
     movenet = load_movenet()

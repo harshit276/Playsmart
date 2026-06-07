@@ -1,5 +1,5 @@
 """
-AthlyticAI Dynamic Training Plan Generator
+Atheonics Dynamic Training Plan Generator
 
 Creates personalized 30-day plans by selecting from the curated drill database
 based on: skill level, play style, goals, injuries, and AI-detected weaknesses.

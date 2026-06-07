@@ -1,6 +1,6 @@
-# Vercel Deployment Guide for AthlyticAI
+# Vercel Deployment Guide for Atheonics
 
-Complete guide to deploying AthlyticAI on Vercel with a custom domain via Cloudflare.
+Complete guide to deploying Atheonics on Vercel with a custom domain via Cloudflare.
 
 ---
 
@@ -21,7 +21,7 @@ Complete guide to deploying AthlyticAI on Vercel with a custom domain via Cloudf
 ```bash
 git init
 git add -A
-git commit -m "Initial commit: AthlyticAI - AI Sports Coach"
+git commit -m "Initial commit: Atheonics - AI Sports Coach"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/athlyticai.git
 git push -u origin main
@@ -52,7 +52,7 @@ git push -u origin main
 | `MONGO_URL`     | Your MongoDB Atlas connection string         |
 | `DB_NAME`       | `athlyticai`                                 |
 | `JWT_SECRET`    | A random string, 32+ characters              |
-| `CORS_ORIGINS`  | `https://athlyticai.com` (your domain)       |
+| `CORS_ORIGINS`  | `https://atheonics.com` (your domain)       |
 | `ENVIRONMENT`   | `production`                                 |
 | `VERCEL`        | `1`                                          |
 
@@ -69,7 +69,7 @@ Vercel natively supports serverless functions. If the backend is served as Verce
 For a separate backend deployment:
 1. Deploy the `backend/` folder to Railway/Render.
 2. Set `CORS_ORIGINS` on the backend to your Vercel frontend URL.
-3. Set `REACT_APP_API_URL` on Vercel to the backend URL (e.g., `https://api.athlyticai.com`).
+3. Set `REACT_APP_API_URL` on Vercel to the backend URL (e.g., `https://api.atheonics.com`).
 
 ---
 
@@ -78,7 +78,7 @@ For a separate backend deployment:
 ### In Vercel
 
 1. Go to your Vercel project, then **Settings** then **Domains**.
-2. Add your domain: `athlyticai.com`.
+2. Add your domain: `atheonics.com`.
 3. Vercel will display DNS records you need to configure.
 
 ### In Cloudflare DNS
@@ -111,7 +111,7 @@ If you have Cloudflare's SSL settings enabled globally:
 
 After DNS propagation (can take up to 48 hours, usually minutes):
 
-1. Visit `https://athlyticai.com` -- should load the landing page.
+1. Visit `https://atheonics.com` -- should load the landing page.
 2. Test user registration and login.
 3. Test the dashboard and training pages.
 4. Test the blog section.

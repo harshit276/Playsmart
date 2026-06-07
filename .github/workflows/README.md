@@ -1,6 +1,6 @@
 # GitHub Actions — Android APK Build
 
-This workflow builds an APK for AthlyticAI in the cloud — no Android Studio needed on your laptop.
+This workflow builds an APK for Atheonics in the cloud — no Android Studio needed on your laptop.
 
 ## How to trigger a build
 
@@ -32,7 +32,7 @@ Debug builds work immediately. Release builds need a keystore. One-time steps:
 You need Java installed. If you don't have it: download JDK 17 from https://adoptium.net (~200 MB).
 
 ```bash
-keytool -genkey -v -keystore athlyticai-release.keystore \
+keytool -genkey -v -keystore atheonics-release.keystore \
   -alias athlyticai -keyalg RSA -keysize 2048 -validity 10000
 ```
 
@@ -44,12 +44,12 @@ Set a strong password. Answer the prompts (CN, OU, O, L, S, C — these become p
 
 PowerShell:
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("athlyticai-release.keystore")) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("atheonics-release.keystore")) | Set-Clipboard
 ```
 
 Bash / Git Bash:
 ```bash
-base64 -w 0 athlyticai-release.keystore | clip
+base64 -w 0 atheonics-release.keystore | clip
 ```
 
 The base64 string is now in your clipboard.

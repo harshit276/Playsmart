@@ -1,9 +1,9 @@
-# AthlyticAI Mobile App — Build & Host Guide
+# Atheonics Mobile App — Build & Host Guide
 
 Two delivery paths for the mobile app:
 
 1. **PWA (live now)** — users install from any browser via the in-app prompt or `/download`. Zero infra.
-2. **Capacitor Android APK** — wraps the web app in a native Android shell. Hosted on `athlyticai.com/download`.
+2. **Capacitor Android APK** — wraps the web app in a native Android shell. Hosted on `atheonics.com/download`.
 
 ---
 
@@ -45,7 +45,7 @@ Bump `CACHE_VERSION` in `service-worker.js` whenever you change cache strategy o
 
 ```bash
 cd frontend/android/app
-keytool -genkey -v -keystore athlyticai-release.keystore \
+keytool -genkey -v -keystore atheonics-release.keystore \
   -alias athlyticai -keyalg RSA -keysize 2048 -validity 10000
 ```
 
@@ -56,7 +56,7 @@ Add to `frontend/android/app/build.gradle` inside the `android { ... }` block:
 ```gradle
 signingConfigs {
     release {
-        storeFile file('athlyticai-release.keystore')
+        storeFile file('atheonics-release.keystore')
         storePassword 'YOUR_STORE_PASSWORD'
         keyAlias 'athlyticai'
         keyPassword 'YOUR_KEY_PASSWORD'
@@ -96,7 +96,7 @@ Or transfer the APK file, tap it, allow "install from unknown sources".
 
 ### Refresh app content (no rebuild needed for web changes)
 
-The Capacitor config points at `athlyticai.com`, so most updates are LIVE — users get them on next app open without any APK update. Only rebuild the APK when:
+The Capacitor config points at `atheonics.com`, so most updates are LIVE — users get them on next app open without any APK update. Only rebuild the APK when:
 - Native plugin added/changed
 - App icon / splash changed
 - Server URL changed

@@ -77,8 +77,8 @@ jobs:
             echo "::error::ANDROID_KEYSTORE_BASE64 secret is missing. Cannot build release APK."
             exit 1
           fi
-          echo "$KEYSTORE_BASE64" | base64 -d > frontend/android/app/athlyticai-release.keystore
-          echo "Keystore decoded ($(wc -c < frontend/android/app/athlyticai-release.keystore) bytes)"
+          echo "$KEYSTORE_BASE64" | base64 -d > frontend/android/app/atheonics-release.keystore
+          echo "Keystore decoded ($(wc -c < frontend/android/app/atheonics-release.keystore) bytes)"
 
       - name: Make gradlew executable
         working-directory: frontend/android
@@ -124,9 +124,9 @@ jobs:
         with:
           files: frontend/android/app/build/outputs/apk/**/*.apk
           generate_release_notes: true
-          name: AthlyticAI ${{ github.ref_name }}
+          name: Atheonics ${{ github.ref_name }}
           body: |
-            ## AthlyticAI Android App ${{ github.ref_name }}
+            ## Atheonics Android App ${{ github.ref_name }}
 
             **Install:** Download the APK below → open on your Android phone → tap to install.
 

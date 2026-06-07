@@ -41,15 +41,15 @@ const HOW_IT_WORKS = [
 const FAQS = [
   {
     q: "How does AI video analysis work?",
-    a: "AthlyticAI uses pose detection AI (MoveNet) to track your body movements in the video. It identifies your shots (smashes, drives, etc.), measures speed, evaluates technique, and provides personalized improvement tips.",
+    a: "Atheonics uses pose detection AI (MoveNet) to track your body movements in the video. It identifies your shots (smashes, drives, etc.), measures speed, evaluates technique, and provides personalized improvement tips.",
   },
   {
-    q: "Which sports does AthlyticAI support?",
+    q: "Which sports does Atheonics support?",
     a: "We currently support badminton, tennis, table tennis, pickleball, cricket, football, and swimming. Video analysis is best for racket sports.",
   },
   {
-    q: "Is AthlyticAI free?",
-    a: "Yes, AthlyticAI is completely free to use. You can analyze videos, get equipment recommendations, training plans, and create highlight reels at no cost.",
+    q: "Is Atheonics free?",
+    a: "Yes, Atheonics is completely free to use. You can analyze videos, get equipment recommendations, training plans, and create highlight reels at no cost.",
   },
   {
     q: "Do I need to upload my video?",
@@ -60,13 +60,13 @@ const FAQS = [
 const APP_STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "AthlyticAI",
+  name: "Atheonics",
   operatingSystem: "Web, Android, iOS",
   applicationCategory: "SportsApplication",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
   aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", ratingCount: "127" },
   description: "AI-powered sports video analysis, training plans, and highlight reel generation",
-  url: "https://athlyticai.com",
+  url: "https://atheonics.com",
   featureList: [
     "AI Video Analysis",
     "Personalized Training Plans",
@@ -135,7 +135,7 @@ export default function LandingPage() {
         title="AI Sports Coach for Badminton, Tennis & More"
         description="Get instant AI video analysis, personalized training plans, smart equipment recommendations, and auto-generated highlight reels for badminton, tennis, table tennis, and more. Free to use."
         keywords="AI sports coach, badminton video analysis, tennis coach app, table tennis training, sports highlights generator, badminton training plan, sports equipment recommendations India, AI shot analysis"
-        url="https://athlyticai.com/"
+        url="https://atheonics.com/"
         structuredData={APP_STRUCTURED_DATA}
       />
 
@@ -354,7 +354,7 @@ export default function LandingPage() {
               ))}
             </div>
             <blockquote className="text-xl md:text-2xl text-white font-medium leading-relaxed mb-6 italic">
-              "AthlyticAI completely changed how I train. The video analysis caught technique flaws I never noticed, and the training plans keep me consistent."
+              "Atheonics completely changed how I train. The video analysis caught technique flaws I never noticed, and the training plans keep me consistent."
             </blockquote>
             <div className="flex items-center justify-center gap-3">
               <div className="w-10 h-10 rounded-full bg-lime-400/20 flex items-center justify-center">
@@ -362,7 +362,7 @@ export default function LandingPage() {
               </div>
               <div className="text-left">
                 <div className="text-white font-semibold text-sm">Thousands of Athletes</div>
-                <div className="text-zinc-500 text-xs">Trust AthlyticAI for their training</div>
+                <div className="text-zinc-500 text-xs">Trust Atheonics for their training</div>
               </div>
             </div>
           </motion.div>
@@ -481,7 +481,7 @@ export default function LandingPage() {
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <Zap className="w-5 h-5 text-lime-400" />
-                <span className="font-heading font-bold text-lg uppercase tracking-wide text-white">AthlyticAI</span>
+                <span className="font-heading font-bold text-lg uppercase tracking-wide text-white">Atheonics</span>
               </div>
               <p className="text-zinc-500 text-sm leading-relaxed">
                 AI-powered sports coaching platform. Train smarter across every sport you love.
@@ -528,7 +528,7 @@ export default function LandingPage() {
           {/* Bottom bar */}
           <div className="pt-8 border-t border-zinc-800/50 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <p className="text-zinc-600 text-xs">&copy; {new Date().getFullYear()} AthlyticAI. All rights reserved.</p>
+              <p className="text-zinc-600 text-xs">&copy; {new Date().getFullYear()} Atheonics. All rights reserved.</p>
               <Link to="/privacy" className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">Privacy Policy</Link>
             </div>
             <div className="flex items-center gap-1">

@@ -3,7 +3,7 @@
  * Compose a polished highlight reel in the browser:
  *   - Title card (1.5s opening with username + date)
  *   - Cross-fade transitions (0.4s alpha blend) between clips
- *   - Per-clip text overlay (SHOT N · type) + athlyticai watermark
+ *   - Per-clip text overlay (SHOT N · type) + atheonics watermark
  *   - Optional background music mixed with original audio
  *   - Records to webm/mp4 via MediaRecorder + canvas captureStream
  *
@@ -21,7 +21,7 @@ const FPS = 30;
 
 const MUSIC_PATH = "/audio/highlights-music.mp3"; // drop a file here to enable
 
-const BRAND = "athlyticai.com";
+const BRAND = "atheonics.com";
 
 /**
  * @param {Object} opts

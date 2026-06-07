@@ -74,7 +74,7 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "What size cricket bat should I use?",
-    a: "Bat size is based on height. For example, a player 5'6\"–5'9\" usually needs a Harrow or full-size Short Handle bat, while players under 4'11\" use sizes 4–6. Pick a bat you can pick up and swing comfortably without straining. AthlyticAI's gear finder matches a size and weight to your height and style.",
+    a: "Bat size is based on height. For example, a player 5'6\"–5'9\" usually needs a Harrow or full-size Short Handle bat, while players under 4'11\" use sizes 4–6. Pick a bat you can pick up and swing comfortably without straining. Atheonics's gear finder matches a size and weight to your height and style.",
   },
   {
     q: "Kashmir willow or English willow — which is better?",
@@ -82,14 +82,14 @@ const FAQS = [
   },
   {
     q: "How can I analyze my batting technique at home?",
-    a: "Record yourself batting in the nets from side-on with your phone, upload it to AthlyticAI, and the AI cricket coach will break down your stance, backlift, footwork, and contact point with frame-by-frame feedback — no coach required.",
+    a: "Record yourself batting in the nets from side-on with your phone, upload it to Atheonics, and the AI cricket coach will break down your stance, backlift, footwork, and contact point with frame-by-frame feedback — no coach required.",
   },
   {
     q: "How do I bowl faster?",
     a: "Pace comes from a smooth, accelerating run-up, a strong braced front leg, full hip and shoulder rotation, and a high, fast bowling arm. Strength and mobility work add to it. Our AI analyzes your action to flag the faults that cost you speed.",
   },
   {
-    q: "Is the AthlyticAI cricket app free?",
+    q: "Is the Atheonics cricket app free?",
     a: "Yes. You can analyze videos, generate training plans, and browse bat and gear recommendations for free. No credit card required to start.",
   },
 ];
@@ -101,13 +101,13 @@ export default function CricketPage() {
         title="AI Cricket Coach - Batting & Bowling Video Analysis App"
         description="Free AI cricket coach: analyze your batting technique and bowling action, get shot recognition, personalized training plans, and bat recommendations. Upload a net video and improve fast."
         keywords="cricket video analysis, AI cricket coach, batting technique analysis, bowling action analysis, cricket training app, best cricket bat for beginners, cricket drills"
-        url="https://athlyticai.com/cricket"
+        url="https://atheonics.com/cricket"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Cricket Coach - Batting & Bowling Video Analysis",
           description: "AI-powered cricket video analysis, batting technique breakdown, bowling action analysis, and personalized training plans.",
-          url: "https://athlyticai.com/cricket",
+          url: "https://atheonics.com/cricket",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -174,7 +174,7 @@ export default function CricketPage() {
               Built for Cricketers
             </h2>
             <p className="text-zinc-400 mt-3 max-w-2xl mx-auto">
-              Every tool on AthlyticAI is tuned to the technique and demands of batting, bowling, and fielding.
+              Every tool on Atheonics is tuned to the technique and demands of batting, bowling, and fielding.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

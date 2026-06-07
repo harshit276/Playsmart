@@ -1,14 +1,14 @@
 {
-  "appId": "com.athlyticai.app",
-  "appName": "AthlyticAI",
+  "appId": "com.atheonics.app",
+  "appName": "Atheonics",
   "webDir": "build",
   "server": {
     "androidScheme": "https",
-    "hostname": "athlyticai.com",
+    "hostname": "atheonics.com",
     "iosScheme": "https",
     "allowNavigation": [
-      "athlyticai.com",
-      "*.athlyticai.com",
+      "atheonics.com",
+      "*.atheonics.com",
       "*.firebaseapp.com",
       "*.googleapis.com",
       "*.gstatic.com",

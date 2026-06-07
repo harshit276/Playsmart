@@ -25,7 +25,7 @@ export default function ReferralPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { document.title = "Refer & Earn | AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Refer & Earn | Atheonics"; }, []);
 
   useEffect(() => {
     if (!user?.id) { setLoading(false); return; }
@@ -68,7 +68,7 @@ export default function ReferralPage() {
 
   const shareWhatsApp = () => {
     const text =
-      `🏸 Try AthlyticAI — AI coach for your game.\n\n` +
+      `🏸 Try Atheonics — AI coach for your game.\n\n` +
       `Get 500 free tokens (300 signup + 200 referral bonus) when you sign up via my link:\n${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
@@ -76,7 +76,7 @@ export default function ReferralPage() {
   const shareNative = () => {
     if (navigator.share) {
       navigator.share({
-        title: "AthlyticAI",
+        title: "Atheonics",
         text: "AI coach for your game. Get 500 free tokens with my link:",
         url: link,
       }).catch(() => {});
@@ -85,7 +85,7 @@ export default function ReferralPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO title="Refer & Earn · AthlyticAI" description="Invite friends and earn AthlyticAI tokens." />
+      <SEO title="Refer & Earn · Atheonics" description="Invite friends and earn Atheonics tokens." />
       <div className="container mx-auto px-4 max-w-3xl">
 
         {/* Hero */}

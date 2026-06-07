@@ -1,5 +1,5 @@
 """
-Multi-sport configuration for AthlyticAI.
+Multi-sport configuration for Atheonics.
 Defines sport-specific options for assessment, equipment, and training.
 """
 

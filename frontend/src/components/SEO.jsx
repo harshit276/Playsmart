@@ -9,15 +9,15 @@ export default function SEO({
   title,
   description,
   keywords,
-  image = "https://athlyticai.com/icons/icon-512.png",
+  image = "https://atheonics.com/icons/icon-512.png",
   url,
   type = "website",
   structuredData,
   noindex = false,
 }) {
-  const fullTitle = title ? `${title} | AthlyticAI` : "AthlyticAI - Your AI Sports Coach";
+  const fullTitle = title ? `${title} | Atheonics` : "Atheonics - Your AI Sports Coach";
   const canonicalUrl =
-    url || (typeof window !== "undefined" ? window.location.href : "https://athlyticai.com");
+    url || (typeof window !== "undefined" ? window.location.href : "https://atheonics.com");
 
   const structuredDataArray = Array.isArray(structuredData)
     ? structuredData
@@ -38,7 +38,7 @@ export default function SEO({
       <meta property="og:title" content={fullTitle} />
       {description && <meta property="og:description" content={description} />}
       <meta property="og:image" content={image} />
-      <meta property="og:site_name" content="AthlyticAI" />
+      <meta property="og:site_name" content="Atheonics" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

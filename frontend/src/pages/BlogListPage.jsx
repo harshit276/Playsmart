@@ -51,9 +51,9 @@ export default function BlogListPage() {
   const [activeSport, setActiveSport] = useState("all");
 
   useEffect(() => {
-    document.title = "AthlyticAI Blog - Sports Tips, Training Guides & Gear Reviews";
+    document.title = "Atheonics Blog - Sports Tips, Training Guides & Gear Reviews";
     const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute("content", "Expert sports tips, training guides, gear reviews, and tutorials for badminton, tennis, and table tennis players. Improve your game with AthlyticAI.");
+    if (meta) meta.setAttribute("content", "Expert sports tips, training guides, gear reviews, and tutorials for badminton, tennis, and table tennis players. Improve your game with Atheonics.");
   }, []);
 
   useEffect(() => {
@@ -71,9 +71,9 @@ export default function BlogListPage() {
     <div className="min-h-screen bg-zinc-950">
       <SEO
         title="Sports Tips, Training Guides & Equipment Reviews"
-        description="Expert articles on badminton, tennis, table tennis, and pickleball. Training tips, equipment reviews, technique guides, and video analysis insights from AthlyticAI."
+        description="Expert articles on badminton, tennis, table tennis, and pickleball. Training tips, equipment reviews, technique guides, and video analysis insights from Atheonics."
         keywords="badminton tips, tennis training, table tennis guide, pickleball strategy, sports equipment reviews"
-        url="https://athlyticai.com/blog"
+        url="https://atheonics.com/blog"
       />
       {/* Hero */}
       <section className="relative py-20 sm:py-28 overflow-hidden">
@@ -86,7 +86,7 @@ export default function BlogListPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/20 mb-6">
               <BookOpen className="w-4 h-4 text-lime-400" />
-              <span className="text-sm font-medium text-lime-400">AthlyticAI Blog</span>
+              <span className="text-sm font-medium text-lime-400">Atheonics Blog</span>
             </div>
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
@@ -211,7 +211,7 @@ export default function BlogListPage() {
           </p>
           <Link to="/auth"
             className="inline-flex items-center gap-2 px-6 py-3 bg-lime-400 text-black font-bold rounded-full hover:bg-lime-500 transition-colors">
-            Try AthlyticAI Free <ArrowRight className="w-4 h-4" />
+            Try Atheonics Free <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>

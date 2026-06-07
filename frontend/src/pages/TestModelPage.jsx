@@ -153,7 +153,7 @@ export default function TestModelPage() {
   return (
     <div className="min-h-screen bg-background text-zinc-100 pt-20 pb-12 px-4">
       <Helmet>
-        <title>Test Trained Model · AthlyticAI</title>
+        <title>Test Trained Model · Atheonics</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 

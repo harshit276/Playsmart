@@ -31,7 +31,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [activatingKey, setActivatingKey] = useState(null);
 
-  useEffect(() => { document.title = "Pricing | AthlyticAI"; }, []);
+  useEffect(() => { document.title = "Pricing | Atheonics"; }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +94,7 @@ export default function PricingPage() {
         title="Pricing - AI Video Analysis for Badminton, Tennis, Cricket"
         description="Pay-as-you-go AI sports video analysis. ₹30 per analysis with bulk discount packs. No subscription required."
         keywords="sports video analysis pricing, badminton coaching app, AI cricket analysis cost India"
-        url="https://athlyticai.com/pricing"
+        url="https://atheonics.com/pricing"
       />
       <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}
@@ -119,7 +119,7 @@ export default function PricingPage() {
                 <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px] ml-auto">{standardCost} tokens</Badge>
               </div>
               <p className="text-3xl font-heading font-black text-white">₹{flashRupees}<span className="text-xs text-zinc-500 ml-1">/ analysis</span></p>
-              <p className="text-[11px] text-zinc-500 mt-1">AthlyticAI Coach — fast (~6s), good for most clips</p>
+              <p className="text-[11px] text-zinc-500 mt-1">Atheonics Coach — fast (~6s), good for most clips</p>
             </div>
             <div className="bg-amber-400/5 border border-amber-400/30 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-1">
@@ -128,7 +128,7 @@ export default function PricingPage() {
                 <Badge className="bg-amber-400/15 text-amber-300 border-amber-400/30 text-[10px] ml-auto">{premiumCost} tokens</Badge>
               </div>
               <p className="text-3xl font-heading font-black text-white">₹{premiumRupees}<span className="text-xs text-zinc-500 ml-1">/ analysis</span></p>
-              <p className="text-[11px] text-zinc-500 mt-1">AthlyticAI Pro engine — catches every shot on tough clips</p>
+              <p className="text-[11px] text-zinc-500 mt-1">Atheonics Pro engine — catches every shot on tough clips</p>
             </div>
           </div>
         </motion.div>
@@ -290,7 +290,7 @@ export default function PricingPage() {
             },
             {
               q: "Are there team / academy plans?",
-              a: "Bulk discounts kick in at the Power Pack tier. For 5+ coaches or 50+ students, email support@athlyticai.com for custom pricing.",
+              a: "Bulk discounts kick in at the Power Pack tier. For 5+ coaches or 50+ students, email support@atheonics.com for custom pricing.",
             },
           ].map((item, i) => (
             <div key={i} className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
