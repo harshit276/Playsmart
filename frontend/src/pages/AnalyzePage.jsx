@@ -334,51 +334,6 @@ function fileToBase64(blob) {
   });
 }
 
-// Upload the ORIGINAL clip straight to the backend's Gemini Files API
-// endpoint — no client-side compression. Used for large clips (50-100 MB / 4K)
-// where the old "decode + compress to 4 MB" pass was both the slow part of the
-// pipeline AND a big quality loss. Files API has no ~20 MB inline cap, so
-// Gemini sees the full-resolution original. Returns the file_name handle the
-// analysis endpoints reference, or throws so the caller falls back to compress.
-// Uses XHR (not fetch/axios) purely for real upload-progress events.
-function uploadVideoToFilesApi(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    try {
-      const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
-      const token = localStorage.getItem("playsmart_token");
-      const fd = new FormData();
-      fd.append("video", file, file.name || "clip.mp4");
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${baseUrl}/api/upload-video`);
-      if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-      // The backend has to register the file with Gemini (server-side
-      // processing) before responding — give it room on a big clip.
-      xhr.timeout = 180000;
-      if (xhr.upload && typeof onProgress === "function") {
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-        };
-      }
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const data = JSON.parse(xhr.responseText || "{}");
-            if (data && data.file_name) resolve(data);
-            else reject(new Error("upload_no_file_name"));
-          } catch (e) { reject(new Error("upload_bad_json")); }
-        } else {
-          reject(new Error(`upload_http_${xhr.status}`));
-        }
-      };
-      xhr.onerror = () => reject(new Error("upload_network_error"));
-      xhr.ontimeout = () => reject(new Error("upload_timeout"));
-      xhr.send(fd);
-    } catch (e) {
-      reject(e);
-    }
-  });
-}
-
 // Build the universal-mode result object the UI renders, from the raw backend
 // `data` (events + narrative + sport). Extracted to module scope so BOTH the
 // live analyze flow and the resume-on-return path produce identical results.
@@ -1440,6 +1395,9 @@ export default function AnalyzePage() {
         // upload the original full-res clip directly instead of compressing).
         // null = legacy inline base64 path.
         let fileName = null;
+        // Cloudinary public_id for the large-clip path — sent to the backend
+        // which deletes the Cloudinary copy once the clip is in the Files API.
+        let cloudinaryPublicId = null;
         if (options.universalPick && universalUploadData) {
           uploadFile = universalUploadData.uploadFile;
           b64 = universalUploadData.b64;
@@ -1450,31 +1408,47 @@ export default function AnalyzePage() {
           setProgress(15);
           const vp = await import("@/ai/videoProcessor");
           const origMbRaw = file.size / 1024 / 1024;
-          // ─── Large-clip fast path: upload the ORIGINAL to the Files API ──
-          // For clips big enough that client compression would be slow AND
-          // lossy (≥8 MB), skip compression entirely and upload the raw file.
-          // Gemini then analyzes the full-resolution original — faster (no
-          // decode/encode pass) and higher quality. Any failure (older
-          // backend, network) falls straight through to the compress path.
+          // ─── Large-clip FULL-RES path: Cloudinary → Gemini Files API ─────
+          // For clips ≥8 MB, DON'T compress on-device (slow + lossy, and the
+          // 480p/3x output is what broke multi-player detection). Instead the
+          // browser uploads the ORIGINAL straight to Cloudinary — which has no
+          // 4.5 MB request cap (our Vercel-hosted API does) — then the backend
+          // pulls that URL and hands the full-res clip to Gemini's Files API
+          // ONCE. The returned file_name is reused for BOTH the player picker
+          // pre-pass and the analysis, so Gemini sees a crisp video and can
+          // actually distinguish the players. Any failure falls straight
+          // through to the legacy compress path below (no regression).
           const DIRECT_UPLOAD_MIN_MB = 8;
           if (origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
             try {
-              setLoadingText("Uploading your video in full quality...");
-              setProgress(15);
-              const up = await uploadVideoToFilesApi(file, (pct) => {
-                setLoadingText(`Uploading video... ${pct}%`);
-                setProgress(15 + Math.round(pct * 0.30));
+              const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
+              const cloud = await uploadToCloudinary(file, {
+                onProgress: ({ percent, message }) => {
+                  setLoadingText(message || "Uploading your video in full quality...");
+                  setProgress(15 + Math.round((percent || 0) * 0.25));
+                },
               });
-              if (up && up.file_name) {
-                fileName = up.file_name;
-                uploadFile = file;   // keep original for mime + picker keyframes
-                b64 = null;
-                timeScale = 1;       // no speed-up → no timestamp scaling needed
-                // eslint-disable-next-line no-console
-                console.info(`[upload] direct Files API upload: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
+              if (cloud?.secure_url) {
+                cloudinaryPublicId = cloud.public_id || null;
+                setLoadingText("Preparing full-quality analysis...");
+                setProgress(42);
+                const { data: reg } = await api.post("/upload-video-url", {
+                  video_url: cloud.secure_url,
+                  mime_type: file.type || "video/mp4",
+                  cloudinary_public_id: cloudinaryPublicId,
+                }, { timeout: 200000 });
+                if (reg?.file_name) {
+                  fileName = reg.file_name;
+                  uploadFile = file;   // keep original for mime + picker keyframes
+                  b64 = null;
+                  timeScale = 1;       // full-res, no speed-up → no timestamp scaling
+                  // eslint-disable-next-line no-console
+                  console.info(`[upload] full-res via Cloudinary→Files API: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
+                }
               }
             } catch (upErr) {
-              console.warn("[universal] direct Files API upload failed, compressing instead:", upErr?.message);
+              console.warn("[universal] cloudinary/files-api path failed, compressing instead:",
+                           upErr?.response?.data?.detail || upErr?.message);
               fileName = null;
             }
           }

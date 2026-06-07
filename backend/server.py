@@ -4199,6 +4199,88 @@ async def upload_video_to_files_api(
     }
 
 
+class RegisterVideoUrlRequest(BaseModel):
+    video_url: str
+    mime_type: str = "video/mp4"
+    # Cloudinary public_id of the just-uploaded clip. Once the bytes are in the
+    # Gemini Files API we don't need the Cloudinary copy anymore, so we delete
+    # it here (best-effort) to avoid accumulating storage. Optional.
+    cloudinary_public_id: str | None = None
+
+
+async def _cloudinary_destroy_video(public_id: str) -> None:
+    """Best-effort delete of a Cloudinary video asset."""
+    try:
+        timestamp = int(time.time())
+        signature = _cloudinary_sign({"public_id": public_id, "timestamp": timestamp})
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await client.post(
+                f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD_NAME}/video/destroy",
+                data={"public_id": public_id, "api_key": CLOUDINARY_API_KEY,
+                      "timestamp": timestamp, "signature": signature},
+            )
+    except Exception:
+        pass
+
+
+@api_router.post("/upload-video-url")
+async def register_video_url_to_files_api(
+    req: RegisterVideoUrlRequest, authorization: str = Header(None),
+):
+    """Register an already-uploaded video (e.g. a Cloudinary URL) with the
+    Gemini Files API and return the handle.
+
+    This is the LARGE-clip path: the browser uploads the full-resolution
+    original straight to Cloudinary (which has no 4.5 MB request cap, unlike
+    our Vercel-hosted API), then sends us just the URL. We fetch the bytes
+    server-side (no body-size limit on an outbound GET) and hand them to the
+    Files API. The returned file_name is reused by BOTH /describe-players and
+    the analysis, so the full-res clip is uploaded to Gemini exactly once —
+    which is what makes reliable multi-player detection + accurate analysis
+    possible on big phone clips."""
+    await get_current_user_or_none(authorization)
+    url = (req.video_url or "").strip()
+    if not url.startswith("http"):
+        raise HTTPException(status_code=400, detail="video_url required")
+    try:
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            video_bytes = resp.content
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"could not fetch video: {str(exc)[:200]}")
+    size_bytes = len(video_bytes)
+    if size_bytes < 1000:
+        raise HTTPException(status_code=400, detail="Video too small")
+    if size_bytes > 200 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video too large (>200 MB)")
+    mime_type = req.mime_type or "video/mp4"
+    try:
+        from ai_pipeline.vlm import files_api_upload
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+    loop = asyncio.get_event_loop()
+    try:
+        handle = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: files_api_upload(video_bytes, mime_type)),
+            timeout=180.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Upload processing timed out — please retry")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Files API upload failed: {str(exc)[:200]}")
+    # The clip now lives in the Files API (valid 48 h, reused for picker +
+    # analysis) — drop the Cloudinary copy so we don't accumulate storage.
+    if req.cloudinary_public_id:
+        await _cloudinary_destroy_video(req.cloudinary_public_id)
+    return {
+        "file_name": handle.name,
+        "file_uri": getattr(handle, "uri", None),
+        "mime_type": mime_type,
+        "size_bytes": size_bytes,
+    }
+
+
 @api_router.post("/analyze-video-async")
 async def analyze_video_async_submit(
     req: AnalyzeVideoUniversalRequest, authorization: str = Header(None),
