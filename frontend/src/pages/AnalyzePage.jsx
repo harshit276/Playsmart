@@ -1418,44 +1418,50 @@ export default function AnalyzePage() {
           // pre-pass and the analysis, so Gemini sees a crisp video and can
           // actually distinguish the players. Any failure falls straight
           // through to the legacy compress path below (no regression).
-          // Lower bound: below this, inline base64 is faster (no extra upload).
-          // Upper bound: Cloudinary's free-tier video cap is 100 MB. Going over
-          // it makes uploadToCloudinary kick off a SLOW, memory-heavy ffmpeg.wasm
-          // pre-compress on-device (≈2 min on a phone) that then starves the
-          // browser and breaks the normal fallback. So clips >95 MB skip
-          // Cloudinary entirely and use the proven compress→inline path below —
-          // they still analyze (as before), just without the full-res picker.
+          // Clips ≥8MB: compress to 720p, then upload that to Cloudinary →
+          // Gemini Files API. 720p is the balance point — small enough to
+          // upload fast on a phone (uploading the full-res original was the
+          // slow part), but sharp enough for Gemini to reliably tell players
+          // apart (480p was too blurry → no picker). 720p also always fits
+          // Cloudinary's 100MB cap, so there's no slow ffmpeg pre-pass and no
+          // big-clip "too large" failure. Any error falls through to the
+          // legacy inline-compress path below (no regression).
           const DIRECT_UPLOAD_MIN_MB = 8;
-          const CLOUD_MAX_MB = 95;
-          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB && origMbRaw <= CLOUD_MAX_MB) {
+          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
             try {
+              setLoadingText("Optimizing your video...");
+              setProgress(15);
+              const prepared = await vp.compressUnderSize(file, 16 * 1024 * 1024, {
+                maxDim: 1280, bitrate: 3_500_000,
+                onProgress: (pct) => { setLoadingText(`Optimizing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
+              });
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
-              const cloud = await uploadToCloudinary(file, {
+              const cloud = await uploadToCloudinary(prepared, {
                 onProgress: ({ percent, message }) => {
-                  setLoadingText(message || "Uploading your video in full quality...");
-                  setProgress(15 + Math.round((percent || 0) * 0.25));
+                  setLoadingText(message || "Uploading your video...");
+                  setProgress(30 + Math.round((percent || 0) * 0.12));
                 },
               });
               if (cloud?.secure_url) {
                 cloudinaryPublicId = cloud.public_id || null;
-                setLoadingText("Preparing full-quality analysis...");
-                setProgress(42);
+                setLoadingText("Preparing analysis...");
+                setProgress(44);
                 const { data: reg } = await api.post("/upload-video-url", {
                   video_url: cloud.secure_url,
-                  mime_type: file.type || "video/mp4",
+                  mime_type: prepared.type || file.type || "video/mp4",
                   cloudinary_public_id: cloudinaryPublicId,
                 }, { timeout: 200000 });
                 if (reg?.file_name) {
                   fileName = reg.file_name;
-                  uploadFile = file;   // keep original for mime + picker keyframes
+                  uploadFile = prepared;   // 720p clip; picker keyframes still use original `file`
                   b64 = null;
-                  timeScale = 1;       // full-res, no speed-up → no timestamp scaling
+                  timeScale = 1;           // real-time capture → no timestamp scaling
                   // eslint-disable-next-line no-console
-                  console.info(`[upload] full-res via Cloudinary→Files API: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
+                  console.info(`[upload] 720p→Cloudinary→Files API: ${origMbRaw.toFixed(1)}MB → ${(prepared.size / 1024 / 1024).toFixed(1)}MB → ${fileName}`);
                 }
               }
             } catch (upErr) {
-              console.warn("[universal] cloudinary/files-api path failed, compressing instead:",
+              console.warn("[universal] 720p/cloudinary path failed, compressing instead:",
                            upErr?.response?.data?.detail || upErr?.message);
               fileName = null;
             }
