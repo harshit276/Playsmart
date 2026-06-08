@@ -1431,10 +1431,32 @@ export default function AnalyzePage() {
             try {
               setLoadingText("Optimizing your video...");
               setProgress(15);
+              // Capture at 1.5x so the optimize step finishes ~33% faster. At
+              // 1.5x we still feed Gemini ~13 content-fps (it samples at 4), so
+              // no shots get skipped — higher speeds (2-3x) start dropping the
+              // fast contact moments. The clip's time axis is sped up, so we
+              // MEASURE the real ratio and pass it as time_scale to map every
+              // event's timestamp back onto the user's original clip.
               const prepared = await vp.compressUnderSize(file, 16 * 1024 * 1024, {
-                maxDim: 1280, bitrate: 3_500_000,
+                maxDim: 1280, bitrate: 3_500_000, playbackRate: 1.5,
                 onProgress: (pct) => { setLoadingText(`Optimizing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
               });
+              // Measure original vs compressed duration — robust even if the
+              // browser capped playbackRate (then the ratio is ~1 and we don't
+              // mis-scale). Defaults to the requested 1.5x if measurement fails.
+              const _measureDur = (b) => new Promise((res) => {
+                const v = document.createElement("video");
+                v.preload = "metadata"; v.muted = true;
+                const u = URL.createObjectURL(b);
+                v.onloadedmetadata = () => { const d = (Number.isFinite(v.duration) && v.duration > 0) ? v.duration : null; URL.revokeObjectURL(u); res(d); };
+                v.onerror = () => { URL.revokeObjectURL(u); res(null); };
+                v.src = u;
+                setTimeout(() => { URL.revokeObjectURL(u); res(null); }, 4000);
+              });
+              try {
+                const [oDur, cDur] = await Promise.all([_measureDur(file), _measureDur(prepared)]);
+                timeScale = (oDur && cDur && oDur / cDur > 1.1) ? Math.min(4, Math.max(1, oDur / cDur)) : 1.5;
+              } catch { timeScale = 1.5; }
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
               const cloud = await uploadToCloudinary(prepared, {
                 onProgress: ({ percent, message }) => {
@@ -1455,9 +1477,9 @@ export default function AnalyzePage() {
                   fileName = reg.file_name;
                   uploadFile = prepared;   // 720p clip; picker keyframes still use original `file`
                   b64 = null;
-                  timeScale = 1;           // real-time capture → no timestamp scaling
+                  // timeScale already set from the 1.5x measurement above.
                   // eslint-disable-next-line no-console
-                  console.info(`[upload] 720p→Cloudinary→Files API: ${origMbRaw.toFixed(1)}MB → ${(prepared.size / 1024 / 1024).toFixed(1)}MB → ${fileName}`);
+                  console.info(`[upload] 720p@1.5x→Cloudinary→Files API: ${origMbRaw.toFixed(1)}MB → ${(prepared.size / 1024 / 1024).toFixed(1)}MB, timeScale=${timeScale.toFixed(2)} → ${fileName}`);
                 }
               }
             } catch (upErr) {
