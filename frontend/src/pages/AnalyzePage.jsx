@@ -767,11 +767,22 @@ export default function AnalyzePage() {
   // phone"). Re-subscribing on open keeps a fresh, valid endpoint registered.
   // Cheap + idempotent (reuses the existing subscription when still valid).
   useEffect(() => {
-    try {
-      if ("Notification" in window && Notification.permission === "granted") {
-        import("@/lib/push").then((m) => m.subscribeToPush(api)).catch(() => {});
-      }
-    } catch { /* unsupported */ }
+    const reSubscribe = () => {
+      try {
+        if ("Notification" in window && Notification.permission === "granted") {
+          import("@/lib/push").then((m) => m.subscribeToPush(api)).catch(() => {});
+        }
+      } catch { /* unsupported */ }
+    };
+    // On first load AND every time the app returns to the foreground. A push
+    // subscription can be silently invalidated (browser eviction, a DOMAIN
+    // CHANGE — subscriptions are origin-bound, so moving athlyticai.com →
+    // atheonics.com killed the old one). Re-subscribing on every foreground
+    // re-registers a fresh, valid endpoint so notifications can't quietly die.
+    reSubscribe();
+    const onVisible = () => { if (!document.hidden) reSubscribe(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   // Current notification permission, for the "Notify me" control's label.
