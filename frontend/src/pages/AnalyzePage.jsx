@@ -1418,8 +1418,16 @@ export default function AnalyzePage() {
           // pre-pass and the analysis, so Gemini sees a crisp video and can
           // actually distinguish the players. Any failure falls straight
           // through to the legacy compress path below (no regression).
+          // Lower bound: below this, inline base64 is faster (no extra upload).
+          // Upper bound: Cloudinary's free-tier video cap is 100 MB. Going over
+          // it makes uploadToCloudinary kick off a SLOW, memory-heavy ffmpeg.wasm
+          // pre-compress on-device (≈2 min on a phone) that then starves the
+          // browser and breaks the normal fallback. So clips >95 MB skip
+          // Cloudinary entirely and use the proven compress→inline path below —
+          // they still analyze (as before), just without the full-res picker.
           const DIRECT_UPLOAD_MIN_MB = 8;
-          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
+          const CLOUD_MAX_MB = 95;
+          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB && origMbRaw <= CLOUD_MAX_MB) {
             try {
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
               const cloud = await uploadToCloudinary(file, {
@@ -2797,28 +2805,9 @@ export default function AnalyzePage() {
             </p>
           </div>
           {notifyPermission === "granted" ? (
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-lime-400">
-                <CheckCircle2 className="w-4 h-4" /> On
-              </span>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const { data } = await api.post("/reengagement/test");
-                    console.info("[push-test]", data);
-                    if (data?.sent) toast.success("Test notification sent — check your tray.");
-                    else if (!data?.subscriptions) toast.error("This device isn't subscribed yet — toggle notifications off/on.");
-                    else toast.error(`Send failed: ${(data?.results?.[0]?.detail || "unknown").slice(0, 90)}`);
-                  } catch (e) {
-                    toast.error("Test failed: " + (e?.response?.data?.detail || e.message));
-                  }
-                }}
-                className="text-[11px] text-sky-300 hover:text-sky-200 underline underline-offset-2"
-              >
-                Send test
-              </button>
-            </div>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-lime-400 shrink-0">
+              <CheckCircle2 className="w-4 h-4" /> On
+            </span>
           ) : notifyPermission !== "denied" ? (
             <button type="button" onClick={requestAnalysisNotifyPermission}
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-400/15 hover:bg-sky-400/25 text-sky-200 border border-sky-400/30 transition-colors shrink-0">
