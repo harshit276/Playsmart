@@ -4416,6 +4416,18 @@ async def analyze_job_status(job_id: str, authorization: str = Header(None)):
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
 VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:support@atheonics.com").strip()
+# The VAPID `sub` claim MUST be a valid mailto: or https:// URI. FCM
+# (Android/Chrome) returns 403 and drops the push when it isn't — while Apple
+# (iOS Safari) is lenient and still delivers. That asymmetry is the classic
+# "works on iPhone, fails on Android" bug. Normalise so a misconfigured env
+# value (a bare email like "support@x.com" or a domain) can't silently break
+# Android push: prepend mailto: when no scheme is present.
+if VAPID_SUBJECT and not (VAPID_SUBJECT.startswith("mailto:") or VAPID_SUBJECT.startswith("http://") or VAPID_SUBJECT.startswith("https://")):
+    VAPID_SUBJECT = "mailto:" + VAPID_SUBJECT
+    logging.getLogger(__name__).warning(
+        "[push] VAPID_SUBJECT had no scheme — normalised to %s (FCM/Android requires mailto:/https:)",
+        VAPID_SUBJECT,
+    )
 
 
 class PushSubscribeRequest(BaseModel):
