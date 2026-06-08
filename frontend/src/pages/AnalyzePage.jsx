@@ -1610,7 +1610,12 @@ export default function AnalyzePage() {
               fileName
                 ? { mime_type: uploadFile.type || file.type || "video/mp4", file_name: fileName }
                 : { mime_type: uploadFile.type || file.type || "video/mp4", video_b64: b64 },
-              { timeout: 25000 });
+              // 45s (was 25s) — MUST exceed the backend's own 40s Gemini cap so
+              // the backend's result/504 actually reaches us. At 25s the client
+              // bailed while the backend was still working, so the picker never
+              // showed even when detection would have succeeded a few seconds
+              // later.
+              { timeout: 45000 });
             let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
             // Also extract a single mid-frame keyframe of the whole
             // video — used as the BACKGROUND of the player picker so

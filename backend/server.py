@@ -5618,7 +5618,10 @@ async def describe_players_endpoint(
                 video_bytes, req.mime_type, backend=req.backend,
                 file_name=req.file_name,
             )),
-            timeout=35.0,
+            # 40s (was 35s) — Gemini reads the Files API video for the player
+            # pre-pass; give it room. The frontend waits 45s, so it still
+            # receives this 504 (not its own client-side timeout) if we overrun.
+            timeout=40.0,
         )
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Player description timed out")

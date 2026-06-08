@@ -1995,13 +1995,14 @@ def describe_players_in_video(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             model = genai.GenerativeModel(backend_obj.model_name)
-        # Lower 1.5 fps is plenty for describing static visual features
-        # (clothing/position) — players don't change appearance shot-to-shot.
-        # Reuse the Files API handle for large clips (same one the analysis
-        # uses) so we upload the original only once.
+        # 0.75 fps is plenty for describing static visual features
+        # (clothing/position) — players don't change appearance shot-to-shot,
+        # and fewer sampled frames = a noticeably faster pre-pass (it was
+        # timing out at 1.5fps on full-res Files API clips). Reuse the Files API
+        # handle for large clips (same one the analysis uses) so we upload once.
         _file_ref, _owns_ref = _resolve_video_ref(video_bytes, mime_type or "video/mp4", file_name)
         parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
-                                   mime_type or "video/mp4", fps=1.5, file_ref=_file_ref)
+                                   mime_type or "video/mp4", fps=0.75, file_ref=_file_ref)
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
