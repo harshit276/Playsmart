@@ -840,8 +840,40 @@ export default function AnalyzePage() {
 
   // Poll a job until it reaches a terminal state. Returns the result payload
   // on success; throws on error/timeout. Updates progress + queue messaging.
+  // Keep the screen awake through the prep + upload phase. Compression and
+  // canvas capture freeze when the screen turns off — the wake lock removes
+  // the screen-off failure mode (app-switching is handled by the server-side
+  // /run execution model below, not by the lock).
+  const wakeLockRef = useRef(null);
+  const acquireWakeLock = useCallback(async () => {
+    try { wakeLockRef.current = await navigator.wakeLock?.request?.("screen"); } catch { /* unsupported / denied — fine */ }
+  }, []);
+  const releaseWakeLock = useCallback(() => {
+    try { wakeLockRef.current?.release?.(); } catch {}
+    wakeLockRef.current = null;
+  }, []);
+
+  // Fire-and-forget "execute this job now" request. On serverless the
+  // analysis runs INSIDE this request's lifetime (the backend keeps the
+  // handler running even after we navigate away), which is what lets the
+  // user leave the PWA and still get the completion push. keepalive:true
+  // makes the browser keep the request alive across page navigation.
+  // Idempotent server-side — duplicate kicks no-op via an atomic claim.
+  const kickAnalysisJob = useCallback((jobId) => {
+    try {
+      const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+      const token = localStorage.getItem("playsmart_token");
+      fetch(`${baseUrl}/api/analyze-jobs/${jobId}/run`, {
+        method: "POST",
+        keepalive: true,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).catch(() => { /* result arrives via polling + push, not this response */ });
+    } catch { /* noop */ }
+  }, []);
+
   const pollAnalysisJob = useCallback(async (jobId) => {
     let waited = 0;
+    let lastKick = -999;
     // ~6 min ceiling so a stuck job can't poll forever.
     while (waited < 360) {
       await new Promise((r) => setTimeout(r, 3000));
@@ -857,6 +889,13 @@ export default function AnalyzePage() {
       }
       if (s.status === "complete") return s.result;
       if (s.status === "error") throw new Error(s.error || "analysis_error");
+      // Self-heal: a job still "queued" means no runner has picked it up
+      // (serverless has no background workers; or a runner died). Re-kick
+      // the run endpoint, throttled — the atomic claim makes extras no-ops.
+      if (s.status === "queued" && waited - lastKick >= 15) {
+        lastKick = waited;
+        kickAnalysisJob(jobId);
+      }
       if (!mountedRef.current) continue; // keep polling but don't touch UI
       if (s.status === "queued" && typeof s.queue_position === "number") {
         setLoadingText(
@@ -870,7 +909,7 @@ export default function AnalyzePage() {
       }
     }
     throw new Error("poll_timeout");
-  }, []);
+  }, [kickAnalysisJob]);
 
   // Clear the persisted picker stage (localStorage + the IndexedDB clip).
   const clearPickerSession = useCallback(() => {
@@ -1430,6 +1469,10 @@ export default function AnalyzePage() {
         } else {
           setLoadingText("Preparing video for Universal AI Coach...");
           setProgress(15);
+          // Screen-off during compression/upload freezes the work — hold a
+          // wake lock through the prep phase (released once the job is
+          // submitted and the analysis lives server-side).
+          acquireWakeLock();
           const vp = await import("@/ai/videoProcessor");
           const origMbRaw = file.size / 1024 / 1024;
           // ─── Large-clip FULL-RES path: Cloudinary → Gemini Files API ─────
@@ -1856,8 +1899,14 @@ export default function AnalyzePage() {
             } catch { /* storage full / private mode — non-fatal */ }
             setAnalysisJobId(jobId);
             requestAnalysisNotifyPermission();
+            // Execute the job inside its own server request (survives the
+            // user leaving the PWA) — polling below just watches progress.
+            kickAnalysisJob(jobId);
+            // Upload + submit are done — the phone no longer needs to stay
+            // awake; the analysis lives server-side now.
+            releaseWakeLock();
             setProgress(62);
-            setLoadingText("Analysis started — you can leave this page; we'll notify you when it's ready.");
+            setLoadingText("Analysis running in the cloud — you can close the app; we'll notify you when it's ready.");
             data = await pollAnalysisJob(jobId);
           }
         } catch (asyncErr) {
@@ -2123,7 +2172,8 @@ export default function AnalyzePage() {
       } finally {
         // If the user navigated away mid-job, leave the persisted job in
         // place so the resume effect can recover it; only the mounted path
-        // clears it (above). Always release the spinner.
+        // clears it (above). Always release the spinner + wake lock.
+        releaseWakeLock();
         setAnalyzing(false);
       }
       return;

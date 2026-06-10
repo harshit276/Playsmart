@@ -3894,6 +3894,12 @@ def _sse_headers() -> dict:
 import uuid as _uuid
 
 _JOB_CONCURRENCY = int(os.environ.get("ANALYSIS_CONCURRENCY", "4"))
+# Serverless (Vercel): background asyncio tasks FREEZE between invocations,
+# so the in-memory queue workers must not own jobs there — a worker that
+# claims a job and then freezes strands it in "running" forever. On
+# serverless, jobs are executed exclusively by /analyze-jobs/{id}/run
+# invocations (each runs inside its own request lifetime).
+_IS_SERVERLESS = bool(os.environ.get("VERCEL"))
 _job_queue = None          # asyncio.PriorityQueue, created on startup
 _job_videos: dict = {}     # job_id -> raw video bytes (freed after the run)
 _job_seq = 0               # monotonic tiebreaker so equal priority = FIFO
@@ -3983,8 +3989,34 @@ def _enqueue_job(job: dict):
     _job_queue.put_nowait((job.get("priority", _PRIORITY_FREE), _job_seq, job))
 
 
-async def _process_job(job: dict):
+async def _claim_job(job_id: str) -> bool:
+    """Atomically flip a job from queued → running. Returns True only for
+    the caller that won the flip. This is what makes it safe to have TWO
+    execution paths racing for the same job (the in-memory queue worker on
+    a long-lived Railway process AND the /analyze-jobs/{id}/run invocation
+    that does the work on Vercel) — whoever claims it first processes it,
+    everyone else no-ops."""
+    try:
+        doc = await asyncio.wait_for(
+            db.analysis_jobs.find_one_and_update(
+                {"job_id": job_id, "status": "queued"},
+                {"$set": {"status": "running",
+                          "started_at": datetime.now(timezone.utc),
+                          "updated_at": datetime.now(timezone.utc)}},
+            ),
+            timeout=5.0,
+        )
+        return doc is not None
+    except (Exception, asyncio.TimeoutError):
+        # Mongo hiccup — let the caller proceed rather than stranding the
+        # job; worst case the 'running' re-claim check below still guards.
+        return True
+
+
+async def _process_job(job: dict, claimed: bool = False):
     job_id = job["job_id"]
+    if not claimed and not await _claim_job(job_id):
+        return  # someone else is already processing this job
     file_name = job.get("file_name")
     video_bytes = None
     if not file_name:
@@ -4000,6 +4032,14 @@ async def _process_job(job: dict):
             return
     await _update_job(job_id, status="running",
                       started_at=datetime.now(timezone.utc))
+    # Heartbeat — keeps updated_at fresh during the (up to ~200s) Gemini
+    # call so the /run stale-job stealer (3 min cutoff) never yanks a job
+    # that's alive and about to finish.
+    async def _heartbeat():
+        while True:
+            await asyncio.sleep(45)
+            await _update_job(job_id, status="running")
+    _hb_task = asyncio.create_task(_heartbeat())
     loop = asyncio.get_event_loop()
     try:
         result = await asyncio.wait_for(
@@ -4043,6 +4083,10 @@ async def _process_job(job: dict):
             pass
         return
     finally:
+        try:
+            _hb_task.cancel()
+        except Exception:
+            pass
         _job_videos.pop(job_id, None)  # free RAM regardless of outcome
         # Gemini has the bytes now — drop the durable copy too (the result is
         # what we keep). On the error/timeout returns above this also runs.
@@ -4188,7 +4232,11 @@ async def _requeue_orphaned_jobs():
         # the job as errored rather than hanging.
         try:
             await _update_job(job["job_id"], status="queued")
-            _enqueue_job(job)
+            # Serverless: don't hand the job to the (freeze-prone) in-memory
+            # workers — flipping it back to "queued" is enough; the client's
+            # poll loop re-kicks /analyze-jobs/{id}/run for queued jobs.
+            if not _IS_SERVERLESS:
+                _enqueue_job(job)
             requeued += 1
         except Exception:
             pass
@@ -4517,7 +4565,12 @@ async def analyze_video_async_submit(
     if not req.file_name:
         await _persist_job_video(job_id, b64)
         _job_videos[job_id] = video_bytes
-    _enqueue_job(job)
+    # Long-lived deployments (Railway/Docker) process via the in-memory
+    # worker pool. On serverless that pool freezes between invocations, so
+    # the job waits for the client's follow-up POST /analyze-jobs/{id}/run
+    # (which executes it inside its own request).
+    if not _IS_SERVERLESS:
+        _enqueue_job(job)
     return {"job_id": job_id, "status": "queued"}
 
 
@@ -4553,6 +4606,71 @@ async def analyze_job_status(job_id: str, authorization: str = Header(None)):
     if job.get("status") == "complete":
         out["result"] = job.get("result")
     return out
+
+
+@api_router.post("/analyze-jobs/{job_id}/run")
+async def analyze_job_run(job_id: str, authorization: str = Header(None)):
+    """Execute a queued analysis job INSIDE this HTTP invocation.
+
+    Why this exists — the PWA "pauses in background" bug: on Vercel the
+    in-memory queue workers are asyncio tasks that FREEZE the moment the
+    request that spawned them returns; they only progress while the
+    (foregrounded) app keeps polling and thawing the instance. So a user
+    who navigated away saw their analysis stall until they came back, and
+    the completion push never fired. Serverless keeps a request handler
+    running to completion even if the client disconnects, so the client
+    fires this request right after submit (fire-and-forget, keepalive)
+    and the job finishes — and notifies — regardless of what the user's
+    phone does afterwards.
+
+    Idempotent: the atomic queued→running claim in _process_job means
+    duplicate /run calls (or a Railway queue worker racing us) no-op.
+    Auth mirrors the status endpoint: a signed-in user may only run their
+    own job; guest jobs run by unguessable job_id."""
+    user = await get_current_user_or_none(authorization)
+    try:
+        job = await asyncio.wait_for(db.analysis_jobs.find_one({"job_id": job_id}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        job = None
+    if not job:
+        raise HTTPException(status_code=404, detail="job_not_found")
+    if job.get("user_id") and (not user or user.get("id") != job["user_id"]):
+        raise HTTPException(status_code=403, detail="forbidden")
+    status = job.get("status")
+    if status == "running":
+        # A previous runner may have been frozen or recycled mid-job. If the
+        # job hasn't been touched in 3 minutes, steal it atomically and
+        # re-run; otherwise someone is genuinely working on it.
+        from datetime import timedelta as _td
+        cutoff = datetime.now(timezone.utc) - _td(minutes=3)
+        try:
+            stolen = await asyncio.wait_for(
+                db.analysis_jobs.find_one_and_update(
+                    {"job_id": job_id, "status": "running",
+                     "updated_at": {"$lte": cutoff}},
+                    {"$set": {"status": "running",
+                              "started_at": datetime.now(timezone.utc),
+                              "updated_at": datetime.now(timezone.utc)}},
+                ),
+                timeout=5.0,
+            )
+        except (Exception, asyncio.TimeoutError):
+            stolen = None
+        if stolen is None:
+            return {"job_id": job_id, "status": "running", "ran": False}
+    elif status != "queued":
+        return {"job_id": job_id, "status": status, "ran": False}
+    elif not await _claim_job(job_id):
+        return {"job_id": job_id, "status": "running", "ran": False}
+    job.pop("_id", None)
+    await _process_job(job, claimed=True)
+    try:
+        fresh = await asyncio.wait_for(db.analysis_jobs.find_one(
+            {"job_id": job_id}, {"_id": 0, "status": 1, "error": 1}), timeout=3.0)
+    except (Exception, asyncio.TimeoutError):
+        fresh = None
+    return {"job_id": job_id, "status": (fresh or {}).get("status", "unknown"),
+            "error": (fresh or {}).get("error"), "ran": True}
 
 
 # ──────────────────────────────────────────────────────────────────────
