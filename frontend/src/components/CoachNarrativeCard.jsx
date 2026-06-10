@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageSquareQuote, Sparkles, AlertTriangle, Target } from "lucide-react";
+import { MessageSquareQuote, Sparkles, AlertTriangle, Target, History } from "lucide-react";
 import SpeakTipButton from "@/components/SpeakTipButton";
 
 // CoachNarrativeCard — renders Gemini's multi-paragraph coach voice as
@@ -24,6 +24,10 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
 
   const intro = (narrative.intro || "").trim();
   const takeaway = (narrative.takeaway || "").trim();
+  // Session continuity — Gemini's honest read on whether THIS clip shows
+  // progress on the previous session's focus points. Only present when
+  // the analysis request carried previous_session_focus.
+  const progressUpdate = (narrative.progress_update || "").trim();
 
   // Prefer the new bullet arrays; for older/cached responses that only have
   // prose paragraphs, split into sentences so they still render as bullets.
@@ -44,7 +48,7 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
 
   // Stitch together the spoken version so the Listen button reads the
   // whole debrief, not just one section.
-  const speakScript = [intro, ...strengthsPoints, ...improvementsPoints, takeaway]
+  const speakScript = [progressUpdate, intro, ...strengthsPoints, ...improvementsPoints, takeaway]
     .filter(Boolean)
     .join(" ");
 
@@ -70,6 +74,23 @@ export default function CoachNarrativeCard({ narrative, shotName }) {
       </div>
 
       <div className="space-y-2">
+        {/* "Since last session" — the coach explicitly checks the fixes it
+            prescribed last time. This is the block that makes the app feel
+            like it REMEMBERS the player, so it leads the debrief. */}
+        {progressUpdate && (
+          <div className="bg-sky-400/8 border border-sky-400/30 rounded-lg p-2.5 flex items-start gap-2">
+            <div className="w-6 h-6 rounded-md bg-sky-400/15 border border-sky-400/40 flex items-center justify-center shrink-0">
+              <History className="w-3 h-3 text-sky-300" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-wider text-sky-300 font-bold mb-0.5">
+                Since last session
+              </p>
+              <p className="text-[13px] text-white leading-snug">{progressUpdate}</p>
+            </div>
+          </div>
+        )}
+
         {intro && (
           <p className="text-[13px] sm:text-sm text-white leading-relaxed">
             {intro}

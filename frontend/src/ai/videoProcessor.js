@@ -2138,6 +2138,70 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
 }
 
 
+/**
+ * countPeopleQuick — fast client-side athlete count used to SKIP the
+ * /describe-players Gemini pre-pass (25-45s of wall time) when only one
+ * person is visible. Samples a few frames spread across the clip, runs
+ * MoveNet MultiPose on each, and returns the MAX simultaneous person
+ * count seen. Conservative on purpose: any frame with 2+ people means
+ * "run the real picker"; only a clean 0-1 across all samples skips it.
+ *
+ * Throws on any failure — callers treat errors as "don't skip".
+ *
+ * @param {File|Blob} videoFile
+ * @param {Object} [options]
+ * @param {number} [options.frameCount=3]
+ * @param {number} [options.minScore=0.25] - person detection confidence floor
+ * @returns {Promise<number>} max people seen in any sampled frame
+ */
+export async function countPeopleQuick(videoFile, options = {}) {
+  const { frameCount = 3, minScore = 0.25 } = options;
+  await initMultiPoseModel();
+
+  const video = document.createElement("video");
+  const url = URL.createObjectURL(videoFile);
+  video.src = url; video.muted = true; video.playsInline = true;
+  video.load();
+  try {
+    await _waitForEvent(video, "loadedmetadata", 6000);
+    const duration = video.duration;
+    if (!duration || !isFinite(duration)) throw new Error("no duration");
+
+    // Detection canvas at a modest size — MultiPose Lightning is built
+    // for 256px-class inputs; bigger buys nothing but latency here.
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const scale = Math.min(1, 512 / Math.max(vw, vh));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(2, Math.round(vw * scale));
+    canvas.height = Math.max(2, Math.round(vh * scale));
+    const ctx = canvas.getContext("2d");
+
+    let maxPeople = 0;
+    // Sample mid-clip fractions — endpoints often show walk-on/walk-off.
+    const fractions = frameCount === 3 ? [0.25, 0.5, 0.75]
+      : Array.from({ length: frameCount }, (_, i) => (i + 1) / (frameCount + 1));
+    for (const f of fractions) {
+      await _seekTo(video, Math.min(duration - 0.05, duration * f), 3000);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const people = await detectMultiplePeople(canvas);
+      const real = (people || []).filter((p) => {
+        if ((p.score || 0) < minScore) return false;
+        // Ignore tiny background figures (<1.5% of frame area) — they're
+        // spectators/passers-by, not pickable athletes.
+        const area = (p.box?.width || 0) * (p.box?.height || 0);
+        const frameArea = canvas.width * canvas.height;
+        return area > frameArea * 0.015;
+      });
+      maxPeople = Math.max(maxPeople, real.length);
+      if (maxPeople >= 2) break; // early exit — picker is needed anyway
+    }
+    return maxPeople;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+
 export async function extractPlayerSnippets(videoFile, peakTimes, customCropBox, options = {}) {
   if (!peakTimes || peakTimes.length === 0) return [];
   const { maxDim = 180, jpegQuality = 0.7, expandFactor = 1.5 } = options;

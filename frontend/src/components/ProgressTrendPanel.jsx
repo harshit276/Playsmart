@@ -74,6 +74,19 @@ export default function ProgressTrendPanel({ sport, shotType, currentId }) {
   const takeaway = data.takeaway || "";
   const isFirstSession = history.length === 1;
 
+  // Defensive trust gate: drop degenerate blocks the backend may still
+  // emit from old saved analyses — a pinned "100 → 100" (both values at
+  // the metric ceiling, zero delta) reads as a fake stat and erodes
+  // trust in every number around it. Real flat trends (e.g. 64 → 64)
+  // still render.
+  const _isDegenerate = (b) =>
+    !b
+    || (b.delta === 0 && b.current === 100 && b.prev_avg === 100)
+    || (b.delta === 0 && b.current === 0 && b.prev_avg === 0);
+  for (const k of Object.keys(deltas)) {
+    if (k.endsWith("_delta") && _isDegenerate(deltas[k])) delete deltas[k];
+  }
+
   // Pick up to 3 headline deltas in priority order. Each block from the
   // backend looks like {current, prev_avg, delta, trend, over_sessions}.
   const headlineDeltas = [];

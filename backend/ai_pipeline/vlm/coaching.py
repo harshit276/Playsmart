@@ -1030,6 +1030,7 @@ def _clean_bullet_points(raw, max_pts: int = 4, max_len: int = 240) -> list:
 def _build_universal_prompt(
     target_player_description: str | None = None,
     doubles_mode: bool = False,
+    previous_session_focus: list | None = None,
 ) -> tuple[str, str]:
     """Build the (sys_prompt, user_msg) for the universal sport-agnostic
     analysis call. Extracted so the streaming variant can reuse it without
@@ -1217,7 +1218,14 @@ def _build_universal_prompt(
         "contact moments in the video. Your `events` array length "
         "should equal that count. If you emitted fewer events than the "
         "number of contacts you can see, you are wrong — add the "
-        "missing ones with lower `confidence` rather than dropping them.\n\n"
+        "missing ones with lower `confidence` rather than dropping them.\n"
+        "Calibration for cooperative drill rallies (two players trading "
+        "the same shot back and forth): the in-scope player typically "
+        "contacts the ball/shuttle every 1.5-2.5 seconds, so a 15-20s "
+        "drive/feeding drill contains roughly 4-10 in-scope contacts. "
+        "If you are about to return only 1-2 events for a continuous "
+        "multi-hit rally, re-watch the clip — you have almost certainly "
+        "merged separate hits.\n\n"
         "CRITICAL — DO NOT DEFAULT TO 'SERVE' FOR RALLY-STARTING SHOTS:\n"
         "A SERVE has ALL of these traits:\n"
         "  1. Ball/shuttle starts STATIONARY in the player's non-racket hand,\n"
@@ -1245,7 +1253,29 @@ def _build_universal_prompt(
         "reaches a deep landing zone. Use the actual shuttle path, not "
         "the landing depth, to decide.\n"
         f"{box_hint_doubles if doubles_mode else box_hint_singles}\n\n"
-        "━━━ SPATIAL TRACKING (ELITE) ━━━\n"
+        + (
+            (
+                "━━━ PREVIOUS SESSION FOCUS (CONTINUITY) ━━━\n"
+                "In their LAST analyzed session, this player was told to "
+                "work on:\n"
+                + "".join(
+                    f"  {i + 1}. {str(f)[:160]}\n"
+                    for i, f in enumerate(previous_session_focus[:3])
+                )
+                + "In coach_narrative.progress_update, explicitly assess "
+                "whether THIS video shows progress on those points — name "
+                "what you actually see ('the split step we asked for is "
+                "now there on most shots', 'weight is still on the back "
+                "foot at contact'). Be honest: improved / unchanged / "
+                "worse, per point, in 1-3 sentences total. If this video "
+                "is clearly a different sport or an unrelated drill where "
+                "those points cannot be judged, set progress_update to an "
+                "empty string instead of guessing.\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            )
+            if previous_session_focus else ""
+        )
+        + "━━━ SPATIAL TRACKING (ELITE) ━━━\n"
         "You must ALSO track WHERE things happen, not just when. All "
         "coordinates are integers 0-1000 normalized to the video frame "
         "(x: 0=left edge, 1000=right edge; y: 0=top, 1000=bottom).\n"
@@ -1298,7 +1328,11 @@ def _build_universal_prompt(
         'height, follow-through). One concise sentence per bullet, no bullet '
         'character.>", "..."],\n'
         '    "takeaway": "<1-2 sentence forward-looking close. Name the '
-        'ONE thing this player should work on next session.>"\n'
+        'ONE thing this player should work on next session.>",\n'
+        '    "progress_update": "<ONLY when a PREVIOUS SESSION FOCUS '
+        'section was given above: 1-3 honest sentences on whether this '
+        'video shows progress on those specific points. Empty string '
+        'otherwise.>"\n'
         '  },\n'
         '  "events": [\n'
         '    {\n'
@@ -1730,6 +1764,8 @@ def analyze_video_universal(
     tier: str = "standard",
     doubles_mode: bool = False,
     file_name: str | None = None,
+    fast_mode: bool = False,
+    previous_session_focus: list | None = None,
 ) -> dict:
     """Sport-agnostic whole-video analysis. Sends the video to Gemini with
     an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
@@ -1744,7 +1780,9 @@ def analyze_video_universal(
                 description, technique_observations, strength, weakness,
                 tip, skill_level}], summary, _meta}.
     """
-    sys_prompt, user_msg = _build_universal_prompt(target_player_description, doubles_mode=doubles_mode)
+    sys_prompt, user_msg = _build_universal_prompt(
+        target_player_description, doubles_mode=doubles_mode,
+        previous_session_focus=previous_session_focus)
 
     # Diagnostic log — lets us see, in Railway logs, EXACTLY what we
     # handed to Gemini and what came back. The recurring "Gemini only
@@ -1752,9 +1790,9 @@ def analyze_video_universal(
     import logging as _logging
     _log = _logging.getLogger("athlytic.vlm")
     _log.info(
-        "[universal] starting — bytes=%s, file=%s, mime=%s, tier=%s, doubles=%s, target=%r",
+        "[universal] starting — bytes=%s, file=%s, mime=%s, tier=%s, fast=%s, doubles=%s, target=%r",
         (len(video_bytes) if video_bytes is not None else "n/a"),
-        file_name or "inline", mime_type, tier, doubles_mode,
+        file_name or "inline", mime_type, tier, fast_mode, doubles_mode,
         (target_player_description or "")[:80],
     )
 
@@ -1765,7 +1803,17 @@ def analyze_video_universal(
     # without code changes: GEMINI_PREMIUM_MODEL overrides specifically
     # for premium tier; if unset, falls back to GEMINI_MODEL (so a single
     # env-var change upgrades both tiers); final fallback is gemini-2.5-pro.
+    #
+    # FAST MODE (short clips, ≤~15s, set by the frontend): a Flash model
+    # with thinking disabled. Short single-drill clips don't need a Pro
+    # model's depth, and Flash-no-thinking cuts the analysis wait roughly
+    # in half — the single biggest contributor to "2 minutes for a 10s
+    # clip". GEMINI_FAST_MODEL overrides the model; quality guardrail is
+    # the clip-length cutoff at the caller, not anything here.
     model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
+    if fast_mode:
+        model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
+                          or "gemini-2.5-flash")
     backend_obj = pick_backend(backend, model=model_override) if model_override else pick_backend(backend)
     _file_ref = None
     _owns_ref = False
@@ -1939,6 +1987,9 @@ def analyze_video_universal(
         "strengths_paragraph": (" ".join(_str_pts) or str(cn_raw.get("strengths_paragraph", "")))[:1500].strip(),
         "improvements_paragraph": (" ".join(_imp_pts) or str(cn_raw.get("improvements_paragraph", "")))[:1500].strip(),
         "takeaway": str(cn_raw.get("takeaway", ""))[:500].strip(),
+        # Session continuity — only non-empty when the caller passed the
+        # previous session's focus points and Gemini could judge them.
+        "progress_update": str(cn_raw.get("progress_update", ""))[:600].strip(),
     }
     # Detect "user picked Player A but Gemini described Player B" cases —
     # the UI surfaces this as a banner so users aren't confused when the
@@ -1981,7 +2032,7 @@ def analyze_video_universal(
             "video_bytes": (len(video_bytes) if video_bytes is not None else 0),
             "via_files_api": bool(file_name),
             "mime_type": mime_type,
-            "mode": "universal", "tier": tier,
+            "mode": "universal", "tier": tier, "fast_mode": fast_mode,
         },
     }
 
@@ -2050,6 +2101,8 @@ def stream_analyze_video_universal(
     tier: str = "standard",
     doubles_mode: bool = False,
     file_name: str | None = None,
+    fast_mode: bool = False,
+    previous_session_focus: list | None = None,
 ):
     """Generator wrapper around analyze_video_universal that yields
     progress dicts as the Gemini response streams in.
@@ -2064,8 +2117,14 @@ def stream_analyze_video_universal(
     `complete` event carries the same shape the non-streaming endpoint
     returns so downstream consumers get the exact same data.
     """
-    sys_prompt, user_msg = _build_universal_prompt(target_player_description, doubles_mode=doubles_mode)
+    sys_prompt, user_msg = _build_universal_prompt(
+        target_player_description, doubles_mode=doubles_mode,
+        previous_session_focus=previous_session_focus)
     model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
+    if fast_mode:
+        # Short-clip fast path — see analyze_video_universal for rationale.
+        model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
+                          or "gemini-2.5-flash")
     backend_obj = (
         pick_backend(backend, model=model_override) if model_override
         else pick_backend(backend)
@@ -2230,6 +2289,7 @@ def stream_analyze_video_universal(
         "strengths_paragraph": (" ".join(_str_pts_s) or str(cn_raw_stream.get("strengths_paragraph", "")))[:1500].strip(),
         "improvements_paragraph": (" ".join(_imp_pts_s) or str(cn_raw_stream.get("improvements_paragraph", "")))[:1500].strip(),
         "takeaway": str(cn_raw_stream.get("takeaway", ""))[:500].strip(),
+        "progress_update": str(cn_raw_stream.get("progress_update", ""))[:600].strip(),
     }
     target_mismatch_warning_stream = _detect_target_mismatch(
         target_player_description, coach_narrative_stream, data.get("events") or [],
@@ -2252,6 +2312,7 @@ def stream_analyze_video_universal(
             "mime_type": mime_type,
             "mode": "universal_stream",
             "tier": tier,
+            "fast_mode": fast_mode,
             "stream_incremental_emits": len(emitted_indices),
             # Debug surface — lets the user verify in-app what Gemini
             # actually returned vs what made it through our pipeline.

@@ -1484,6 +1484,10 @@ function computeMatchMetrics(perShot, durationSec, sport) {
 
   // 1. Tempo — shots per minute (only meaningful when we know duration)
   let tempo = dur > 0 ? (N / dur) * 60 : null;
+  // Sample-size gate: at 1-2 detected shots, "shots/min" is an
+  // extrapolation from almost nothing (2 shots in a 4s window read as
+  // "30/min"). Render "—" instead of a number users can't trust.
+  if (N < 3) tempo = null;
   // Defensive clamp: no racket sport sustains >200 shots/min. If we
   // computed something higher it means the duration we used is wrong
   // (almost always a missing/short video_info on a historical replay).
@@ -1620,12 +1624,18 @@ function MatchMetricsPanel({ perShot, durationSec, sport, sessionType, contextua
   const varietyCtx = cb.variety || null;
 
   // Resolve "should this metric render at all?"
-  const showAggression = aggressionCtx
+  // Hard sample-size floor that applies REGARDLESS of the backend's
+  // contextualBenchmarks: with <4 shots, aggression % and recovery time
+  // are noise dressed as stats (e.g. "0% aggression" from 2 drives) and
+  // they cost more credibility than they add. The backend override can
+  // re-show metrics for real sessions, never for tiny ones.
+  const tinySession = (m.totalShots ?? 0) < 4;
+  const showAggression = !tinySession && (aggressionCtx
     ? !aggressionCtx.hidden
-    : (m.totalShots >= 5 && m.varietyCount > 1);
-  const showRecovery = recoveryCtx
+    : (m.totalShots >= 5 && m.varietyCount > 1));
+  const showRecovery = !tinySession && (recoveryCtx
     ? !recoveryCtx.hidden
-    : (m.varietyCount > 1 && m.recoveryAvg != null);
+    : (m.varietyCount > 1 && m.recoveryAvg != null));
 
   // How many metrics actually render → choose the grid column count so
   // we don't end up with one tile floating awkwardly to the left.
@@ -1739,10 +1749,12 @@ function MatchMetricsPanel({ perShot, durationSec, sport, sessionType, contextua
         )}
       </div>
 
-      {/* Side balance + peak power (only when data is meaningful) */}
-      {(m.sideTotal > 0 || m.peakSpeed) && (
+      {/* Side balance + peak power (only when data is meaningful).
+          FH/BH needs ≥4 sided shots — "100% / 0%" from two forehand
+          drives is technically true and reads as a fake stat. */}
+      {(m.sideTotal >= 4 || m.peakSpeed) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {m.sideTotal > 0 && (
+          {m.sideTotal >= 4 && (
             <div className="bg-zinc-800/40 rounded-lg p-2.5">
               <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1">Forehand vs backhand</p>
               <div className="flex items-baseline gap-2">

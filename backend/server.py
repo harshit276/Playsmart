@@ -3415,6 +3415,14 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     # notify THIS device when the job finishes regardless of whether it's
     # tied to a signed-in account (covers guests + avoids user-id mismatch).
     push_endpoint: str | None = None
+    # Short-clip fast path: route to a Flash model with thinking disabled.
+    # Set by the frontend only for clips ≤~15s, where a Pro model's depth
+    # isn't needed and Flash roughly halves the analysis wait.
+    fast_mode: bool = False
+    # Session continuity: the previous session's top fixes (≤3 short
+    # strings). When present, the coach narrative gets a progress_update
+    # paragraph explicitly assessing whether this clip shows progress.
+    previous_session_focus: list | None = None
 
 
 def _apply_time_scale(events: list, time_scale: float) -> list:
@@ -3471,7 +3479,7 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
-    PROMPT_VERSION = "v2026-06-10-spatial-tracking"
+    PROMPT_VERSION = "v2026-06-10b-continuity-undercount"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
@@ -3491,7 +3499,17 @@ async def analyze_video_universal_endpoint(
         raise HTTPException(status_code=400, detail="No video provided")
 
     # ─── Cache lookup ────────────────────────────────────────────────
-    cache_key = f"{PROMPT_VERSION}:{video_hash}:{req.tier}:{(req.target_player_description or '')[:80]}"
+    # fast_mode changes the model and previous_session_focus changes the
+    # prompt — both must key the cache or users get stale-shaped results.
+    _focus_sig = ""
+    if req.previous_session_focus:
+        _focus_sig = hashlib.sha256(
+            "|".join(str(f)[:160] for f in req.previous_session_focus[:3]).encode()
+        ).hexdigest()[:12]
+    cache_key = (
+        f"{PROMPT_VERSION}:{video_hash}:{req.tier}:{int(bool(req.fast_mode))}:"
+        f"{_focus_sig}:{(req.target_player_description or '')[:80]}"
+    )
     try:
         cached = await asyncio.wait_for(
             db.video_analysis_cache.find_one({"key": cache_key}, {"_id": 0}),
@@ -3519,6 +3537,8 @@ async def analyze_video_universal_endpoint(
                 tier=req.tier,
                 doubles_mode=req.doubles_mode,
                 file_name=req.file_name,
+                fast_mode=bool(req.fast_mode),
+                previous_session_focus=req.previous_session_focus,
             )),
             # 180s: dense doubles clips (both near-court players, many events)
             # routinely need 110-160s of Gemini generation. The old 110s cap
@@ -3603,6 +3623,11 @@ async def analyze_video_stream_endpoint(
     # the clip the user views (see _apply_time_scale + AnalyzeVideoUniversal
     # Request.time_scale). Form string; "1.0" = no scaling.
     time_scale: str = "1.0",
+    # Short-clip fast path (Flash, no thinking). Form string "true"/"false".
+    fast_mode: str = "false",
+    # Previous session's top fixes as a JSON array string (multipart can't
+    # carry a real list). Empty/absent = no continuity section.
+    previous_session_focus: str | None = None,
     authorization: str = Header(None),
 ):
     """Stream a video analysis as Server-Sent Events.
@@ -3695,6 +3720,15 @@ async def analyze_video_stream_endpoint(
         SENTINEL = object()
 
         _doubles_flag = str(doubles_mode or "false").strip().lower() in ("1", "true", "yes")
+        _fast_flag = str(fast_mode or "false").strip().lower() in ("1", "true", "yes")
+        _prev_focus = None
+        if previous_session_focus:
+            try:
+                _pf = json.loads(previous_session_focus)
+                if isinstance(_pf, list):
+                    _prev_focus = [str(x)[:160] for x in _pf[:3] if str(x).strip()]
+            except (ValueError, TypeError):
+                _prev_focus = None
         try:
             _ts = float(time_scale)
         except (TypeError, ValueError):
@@ -3707,6 +3741,8 @@ async def analyze_video_stream_endpoint(
                     target_player_description=target_player_description,
                     backend=backend, tier=tier,
                     doubles_mode=_doubles_flag,
+                    fast_mode=_fast_flag,
+                    previous_session_focus=_prev_focus,
                 ):
                     q.put(ev)
             except Exception as exc:
@@ -3974,6 +4010,8 @@ async def _process_job(job: dict):
                 tier=job.get("tier", "premium"),
                 doubles_mode=job.get("doubles_mode", False),
                 file_name=file_name,
+                fast_mode=job.get("fast_mode", False),
+                previous_session_focus=job.get("previous_session_focus"),
             )),
             timeout=200.0,
         )
@@ -4452,6 +4490,11 @@ async def analyze_video_async_submit(
         "backend": req.backend,
         "tier": req.tier,
         "doubles_mode": req.doubles_mode,
+        "fast_mode": bool(req.fast_mode),
+        "previous_session_focus": (
+            [str(x)[:160] for x in req.previous_session_focus[:3]]
+            if isinstance(req.previous_session_focus, list) else None
+        ),
         "time_scale": req.time_scale,
         "push_endpoint": req.push_endpoint,
         # Files API handle for large clips — the worker re-fetches by this name
@@ -8768,17 +8811,16 @@ def _derive_trend_metrics(analysis: dict) -> dict:
                 break
             except (TypeError, ValueError):
                 pass
-    # Fallback: derive from stdev of per-shot scores (lower stdev = higher consistency).
-    if consistency is None and len(shot_scores) >= 2:
+    # Fallback: derive from stdev of per-shot scores (lower stdev = higher
+    # consistency). Requires ≥3 shots — at n=2 identical scores produce
+    # stdev=0 → a fake-looking "100" that users (rightly) don't trust.
+    # The trend panel shows nothing rather than a meaningless perfect score.
+    if consistency is None and len(shot_scores) >= 3:
         mean = sum(shot_scores) / len(shot_scores)
         var = sum((x - mean) ** 2 for x in shot_scores) / len(shot_scores)
         stdev = var ** 0.5
         # Map stdev 0→100, stdev 30→0 (clamped).
         consistency = max(0.0, min(100.0, 100.0 - (stdev * (100.0 / 30.0))))
-    # Fallback 2: single-shot session — use the overall shot score as a
-    # proxy (one data point can't show variance, but it's honest signal).
-    if consistency is None and len(shot_scores) == 1:
-        consistency = float(shot_scores[0])
 
     # ── Tempo: shots / minute. video_info.duration_sec or .duration is
     # the most reliable source; fall back to segments_summary if present.
@@ -8793,8 +8835,10 @@ def _derive_trend_metrics(analysis: dict) -> dict:
     if duration_sec and shot_count > 0:
         tempo = round((shot_count / duration_sec) * 60.0, 1)
 
-    # ── Best shot quality
-    best_shot_quality = max(shot_scores) if shot_scores else None
+    # ── Best shot quality. Gated on ≥2 scored shots — a "best" of one
+    # shot is just that shot's score, and trending it session-to-session
+    # produced punitive-looking "-10" arrows from pure noise.
+    best_shot_quality = max(shot_scores) if len(shot_scores) >= 2 else None
 
     # ── Primary shot type (dominant in this session)
     primary_shot = None

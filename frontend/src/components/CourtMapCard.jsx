@@ -77,14 +77,54 @@ function computeHomography(src, dst) {
 
 export default function CourtMapCard({ courtMap, movement, shots }) {
   const canvasRef = useRef(null);
+  // Projected dot positions (canvas px) + their timestamps, for tap-to-seek.
+  const dotHitsRef = useRef([]);
 
   const spatialShots = useMemo(
     () => (shots || []).filter((s) => Array.isArray(s.player_position) && s.player_position.length === 2),
     [shots],
   );
 
-  const hasMap = courtMap && Array.isArray(courtMap.corners) && courtMap.corners.length === 4 && spatialShots.length > 0;
+  // Low-movement collapse: a stationary drill (all positions clustered,
+  // tiny distance covered) renders as one lonely dot on an empty court —
+  // it reads as "the app barely saw me". Show the stats + note instead;
+  // the map earns its space on rally/match clips with real movement.
+  const lowMovement = useMemo(() => {
+    if (spatialShots.length === 0) return true;
+    if (typeof movement?.distance_covered_m === "number" && movement.distance_covered_m >= 5) return false;
+    const xs = spatialShots.map((s) => s.player_position[0]);
+    const ys = spatialShots.map((s) => s.player_position[1]);
+    const spread = Math.hypot(
+      Math.max(...xs) - Math.min(...xs),
+      Math.max(...ys) - Math.min(...ys),
+    );
+    // <8% of the frame diagonal of spread AND <5m covered = stationary drill.
+    return spread < 80 && (movement?.distance_covered_m == null || movement.distance_covered_m < 5);
+  }, [spatialShots, movement]);
+
+  const hasMap = courtMap && Array.isArray(courtMap.corners) && courtMap.corners.length === 4
+    && spatialShots.length > 0 && !lowMovement;
   const hasMovement = movement && (movement.distance_covered_m || movement.court_coverage_pct || movement.avg_recovery_quality || movement.note);
+
+  // Tap a dot → jump the main player to that shot (same event the
+  // "tap to jump" pro panel uses).
+  const onCanvasClick = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas || dotHitsRef.current.length === 0) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    let best = null, bestD = 16; // 16px tap tolerance
+    for (const hit of dotHitsRef.current) {
+      const d = Math.hypot(hit.x - x, hit.y - y);
+      if (d < bestD) { bestD = d; best = hit; }
+    }
+    if (best && typeof best.t === "number") {
+      window.dispatchEvent(new CustomEvent("playsmart:seek", { detail: { time: best.t } }));
+      const v = document.querySelector("video[data-playsmart-clip]");
+      if (v) { try { v.scrollIntoView({ behavior: "smooth", block: "center" }); } catch {} }
+    }
+  };
 
   useEffect(() => {
     if (!hasMap) return;
@@ -182,9 +222,11 @@ export default function CourtMapCard({ courtMap, movement, shots }) {
     }
 
     // ── Numbered position markers, colored by intent ──
+    dotHitsRef.current = [];
     spatialShots.forEach((s, i) => {
       const p = clampPt(project(s.player_position[0], s.player_position[1]));
       if (!p) return;
+      dotHitsRef.current.push({ x: p[0], y: p[1], t: s.timestamp ?? s.timestamp_sec ?? null });
       ctx.fillStyle = INTENT_COLOR[s.intent] || INTENT_COLOR.neutral;
       ctx.beginPath();
       ctx.arc(p[0], p[1], 7, 0, Math.PI * 2);
@@ -224,7 +266,12 @@ export default function CourtMapCard({ courtMap, movement, shots }) {
 
       {hasMap && (
         <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-          <canvas ref={canvasRef} className="rounded-lg bg-zinc-950/60 border border-zinc-800/70" />
+          <canvas
+            ref={canvasRef}
+            onClick={onCanvasClick}
+            className="rounded-lg bg-zinc-950/60 border border-zinc-800/70 cursor-pointer"
+            title="Tap a dot to jump to that shot in the video"
+          />
           <div className="flex-1 min-w-0 w-full">
             <div className="flex items-center gap-3 flex-wrap mb-3 text-[11px] text-zinc-400">
               <span className="flex items-center gap-1.5">
@@ -243,7 +290,8 @@ export default function CourtMapCard({ courtMap, movement, shots }) {
             <p className="text-[12px] text-zinc-400 leading-relaxed">
               Numbered dots show where you were standing at each shot, mapped
               top-down from the camera view. Bright zones are where you played
-              from most.
+              from most. <span className="text-sky-300">Tap a dot to jump to
+              that shot in the video.</span>
             </p>
             {hasMovement && (
               <div className="grid grid-cols-2 gap-2 mt-3">

@@ -1637,6 +1637,32 @@ export default function AnalyzePage() {
           // straight to analysis. The full analysis still identifies the
           // player itself (and doubles mode covers both near-court players),
           // so skipping the picker is a graceful degrade, not a failure.
+          // ── Picker pre-pass skip ──────────────────────────────────────
+          // The /describe-players Gemini call costs 15-45s of wall time and
+          // exists ONLY to disambiguate multiple athletes. A quick local
+          // MoveNet MultiPose sweep (~2-4s incl. model load) tells us when
+          // there's just one person — in that case we skip the pre-pass
+          // entirely. Conservative: any error or any frame with 2+ people
+          // runs the normal picker flow.
+          let skipDescribe = false;
+          try {
+            setLoadingText("Checking how many players are visible...");
+            setProgress(32);
+            const vpCount = await import("@/ai/videoProcessor");
+            const nPeople = await Promise.race([
+              vpCount.countPeopleQuick(file),
+              new Promise((_, rej) => setTimeout(() => rej(new Error("count_timeout")), 12000)),
+            ]);
+            if (nPeople <= 1) {
+              skipDescribe = true;
+              // eslint-disable-next-line no-console
+              console.info(`[universal] ${nPeople} athlete(s) detected locally — skipping the Gemini picker pre-pass`);
+            }
+          } catch (cntErr) {
+            console.warn("[universal] person-count check failed (running picker as usual):", cntErr?.message);
+          }
+
+          if (!skipDescribe) {
           setLoadingText("AI Coach is spotting players (skips automatically if slow)...");
           setProgress(35);
           try {
@@ -1713,6 +1739,7 @@ export default function AnalyzePage() {
             // Description failed — proceed without target_player_description.
             console.warn("[universal] player description failed:", descErr?.response?.data?.detail || descErr.message);
           }
+          } // ── end !skipDescribe ──
         }
 
         setLoadingText("AI Coach is watching the whole video...");
@@ -1727,6 +1754,54 @@ export default function AnalyzePage() {
         // was chosen (so a clip the user didn't disambiguate still covers both
         // near-court players).
         const effectiveDoubles = options.fromPicker ? false : doublesMode;
+
+        // ── Fast-mode routing: short clips → Flash with thinking off ──
+        // A ≤16s single-drill clip doesn't need a Pro model's depth, and
+        // the fast path roughly halves the analysis wait (the #1 UX
+        // complaint: ~2 min for a 10s clip). Longer clips keep the full
+        // Premium model untouched.
+        let fastMode = false;
+        try {
+          const clipDur = await new Promise((resolve) => {
+            const v = document.createElement("video");
+            v.preload = "metadata"; v.muted = true;
+            const u = URL.createObjectURL(file);
+            v.onloadedmetadata = () => {
+              const d = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : null;
+              URL.revokeObjectURL(u); resolve(d);
+            };
+            v.onerror = () => { URL.revokeObjectURL(u); resolve(null); };
+            v.src = u;
+            setTimeout(() => resolve(null), 4000);
+          });
+          fastMode = clipDur != null && clipDur <= 16;
+          if (fastMode) {
+            // eslint-disable-next-line no-console
+            console.info(`[universal] ${clipDur.toFixed(1)}s clip → fast mode (Flash, thinking off)`);
+          }
+        } catch { fastMode = false; }
+
+        // ── Session continuity: previous session's top fixes ──────────
+        // Feeds the coach narrative's progress_update ("the split step we
+        // asked for last time is now there"). Prefers the explicit
+        // Re-analyze context; falls back to the most recent history entry
+        // (≤30 days old). The backend prompt tells Gemini to skip the
+        // update when the new clip can't be compared (different sport).
+        const prevFocus = (() => {
+          const fresh = (a) => {
+            if (!a?.date) return true;
+            const t = Date.parse(a.date);
+            return !Number.isFinite(t) || (Date.now() - t) < 30 * 24 * 3600 * 1000;
+          };
+          const src = reanalyzeContext
+            || ((Array.isArray(history) && history.length > 0 && fresh(history[0])) ? history[0] : null);
+          if (!src) return null;
+          const f = (src.vlm_coaching?.key_focus_areas
+            || src.shot_analysis?.weaknesses
+            || []).filter((x) => typeof x === "string" && x.trim()).slice(0, 3);
+          return f.length ? f : null;
+        })();
+
         // ─── Streaming-first path (premium tier only) ─────────────────
         // Default-enabled for premium: gets the user perceived progress
         // (uploaded / analyzing / per-shot badges) while Gemini is still
@@ -1766,6 +1841,8 @@ export default function AnalyzePage() {
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: effectiveDoubles,
+            fast_mode: fastMode,
+            previous_session_focus: prevFocus,
             time_scale: timeScale,
             push_endpoint: pushEndpoint,
           }, { timeout: 45000 });
@@ -1801,6 +1878,8 @@ export default function AnalyzePage() {
             // analyse-both-near-court mode and tags each event with
             // player_role.
             if (effectiveDoubles) fd.append("doubles_mode", "true");
+            if (fastMode) fd.append("fast_mode", "true");
+            if (prevFocus) fd.append("previous_session_focus", JSON.stringify(prevFocus));
             // Tell the backend how to map Gemini's (possibly sped-up)
             // timestamps back to the original clip the user views.
             if (timeScale && timeScale !== 1) fd.append("time_scale", String(timeScale));
@@ -1930,6 +2009,8 @@ export default function AnalyzePage() {
             target_player_description: targetDesc,
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: effectiveDoubles,
+            fast_mode: fastMode,
+            previous_session_focus: prevFocus,
             time_scale: timeScale,
             // Bumped to 210s so we don't false-fail when Gemini has a slow
             // moment on a dense clip. The backend caps Gemini at 180s and

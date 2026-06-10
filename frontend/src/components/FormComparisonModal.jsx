@@ -5,6 +5,23 @@ import {
   Activity, Info, AlertTriangle, ExternalLink,
 } from "lucide-react";
 import SpeakTipButton from "@/components/SpeakTipButton";
+import api from "@/lib/api";
+
+// Swing-phase label for a loop position relative to the contact moment.
+// Boundaries are deliberately loose — they're a viewing aid ("watch the
+// backswing now"), not a biomechanical claim.
+function _phaseAt(dtSec) {
+  if (dtSec < -0.45) return "Setup";
+  if (dtSec < -0.12) return "Backswing";
+  if (dtSec <= 0.15) return "Contact";
+  return "Follow-through";
+}
+const _PHASE_STYLE = {
+  Setup: "text-zinc-300 border-zinc-600",
+  Backswing: "text-sky-300 border-sky-400/50",
+  Contact: "text-lime-300 border-lime-400/60",
+  "Follow-through": "text-amber-300 border-amber-400/50",
+};
 
 // FormComparisonModal — the "real coach view" for a single shot.
 //
@@ -67,6 +84,15 @@ export default function FormComparisonModal({
   const [videoReady, setVideoReady] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  // Live swing-phase label (Setup/Backswing/Contact/Follow-through) that
+  // tracks the loop position relative to the contact timestamp.
+  const [phase, setPhase] = useState(null);
+  // Mirror the pro clip horizontally — left-handed players comparing
+  // against a right-handed pro (or vice versa) otherwise read everything
+  // backwards.
+  const [mirrorPro, setMirrorPro] = useState(false);
+  // "Wrong clip?" feedback state: null | "sending" | "sent"
+  const [proReport, setProReport] = useState(null);
 
   // Fallback video sourced from IndexedDB. We try this when the parent
   // didn't pass a videoFile prop (typical after a refresh: AnalyzePage
@@ -182,6 +208,9 @@ export default function FormComparisonModal({
       if (v2.currentTime >= end - 0.02) {
         try { v2.currentTime = start; } catch {}
       }
+      // Track the swing phase for the overlay badge. setState is cheap
+      // here because the value only changes 4x per loop.
+      setPhase(_phaseAt(v2.currentTime - timestamp));
     };
 
     const onError = () => {
@@ -435,6 +464,13 @@ export default function FormComparisonModal({
                 <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded-md px-2 py-0.5">
                   <p className="text-[9px] uppercase tracking-wider text-sky-300 font-bold">You</p>
                 </div>
+                {/* Live swing-phase label — tells the eye WHAT it's watching
+                    right now (the loop covers setup → follow-through). */}
+                {hasUserVideo && videoReady && phase && (
+                  <div className={`absolute bottom-2 left-2 bg-black/75 backdrop-blur-sm rounded-md px-2 py-0.5 border ${_PHASE_STYLE[phase] || "text-zinc-300 border-zinc-600"}`}>
+                    <p className="text-[9px] uppercase tracking-wider font-bold">{phase}</p>
+                  </div>
+                )}
                 {hasUserVideo && videoReady && (
                   <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
                     <div className="bg-black/70 backdrop-blur-sm rounded-md px-2 py-0.5">
@@ -527,6 +563,7 @@ export default function FormComparisonModal({
                     allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
                     allowFullScreen
                     className="w-full h-full"
+                    style={mirrorPro ? { transform: "scaleX(-1)" } : undefined}
                   />
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 gap-2">
@@ -568,6 +605,21 @@ export default function FormComparisonModal({
                       </p>
                     )}
                   </div>
+                  {ytSrc && (
+                    <button
+                      type="button"
+                      onClick={() => setMirrorPro((v) => !v)}
+                      aria-pressed={mirrorPro}
+                      className={`inline-flex items-center min-h-[36px] px-2.5 text-[11px] font-bold whitespace-nowrap rounded-md border transition-colors ${
+                        mirrorPro
+                          ? "bg-amber-400/15 text-amber-200 border-amber-400/50"
+                          : "text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+                      }`}
+                      title="Flip the pro clip horizontally — use when your playing hand differs from the pro's"
+                    >
+                      ⇋ Mirror
+                    </button>
+                  )}
                   {proReference.youtube_id && (
                     <a
                       href={`https://www.youtube.com/watch?v=${proReference.youtube_id}&t=${Math.max(0, Math.round(proReference.start_sec || 0))}s`}
@@ -579,6 +631,30 @@ export default function FormComparisonModal({
                       YouTube
                       <ExternalLink className="w-3 h-3" />
                     </a>
+                  )}
+                  {ytSrc && (
+                    <button
+                      type="button"
+                      disabled={proReport === "sending" || proReport === "sent"}
+                      onClick={async () => {
+                        setProReport("sending");
+                        try {
+                          await api.post("/analysis-feedback", {
+                            analysis_id: "pro_reference_report",
+                            rating: 2,
+                            sport: sport || null,
+                            comment: `pro_reference_mismatch: sport=${sport || "?"} shot=${shotType || "?"} → yt=${proReference.youtube_id} [${proStart}-${proEnd}s] (${proReference.player || "?"})`,
+                          }, { timeout: 10000 });
+                          setProReport("sent");
+                        } catch {
+                          setProReport(null);
+                        }
+                      }}
+                      className="inline-flex items-center min-h-[36px] px-2 text-[10px] text-zinc-500 hover:text-zinc-300 whitespace-nowrap rounded-md hover:bg-zinc-800 disabled:opacity-60"
+                      title="Flag this pro clip as a bad match for your shot — we review every report"
+                    >
+                      {proReport === "sent" ? "Thanks ✓" : proReport === "sending" ? "Sending…" : "Wrong clip?"}
+                    </button>
                   )}
                 </div>
               )}
@@ -644,7 +720,7 @@ export default function FormComparisonModal({
             <summary className="cursor-pointer select-none flex items-center justify-between gap-2 p-3 list-none min-h-[44px]">
               <div className="flex items-center gap-2">
                 <Activity className="w-3.5 h-3.5 text-zinc-400" />
-                <span className="text-[12px] text-zinc-300 font-medium">Technical detail (joint angles + pose ghost)</span>
+                <span className="text-[12px] text-zinc-300 font-medium">📐 Measure my form — joint angles vs ideal + pose ghost</span>
               </div>
               <span className="text-[10px] text-zinc-600">{showDetail ? "Hide" : "Show"}</span>
             </summary>
