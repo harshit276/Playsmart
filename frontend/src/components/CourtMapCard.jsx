@@ -298,7 +298,7 @@ export default function CourtMapCard({ courtMap, movement, shots }) {
                 {typeof movement.distance_covered_m === "number" && (
                   <div className="bg-zinc-950/60 border border-zinc-800 rounded-lg p-2.5">
                     <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5">Distance covered</p>
-                    <p className="text-base font-bold text-lime-400">{movement.distance_covered_m.toFixed(0)} m</p>
+                    <p className="text-base font-bold text-lime-400">{movement.distance_covered_m < 10 ? movement.distance_covered_m.toFixed(1) : movement.distance_covered_m.toFixed(0)} m</p>
                   </div>
                 )}
                 {typeof movement.court_coverage_pct === "number" && (

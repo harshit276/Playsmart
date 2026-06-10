@@ -6146,6 +6146,9 @@ class SaveUniversalAnalysisRequest(BaseModel):
     # court positioning map + movement stats for past sessions.
     court_map: dict | None = None
     movement: dict | None = None
+    # Content fingerprint of the analyzed clip — lets the trend endpoint
+    # detect "same video re-analyzed" and suppress fake progress deltas.
+    video_hash: str | None = None
 
 
 def _grade_from_score(s: float) -> str:
@@ -6206,6 +6209,7 @@ async def save_universal_analysis(req: SaveUniversalAnalysisRequest, authorizati
         "shots": [{k: v for k, v in s.items() if k != "thumbnail"} for s in (req.shots or [])],
         "court_map": req.court_map or None,
         "movement": req.movement or None,
+        "video_hash": (req.video_hash or "")[:80] or None,
         # Drives drill attribution in /compare-analyses.
         "vlm_coaching": {"key_focus_areas": improvements[:3]},
         "_meta": {"source": "universal", "save_only": True},
@@ -9062,7 +9066,7 @@ async def get_analyses_trend(
                 "id": 1, "date": 1, "sport": 1, "skill_level": 1,
                 "shot_analysis": 1, "performance_scores": 1,
                 "speed_analysis": 1, "detailed_metrics": 1,
-                "video_info": 1, "shots": 1,
+                "video_info": 1, "shots": 1, "video_hash": 1,
             },
         ).sort("date", -1).limit(limit)
         raw = await asyncio.wait_for(cursor.to_list(length=limit), timeout=4.0)
@@ -9110,6 +9114,27 @@ async def get_analyses_trend(
     current = history[0]
     prior = history[1:]
     deltas: dict = {}
+
+    # Same-clip re-run guard: if the newest session analyzed the SAME video
+    # as an earlier one (content fingerprint match), session-to-session
+    # deltas are model noise, not player progress — re-uploading a clip
+    # showed "+5.5 consistency improvement" with zero actual change. Hide
+    # the deltas and say so honestly.
+    _cur_hash = (raw[0] or {}).get("video_hash")
+    same_video_rerun = bool(
+        _cur_hash and any(a.get("video_hash") == _cur_hash for a in raw[1:])
+    )
+    if same_video_rerun:
+        return {
+            "user_id": user["id"],
+            "sport": sport,
+            "shot_type": shot_type,
+            "current_analysis_id": current.get("analysis_id"),
+            "history": history,
+            "deltas": {},
+            "same_video_rerun": True,
+            "takeaway": "This is the same clip re-analyzed — score differences here are model noise, not progress. Record a new session to track real improvement.",
+        }
 
     def _avg(values: list) -> Optional[float]:
         vals = [v for v in values if isinstance(v, (int, float))]

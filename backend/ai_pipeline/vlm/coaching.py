@@ -1288,7 +1288,10 @@ def _build_universal_prompt(
         "(t_sec = video timestamp of that point). Omit for sports with "
         "no ball (swimming, weightlifting).\n"
         "  • player_position: [x, y] — where the player's FEET are at "
-        "contact (used for the court positioning map).\n"
+        "contact (used for the court positioning map). Include this for "
+        "EVERY event where the player is visible — even when the position "
+        "barely changes between shots, repeat the coordinates rather than "
+        "omitting them.\n"
         "  • speed_estimate_kmh: estimated ball/shuttle speed off the "
         "contact in km/h, judged from how many frames it takes to cross "
         "a known court distance. null when you can't judge it.\n"
@@ -1645,7 +1648,9 @@ def _sanitize_movement(data: dict) -> dict | None:
         return None
     out: dict = {}
     d = mv.get("distance_covered_m")
-    if isinstance(d, (int, float)) and 0 < float(d) < 30000:
+    # Floor at 1m — sub-meter "distance covered" renders as "0 m" and reads
+    # as a broken stat; a stationary drill simply gets no distance tile.
+    if isinstance(d, (int, float)) and 1 <= float(d) < 30000:
         out["distance_covered_m"] = round(float(d), 1)
     c = mv.get("court_coverage_pct")
     if isinstance(c, (int, float)) and 0 <= float(c) <= 100:

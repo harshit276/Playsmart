@@ -2702,6 +2702,11 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   // Speed selector for the YOU clip — same toggle pattern users already
   // know from FormComparisonModal.
   const [speed, setSpeed] = useState(0.5);
+  // Live swing-phase label tracking the loop position vs the contact moment.
+  const [phase, setPhase] = useState(null);
+  // Mirror the pro clip — left-handed players vs a right-handed pro (or
+  // vice versa) otherwise read the comparison backwards.
+  const [mirrorPro, setMirrorPro] = useState(false);
   // AI Correct generation removed — Replicate motion-transfer models
   // are too slow + flaky to be a foreground feature right now (60-180s,
   // sometimes failing even with billing). Keeping the backend endpoint
@@ -2781,10 +2786,14 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       } catch {}
       v._loopStart = Math.max(0, ts - SHOT_LEAD);
       v._loopEnd = ts + SHOT_TAIL;
+      v._contactTs = ts;
     };
     const onTimeUpdate = () => {
       if (!active) return;
       if (v._loopEnd != null && v.currentTime >= v._loopEnd) setLoop();
+      // Swing-phase badge — tells the eye what it's watching right now.
+      const dt = v.currentTime - (v._contactTs ?? 0);
+      setPhase(dt < -0.45 ? "Setup" : dt < -0.12 ? "Backswing" : dt <= 0.15 ? "Contact" : "Follow-through");
     };
     v.addEventListener("timeupdate", onTimeUpdate);
     v.addEventListener("loadeddata", setLoop, { once: true });
@@ -2892,6 +2901,16 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
               <p className="text-[9px] uppercase tracking-wider text-sky-300 font-bold">Tap to jump ↗</p>
             </div>
           )}
+          {canShowVideo && phase && (
+            <div className={`absolute top-2 left-2 bg-black/75 backdrop-blur-sm rounded px-2 py-0.5 border ${
+              phase === "Contact" ? "text-lime-300 border-lime-400/60"
+                : phase === "Backswing" ? "text-sky-300 border-sky-400/50"
+                : phase === "Follow-through" ? "text-amber-300 border-amber-400/50"
+                : "text-zinc-300 border-zinc-600"
+            }`}>
+              <p className="text-[9px] uppercase tracking-wider font-bold">{phase}</p>
+            </div>
+          )}
         </div>
         {/* PRO side — curated YouTube segment. controls=0 + custom
             badge so users don't see the full 10-minute video chrome
@@ -2903,6 +2922,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
             allowFullScreen
             className="w-full h-full"
+            style={mirrorPro ? { transform: "scaleX(-1)" } : undefined}
           />
           <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
             <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold">{proRef.player}</p>
@@ -2937,6 +2957,19 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setMirrorPro((v) => !v); }}
+            aria-pressed={mirrorPro}
+            className={`min-h-[32px] px-2.5 py-1 text-[11px] font-bold rounded-md border transition-colors ${
+              mirrorPro
+                ? "bg-amber-400/15 text-amber-200 border-amber-400/50"
+                : "text-zinc-400 border-zinc-700 hover:bg-zinc-800"
+            }`}
+            title="Flip the pro clip horizontally — use when your playing hand differs from the pro's"
+          >
+            ⇋ Mirror pro
+          </button>
           <span className="text-[10px] text-zinc-600 ml-auto">
             Tap the YOU panel to jump there in the main player
           </span>

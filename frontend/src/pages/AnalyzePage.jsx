@@ -335,6 +335,20 @@ function fileToBase64(blob) {
   });
 }
 
+// Cheap content fingerprint of the uploaded clip (SHA-256 of the first 2MB
+// + file size). Saved with the analysis so the progress trend can detect
+// "same video re-analyzed" and refuse to report fake improvements when the
+// input didn't change.
+async function computeVideoHash(file) {
+  try {
+    if (!file || !window.crypto?.subtle) return null;
+    const head = await file.slice(0, 2 * 1024 * 1024).arrayBuffer();
+    const buf = await crypto.subtle.digest("SHA-256", head);
+    const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 32)}-${file.size}`;
+  } catch { return null; }
+}
+
 // Build the universal-mode result object the UI renders, from the raw backend
 // `data` (events + narrative + sport). Extracted to module scope so BOTH the
 // live analyze flow and the resume-on-return path produce identical results.
@@ -1032,6 +1046,7 @@ export default function AnalyzePage() {
             coach_narrative: universalResult.coach_narrative,
             court_map: universalResult.court_map || null,
             movement: universalResult.movement || null,
+            video_hash: file ? await computeVideoHash(file) : null,
             shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
           }, { timeout: 20000 });
           if (saved?.analysis_id && mountedRef.current) {
@@ -1474,6 +1489,11 @@ export default function AnalyzePage() {
           // submitted and the analysis lives server-side).
           acquireWakeLock();
           const vp = await import("@/ai/videoProcessor");
+          // Start the local athlete count NOW so the MoveNet model download
+          // + 3-frame sweep overlap with compression/upload below, instead
+          // of adding their own 5-12s wait at the picker step. Resolved (or
+          // ignored) right before the describe-players call.
+          const personCountPromise = vp.countPeopleQuick(file).catch(() => null);
           const origMbRaw = file.size / 1024 / 1024;
           // ─── Large-clip FULL-RES path: Cloudinary → Gemini Files API ─────
           // For clips ≥8 MB, DON'T compress on-device (slow + lossy, and the
@@ -1691,12 +1711,14 @@ export default function AnalyzePage() {
           try {
             setLoadingText("Checking how many players are visible...");
             setProgress(32);
-            const vpCount = await import("@/ai/videoProcessor");
+            // The count started in parallel with compression/upload above —
+            // by now it's usually already resolved. Give it at most 5 more
+            // seconds; null (timeout/failure) = run the picker as usual.
             const nPeople = await Promise.race([
-              vpCount.countPeopleQuick(file),
-              new Promise((_, rej) => setTimeout(() => rej(new Error("count_timeout")), 12000)),
+              personCountPromise,
+              new Promise((res) => setTimeout(() => res(null), 5000)),
             ]);
-            if (nPeople <= 1) {
+            if (nPeople != null && nPeople <= 1) {
               skipDescribe = true;
               // eslint-disable-next-line no-console
               console.info(`[universal] ${nPeople} athlete(s) detected locally — skipping the Gemini picker pre-pass`);
@@ -1817,7 +1839,10 @@ export default function AnalyzePage() {
             v.src = u;
             setTimeout(() => resolve(null), 4000);
           });
-          fastMode = clipDur != null && clipDur <= 16;
+          // 24s cutoff: covers typical drill clips (15-20s) — a 17s clip
+          // missing a 16s cutoff and paying the full Pro-model wait was
+          // exactly the wrong outcome.
+          fastMode = clipDur != null && clipDur <= 24;
           if (fastMode) {
             // eslint-disable-next-line no-console
             console.info(`[universal] ${clipDur.toFixed(1)}s clip → fast mode (Flash, thinking off)`);
@@ -2126,6 +2151,7 @@ export default function AnalyzePage() {
               coach_narrative: universalResult.coach_narrative,
               court_map: universalResult.court_map || null,
               movement: universalResult.movement || null,
+              video_hash: file ? await computeVideoHash(file) : null,
               shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
             }, { timeout: 20000 });
             if (saved?.analysis_id && mountedRef.current) {
