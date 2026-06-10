@@ -34,6 +34,119 @@ def _premium_model_override() -> str:
     ).strip() or "gemini-2.5-pro"
 
 
+def _thinking_budget_for(model_name: str, tier: str = "standard"):
+    """Thinking-token budget for a Gemini call, or None to leave the API
+    default (dynamic thinking).
+
+    Speed lever: video event-extraction is perception-bound, not
+    reasoning-bound — on gemini-2.5-flash, disabling thinking
+    (budget=0) cuts end-to-end latency 30-60% with no measurable loss
+    on this task. Pro models can't disable thinking (min 128), and the
+    Premium tier exists precisely for maximum quality, so Pro keeps
+    dynamic thinking unless explicitly overridden.
+
+    Override via GEMINI_THINKING_BUDGET (int; -1 = dynamic/default).
+    """
+    raw = os.getenv("GEMINI_THINKING_BUDGET", "").strip()
+    if raw:
+        try:
+            v = int(raw)
+            return None if v < 0 else v
+        except ValueError:
+            pass
+    name = (model_name or "").lower()
+    if "flash" in name and "pro" not in name:
+        return 0
+    return None
+
+
+def _media_resolution_env():
+    """Optional media-resolution override (GEMINI_MEDIA_RESOLUTION =
+    low|medium|high). Low cuts video tokens ~4x (faster prefill, cheaper)
+    at some cost to small-object detail (shuttle/ball), so we leave the
+    API default unless ops explicitly opts in."""
+    v = os.getenv("GEMINI_MEDIA_RESOLUTION", "").strip().lower()
+    if v in ("low", "medium", "high"):
+        return f"MEDIA_RESOLUTION_{v.upper()}"
+    return None
+
+
+def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
+                        video_bytes, mime_type: str, file_ref=None,
+                        fps: float = 4.0, tier: str = "standard",
+                        stream: bool = False):
+    """Run a whole-video Gemini call through the NEW google-genai SDK.
+
+    Why: the legacy google-generativeai SDK cannot attach VideoMetadata
+    to a Files-API file part — so every large clip was sampled at
+    Gemini's 1 fps default and fast contact moments fell between frames
+    (the systematic large-clip undercount). The new SDK supports
+    fps on BOTH inline and file_data parts, plus thinking-budget and
+    media-resolution control.
+
+    Returns the response object (stream=False) or the chunk iterator
+    (stream=True); both expose `.text` like the legacy SDK, so callers
+    are agnostic. Raises ImportError if google-genai isn't installed —
+    callers fall back to the legacy path.
+    """
+    from google import genai as genai_new  # raises ImportError → legacy fallback
+    from google.genai import types as gt
+
+    client = genai_new.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+    meta = gt.VideoMetadata(fps=fps) if fps else None
+    if file_ref is not None:
+        uri = getattr(file_ref, "uri", None) or str(file_ref)
+        video_part = gt.Part(
+            file_data=gt.FileData(file_uri=uri,
+                                  mime_type=mime_type or "video/mp4"),
+            video_metadata=meta,
+        )
+    else:
+        video_part = gt.Part(
+            inline_data=gt.Blob(mime_type=mime_type or "video/mp4",
+                                data=video_bytes),
+            video_metadata=meta,
+        )
+
+    cfg_kwargs = dict(
+        system_instruction=sys_prompt,
+        temperature=0.0,
+        response_mime_type="application/json",
+    )
+    budget = _thinking_budget_for(model_name, tier)
+    if budget is not None:
+        cfg_kwargs["thinking_config"] = gt.ThinkingConfig(thinking_budget=budget)
+    media_res = _media_resolution_env()
+    if media_res:
+        cfg_kwargs["media_resolution"] = media_res
+
+    contents = [gt.Content(role="user", parts=[gt.Part(text=user_msg), video_part])]
+
+    def _call(kwargs):
+        if stream:
+            return client.models.generate_content_stream(
+                model=model_name, contents=contents,
+                config=gt.GenerateContentConfig(**kwargs))
+        return client.models.generate_content(
+            model=model_name, contents=contents,
+            config=gt.GenerateContentConfig(**kwargs))
+
+    try:
+        return _call(cfg_kwargs)
+    except Exception as exc:
+        # Some model/SDK combos reject thinking_config or media_resolution
+        # (e.g. budget=0 on a Pro model). Strip the optional knobs and retry
+        # once before giving up — never fail an analysis over a tuning flag.
+        s = str(exc).lower()
+        if ("thinking" in s or "media_resolution" in s or "budget" in s) and (
+                "thinking_config" in cfg_kwargs or "media_resolution" in cfg_kwargs):
+            cfg_kwargs.pop("thinking_config", None)
+            cfg_kwargs.pop("media_resolution", None)
+            return _call(cfg_kwargs)
+        raise
+
+
 def _parse_json_safe(raw: str) -> dict:
     if not raw or not raw.strip():
         return {}
@@ -99,11 +212,15 @@ def files_api_upload(video_bytes: bytes, mime_type: str = "video/mp4",
                 pass
     # Poll until the file leaves PROCESSING — Gemini rejects a file that's
     # still being processed, and on big clips that can take a few seconds.
+    # Start at 0.4s and back off to 1.5s: most clips go ACTIVE in 1-3s, so
+    # the old fixed 1.5s poll added ~1s of pure idle latency per upload.
     deadline = _t.monotonic() + timeout_sec
+    poll = 0.4
     while getattr(f.state, "name", str(f.state)) == "PROCESSING":
         if _t.monotonic() > deadline:
             raise TimeoutError("files_api_processing_timeout")
-        _t.sleep(1.5)
+        _t.sleep(poll)
+        poll = min(1.5, poll * 1.5)
         f = genai.get_file(f.name)
     state = getattr(f.state, "name", str(f.state))
     if state != "ACTIVE":
@@ -119,6 +236,30 @@ def files_api_get(file_name: str):
     import os as _os
     genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
     f = genai.get_file(file_name)
+    state = getattr(f.state, "name", str(f.state))
+    if state != "ACTIVE":
+        raise RuntimeError(f"files_api_state_{state}")
+    return f
+
+
+def files_api_wait_active(file_name: str, timeout_sec: float = 120.0):
+    """Block until a Files API handle leaves PROCESSING. Used by the
+    direct browser→Gemini upload path: the browser PUTs the bytes straight
+    to Google's resumable upload URL, then asks us to confirm the file is
+    ACTIVE before kicking off analysis. Returns the handle; raises on
+    timeout or a FAILED state."""
+    import google.generativeai as genai  # type: ignore
+    import os as _os, time as _t
+    genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+    deadline = _t.monotonic() + timeout_sec
+    poll = 0.4
+    f = genai.get_file(file_name)
+    while getattr(f.state, "name", str(f.state)) == "PROCESSING":
+        if _t.monotonic() > deadline:
+            raise TimeoutError("files_api_processing_timeout")
+        _t.sleep(poll)
+        poll = min(1.5, poll * 1.5)
+        f = genai.get_file(file_name)
     state = getattr(f.state, "name", str(f.state))
     if state != "ACTIVE":
         raise RuntimeError(f"files_api_state_{state}")
@@ -1104,6 +1245,36 @@ def _build_universal_prompt(
         "reaches a deep landing zone. Use the actual shuttle path, not "
         "the landing depth, to decide.\n"
         f"{box_hint_doubles if doubles_mode else box_hint_singles}\n\n"
+        "━━━ SPATIAL TRACKING (ELITE) ━━━\n"
+        "You must ALSO track WHERE things happen, not just when. All "
+        "coordinates are integers 0-1000 normalized to the video frame "
+        "(x: 0=left edge, 1000=right edge; y: 0=top, 1000=bottom).\n"
+        "Per event (include when visible, omit the field when you "
+        "genuinely cannot see it — do NOT guess):\n"
+        "  • contact_box: [ymin, xmin, ymax, xmax] — tight box around the "
+        "player who performs the event, at the contact/execution moment.\n"
+        "  • ball_trajectory: up to 5 points [[t_sec, x, y], ...] tracing "
+        "the ball/shuttle path from just before contact to ~0.5s after "
+        "(t_sec = video timestamp of that point). Omit for sports with "
+        "no ball (swimming, weightlifting).\n"
+        "  • player_position: [x, y] — where the player's FEET are at "
+        "contact (used for the court positioning map).\n"
+        "  • speed_estimate_kmh: estimated ball/shuttle speed off the "
+        "contact in km/h, judged from how many frames it takes to cross "
+        "a known court distance. null when you can't judge it.\n"
+        "Top-level (once for the whole video):\n"
+        "  • court_map: the visible playing area, or null if no "
+        "court/table/pitch is identifiable. corners = the 4 corners of "
+        "the STANDARD playing surface (court/table/pool) in frame "
+        "coordinates, ordered [far-left, far-right, near-right, "
+        "near-left]. If a corner is off-frame, extrapolate where it "
+        "would be (values may go slightly outside 0-1000).\n"
+        "  • movement: footwork/positioning read of the TARGET player "
+        "across the whole clip — estimated total distance covered in "
+        "meters (use the court's standard dimensions as the scale "
+        "reference), how much of their court side they covered, and "
+        "recovery-to-base quality between shots.\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "Respond with valid JSON ONLY (no markdown):\n"
         '{\n'
         '  "sport_detected": "<sport name in your own words>",\n'
@@ -1144,6 +1315,10 @@ def _build_universal_prompt(
         '      "tip": "<one actionable improvement>",\n'
         '      "confidence": <0-1 — how sure are you about this event>,\n'
         '      "skill_level": "<Beginner|Intermediate|Advanced|Pro>",\n'
+        '      "contact_box": [<ymin>, <xmin>, <ymax>, <xmax>],\n'
+        '      "ball_trajectory": [[<t_sec>, <x>, <y>], ...],\n'
+        '      "player_position": [<x>, <y>],\n'
+        '      "speed_estimate_kmh": <number|null>,\n'
         + (
             '      "player_role": "<you|partner|opponent — which '
             'near-court player; required in doubles mode>"\n'
@@ -1151,7 +1326,20 @@ def _build_universal_prompt(
             '      "player_role": "you"\n'
         ) +
         '    }\n'
-        '  ]\n'
+        '  ],\n'
+        '  "court_map": {\n'
+        '    "type": "<badminton_court|tennis_court|tt_table|pickleball_court|'
+        'cricket_pitch|football_pitch|basketball_court|pool|generic>",\n'
+        '    "corners": [[<x>,<y>], [<x>,<y>], [<x>,<y>], [<x>,<y>]],\n'
+        '    "net_line": [[<x>,<y>], [<x>,<y>]],\n'
+        '    "confidence": <0-1>\n'
+        '  },\n'
+        '  "movement": {\n'
+        '    "distance_covered_m": <float|null>,\n'
+        '    "court_coverage_pct": <0-100|null>,\n'
+        '    "avg_recovery_quality": "<poor|fair|good|excellent>",\n'
+        '    "note": "<one specific sentence on footwork/positioning>"\n'
+        '  }\n'
         '}\n\n'
         "ABOUT coach_narrative — this is the MOST IMPORTANT field. Write it "
         "like a real coach giving a session debrief. Concrete observations, "
@@ -1327,6 +1515,116 @@ def _belongs_to_target(e: dict, target_player_description: str | None) -> bool:
     return True
 
 
+def _extract_tracking_fields(e: dict) -> dict:
+    """Sanitize the per-event spatial-tracking fields (contact_box,
+    ball_trajectory, player_position, speed_estimate_kmh) Gemini returns
+    for the elite overlay. All coordinates are kept in the model's
+    0-1000 normalized frame space; the frontend divides by 1000.
+    Every field is optional — missing/garbage input yields no key, so
+    legacy consumers see exactly the old event shape."""
+    out: dict = {}
+
+    def _num(v, lo=-250.0, hi=1250.0):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        if not (lo <= f <= hi):
+            return None
+        return round(f, 1)
+
+    cb = e.get("contact_box")
+    if isinstance(cb, (list, tuple)) and len(cb) == 4:
+        vals = [_num(v, 0, 1000) for v in cb]
+        if all(v is not None for v in vals) and vals[2] > vals[0] and vals[3] > vals[1]:
+            out["contact_box"] = vals
+
+    traj = e.get("ball_trajectory")
+    if isinstance(traj, (list, tuple)):
+        pts = []
+        for p in traj[:8]:
+            if isinstance(p, (list, tuple)) and len(p) == 3:
+                t = _num(p[0], 0, 36000)
+                x = _num(p[1], -250, 1250)
+                y = _num(p[2], -250, 1250)
+                if t is not None and x is not None and y is not None:
+                    pts.append([t, x, y])
+        if len(pts) >= 2:
+            out["ball_trajectory"] = pts[:5]
+
+    pp = e.get("player_position")
+    if isinstance(pp, (list, tuple)) and len(pp) == 2:
+        x, y = _num(pp[0], -250, 1250), _num(pp[1], -250, 1250)
+        if x is not None and y is not None:
+            out["player_position"] = [x, y]
+
+    spd = e.get("speed_estimate_kmh")
+    if isinstance(spd, (int, float)) and 1 <= float(spd) <= 500:
+        out["speed_estimate_kmh"] = round(float(spd), 1)
+
+    return out
+
+
+def _sanitize_court_map(data: dict) -> dict | None:
+    """Validate the top-level court_map Gemini returns. None when absent
+    or unusable. Corners may extrapolate slightly past the frame (off-frame
+    court corners), hence the wider clamp."""
+    cm = data.get("court_map")
+    if not isinstance(cm, dict):
+        return None
+    corners_raw = cm.get("corners")
+    if not isinstance(corners_raw, (list, tuple)) or len(corners_raw) != 4:
+        return None
+    corners = []
+    for c in corners_raw:
+        if not (isinstance(c, (list, tuple)) and len(c) == 2):
+            return None
+        try:
+            x, y = float(c[0]), float(c[1])
+        except (TypeError, ValueError):
+            return None
+        if not (-600 <= x <= 1600 and -600 <= y <= 1600):
+            return None
+        corners.append([round(x, 1), round(y, 1)])
+    ctype = str(cm.get("type", "generic")).strip().lower()[:40] or "generic"
+    try:
+        conf = max(0.0, min(1.0, float(cm.get("confidence", 0.5) or 0.5)))
+    except (TypeError, ValueError):
+        conf = 0.5
+    out = {"type": ctype, "corners": corners, "confidence": conf}
+    nl = cm.get("net_line")
+    if isinstance(nl, (list, tuple)) and len(nl) == 2:
+        try:
+            pts = [[round(float(p[0]), 1), round(float(p[1]), 1)] for p in nl
+                   if isinstance(p, (list, tuple)) and len(p) == 2]
+            if len(pts) == 2:
+                out["net_line"] = pts
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def _sanitize_movement(data: dict) -> dict | None:
+    """Validate the top-level movement summary. None when absent."""
+    mv = data.get("movement")
+    if not isinstance(mv, dict):
+        return None
+    out: dict = {}
+    d = mv.get("distance_covered_m")
+    if isinstance(d, (int, float)) and 0 < float(d) < 30000:
+        out["distance_covered_m"] = round(float(d), 1)
+    c = mv.get("court_coverage_pct")
+    if isinstance(c, (int, float)) and 0 <= float(c) <= 100:
+        out["court_coverage_pct"] = round(float(c), 1)
+    rq = str(mv.get("avg_recovery_quality", "")).strip().lower()
+    if rq in ("poor", "fair", "good", "excellent"):
+        out["avg_recovery_quality"] = rq
+    note = str(mv.get("note", ""))[:300].strip()
+    if note:
+        out["note"] = note
+    return out or None
+
+
 def _normalize_universal_event(e: dict, sport_vocab: list, target_player_description: str | None = None) -> dict | None:
     """Normalize one raw event dict from Gemini into the stable output
     schema. Returns None if `e` isn't usable OR if the strict target-player
@@ -1384,6 +1682,10 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
         outcome = "unknown"
     quality_observation = str(e.get("quality_observation", ""))[:400].strip()
     return {
+        # Elite spatial-tracking fields (contact_box / ball_trajectory /
+        # player_position / speed_estimate_kmh) — only present when Gemini
+        # actually saw them, so legacy events keep their exact old shape.
+        **_extract_tracking_fields(e),
         "timestamp_sec": ts,
         "shot_type": shot_category,
         "event_type": shot_category,
@@ -1468,22 +1770,42 @@ def analyze_video_universal(
     _file_ref = None
     _owns_ref = False
     try:
-        import google.generativeai as genai  # type: ignore
-        model = backend_obj._get() if hasattr(backend_obj, "_get") else None
-        if model is None:
-            import os as _os
-            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
-            model = genai.GenerativeModel(backend_obj.model_name)
         # Large clips go through the Files API (full-res, no 20 MB inline cap);
         # small ones inline directly. _resolve_video_ref handles the choice.
         _file_ref, _owns_ref = _resolve_video_ref(video_bytes, mime_type or "video/mp4", file_name)
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
-                                   mime_type or "video/mp4", fps=4.0, file_ref=_file_ref)
-        resp = model.generate_content(
-            parts,
-            generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
-        )
-        raw = resp.text
+        raw = None
+        try:
+            # NEW SDK path (preferred): fps control works on Files API refs
+            # (legacy SDK silently fell back to 1 fps there — the root cause
+            # of large-clip undercounting), and flash runs without thinking
+            # for a 30-60% latency cut.
+            resp = _new_sdk_video_call(
+                backend_obj.model_name, sys_prompt, user_msg, video_bytes,
+                mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
+                tier=tier, stream=False,
+            )
+            raw = resp.text
+            _log.info("[universal] new-SDK call ok (model=%s)", backend_obj.model_name)
+        except ImportError:
+            raw = None
+        except Exception as _new_exc:
+            _log.warning("[universal] new-SDK call failed, falling back to legacy: %s",
+                         str(_new_exc)[:200])
+            raw = None
+        if raw is None:
+            import google.generativeai as genai  # type: ignore
+            model = backend_obj._get() if hasattr(backend_obj, "_get") else None
+            if model is None:
+                import os as _os
+                genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+                model = genai.GenerativeModel(backend_obj.model_name)
+            parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
+                                       mime_type or "video/mp4", fps=4.0, file_ref=_file_ref)
+            resp = model.generate_content(
+                parts,
+                generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+            )
+            raw = resp.text
     except Exception as exc:
         return {
             "sport_detected": "unknown", "summary": "",
@@ -1559,6 +1881,7 @@ def analyze_video_universal(
         if role_raw not in ("you", "partner", "opponent"):
             role_raw = "you"
         events_out.append({
+            **_extract_tracking_fields(e),
             "timestamp_sec": ts,
             # Backward compat: shot_type / event_type mirror shot_category so
             # legacy UI code reading either field keeps working.
@@ -1630,6 +1953,10 @@ def analyze_video_universal(
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
         "coach_narrative": coach_narrative,
         "target_mismatch_warning": target_mismatch_warning,
+        # Elite overlays: visible playing-area geometry + whole-clip
+        # footwork read. None when Gemini couldn't see a court / judge it.
+        "court_map": _sanitize_court_map(data),
+        "movement": _sanitize_movement(data),
         "events": events_out,
         # Debug surface for the in-app debug panel — see stream variant.
         "_debug": {
@@ -1747,36 +2074,54 @@ def stream_analyze_video_universal(
     _owns_ref = False
 
     try:
-        import google.generativeai as genai  # type: ignore
-        model = backend_obj._get() if hasattr(backend_obj, "_get") else None
-        if model is None:
-            import os as _os
-            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
-            model = genai.GenerativeModel(backend_obj.model_name)
         try:
             _file_ref, _owns_ref = _resolve_video_ref(
                 video_bytes, mime_type or "video/mp4", file_name)
         except Exception as exc:
             yield {"kind": "error", "msg": f"files_api_failed: {str(exc)[:200]}"}
             return
-        parts = _build_video_parts(
-            sys_prompt, user_msg, video_bytes,
-            mime_type or "video/mp4", fps=4.0, file_ref=_file_ref,
-        )
+        stream_iter = None
         try:
-            stream_iter = model.generate_content(
-                parts,
-                stream=True,
-                generation_config={
-                    "temperature": 0.0,
-                    "response_mime_type": "application/json",
-                },
+            # NEW SDK path — see analyze_video_universal for the rationale
+            # (fps on Files API refs + thinking-budget latency cut).
+            stream_iter = _new_sdk_video_call(
+                backend_obj.model_name, sys_prompt, user_msg, video_bytes,
+                mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
+                tier=tier, stream=True,
             )
-        except Exception as exc:
-            if _owns_ref and _file_ref is not None:
-                files_api_delete(_file_ref.name)
-            yield {"kind": "error", "msg": f"gemini_call_failed: {str(exc)[:200]}"}
-            return
+        except ImportError:
+            stream_iter = None
+        except Exception as _new_exc:
+            import logging as _lg
+            _lg.getLogger("athlytic.vlm").warning(
+                "[universal-stream] new-SDK call failed, falling back to legacy: %s",
+                str(_new_exc)[:200])
+            stream_iter = None
+        if stream_iter is None:
+            import google.generativeai as genai  # type: ignore
+            model = backend_obj._get() if hasattr(backend_obj, "_get") else None
+            if model is None:
+                import os as _os
+                genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+                model = genai.GenerativeModel(backend_obj.model_name)
+            parts = _build_video_parts(
+                sys_prompt, user_msg, video_bytes,
+                mime_type or "video/mp4", fps=4.0, file_ref=_file_ref,
+            )
+            try:
+                stream_iter = model.generate_content(
+                    parts,
+                    stream=True,
+                    generation_config={
+                        "temperature": 0.0,
+                        "response_mime_type": "application/json",
+                    },
+                )
+            except Exception as exc:
+                if _owns_ref and _file_ref is not None:
+                    files_api_delete(_file_ref.name)
+                yield {"kind": "error", "msg": f"gemini_call_failed: {str(exc)[:200]}"}
+                return
     except Exception as exc:
         yield {"kind": "error", "msg": f"gemini_init_failed: {str(exc)[:200]}"}
         return
@@ -1896,6 +2241,8 @@ def stream_analyze_video_universal(
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
         "coach_narrative": coach_narrative_stream,
         "target_mismatch_warning": target_mismatch_warning_stream,
+        "court_map": _sanitize_court_map(data),
+        "movement": _sanitize_movement(data),
         "events": events_out,
         "_meta": {
             "backend": backend_obj.name,
@@ -1989,25 +2336,41 @@ def describe_players_in_video(
 
     backend_obj = pick_backend(backend)
     try:
-        import google.generativeai as genai  # type: ignore
-        model = backend_obj._get() if hasattr(backend_obj, "_get") else None
-        if model is None:
-            import os as _os
-            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
-            model = genai.GenerativeModel(backend_obj.model_name)
         # 0.75 fps is plenty for describing static visual features
         # (clothing/position) — players don't change appearance shot-to-shot,
         # and fewer sampled frames = a noticeably faster pre-pass (it was
         # timing out at 1.5fps on full-res Files API clips). Reuse the Files API
         # handle for large clips (same one the analysis uses) so we upload once.
         _file_ref, _owns_ref = _resolve_video_ref(video_bytes, mime_type or "video/mp4", file_name)
-        parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
-                                   mime_type or "video/mp4", fps=0.75, file_ref=_file_ref)
-        resp = model.generate_content(
-            parts,
-            generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
-        )
-        raw = resp.text
+        raw = None
+        try:
+            # New SDK: the 0.75 fps cap actually APPLIES on Files API refs
+            # (the legacy SDK ignored fps there and sampled at 1 fps over the
+            # whole clip — the main reason this pre-pass was slow on big clips).
+            resp = _new_sdk_video_call(
+                backend_obj.model_name, sys_prompt, user_msg, video_bytes,
+                mime_type or "video/mp4", file_ref=_file_ref, fps=0.75,
+                tier="standard", stream=False,
+            )
+            raw = resp.text
+        except ImportError:
+            raw = None
+        except Exception:
+            raw = None
+        if raw is None:
+            import google.generativeai as genai  # type: ignore
+            model = backend_obj._get() if hasattr(backend_obj, "_get") else None
+            if model is None:
+                import os as _os
+                genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+                model = genai.GenerativeModel(backend_obj.model_name)
+            parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
+                                       mime_type or "video/mp4", fps=0.75, file_ref=_file_ref)
+            resp = model.generate_content(
+                parts,
+                generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+            )
+            raw = resp.text
         if _owns_ref and _file_ref is not None:
             files_api_delete(_file_ref.name)
     except Exception as exc:

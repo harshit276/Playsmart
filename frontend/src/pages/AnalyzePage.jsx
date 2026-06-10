@@ -33,6 +33,7 @@ import LiveVoiceCoach from "@/components/LiveVoiceCoach";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
 import GeminiDebugPanel from "@/components/GeminiDebugPanel";
 import CoachNarrativeCard from "@/components/CoachNarrativeCard";
+import CourtMapCard from "@/components/CourtMapCard";
 import AnalysisScroller from "@/components/AnalysisScroller";
 import AnalysisQuickNav from "@/components/AnalysisQuickNav";
 import PlayerDetectionCard from "@/components/PlayerDetectionCard";
@@ -349,6 +350,10 @@ function buildUniversalResult(data, targetDesc, pickedPlayer) {
     _debug: data?._debug || data?._meta || null,
     coach_narrative: data?.coach_narrative || null,
     target_mismatch_warning: data?.target_mismatch_warning || null,
+    // Elite spatial layer (Gemini-tracked): visible court geometry +
+    // whole-clip footwork stats. Null when the model couldn't see a court.
+    court_map: data?.court_map || null,
+    movement: data?.movement || null,
     sport: data?.sport_detected || "unknown",
     skill_level: data?.overall_skill_level || "Intermediate",
     quick_summary: data?.summary || "",
@@ -369,7 +374,13 @@ function buildUniversalResult(data, targetDesc, pickedPlayer) {
       formFeedback: { strengths: e.strengths || [], weaknesses: e.weaknesses || [], tip: e.tip || "" },
       vlmSkill: e.skill_level || "Intermediate",
       powerLevel: null,
-      speed: null,
+      speed: (typeof e.speed_estimate_kmh === "number" && e.speed_estimate_kmh > 0)
+        ? { estimated_speed_kmh: e.speed_estimate_kmh }
+        : null,
+      // Spatial tracking (coords normalized 0-1000 to the video frame)
+      ball_trajectory: e.ball_trajectory || null,
+      contact_box: e.contact_box || null,
+      player_position: e.player_position || null,
       thumbnail: null,
     })),
     total_shots_detected: events.length,
@@ -980,6 +991,8 @@ export default function AnalyzePage() {
             skill_level: universalResult.skill_level,
             quick_summary: universalResult.quick_summary,
             coach_narrative: universalResult.coach_narrative,
+            court_map: universalResult.court_map || null,
+            movement: universalResult.movement || null,
             shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
           }, { timeout: 20000 });
           if (saved?.analysis_id && mountedRef.current) {
@@ -1468,8 +1481,31 @@ export default function AnalyzePage() {
                 const [oDur, cDur] = await Promise.all([_measureDur(file), _measureDur(prepared)]);
                 timeScale = (oDur && cDur && oDur / cDur > 1.1) ? Math.min(4, Math.max(1, oDur / cDur)) : 1.5;
               } catch { timeScale = 1.5; }
+              // FASTEST path: browser PUTs the bytes straight to Gemini's
+              // Files API (one transfer instead of the Cloudinary triple-hop
+              // browser→Cloudinary→backend→Gemini). Falls through to the
+              // Cloudinary route below on any error (CORS, proxy, etc.).
+              try {
+                const { uploadDirectToGemini } = await import("@/lib/geminiDirectUpload");
+                const direct = await uploadDirectToGemini(prepared, {
+                  onProgress: ({ percent, message }) => {
+                    setLoadingText(message || "Uploading your video...");
+                    setProgress(30 + Math.round((percent || 0) * 0.14));
+                  },
+                });
+                if (direct?.file_name) {
+                  fileName = direct.file_name;
+                  uploadFile = prepared;
+                  b64 = null;
+                  // eslint-disable-next-line no-console
+                  console.info(`[upload] 720p@1.5x→Gemini DIRECT: ${origMbRaw.toFixed(1)}MB → ${(prepared.size / 1024 / 1024).toFixed(1)}MB, timeScale=${timeScale.toFixed(2)} → ${fileName}`);
+                }
+              } catch (directErr) {
+                console.warn("[upload] direct Gemini upload failed, using Cloudinary route:",
+                             directErr?.message);
+              }
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
-              const cloud = await uploadToCloudinary(prepared, {
+              const cloud = fileName ? null : await uploadToCloudinary(prepared, {
                 onProgress: ({ percent, message }) => {
                   setLoadingText(message || "Uploading your video...");
                   setProgress(30 + Math.round((percent || 0) * 0.12));
@@ -1857,6 +1893,9 @@ export default function AnalyzePage() {
               // Backend-side detection of "user picked Player A but
               // Gemini described Player B" — surfaces as an amber banner.
               target_mismatch_warning: final.target_mismatch_warning || null,
+              // Elite spatial layer (court positioning map + footwork stats)
+              court_map: final.court_map || null,
+              movement: final.movement || null,
               events: final.events || final.shots || [],
               _meta: { ...(final._meta || {}), streamed: true },
             };
@@ -1955,6 +1994,8 @@ export default function AnalyzePage() {
               skill_level: universalResult.skill_level,
               quick_summary: universalResult.quick_summary,
               coach_narrative: universalResult.coach_narrative,
+              court_map: universalResult.court_map || null,
+              movement: universalResult.movement || null,
               shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
             }, { timeout: 20000 });
             if (saved?.analysis_id && mountedRef.current) {
@@ -3928,6 +3969,18 @@ export default function AnalyzePage() {
           <div id="analysis-section-overview" className="scroll-mt-24">
             <CoachNarrativeCard narrative={result.coach_narrative} />
           </div>
+        )}
+
+        {/* Elite spatial layer — top-down court positioning map + footwork
+            stats, built from Gemini's tracked court corners, per-shot player
+            positions, and ball trajectories. Renders nothing for clips where
+            no court/positions were detected (graceful no-op for old data). */}
+        {(result?.court_map || result?.movement) && (
+          <CourtMapCard
+            courtMap={result.court_map}
+            movement={result.movement}
+            shots={result.shots || []}
+          />
         )}
 
         {/* Debug panel — visible with ?debug=1 or localStorage.playsmart_debug=true.

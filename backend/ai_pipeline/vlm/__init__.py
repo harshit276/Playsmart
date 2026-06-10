@@ -23,6 +23,7 @@ from .coaching import (
     analyze_video_full, analyze_video_universal,
     describe_players_in_video,
     files_api_upload, files_api_get, files_api_delete,
+    files_api_wait_active,
 )
 
 __all__ = ["VLMShotClassifier", "predict_shot", "available_backends",
@@ -31,4 +32,5 @@ __all__ = ["VLMShotClassifier", "predict_shot", "available_backends",
            "quiz_personalization", "coach_chat", "generic_drill_set",
            "analyze_video_full", "analyze_video_universal",
            "describe_players_in_video",
-           "files_api_upload", "files_api_get", "files_api_delete"]
+           "files_api_upload", "files_api_get", "files_api_delete",
+           "files_api_wait_active"]

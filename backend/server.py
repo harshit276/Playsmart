@@ -3439,6 +3439,14 @@ def _apply_time_scale(events: list, time_scale: float) -> list:
             v = ev.get(key)
             if isinstance(v, (int, float)):
                 ev[key] = round(v * ts, 3)
+        # Ball-trajectory points carry their own timestamps ([t, x, y]) —
+        # scale t into the original timeline too so the overlay lands on
+        # the right video frames. x/y are frame-normalized, unaffected.
+        traj = ev.get("ball_trajectory")
+        if isinstance(traj, list):
+            for p in traj:
+                if isinstance(p, list) and len(p) == 3 and isinstance(p[0], (int, float)):
+                    p[0] = round(p[0] * ts, 3)
     return events
 
 
@@ -3463,7 +3471,7 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
-    PROMPT_VERSION = "v2026-06-01-narrative-bullets"
+    PROMPT_VERSION = "v2026-06-10-spatial-tracking"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
@@ -3535,6 +3543,10 @@ async def analyze_video_universal_endpoint(
         # When the user's selected player and Gemini's described player
         # disagree, this carries the explanation for the in-app banner.
         "target_mismatch_warning": result.get("target_mismatch_warning") or None,
+        # Elite spatial layer: court geometry + footwork summary for the
+        # court-map / trajectory overlays. None when not detected.
+        "court_map": result.get("court_map") or None,
+        "movement": result.get("movement") or None,
         "events": result.get("events") or [],
         "_debug": result.get("_debug") or {},
         "_meta": result.get("_meta") or {},
@@ -3777,6 +3789,8 @@ async def analyze_video_stream_endpoint(
                     "overall_skill_level": final_payload.get("overall_skill_level"),
                     "coach_narrative": final_payload.get("coach_narrative") or {},
                     "target_mismatch_warning": final_payload.get("target_mismatch_warning") or None,
+                    "court_map": final_payload.get("court_map") or None,
+                    "movement": final_payload.get("movement") or None,
                     "_meta": final_payload.get("_meta", {}),
                 })
                 complete_delivered = True
@@ -4011,6 +4025,8 @@ async def _process_job(job: dict):
         "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
         "coach_narrative": result.get("coach_narrative") or {},
         "target_mismatch_warning": result.get("target_mismatch_warning") or None,
+        "court_map": result.get("court_map") or None,
+        "movement": result.get("movement") or None,
         "events": result.get("events") or [],
         "_debug": result.get("_debug") or {},
         "_meta": {**(result.get("_meta") or {}), "async_job": True},
@@ -4278,6 +4294,98 @@ async def register_video_url_to_files_api(
         "file_uri": getattr(handle, "uri", None),
         "mime_type": mime_type,
         "size_bytes": size_bytes,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Direct browser → Gemini Files API upload (fastest large-clip path).
+#
+# The Cloudinary route moves the clip THREE times (browser→Cloudinary,
+# Cloudinary→backend, backend→Gemini) — tens of seconds of pure transfer
+# overhead on a big phone clip. Google's resumable-upload protocol lets the
+# browser PUT the bytes straight to Gemini instead: we mint the session
+# server-side (the API key never leaves the backend — the returned upload
+# URL embeds a single-use upload token), the browser uploads ONCE, then
+# /files/finalize confirms the handle is ACTIVE. The Cloudinary path stays
+# as the automatic fallback for browsers/networks where the direct PUT
+# fails (e.g. a corporate proxy stripping the upload headers).
+# ──────────────────────────────────────────────────────────────────────
+class UploadSessionRequest(BaseModel):
+    size_bytes: int
+    mime_type: str = "video/mp4"
+
+
+@api_router.post("/files/upload-session")
+async def files_upload_session(
+    req: UploadSessionRequest, authorization: str = Header(None),
+):
+    """Mint a Gemini Files API resumable-upload URL for the browser."""
+    await get_current_user_or_none(authorization)
+    if not (1000 <= int(req.size_bytes or 0) <= 200 * 1024 * 1024):
+        raise HTTPException(status_code=400, detail="size_bytes out of range (1KB-200MB)")
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY not configured")
+    mime_type = (req.mime_type or "video/mp4").split(";")[0].strip()
+    if not mime_type.startswith("video/"):
+        raise HTTPException(status_code=400, detail="mime_type must be video/*")
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                "https://generativelanguage.googleapis.com/upload/v1beta/files",
+                headers={
+                    "x-goog-api-key": api_key,
+                    "X-Goog-Upload-Protocol": "resumable",
+                    "X-Goog-Upload-Command": "start",
+                    "X-Goog-Upload-Header-Content-Length": str(int(req.size_bytes)),
+                    "X-Goog-Upload-Header-Content-Type": mime_type,
+                    "Content-Type": "application/json",
+                },
+                json={"file": {"display_name": "atheonics-clip"}},
+            )
+            resp.raise_for_status()
+            upload_url = resp.headers.get("x-goog-upload-url")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"could not start upload session: {str(exc)[:200]}")
+    if not upload_url:
+        raise HTTPException(status_code=502, detail="upload session missing upload URL")
+    return {"upload_url": upload_url, "mime_type": mime_type}
+
+
+class FinalizeUploadRequest(BaseModel):
+    file_name: str
+
+
+@api_router.post("/files/finalize")
+async def files_finalize_upload(
+    req: FinalizeUploadRequest, authorization: str = Header(None),
+):
+    """Wait for a directly-uploaded Files API handle to become ACTIVE so it
+    can be referenced by /describe-players and the analysis endpoints."""
+    await get_current_user_or_none(authorization)
+    name = (req.file_name or "").strip()
+    if not name.startswith("files/"):
+        raise HTTPException(status_code=400, detail="file_name must look like files/...")
+    try:
+        from ai_pipeline.vlm import files_api_wait_active
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+    loop = asyncio.get_event_loop()
+    try:
+        handle = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: files_api_wait_active(name, 110.0)),
+            timeout=115.0,
+        )
+    except (asyncio.TimeoutError, TimeoutError):
+        raise HTTPException(status_code=504, detail="File processing timed out — please retry")
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"file not usable: {str(exc)[:200]}")
+    return {
+        "file_name": handle.name,
+        "file_uri": getattr(handle, "uri", None),
+        "state": "ACTIVE",
     }
 
 
@@ -5873,6 +5981,10 @@ class SaveUniversalAnalysisRequest(BaseModel):
     quick_summary: str | None = None
     coach_narrative: dict | None = None
     shots: list = []
+    # Elite spatial layer — persisted so history cards can re-render the
+    # court positioning map + movement stats for past sessions.
+    court_map: dict | None = None
+    movement: dict | None = None
 
 
 def _grade_from_score(s: float) -> str:
@@ -5931,6 +6043,8 @@ async def save_universal_analysis(req: SaveUniversalAnalysisRequest, authorizati
         "coach_feedback": {"summary": req.quick_summary or "", "encouragement": ""},
         "quick_summary": req.quick_summary or "",
         "shots": [{k: v for k, v in s.items() if k != "thumbnail"} for s in (req.shots or [])],
+        "court_map": req.court_map or None,
+        "movement": req.movement or None,
         # Drives drill attribution in /compare-analyses.
         "vlm_coaching": {"key_focus_areas": improvements[:3]},
         "_meta": {"source": "universal", "save_only": True},
