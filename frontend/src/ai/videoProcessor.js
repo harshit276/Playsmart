@@ -2183,6 +2183,27 @@ export async function countPeopleQuick(videoFile, options = {}) {
     for (const f of fractions) {
       await _seekTo(video, Math.min(duration - 0.05, duration * f), 3000);
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Black/blank frame guard: if the seek didn't actually land (decoder
+      // not ready), the canvas is near-black and MoveNet reports 0 people —
+      // which the caller would read as a real count. Sample luminance and
+      // skip such frames instead of counting them.
+      {
+        const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let sum = 0, n = 0;
+        for (let i = 0; i < d.length; i += 401 * 4) { // ~sparse sample
+          sum += d[i] + d[i + 1] + d[i + 2];
+          n += 3;
+        }
+        if (n > 0 && sum / n < 10) {
+          // Give the decoder one more moment, redraw, re-check.
+          await new Promise((r) => setTimeout(r, 350));
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const d2 = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+          let s2 = 0, n2 = 0;
+          for (let i = 0; i < d2.length; i += 401 * 4) { s2 += d2[i] + d2[i + 1] + d2[i + 2]; n2 += 3; }
+          if (n2 > 0 && s2 / n2 < 10) continue; // still black — skip sample
+        }
+      }
       const people = await detectMultiplePeople(canvas);
       const real = (people || []).filter((p) => {
         if ((p.score || 0) < minScore) return false;

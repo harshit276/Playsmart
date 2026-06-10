@@ -2683,6 +2683,138 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   );
 }
 
+// Capture a single frame from a video URL at time t as a JPEG data URL.
+// Used by the posture tracker to grab the contact moment.
+async function _captureFrameAt(videoUrl, t, maxDim = 720) {
+  return new Promise((resolve) => {
+    try {
+      const v = document.createElement("video");
+      v.muted = true; v.playsInline = true; v.preload = "auto";
+      v.src = videoUrl;
+      const fail = setTimeout(() => resolve(null), 8000);
+      const grab = () => {
+        try {
+          const vw = v.videoWidth, vh = v.videoHeight;
+          if (!vw || !vh) { clearTimeout(fail); resolve(null); return; }
+          const scale = Math.min(1, maxDim / Math.max(vw, vh));
+          const c = document.createElement("canvas");
+          c.width = Math.max(2, Math.round(vw * scale));
+          c.height = Math.max(2, Math.round(vh * scale));
+          c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+          clearTimeout(fail);
+          resolve(c.toDataURL("image/jpeg", 0.85));
+        } catch { clearTimeout(fail); resolve(null); }
+      };
+      v.onloadedmetadata = () => {
+        try {
+          v.currentTime = Math.max(0.05, Math.min(t, (v.duration || t + 1) - 0.05));
+        } catch { grab(); }
+      };
+      v.onseeked = grab;
+      v.onerror = () => { clearTimeout(fail); resolve(null); };
+    } catch { resolve(null); }
+  });
+}
+
+const _JOINT_LABELS = { elbow: "Elbow angle", shoulder: "Arm elevation", knee: "Knee bend" };
+const _POSTURE_STATUS = {
+  good: { dot: "bg-lime-400", text: "text-lime-300", label: "On target" },
+  okay: { dot: "bg-amber-400", text: "text-amber-300", label: "Close" },
+  off: { dot: "bg-red-400", text: "text-red-300", label: "Off" },
+  neutral: { dot: "bg-zinc-500", text: "text-zinc-400", label: "Measured" },
+};
+
+// POSTURE TRACKER — runs MoveNet on the contact frame of the headline shot,
+// draws the skeleton with joints color-graded against curated ideal angle
+// ranges for this sport+shot, and lists measured vs ideal numbers. This
+// replaced the YouTube pro embed on the main results page: a measured read
+// of YOUR body beats watching someone else's video (the pro clip is still
+// available in each shot's Compare view and the footer link).
+function PostureCheckPanel({ videoUrl, timestamp, thumbnail, sport, shotType }) {
+  const [state, setState] = useState({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    setState({ status: "loading" });
+    (async () => {
+      try {
+        let frame = null;
+        if (videoUrl && typeof timestamp === "number" && Number.isFinite(timestamp)) {
+          frame = await _captureFrameAt(videoUrl, timestamp);
+        }
+        if (!frame) frame = thumbnail || null;
+        if (!frame) { if (!cancelled) setState({ status: "no-frame" }); return; }
+        const mod = await import("@/ai/poseOverlay");
+        const r = await mod.analyzePoseOnFrame(frame, sport, shotType, { maxDim: 600 });
+        if (cancelled) return;
+        if (!r || r.error || !r.annotatedDataUrl) { setState({ status: "failed" }); return; }
+        setState({ status: "ready", result: r });
+      } catch {
+        if (!cancelled) setState({ status: "failed" });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [videoUrl, timestamp, thumbnail, sport, shotType]);
+
+  if (state.status === "loading") {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-zinc-950">
+        <div className="w-8 h-8 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin" />
+        <p className="text-[10px] text-zinc-500">Measuring your posture at contact…</p>
+      </div>
+    );
+  }
+  if (state.status !== "ready") {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-zinc-950 px-4">
+        <p className="text-[11px] text-zinc-500 text-center leading-snug">
+          Couldn't measure the pose on this frame — the player may be too far
+          from the camera or partially hidden. Try the per-shot Compare view.
+        </p>
+      </div>
+    );
+  }
+
+  const { annotatedDataUrl, measurements, racketSide } = state.result;
+  const graded = (measurements || []).filter((m) => m.ideal);
+  const rows = graded.length ? graded : (measurements || []);
+  return (
+    <div className="w-full h-full flex bg-zinc-950">
+      <div className="h-full w-1/2 bg-black flex items-center justify-center overflow-hidden">
+        <img src={annotatedDataUrl} alt="Your posture at contact (skeleton overlay)" className="max-h-full max-w-full object-contain" />
+      </div>
+      <div className="flex-1 min-w-0 p-2.5 overflow-y-auto">
+        <p className="text-[9px] uppercase tracking-wider text-lime-400 font-bold mb-1.5">
+          At contact · {racketSide} arm
+        </p>
+        <div className="space-y-1.5">
+          {rows.slice(0, 3).map((m) => {
+            const st = _POSTURE_STATUS[m.status] || _POSTURE_STATUS.neutral;
+            return (
+              <div key={m.joint} className="bg-zinc-900/80 rounded-md p-1.5" title={m.ideal?.why || ""}>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] text-zinc-400 truncate">{_JOINT_LABELS[m.joint] || m.joint}</span>
+                  <span className={`flex items-center gap-1 text-[10px] font-bold ${st.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} /> {st.label}
+                  </span>
+                </div>
+                <p className="text-[11px] text-white font-mono mt-0.5">
+                  {m.value}°{m.ideal ? <span className="text-zinc-500"> · ideal {m.ideal.min}–{m.ideal.max}°</span> : null}
+                </p>
+              </div>
+            );
+          })}
+          {rows.length === 0 && (
+            <p className="text-[10px] text-zinc-500">
+              Skeleton tracked — no curated ideal ranges for this shot type yet.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AutoProReferencePanel({ perShot, sport, videoFile }) {
   // Pick the user's "headline" shot: most-frequent type, prefer a
   // representative with both high confidence AND a thumbnail (so the
@@ -2704,9 +2836,6 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   const [speed, setSpeed] = useState(0.5);
   // Live swing-phase label tracking the loop position vs the contact moment.
   const [phase, setPhase] = useState(null);
-  // Mirror the pro clip — left-handed players vs a right-handed pro (or
-  // vice versa) otherwise read the comparison backwards.
-  const [mirrorPro, setMirrorPro] = useState(false);
   // AI Correct generation removed — Replicate motion-transfer models
   // are too slow + flaky to be a foreground feature right now (60-180s,
   // sometimes failing even with billing). Keeping the backend endpoint
@@ -2814,23 +2943,10 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     try { v.playbackRate = speed; } catch {}
   }, [speed]);
 
-  if (!proRef || !headlineShot) return null;
-
-  // Pro segment in seconds, used for both the embed window AND the
-  // visible "Ns segment · loop" badge so users don't see the full
-  // 10-minute video chrome and assume we're playing the whole video.
-  const proStart = Math.max(0, Math.round(proRef.start_sec || 0));
-  const proEnd = Math.max(proStart + 1, Math.round(proRef.end_sec || proStart + 5));
-  const proSegmentSec = Math.max(1, proEnd - proStart);
-
-  // controls=0 + disablekb + showinfo=0 + iv_load_policy=3 strips YT's
-  // own progress bar and title chrome — the same approach the Form
-  // Comparison modal uses. We render our own segment label.
-  const ytSrc = `https://www.youtube-nocookie.com/embed/${proRef.youtube_id}`
-    + `?start=${proStart}&end=${proEnd}`
-    + `&autoplay=1&mute=1&loop=1&playlist=${proRef.youtube_id}`
-    + `&controls=0&modestbranding=1&rel=0&disablekb=1&iv_load_policy=3`
-    + `&showinfo=0&fs=0&playsinline=1`;
+  // Renders whenever a headline shot exists — the posture tracker is
+  // independent of whether a curated pro reference was found (proRef only
+  // feeds the optional footer link now).
+  if (!headlineShot) return null;
 
   const canShowVideo = !!userVideoUrl && typeof headlineShot.timestamp === "number";
 
@@ -2853,13 +2969,14 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl overflow-hidden">
       <div className="px-4 py-3 bg-amber-400/5 border-b border-amber-400/20">
         <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
-          <Trophy className="w-3 h-3" /> Pro reference for your top shot
+          <Trophy className="w-3 h-3" /> Posture tracker — your top shot
         </p>
         <p className="text-sm font-semibold text-white mt-0.5 capitalize">
-          Your {headlineShot._name} vs {proRef.player}
+          Your {headlineShot._name} — measured at contact
         </p>
         <p className="text-[10px] text-zinc-500 mt-0.5">
-          Your clip loops on the left. The pro's segment loops on the right.
+          Your clip loops on the left. Joint angles vs the ideal range for
+          this shot on the right.
         </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
@@ -2912,26 +3029,18 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             </div>
           )}
         </div>
-        {/* PRO side — curated YouTube segment. controls=0 + custom
-            badge so users don't see the full 10-minute video chrome
-            and think we're playing the whole video. */}
+        {/* POSTURE TRACKER — replaces the old YouTube pro embed. Skeleton
+            overlay on the contact frame, joints color-graded against the
+            curated ideal angle ranges, with the measured numbers. The pro
+            video lives in each shot's Compare view + the footer link. */}
         <div className="bg-black aspect-video relative">
-          <iframe
-            src={ytSrc}
-            title={`${proRef.player} ${proRef.shot_type}`}
-            allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            className="w-full h-full"
-            style={mirrorPro ? { transform: "scaleX(-1)" } : undefined}
+          <PostureCheckPanel
+            videoUrl={userVideoUrl}
+            timestamp={typeof headlineShot.timestamp === "number" ? headlineShot.timestamp : null}
+            thumbnail={headlineShot.thumbnail || null}
+            sport={sport}
+            shotType={headlineShot.category || headlineShot.type || headlineShot.label}
           />
-          <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
-            <p className="text-[10px] uppercase tracking-wider text-amber-300 font-bold">{proRef.player}</p>
-          </div>
-          <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
-            <p className="text-[10px] uppercase tracking-wider text-amber-200 font-bold">
-              {proSegmentSec}s segment · loop
-            </p>
-          </div>
         </div>
       </div>
       {/* Speed controls row — only when a real video is loaded; we
@@ -2957,39 +3066,30 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setMirrorPro((v) => !v); }}
-            aria-pressed={mirrorPro}
-            className={`min-h-[32px] px-2.5 py-1 text-[11px] font-bold rounded-md border transition-colors ${
-              mirrorPro
-                ? "bg-amber-400/15 text-amber-200 border-amber-400/50"
-                : "text-zinc-400 border-zinc-700 hover:bg-zinc-800"
-            }`}
-            title="Flip the pro clip horizontally — use when your playing hand differs from the pro's"
-          >
-            ⇋ Mirror pro
-          </button>
           <span className="text-[10px] text-zinc-600 ml-auto">
             Tap the YOU panel to jump there in the main player
           </span>
         </div>
       )}
-      {proRef.description && (
+      {proRef?.description && (
         <div className="px-4 py-2 bg-zinc-800/30 border-t border-zinc-800 flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">What to watch</p>
+            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">
+              How {proRef.player || "the pros"} do it
+            </p>
             <p className="text-xs text-zinc-300 leading-relaxed">{proRef.description}</p>
           </div>
-          <a
-            href={`https://www.youtube.com/watch?v=${proRef.youtube_id}&t=${Math.max(0, proRef.start_sec || 0)}s`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[10px] text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap shrink-0 mt-0.5"
-            title="Open the pro reference clip directly on YouTube — useful if the embed above shows 'unavailable'"
-          >
-            Open on YouTube ↗
-          </a>
+          {proRef.youtube_id && (
+            <a
+              href={`https://www.youtube.com/watch?v=${proRef.youtube_id}&t=${Math.max(0, proRef.start_sec || 0)}s`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap shrink-0 mt-0.5"
+              title="Watch the curated pro reference clip on YouTube"
+            >
+              Watch {proRef.player || "pro"} ↗
+            </a>
+          )}
         </div>
       )}
     </div>
