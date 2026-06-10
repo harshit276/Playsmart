@@ -1489,11 +1489,20 @@ export default function AnalyzePage() {
           // submitted and the analysis lives server-side).
           acquireWakeLock();
           const vp = await import("@/ai/videoProcessor");
-          // Start the local athlete count NOW so the MoveNet model download
-          // + 3-frame sweep overlap with compression/upload below, instead
-          // of adding their own 5-12s wait at the picker step. Resolved (or
-          // ignored) right before the describe-players call.
-          const personCountPromise = vp.countPeopleQuick(file).catch(() => null);
+          // Local athlete count BEFORE compression, strictly sequential.
+          // Running it in PARALLEL with the MediaRecorder capture corrupted
+          // the compression in production (GPU/decoder contention turned a
+          // 17s/5.5MB clip into a 0.8s/12KB file — which then wrecked the
+          // analysis AND the timestamps). Hard 10s budget; null =
+          // inconclusive → run the Gemini picker as usual.
+          setLoadingText("Checking how many players are visible...");
+          let nPeopleEarly = null;
+          try {
+            nPeopleEarly = await Promise.race([
+              vp.countPeopleQuick(file).catch(() => null),
+              new Promise((res) => setTimeout(() => res(null), 10000)),
+            ]);
+          } catch { nPeopleEarly = null; }
           const origMbRaw = file.size / 1024 / 1024;
           // ─── Large-clip FULL-RES path: Cloudinary → Gemini Files API ─────
           // For clips ≥8 MB, DON'T compress on-device (slow + lossy, and the
@@ -1667,29 +1676,48 @@ export default function AnalyzePage() {
             v.src = objUrl;
             setTimeout(() => { cleanup(); resolve(null); }, 4000);
           });
+          let _origDur = null;
+          let _compDur = null;
           try {
-            const [origDur, compDur] = await Promise.all([
+            [_origDur, _compDur] = await Promise.all([
               _measureDur(file),
               _measureDur(uploadFile),
             ]);
-            if (origDur && compDur && origDur / compDur > 1.1) {
-              // Clamp to [1, 4] so a bad measurement can't wildly mis-scale.
-              timeScale = Math.min(4, Math.max(1, origDur / compDur));
-            } else if (captureRate > 1) {
-              // Measurement failed but we explicitly sped up — best estimate
-              // is the rate we requested.
-              timeScale = captureRate;
+          } catch { /* measurement is best-effort */ }
+          // ── Corruption guard ──────────────────────────────────────────
+          // A flaky decoder / GPU contention can produce a near-empty
+          // capture (seen in production: 17s/5.5MB → 0.8s/12KB — Gemini
+          // then "analyzed" 0.8s of mush and every timestamp was wrong).
+          // Expected duration is original/captureRate; under half of that
+          // means the capture broke. Retry once now that nothing else is
+          // running; if still broken, fail loudly instead of analyzing
+          // garbage and charging for it.
+          if (_origDur && _compDur && _compDur < (_origDur / captureRate) * 0.5) {
+            console.warn(`[compress] corrupt output (${_compDur.toFixed(1)}s of ${_origDur.toFixed(1)}s expected ~${(_origDur / captureRate).toFixed(1)}s) — retrying once`);
+            setLoadingText("Re-compressing video (first attempt failed)...");
+            uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
+              maxDim: 480, bitrate: 800_000, playbackRate: captureRate,
+            });
+            try { _compDur = await _measureDur(uploadFile); } catch { _compDur = null; }
+            if (_origDur && _compDur && _compDur < (_origDur / captureRate) * 0.5) {
+              throw new Error("Video compression failed on this device — please close other tabs/apps and try again.");
             }
-            // eslint-disable-next-line no-console
-            console.info(
-              `[upload] compressed=${(uploadFile.size / 1024).toFixed(0)}KB, `
-              + `duration=${compDur ? compDur.toFixed(1) + 's' : 'unknown'}, `
-              + `original=${origMb.toFixed(1)}MB`
-              + `${timeScale !== 1 ? `, timeScale=${timeScale.toFixed(2)}x (capture ${captureRate}x)` : ''}`,
-            );
-          } catch {
-            /* noop — diagnostic only */
           }
+          if (_origDur && _compDur && _origDur / _compDur > 1.1) {
+            // Clamp to [1, 4] so a bad measurement can't wildly mis-scale.
+            timeScale = Math.min(4, Math.max(1, _origDur / _compDur));
+          } else if (captureRate > 1 && !(_origDur && _compDur)) {
+            // Measurement failed but we explicitly sped up — best estimate
+            // is the rate we requested.
+            timeScale = captureRate;
+          }
+          // eslint-disable-next-line no-console
+          console.info(
+            `[upload] compressed=${(uploadFile.size / 1024).toFixed(0)}KB, `
+            + `duration=${_compDur ? _compDur.toFixed(1) + 's' : 'unknown'}, `
+            + `original=${origMb.toFixed(1)}MB`
+            + `${timeScale !== 1 ? `, timeScale=${timeScale.toFixed(2)}x (capture ${captureRate}x)` : ''}`,
+          );
           b64 = await fileToBase64(uploadFile);
           } // ── end !fileName (compress) branch ──
 
@@ -1707,24 +1735,14 @@ export default function AnalyzePage() {
           // there's just one person — in that case we skip the pre-pass
           // entirely. Conservative: any error or any frame with 2+ people
           // runs the normal picker flow.
-          let skipDescribe = false;
-          try {
-            setLoadingText("Checking how many players are visible...");
-            setProgress(32);
-            // The count started in parallel with compression/upload above —
-            // by now it's usually already resolved. Give it at most 5 more
-            // seconds; null (timeout/failure) = run the picker as usual.
-            const nPeople = await Promise.race([
-              personCountPromise,
-              new Promise((res) => setTimeout(() => res(null), 5000)),
-            ]);
-            if (nPeople != null && nPeople <= 1) {
-              skipDescribe = true;
-              // eslint-disable-next-line no-console
-              console.info(`[universal] ${nPeople} athlete(s) detected locally — skipping the Gemini picker pre-pass`);
-            }
-          } catch (cntErr) {
-            console.warn("[universal] person-count check failed (running picker as usual):", cntErr?.message);
+          // Skip the Gemini picker pre-pass ONLY on a confident, exact
+          // single-athlete read. A count of 0 means the local detector
+          // FAILED (black frame, model load issue) — treat as inconclusive
+          // and run the picker, never as "no players".
+          const skipDescribe = nPeopleEarly === 1;
+          if (skipDescribe) {
+            // eslint-disable-next-line no-console
+            console.info("[universal] exactly 1 athlete detected locally — skipping the Gemini picker pre-pass");
           }
 
           if (!skipDescribe) {

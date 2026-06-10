@@ -4663,7 +4663,21 @@ async def analyze_job_run(job_id: str, authorization: str = Header(None)):
     elif not await _claim_job(job_id):
         return {"job_id": job_id, "status": "running", "ran": False}
     job.pop("_id", None)
-    await _process_job(job, claimed=True)
+    # NEVER let an exception escape — an unhandled error here returns a bare
+    # 500 to a fire-and-forget client request and strands the job in
+    # "running" (seen in production). Mark the job errored with the real
+    # cause so polling surfaces it and the stale-steal can't re-run a
+    # poisoned job forever.
+    try:
+        await _process_job(job, claimed=True)
+    except Exception as exc:
+        import traceback as _tb
+        logger.error("[jobs] /run crashed for %s: %s\n%s",
+                     job_id, exc, _tb.format_exc()[-1500:])
+        await _update_job(job_id, status="error",
+                          error=f"run_crashed: {type(exc).__name__}: {str(exc)[:200]}")
+        return {"job_id": job_id, "status": "error",
+                "error": f"run_crashed: {type(exc).__name__}: {str(exc)[:200]}", "ran": True}
     try:
         fresh = await asyncio.wait_for(db.analysis_jobs.find_one(
             {"job_id": job_id}, {"_id": 0, "status": 1, "error": 1}), timeout=3.0)

@@ -9,7 +9,9 @@ dnspython==2.4.2
 aiofiles==23.2.1
 pydantic==2.5.2
 certifi
-httpx==0.27.0
+# >=0.28: required by google-genai; server.py only uses plain
+# AsyncClient(timeout=...) which is unchanged across 0.27→0.28.
+httpx>=0.28,<1
 
 # Shot classifier inference
 numpy>=1.24,<2
@@ -20,3 +22,14 @@ joblib>=1.3
 # Used by /classify-shots-vlm, /compare-analyses, and the personalized
 # coaching call inside /analyze-client-results.
 google-generativeai>=0.8.0
+
+# New Gemini SDK — fps control on Files API refs + thinking-budget control
+# (coaching.py tries this first and falls back to google-generativeai).
+# WITHOUT this, large clips silently sample at 1 fps and fast mode loses
+# its thinking-off latency win in production.
+google-genai>=1.16
+
+# Web Push delivery ("your analysis is ready" notifications). WITHOUT this,
+# _send_web_push_sync silently skips every send — push was a no-op in
+# production until this line existed.
+pywebpush==1.14.1

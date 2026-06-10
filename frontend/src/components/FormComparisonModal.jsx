@@ -69,7 +69,7 @@ export default function FormComparisonModal({
   shotType,
   shotName,
   topFix,
-  proReference,
+  proReference: proReferenceProp,
   userThumbnail,
 }) {
   const userVideoRef = useRef(null);
@@ -109,6 +109,31 @@ export default function FormComparisonModal({
   const hasUserVideo = !!effectiveVideoFile
     && typeof timestamp === "number"
     && Number.isFinite(timestamp);
+
+  // Universal-mode shots don't carry pro_reference (that enrichment only
+  // runs in the legacy client pipeline), which left this modal's pro panel
+  // permanently empty for universal analyses. Fetch the curated reference
+  // for (sport, shotType) directly when the parent didn't pass one — the
+  // backend's lookup has substring/alias fallbacks (forehand_drive→drive).
+  const [fetchedProRef, setFetchedProRef] = useState(null);
+  useEffect(() => {
+    if (!open || proReferenceProp || !sport || !shotType) {
+      setFetchedProRef(null);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get(
+          `/reference/${encodeURIComponent(sport)}/${encodeURIComponent(shotType)}`,
+          { timeout: 10000 },
+        );
+        if (!cancelled && data?.reference?.youtube_id) setFetchedProRef(data.reference);
+      } catch { /* no curated ref — honest empty state stays */ }
+    })();
+    return () => { cancelled = true; };
+  }, [open, proReferenceProp, sport, shotType]);
+  const proReference = proReferenceProp || fetchedProRef;
   const hasPro = !!proReference?.youtube_id;
 
   // ── IndexedDB fallback hydrate ──────────────────────────────────────
