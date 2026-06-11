@@ -1,4 +1,7 @@
-fastapi==0.104.1
+# 0.110.1 matches backend/requirements.txt (same server.py code). Needed
+# because 0.104.1 pinned anyio<4 while google-genai requires anyio>=4.8 —
+# the conflict that failed the Vercel dependency resolution.
+fastapi==0.110.1
 uvicorn[standard]==0.24.0
 motor==3.3.2
 pymongo[srv]==4.6.1
