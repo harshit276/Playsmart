@@ -2683,27 +2683,35 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   );
 }
 
-// Capture a single frame from a video URL at time t as a JPEG data URL.
-// Used by the posture tracker to grab the contact moment.
-async function _captureFrameAt(videoUrl, t, maxDim = 720) {
+// Capture a single frame from a video FILE at time t as a JPEG data URL.
+// Takes the File (not a shared object URL) and owns its own URL lifecycle —
+// sharing the parent's URL caused net::ERR_FILE_NOT_FOUND when the parent
+// revoked it mid-capture (seen in prod console).
+async function _captureFrameAt(videoFile, t, maxDim = 720) {
   return new Promise((resolve) => {
+    let url = null;
+    const finish = (val) => {
+      if (url) { try { URL.revokeObjectURL(url); } catch {} url = null; }
+      resolve(val);
+    };
     try {
       const v = document.createElement("video");
       v.muted = true; v.playsInline = true; v.preload = "auto";
-      v.src = videoUrl;
-      const fail = setTimeout(() => resolve(null), 8000);
+      url = URL.createObjectURL(videoFile);
+      v.src = url;
+      const fail = setTimeout(() => finish(null), 8000);
       const grab = () => {
         try {
           const vw = v.videoWidth, vh = v.videoHeight;
-          if (!vw || !vh) { clearTimeout(fail); resolve(null); return; }
+          if (!vw || !vh) { clearTimeout(fail); finish(null); return; }
           const scale = Math.min(1, maxDim / Math.max(vw, vh));
           const c = document.createElement("canvas");
           c.width = Math.max(2, Math.round(vw * scale));
           c.height = Math.max(2, Math.round(vh * scale));
           c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
           clearTimeout(fail);
-          resolve(c.toDataURL("image/jpeg", 0.85));
-        } catch { clearTimeout(fail); resolve(null); }
+          finish(c.toDataURL("image/jpeg", 0.85));
+        } catch { clearTimeout(fail); finish(null); }
       };
       v.onloadedmetadata = () => {
         try {
@@ -2711,8 +2719,8 @@ async function _captureFrameAt(videoUrl, t, maxDim = 720) {
         } catch { grab(); }
       };
       v.onseeked = grab;
-      v.onerror = () => { clearTimeout(fail); resolve(null); };
-    } catch { resolve(null); }
+      v.onerror = () => { finish(null); };
+    } catch { finish(null); }
   });
 }
 
@@ -2730,7 +2738,7 @@ const _POSTURE_STATUS = {
 // replaced the YouTube pro embed on the main results page: a measured read
 // of YOUR body beats watching someone else's video (the pro clip is still
 // available in each shot's Compare view and the footer link).
-function PostureCheckPanel({ videoUrl, timestamp, thumbnail, sport, shotType }) {
+function PostureCheckPanel({ videoFile, timestamp, thumbnail, sport, shotType }) {
   const [state, setState] = useState({ status: "loading" });
 
   useEffect(() => {
@@ -2739,8 +2747,8 @@ function PostureCheckPanel({ videoUrl, timestamp, thumbnail, sport, shotType }) 
     (async () => {
       try {
         let frame = null;
-        if (videoUrl && typeof timestamp === "number" && Number.isFinite(timestamp)) {
-          frame = await _captureFrameAt(videoUrl, timestamp);
+        if (videoFile && typeof timestamp === "number" && Number.isFinite(timestamp)) {
+          frame = await _captureFrameAt(videoFile, timestamp);
         }
         if (!frame) frame = thumbnail || null;
         if (!frame) { if (!cancelled) setState({ status: "no-frame" }); return; }
@@ -2754,7 +2762,7 @@ function PostureCheckPanel({ videoUrl, timestamp, thumbnail, sport, shotType }) 
       }
     })();
     return () => { cancelled = true; };
-  }, [videoUrl, timestamp, thumbnail, sport, shotType]);
+  }, [videoFile, timestamp, thumbnail, sport, shotType]);
 
   if (state.status === "loading") {
     return (
@@ -3035,7 +3043,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             video lives in each shot's Compare view + the footer link. */}
         <div className="bg-black aspect-video relative">
           <PostureCheckPanel
-            videoUrl={userVideoUrl}
+            videoFile={videoFile}
             timestamp={typeof headlineShot.timestamp === "number" ? headlineShot.timestamp : null}
             thumbnail={headlineShot.thumbnail || null}
             sport={sport}

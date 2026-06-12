@@ -5869,8 +5869,12 @@ async def describe_players_endpoint(
     """Returns a list of {id, description, clothing, court_position} for
     every visible athlete. Frontend renders these as picker options so
     the user explicitly chooses which player Gemini should focus on in
-    the subsequent analysis call."""
-    await get_current_user(authorization)
+    the subsequent analysis call.
+
+    Guest-accessible: guests get one free analysis, and the picker is part
+    of that flow — requiring auth here 401'd every guest's player
+    detection while the analysis itself went through."""
+    await get_current_user_or_none(authorization)
 
     import base64
     video_bytes = None
@@ -5929,7 +5933,9 @@ class DetectSportRequest(BaseModel):
 
 @api_router.post("/detect-sport-vlm")
 async def detect_sport_endpoint(req: DetectSportRequest, authorization: str = Header(None)):
-    await get_current_user(authorization)
+    # Guest-accessible — part of the free-analysis flow (same rationale as
+    # /describe-players above).
+    await get_current_user_or_none(authorization)
     if not req.keyframes:
         return {"success": False, "error": "no keyframes provided"}
 

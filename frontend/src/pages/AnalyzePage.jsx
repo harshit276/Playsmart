@@ -1523,7 +1523,35 @@ export default function AnalyzePage() {
           // big-clip "too large" failure. Any error falls through to the
           // legacy inline-compress path below (no regression).
           const DIRECT_UPLOAD_MIN_MB = 8;
-          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
+          // ── FASTEST big-clip path: ship the ORIGINAL straight to Gemini ──
+          // No re-encode (the "Optimizing" step that took duration/1.5s of
+          // wall time), ONE upload instead of optimize→upload→fallback-upload,
+          // exact timestamps (timeScale stays 1), and full-res quality. The
+          // 720p optimize chain below remains the fallback for failures and
+          // for very large files where upload time dominates encode time.
+          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB && origMbRaw <= 60) {
+            try {
+              const { uploadDirectToGemini } = await import("@/lib/geminiDirectUpload");
+              const direct = await uploadDirectToGemini(file, {
+                onProgress: ({ percent, message }) => {
+                  setLoadingText(message || "Uploading your video...");
+                  setProgress(15 + Math.round((percent || 0) * 0.28));
+                },
+              });
+              if (direct?.file_name) {
+                fileName = direct.file_name;
+                uploadFile = file;
+                b64 = null;
+                timeScale = 1;
+                // eslint-disable-next-line no-console
+                console.info(`[upload] ORIGINAL→Gemini direct: ${origMbRaw.toFixed(1)}MB, timeScale=1 → ${fileName}`);
+              }
+            } catch (directOrigErr) {
+              console.warn("[upload] direct original upload failed, falling back to optimize route:",
+                           directOrigErr?.message);
+            }
+          }
+          if (!fileName && origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
             try {
               setLoadingText("Optimizing your video...");
               setProgress(15);
@@ -1751,16 +1779,30 @@ export default function AnalyzePage() {
           try {
             // Reference the uploaded handle for big clips; inline base64 for
             // small ones. Same picker UI either way.
-            const { data: descData } = await api.post("/describe-players",
-              fileName
-                ? { mime_type: uploadFile.type || file.type || "video/mp4", file_name: fileName }
-                : { mime_type: uploadFile.type || file.type || "video/mp4", video_b64: b64 },
-              // 45s (was 25s) — MUST exceed the backend's own 40s Gemini cap so
-              // the backend's result/504 actually reaches us. At 25s the client
-              // bailed while the backend was still working, so the picker never
-              // showed even when detection would have succeeded a few seconds
-              // later.
-              { timeout: 45000 });
+            // Two attempts: a Gemini latency spike or serverless cold start
+            // routinely killed the single 45s attempt on phones ("player
+            // detection still failing sometimes") — the retry usually lands
+            // on a warm instance and succeeds in a few seconds.
+            let descData = null;
+            for (let descAttempt = 0; descAttempt < 2 && !descData; descAttempt++) {
+              try {
+                const resp = await api.post("/describe-players",
+                  fileName
+                    ? { mime_type: uploadFile.type || file.type || "video/mp4", file_name: fileName }
+                    : { mime_type: uploadFile.type || file.type || "video/mp4", video_b64: b64 },
+                  // Must exceed the backend's own 40s Gemini cap so the
+                  // backend's result/504 actually reaches us.
+                  { timeout: descAttempt === 0 ? 45000 : 35000 });
+                descData = resp.data;
+              } catch (descAttemptErr) {
+                if (descAttempt === 0) {
+                  console.warn("[universal] describe-players attempt 1 failed, retrying once:",
+                               descAttemptErr?.message);
+                } else {
+                  throw descAttemptErr;
+                }
+              }
+            }
             let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
             // Also extract a single mid-frame keyframe of the whole
             // video — used as the BACKGROUND of the player picker so
