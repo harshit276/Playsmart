@@ -1523,32 +1523,47 @@ export default function AnalyzePage() {
           // big-clip "too large" failure. Any error falls through to the
           // legacy inline-compress path below (no regression).
           const DIRECT_UPLOAD_MIN_MB = 8;
-          // ── FASTEST big-clip path: ship the ORIGINAL straight to Gemini ──
-          // No re-encode (the "Optimizing" step that took duration/1.5s of
-          // wall time), ONE upload instead of optimize→upload→fallback-upload,
-          // exact timestamps (timeScale stays 1), and full-res quality. The
-          // 720p optimize chain below remains the fallback for failures and
-          // for very large files where upload time dominates encode time.
+          // ── FASTEST big-clip path: ship the ORIGINAL via Cloudinary ──
+          // ONE upload, no "Optimizing" re-encode (which took duration/1.5s
+          // of wall time), exact timestamps (timeScale stays 1), full-res
+          // quality. NOTE: browsers CANNOT upload straight to Gemini's
+          // resumable endpoint — it sends no CORS headers, so that "direct"
+          // attempt uploaded all the bytes and then failed reading the
+          // response (live-QA confirmed). Cloudinary → /upload-video-url is
+          // the one browser-viable route; the server hands the bytes to
+          // Gemini. The 720p optimize chain below remains the fallback and
+          // the path for >60MB files where upload time dominates.
           if (origMbRaw >= DIRECT_UPLOAD_MIN_MB && origMbRaw <= 60) {
             try {
-              const { uploadDirectToGemini } = await import("@/lib/geminiDirectUpload");
-              const direct = await uploadDirectToGemini(file, {
+              setLoadingText("Uploading your video...");
+              setProgress(15);
+              const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
+              const cloudOrig = await uploadToCloudinary(file, {
                 onProgress: ({ percent, message }) => {
                   setLoadingText(message || "Uploading your video...");
-                  setProgress(15 + Math.round((percent || 0) * 0.28));
+                  setProgress(15 + Math.round((percent || 0) * 0.26));
                 },
               });
-              if (direct?.file_name) {
-                fileName = direct.file_name;
-                uploadFile = file;
-                b64 = null;
-                timeScale = 1;
-                // eslint-disable-next-line no-console
-                console.info(`[upload] ORIGINAL→Gemini direct: ${origMbRaw.toFixed(1)}MB, timeScale=1 → ${fileName}`);
+              if (cloudOrig?.secure_url) {
+                setLoadingText("Preparing analysis...");
+                setProgress(42);
+                const { data: regOrig } = await api.post("/upload-video-url", {
+                  video_url: cloudOrig.secure_url,
+                  mime_type: file.type || "video/mp4",
+                  cloudinary_public_id: cloudOrig.public_id || null,
+                }, { timeout: 200000 });
+                if (regOrig?.file_name) {
+                  fileName = regOrig.file_name;
+                  uploadFile = file;
+                  b64 = null;
+                  timeScale = 1;
+                  // eslint-disable-next-line no-console
+                  console.info(`[upload] ORIGINAL→Cloudinary→Files API: ${origMbRaw.toFixed(1)}MB, timeScale=1 → ${fileName}`);
+                }
               }
-            } catch (directOrigErr) {
-              console.warn("[upload] direct original upload failed, falling back to optimize route:",
-                           directOrigErr?.message);
+            } catch (origUpErr) {
+              console.warn("[upload] original upload failed, falling back to optimize route:",
+                           origUpErr?.response?.data?.detail || origUpErr?.message);
             }
           }
           if (!fileName && origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
@@ -1581,31 +1596,11 @@ export default function AnalyzePage() {
                 const [oDur, cDur] = await Promise.all([_measureDur(file), _measureDur(prepared)]);
                 timeScale = (oDur && cDur && oDur / cDur > 1.1) ? Math.min(4, Math.max(1, oDur / cDur)) : 1.5;
               } catch { timeScale = 1.5; }
-              // FASTEST path: browser PUTs the bytes straight to Gemini's
-              // Files API (one transfer instead of the Cloudinary triple-hop
-              // browser→Cloudinary→backend→Gemini). Falls through to the
-              // Cloudinary route below on any error (CORS, proxy, etc.).
-              try {
-                const { uploadDirectToGemini } = await import("@/lib/geminiDirectUpload");
-                const direct = await uploadDirectToGemini(prepared, {
-                  onProgress: ({ percent, message }) => {
-                    setLoadingText(message || "Uploading your video...");
-                    setProgress(30 + Math.round((percent || 0) * 0.14));
-                  },
-                });
-                if (direct?.file_name) {
-                  fileName = direct.file_name;
-                  uploadFile = prepared;
-                  b64 = null;
-                  // eslint-disable-next-line no-console
-                  console.info(`[upload] 720p@1.5x→Gemini DIRECT: ${origMbRaw.toFixed(1)}MB → ${(prepared.size / 1024 / 1024).toFixed(1)}MB, timeScale=${timeScale.toFixed(2)} → ${fileName}`);
-                }
-              } catch (directErr) {
-                console.warn("[upload] direct Gemini upload failed, using Cloudinary route:",
-                             directErr?.message);
-              }
+              // Browser→Gemini direct upload is NOT viable (no CORS headers
+              // on Google's resumable endpoint — the bytes upload fully and
+              // then the response is unreadable). Cloudinary is the route.
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
-              const cloud = fileName ? null : await uploadToCloudinary(prepared, {
+              const cloud = await uploadToCloudinary(prepared, {
                 onProgress: ({ percent, message }) => {
                   setLoadingText(message || "Uploading your video...");
                   setProgress(30 + Math.round((percent || 0) * 0.12));

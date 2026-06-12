@@ -185,9 +185,39 @@ def files_api_upload(video_bytes: bytes, mime_type: str = "video/mp4",
                      timeout_sec: float = 120.0):
     """Upload raw video bytes to the Gemini Files API and block until the
     file is ACTIVE (Gemini finishes its server-side processing). Returns the
-    file handle object (has .name and .uri). Raises on failure / timeout."""
+    file handle object (has .name and .uri). Raises on failure / timeout.
+
+    NEW SDK first: it auths with the x-goog-api-key header (same as the
+    analysis calls, which work in prod). The legacy SDK's upload_file goes
+    through the googleapiclient discovery endpoint with ?key=<...>, which
+    rejects the production key format — every /upload-video-url call 502'd
+    with "API key not valid" while analyses succeeded."""
+    import os as _os, time as _t
+    try:
+        from google import genai as genai_new  # type: ignore
+        from google.genai import types as gt  # type: ignore
+        import io as _io
+        client = genai_new.Client(api_key=_os.environ["GEMINI_API_KEY"])
+        f = client.files.upload(
+            file=_io.BytesIO(video_bytes),
+            config=gt.UploadFileConfig(mime_type=mime_type or "video/mp4"),
+        )
+        deadline = _t.monotonic() + timeout_sec
+        poll = 0.4
+        while getattr(f.state, "name", str(f.state)) == "PROCESSING":
+            if _t.monotonic() > deadline:
+                raise TimeoutError("files_api_processing_timeout")
+            _t.sleep(poll)
+            poll = min(1.5, poll * 1.5)
+            f = client.files.get(name=f.name)
+        state = getattr(f.state, "name", str(f.state))
+        if state != "ACTIVE":
+            raise RuntimeError(f"files_api_state_{state}")
+        return f
+    except ImportError:
+        pass  # legacy SDK fallback below
     import google.generativeai as genai  # type: ignore
-    import os as _os, time as _t, tempfile as _tmp
+    import tempfile as _tmp
     genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
     # Write to a temp file and upload by path — the most universally-supported
     # upload_file shape across google-generativeai SDK versions (file-like /
@@ -232,10 +262,15 @@ def files_api_get(file_name: str):
     """Re-fetch an existing Files API handle by name (e.g. inside the job
     worker, which only persisted the name). Re-validates it's ACTIVE so an
     expired/deleted handle surfaces as a clean error, not a Gemini 4xx."""
-    import google.generativeai as genai  # type: ignore
     import os as _os
-    genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
-    f = genai.get_file(file_name)
+    try:
+        from google import genai as genai_new  # type: ignore
+        client = genai_new.Client(api_key=_os.environ["GEMINI_API_KEY"])
+        f = client.files.get(name=file_name)
+    except ImportError:
+        import google.generativeai as genai  # type: ignore
+        genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+        f = genai.get_file(file_name)
     state = getattr(f.state, "name", str(f.state))
     if state != "ACTIVE":
         raise RuntimeError(f"files_api_state_{state}")
@@ -248,18 +283,26 @@ def files_api_wait_active(file_name: str, timeout_sec: float = 120.0):
     to Google's resumable upload URL, then asks us to confirm the file is
     ACTIVE before kicking off analysis. Returns the handle; raises on
     timeout or a FAILED state."""
-    import google.generativeai as genai  # type: ignore
     import os as _os, time as _t
-    genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+    try:
+        from google import genai as genai_new  # type: ignore
+        client = genai_new.Client(api_key=_os.environ["GEMINI_API_KEY"])
+        def _get():
+            return client.files.get(name=file_name)
+    except ImportError:
+        import google.generativeai as genai  # type: ignore
+        genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+        def _get():
+            return genai.get_file(file_name)
     deadline = _t.monotonic() + timeout_sec
     poll = 0.4
-    f = genai.get_file(file_name)
+    f = _get()
     while getattr(f.state, "name", str(f.state)) == "PROCESSING":
         if _t.monotonic() > deadline:
             raise TimeoutError("files_api_processing_timeout")
         _t.sleep(poll)
         poll = min(1.5, poll * 1.5)
-        f = genai.get_file(file_name)
+        f = _get()
     state = getattr(f.state, "name", str(f.state))
     if state != "ACTIVE":
         raise RuntimeError(f"files_api_state_{state}")
@@ -268,9 +311,16 @@ def files_api_wait_active(file_name: str, timeout_sec: float = 120.0):
 
 def files_api_delete(file_name: str) -> None:
     """Best-effort delete of a Files API handle once we're done with it."""
+    import os as _os
+    try:
+        from google import genai as genai_new  # type: ignore
+        client = genai_new.Client(api_key=_os.environ["GEMINI_API_KEY"])
+        client.files.delete(name=file_name)
+        return
+    except Exception:
+        pass
     try:
         import google.generativeai as genai  # type: ignore
-        import os as _os
         genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
         genai.delete_file(file_name)
     except Exception:
