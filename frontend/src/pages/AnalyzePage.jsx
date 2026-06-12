@@ -1560,27 +1560,27 @@ export default function AnalyzePage() {
           // are mapped back via time_offset. (The 8-60MB original-upload
           // path analyzes the FULL video, so no windowing there.)
           try {
-            const metaDur = await new Promise((res) => {
-              const v = document.createElement("video");
-              v.preload = "metadata"; v.muted = true;
-              const u = URL.createObjectURL(file);
-              v.onloadedmetadata = () => { const d = v.duration; URL.revokeObjectURL(u); res(Number.isFinite(d) ? d : null); };
-              v.onerror = () => { URL.revokeObjectURL(u); res(null); };
-              v.src = u;
-              setTimeout(() => res(null), 4000);
-            });
             const mbForWindow = file.size / 1024 / 1024;
+            // Only compress paths truncate; the 8-60MB original-upload path
+            // analyzes the full video and needs no windowing.
             const willCompress = mbForWindow < 8 || mbForWindow > 60;
-            if (metaDur && metaDur > 110 && willCompress) {
-              setLoadingText("Finding the most active stretch of your video...");
+            if (willCompress) {
+              // findBusiestWindow reads the duration itself (8s budget) and
+              // short-circuits cheaply for clips that fit the window — a
+              // separate 4s metadata probe here silently timed out on big
+              // files and skipped windowing entirely (live-QA caught
+              // timeScale=4.00 on the 148MB tournament video).
+              setLoadingText("Checking video length & action...");
               const win = await vp.findBusiestWindow(file, 88);
-              windowApplied = true;
-              windowStartSec = win.start || 0;
-              windowTotalDur = win.totalDuration || metaDur;
-              windowLenSec = Math.min(88, windowTotalDur - windowStartSec);
-              timeOffset = windowStartSec;
-              // eslint-disable-next-line no-console
-              console.info(`[window] analyzing busiest ${windowLenSec.toFixed(0)}s starting at ${windowStartSec.toFixed(0)}s of ${windowTotalDur.toFixed(0)}s`);
+              if (win.totalDuration > 110) {
+                windowApplied = true;
+                windowStartSec = win.start || 0;
+                windowTotalDur = win.totalDuration;
+                windowLenSec = Math.min(88, windowTotalDur - windowStartSec);
+                timeOffset = windowStartSec;
+                // eslint-disable-next-line no-console
+                console.info(`[window] analyzing busiest ${windowLenSec.toFixed(0)}s starting at ${windowStartSec.toFixed(0)}s of ${windowTotalDur.toFixed(0)}s`);
+              }
             }
           } catch { windowApplied = false; timeOffset = 0; }
           const origMbRaw = file.size / 1024 / 1024;
