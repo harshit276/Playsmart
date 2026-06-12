@@ -1129,7 +1129,38 @@ export default function AnalyzePage() {
     setLoadingDetail(true);
     try {
       const { data } = await api.get(`/analysis/${analysisId}`);
-      setResult(data);
+      // Universal-mode records must be reshaped into the SAME result object
+      // the live renderer uses — setting the raw Mongo doc routed the page
+      // into a legacy layout with broken empty sections ("Technique" rows
+      // with no text, no per-shot cards, no coach narrative).
+      if (data?.analysis_mode === "universal" && Array.isArray(data.shots)) {
+        const shots = data.shots || [];
+        setResult({
+          success: true,
+          _universal: true,
+          _accuracy_mode: "universal",
+          analysis_id: data.id,
+          sport: data.sport || "unknown",
+          skill_level: data.skill_level || "Intermediate",
+          quick_summary: data.quick_summary || data.coach_feedback?.summary || "",
+          coach_feedback: data.coach_feedback || { summary: data.quick_summary || "", encouragement: "" },
+          coach_narrative: data.coach_narrative || null,
+          court_map: data.court_map || null,
+          movement: data.movement || null,
+          player_legend: data.player_legend || null,
+          shot_analysis: data.shot_analysis || null,
+          shots,
+          total_shots_detected: shots.length,
+          multi_shot: shots.length > 1,
+          shot_distribution: shots.reduce((d, s) => {
+            const k = (s.type || "event").toLowerCase();
+            d[k] = (d[k] || 0) + 1;
+            return d;
+          }, {}),
+        });
+      } else {
+        setResult(data);
+      }
       setViewingHistorical(true);
       setActiveTab("results");
     } catch (err) {
@@ -1908,18 +1939,13 @@ export default function AnalyzePage() {
 
         // ── Session continuity: previous session's top fixes ──────────
         // Feeds the coach narrative's progress_update ("the split step we
-        // asked for last time is now there"). Prefers the explicit
-        // Re-analyze context; falls back to the most recent history entry
-        // (≤30 days old). The backend prompt tells Gemini to skip the
-        // update when the new clip can't be compared (different sport).
+        // asked for last time is now there"). ONLY active in the explicit
+        // Re-analyze (Progress Review) flow — auto-applying the latest
+        // history entry was wrong whenever the same account analyzes a
+        // DIFFERENT person (a friend's clip got "since your last session"
+        // feedback about someone else's footwork).
         const prevFocus = (() => {
-          const fresh = (a) => {
-            if (!a?.date) return true;
-            const t = Date.parse(a.date);
-            return !Number.isFinite(t) || (Date.now() - t) < 30 * 24 * 3600 * 1000;
-          };
-          const src = reanalyzeContext
-            || ((Array.isArray(history) && history.length > 0 && fresh(history[0])) ? history[0] : null);
+          const src = reanalyzeContext;
           if (!src) return null;
           const f = (src.vlm_coaching?.key_focus_areas
             || src.shot_analysis?.weaknesses
@@ -3892,7 +3918,11 @@ export default function AnalyzePage() {
             the per-shot AI coach cards so users see their multi-session
             improvement before the single-clip breakdown. Hidden silently
             on auth-less / network-error / no-history cases. */}
-        {trendSport && !viewingHistorical && (
+        {/* Session-to-session deltas ONLY in the explicit Re-analyze flow.
+            Auto-showing them on every same-sport upload produced false
+            "improvement" readings whenever the account analyzed a different
+            person (e.g. a friend's drive vs your history). */}
+        {trendSport && !viewingHistorical && (comparisonResult || reanalyzeContext) && (
           <ProgressTrendPanel
             sport={trendSport}
             shotType={dominantShotType}

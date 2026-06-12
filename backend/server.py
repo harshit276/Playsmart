@@ -6229,6 +6229,10 @@ async def save_universal_analysis(req: SaveUniversalAnalysisRequest, authorizati
         },
         "coach_feedback": {"summary": req.quick_summary or "", "encouragement": ""},
         "quick_summary": req.quick_summary or "",
+        # Full narrative stored verbatim so the history detail view renders
+        # the same Coach's Read the user saw live (was derived-only before —
+        # history cards opened to a stub).
+        "coach_narrative": req.coach_narrative or None,
         "shots": [{k: v for k, v in s.items() if k != "thumbnail"} for s in (req.shots or [])],
         "court_map": req.court_map or None,
         "movement": req.movement or None,
