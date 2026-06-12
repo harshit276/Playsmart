@@ -710,12 +710,29 @@ def coach_chat(
             ctx_block += f"- {d.get('kind', 'doc')}: {title}\n  {str(d.get('content', ''))[:300]}\n"
 
     sys_prompt = (
-        "You are Atheonics's Virtual Coach. You help players with sports questions: "
-        "equipment recommendations, training, technique, rules, and player advice. "
-        "If the player asks something off-topic (cooking, politics, etc.), gently steer "
-        "them back to sports. Keep replies under 200 words. Use markdown lists for "
-        "structure when helpful. Cite specific products when context provides them."
-        + ((" Player's primary sport: " + sport) if sport else "")
+        "You are Coach A — Atheonics's virtual sports coach. You sound like a "
+        "real courtside coach: warm, direct, a little demanding, and genuinely "
+        "invested in this player's improvement. Never robotic, never a manual.\n\n"
+        "How you answer:\n"
+        "• Lead with the single most useful point, then expand. No throat-clearing.\n"
+        "• Be CONCRETE: name grip sizes, string tensions, rep counts, drill "
+        "durations, court positions, and prices in ₹ where relevant. A player "
+        "should be able to act on your answer today.\n"
+        "• Share the 'why' behind advice in one line — players retain reasons, "
+        "not rules.\n"
+        "• Use short markdown structure (a few bullets or a mini-plan) when it "
+        "helps scanning; plain prose for simple answers.\n"
+        "• When the question is ambiguous (e.g. 'best racket?' with no level/"
+        "budget), give your best default answer for a club player AND ask one "
+        "sharp follow-up question.\n"
+        "• When the context block includes products, recommend those (use their "
+        "BUY_LINK as the markdown href); general sports knowledge is fine "
+        "otherwise — but never invent product names or prices.\n"
+        "• Off-topic questions (cooking, politics…): one friendly line steering "
+        "back to sports.\n"
+        "• Length: up to ~300 words for training/technique plans, shorter for "
+        "simple questions."
+        + (("\n\nPlayer's primary sport: " + sport) if sport else "")
         + ctx_block
     )
 
@@ -728,6 +745,46 @@ def coach_chat(
         history_block = "\n\nPREVIOUS TURNS:" + history_block + "\n\n"
 
     user_msg = f"{history_block}USER QUESTION: {question}"
+
+    # Creative text call via the new SDK. The legacy backend.call() forces
+    # temperature 0.0 + response_mime_type=application/json — it's built for
+    # shot classification, and routing the coach through it made every reply
+    # deterministic, flat, and occasionally raw JSON. The coach needs the
+    # opposite: warm temperature, plain markdown, no thinking latency.
+    try:
+        from google import genai as genai_new  # type: ignore
+        from google.genai import types as gt  # type: ignore
+        model_name = (
+            os.getenv("GEMINI_COACH_MODEL")
+            or os.getenv("GEMINI_MODEL")
+            or "gemini-2.5-flash"
+        ).strip() or "gemini-2.5-flash"
+        cfg = dict(
+            system_instruction=sys_prompt,
+            temperature=0.9,
+            top_p=0.95,
+            max_output_tokens=1024,
+        )
+        if "flash" in model_name and "pro" not in model_name:
+            cfg["thinking_config"] = gt.ThinkingConfig(thinking_budget=0)
+        client = genai_new.Client(api_key=os.environ["GEMINI_API_KEY"])
+        resp = client.models.generate_content(
+            model=model_name,
+            contents=user_msg,
+            config=gt.GenerateContentConfig(**cfg),
+        )
+        answer = (resp.text or "").strip()
+        if answer:
+            return {
+                "answer": answer,
+                "_meta": {"backend": "gemini", "model": model_name, "mode": "coach_text"},
+            }
+    except ImportError:
+        pass
+    except Exception as exc:
+        import logging as _lg
+        _lg.getLogger("athlytic.vlm").warning(
+            "[coach] new-SDK chat failed, falling back to legacy: %s", str(exc)[:200])
 
     backend_obj = pick_backend(backend)
     try:
@@ -1143,6 +1200,12 @@ def _build_universal_prompt(
         f"6. If a player's coverage is partial (occluded, off-frame), "
         f"say so in the top-level `summary` with the role name "
         f"('partner is off-frame for the second half of the rally').\n"
+        f"\n"
+        f"7. REQUIRED: fill the top-level `player_legend` field with a "
+        f"one-line visual description of who you treated as 'you' (the "
+        f"target) and who as 'partner' — clothing + court side, e.g. "
+        f"'Player in white shirt with orange headband, front-left'. "
+        f"Users cannot tell whose shots are whose without this.\n"
         f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     )
 
@@ -1426,8 +1489,16 @@ def _build_universal_prompt(
         '    "court_coverage_pct": <0-100|null>,\n'
         '    "avg_recovery_quality": "<poor|fair|good|excellent>",\n'
         '    "note": "<one specific sentence on footwork/positioning>"\n'
-        '  }\n'
-        '}\n\n'
+        '  }'
+        + (
+            ',\n'
+            '  "player_legend": {\n'
+            '    "you": "<one-line visual description of the TARGET player — clothing + court side>",\n'
+            '    "partner": "<one-line visual description of the partner>"\n'
+            '  }\n'
+            if doubles_mode else '\n'
+        )
+        + '}\n\n'
         "ABOUT coach_narrative — this is the MOST IMPORTANT field. Write it "
         "like a real coach giving a session debrief. Concrete observations, "
         "specific body parts and angles, gentle but honest. Avoid generic "
@@ -1689,6 +1760,20 @@ def _sanitize_court_map(data: dict) -> dict | None:
         except (TypeError, ValueError):
             pass
     return out
+
+
+def _sanitize_player_legend(data: dict) -> dict | None:
+    """Doubles-mode legend: who Gemini treated as 'you' vs 'partner'
+    (one-line visual descriptions). None when absent/unusable."""
+    pl = data.get("player_legend")
+    if not isinstance(pl, dict):
+        return None
+    out = {}
+    for k in ("you", "partner"):
+        v = str(pl.get(k, "") or "").strip()[:160]
+        if v:
+            out[k] = v
+    return out or None
 
 
 def _sanitize_movement(data: dict) -> dict | None:
@@ -2063,6 +2148,8 @@ def analyze_video_universal(
         # footwork read. None when Gemini couldn't see a court / judge it.
         "court_map": _sanitize_court_map(data),
         "movement": _sanitize_movement(data),
+        # Doubles: who is "you" vs "partner" (visual descriptions).
+        "player_legend": _sanitize_player_legend(data),
         "events": events_out,
         # Debug surface for the in-app debug panel — see stream variant.
         "_debug": {
@@ -2358,6 +2445,7 @@ def stream_analyze_video_universal(
         "target_mismatch_warning": target_mismatch_warning_stream,
         "court_map": _sanitize_court_map(data),
         "movement": _sanitize_movement(data),
+        "player_legend": _sanitize_player_legend(data),
         "events": events_out,
         "_meta": {
             "backend": backend_obj.name,

@@ -3479,7 +3479,7 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
-    PROMPT_VERSION = "v2026-06-10b-continuity-undercount"
+    PROMPT_VERSION = "v2026-06-12-player-legend"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
@@ -3567,6 +3567,7 @@ async def analyze_video_universal_endpoint(
         # court-map / trajectory overlays. None when not detected.
         "court_map": result.get("court_map") or None,
         "movement": result.get("movement") or None,
+        "player_legend": result.get("player_legend") or None,
         "events": result.get("events") or [],
         "_debug": result.get("_debug") or {},
         "_meta": result.get("_meta") or {},
@@ -3827,6 +3828,7 @@ async def analyze_video_stream_endpoint(
                     "target_mismatch_warning": final_payload.get("target_mismatch_warning") or None,
                     "court_map": final_payload.get("court_map") or None,
                     "movement": final_payload.get("movement") or None,
+                    "player_legend": final_payload.get("player_legend") or None,
                     "_meta": final_payload.get("_meta", {}),
                 })
                 complete_delivered = True
@@ -4109,6 +4111,7 @@ async def _process_job(job: dict, claimed: bool = False):
         "target_mismatch_warning": result.get("target_mismatch_warning") or None,
         "court_map": result.get("court_map") or None,
         "movement": result.get("movement") or None,
+        "player_legend": result.get("player_legend") or None,
         "events": result.get("events") or [],
         "_debug": result.get("_debug") or {},
         "_meta": {**(result.get("_meta") or {}), "async_job": True},

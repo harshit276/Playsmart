@@ -291,6 +291,7 @@ export default function MatchInsights({
           vlmMeta: s.vlmMeta || s._meta || null,
           thumbnail: s.thumbnail || null,
           timestamp: typeof s.timestamp === "number" ? s.timestamp : null,
+          contactBox: s.contact_box || s.contactBox || null,
         }));
         setPerShot(merged);
         setPhase("done");
@@ -472,6 +473,11 @@ export default function MatchInsights({
           // every accuracy mode (not just video-direct) has one.
           thumbnail: capturedThumb,
           timestamp: shot.timestamp,
+          // Gemini's tight box around the performing player at contact
+          // ([ymin,xmin,ymax,xmax], 0-1000 frame coords) — lets the posture
+          // tracker crop to the RIGHT person instead of whoever MoveNet
+          // finds most prominent in the full frame.
+          contactBox: shot.contact_box || null,
         });
 
         const pct = Math.round(((si + 1) / chosen.length) * 90);
@@ -2687,7 +2693,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
 // Takes the File (not a shared object URL) and owns its own URL lifecycle —
 // sharing the parent's URL caused net::ERR_FILE_NOT_FOUND when the parent
 // revoked it mid-capture (seen in prod console).
-async function _captureFrameAt(videoFile, t, maxDim = 720) {
+async function _captureFrameAt(videoFile, t, maxDim = 720, cropBox = null) {
   return new Promise((resolve) => {
     let url = null;
     const finish = (val) => {
@@ -2704,11 +2710,28 @@ async function _captureFrameAt(videoFile, t, maxDim = 720) {
         try {
           const vw = v.videoWidth, vh = v.videoHeight;
           if (!vw || !vh) { clearTimeout(fail); finish(null); return; }
-          const scale = Math.min(1, maxDim / Math.max(vw, vh));
+          // Crop to the performing player's contact box when available
+          // ([ymin,xmin,ymax,xmax], 0-1000) with 20% padding — otherwise
+          // MoveNet's single-pose model can lock onto the wrong (more
+          // prominent) person in the frame.
+          let sx = 0, sy = 0, sw = vw, sh = vh;
+          if (Array.isArray(cropBox) && cropBox.length === 4) {
+            const [ymin, xmin, ymax, xmax] = cropBox.map(Number);
+            if (ymax > ymin && xmax > xmin) {
+              const padY = (ymax - ymin) * 0.2;
+              const padX = (xmax - xmin) * 0.2;
+              sy = Math.max(0, ((ymin - padY) / 1000) * vh);
+              sx = Math.max(0, ((xmin - padX) / 1000) * vw);
+              sh = Math.min(vh - sy, ((ymax - ymin + 2 * padY) / 1000) * vh);
+              sw = Math.min(vw - sx, ((xmax - xmin + 2 * padX) / 1000) * vw);
+              if (sw < 40 || sh < 40) { sx = 0; sy = 0; sw = vw; sh = vh; }
+            }
+          }
+          const scale = Math.min(1, maxDim / Math.max(sw, sh));
           const c = document.createElement("canvas");
-          c.width = Math.max(2, Math.round(vw * scale));
-          c.height = Math.max(2, Math.round(vh * scale));
-          c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
+          c.width = Math.max(2, Math.round(sw * scale));
+          c.height = Math.max(2, Math.round(sh * scale));
+          c.getContext("2d").drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
           clearTimeout(fail);
           finish(c.toDataURL("image/jpeg", 0.85));
         } catch { clearTimeout(fail); finish(null); }
@@ -2738,7 +2761,7 @@ const _POSTURE_STATUS = {
 // replaced the YouTube pro embed on the main results page: a measured read
 // of YOUR body beats watching someone else's video (the pro clip is still
 // available in each shot's Compare view and the footer link).
-function PostureCheckPanel({ videoFile, timestamp, thumbnail, sport, shotType }) {
+function PostureCheckPanel({ videoFile, timestamp, thumbnail, sport, shotType, contactBox }) {
   const [state, setState] = useState({ status: "loading" });
 
   useEffect(() => {
@@ -2748,7 +2771,7 @@ function PostureCheckPanel({ videoFile, timestamp, thumbnail, sport, shotType })
       try {
         let frame = null;
         if (videoFile && typeof timestamp === "number" && Number.isFinite(timestamp)) {
-          frame = await _captureFrameAt(videoFile, timestamp);
+          frame = await _captureFrameAt(videoFile, timestamp, 720, contactBox || null);
         }
         if (!frame) frame = thumbnail || null;
         if (!frame) { if (!cancelled) setState({ status: "no-frame" }); return; }
@@ -2762,7 +2785,7 @@ function PostureCheckPanel({ videoFile, timestamp, thumbnail, sport, shotType })
       }
     })();
     return () => { cancelled = true; };
-  }, [videoFile, timestamp, thumbnail, sport, shotType]);
+  }, [videoFile, timestamp, thumbnail, sport, shotType, contactBox]);
 
   if (state.status === "loading") {
     return (
@@ -3048,6 +3071,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             thumbnail={headlineShot.thumbnail || null}
             sport={sport}
             shotType={headlineShot.category || headlineShot.type || headlineShot.label}
+            contactBox={headlineShot.contactBox || null}
           />
         </div>
       </div>

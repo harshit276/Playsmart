@@ -368,6 +368,8 @@ function buildUniversalResult(data, targetDesc, pickedPlayer) {
     // whole-clip footwork stats. Null when the model couldn't see a court.
     court_map: data?.court_map || null,
     movement: data?.movement || null,
+    // Doubles: who Gemini treated as "you" vs "partner".
+    player_legend: data?.player_legend || null,
     sport: data?.sport_detected || "unknown",
     skill_level: data?.overall_skill_level || "Intermediate",
     quick_summary: data?.summary || "",
@@ -2104,6 +2106,7 @@ export default function AnalyzePage() {
               // Elite spatial layer (court positioning map + footwork stats)
               court_map: final.court_map || null,
               movement: final.movement || null,
+              player_legend: final.player_legend || null,
               events: final.events || final.shots || [],
               _meta: { ...(final._meta || {}), streamed: true },
             };
@@ -4177,6 +4180,37 @@ export default function AnalyzePage() {
             is the FIRST thing the user sees after the universal-mode
             banner so the rich coach voice is the lead, not buried under
             metric tiles. Renders nothing if Gemini returned empty. */}
+        {/* Doubles "who's who" — Gemini's visual descriptions of which
+            player it treated as YOU vs PARTNER. Without this, a doubles
+            analysis with player_role tags was unreadable ("which one am
+            I?"). Hidden when the user explicitly picked a player (the
+            picker thumbnail already answers it) or in singles mode. */}
+        {result?.player_legend && (result.player_legend.you || result.player_legend.partner)
+          && !result?._target_player && (
+          <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-3.5 mb-4">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2">
+              Who's who in this analysis
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {result.player_legend.you && (
+                <div className="flex-1 bg-lime-400/8 border border-lime-400/30 rounded-lg px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold mb-0.5">🎯 You</p>
+                  <p className="text-[12px] text-zinc-100 leading-snug">{result.player_legend.you}</p>
+                </div>
+              )}
+              {result.player_legend.partner && (
+                <div className="flex-1 bg-sky-400/8 border border-sky-400/30 rounded-lg px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wider text-sky-300 font-bold mb-0.5">🤝 Partner</p>
+                  <p className="text-[12px] text-zinc-100 leading-snug">{result.player_legend.partner}</p>
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-zinc-600 mt-2">
+              Wrong way around? Re-analyze and pick yourself in the player picker for exact targeting.
+            </p>
+          </div>
+        )}
+
         {result?.coach_narrative && (
           <div id="analysis-section-overview" className="scroll-mt-24">
             <CoachNarrativeCard narrative={result.coach_narrative} />
