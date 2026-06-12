@@ -3471,7 +3471,18 @@ async def analyze_video_universal_endpoint(
     target returns the saved result instead of re-running Gemini, so
     users no longer get "Overhead Smash" one run and "Back Court Smash"
     the next on the same input. 7-day TTL."""
-    await get_current_user(authorization)
+    _u = await get_current_user(authorization)
+    # Token gate — the async and stream endpoints enforce this, but this
+    # legacy JSON path didn't: the frontend's fallback chain landed here
+    # after a 402 upstream and ran the analysis FOR FREE without ever
+    # telling the user to top up.
+    if _u and _u.get("id") and _u.get("id") != "guest":
+        try:
+            _bal = await _get_balance(_u["id"])
+        except Exception:
+            _bal = 0
+        if _bal < abs(TOKEN_RULES.get("analysis_spend", -100)):
+            raise HTTPException(status_code=402, detail="insufficient_tokens")
 
     import base64, hashlib
     video_bytes = None
@@ -3479,7 +3490,7 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
-    PROMPT_VERSION = "v2026-06-12-player-legend"
+    PROMPT_VERSION = "v2026-06-13-rally-variety"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).

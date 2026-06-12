@@ -2018,8 +2018,17 @@ export default function AnalyzePage() {
             data = await pollAnalysisJob(jobId);
           }
         } catch (asyncErr) {
-          console.warn("[universal] async submit/poll failed, falling back:",
-                       asyncErr?.response?.data?.detail || asyncErr?.message);
+          const _aMsg = String(asyncErr?.response?.data?.detail || asyncErr?.message || "");
+          // 402 means the balance is genuinely short — do NOT fall through
+          // to the other endpoints (they'd run the analysis unpaid; the
+          // legacy JSON path previously had no token gate, so users with
+          // 0 tokens silently got free analyses instead of a top-up prompt).
+          if (asyncErr?.response?.status === 402 || /insufficient_tokens/i.test(_aMsg)) {
+            setInsufficientBalance(tokens?.balance ?? 0);
+            setShowInsufficientModal(true);
+            throw new Error("insufficient_tokens");
+          }
+          console.warn("[universal] async submit/poll failed, falling back:", _aMsg);
           // data stays null → streaming/JSON fallback runs below.
         }
 
@@ -2265,7 +2274,9 @@ export default function AnalyzePage() {
         // Translate any failure into a clear, actionable on-screen message
         // (the user shouldn't see raw codes or a fake result).
         let msg;
-        if (/couldn't detect any shots|no shots in this clip/i.test(raw)) {
+        if (/insufficient_tokens/i.test(raw)) {
+          msg = "You don't have enough tokens for this analysis — top up from your Wallet and try again.";
+        } else if (/couldn't detect any shots|no shots in this clip/i.test(raw)) {
           msg = raw; // already friendly (the 0-event case)
         } else if (status === 413 || status === 403 || /too large|413|compress.*large|overshoot/i.test(raw)) {
           msg = "That video was too large to upload. Record a shorter clip (~10–15s) or at a lower resolution (720p), then try again.";
