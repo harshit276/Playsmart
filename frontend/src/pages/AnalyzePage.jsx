@@ -1502,6 +1502,15 @@ export default function AnalyzePage() {
         // case the compressed clip is shorter and every event timestamp must
         // be multiplied by origDuration/compressedDuration before display.
         let timeScale = 1;
+        // Rally-window selection for long videos: which stretch of the
+        // original we actually encoded + analyzed. timeOffset shifts every
+        // Gemini timestamp back into the original timeline; the window
+        // facts power the honest coverage banner on the results page.
+        let timeOffset = 0;
+        let windowApplied = false;
+        let windowStartSec = 0;
+        let windowTotalDur = 0;
+        let windowLenSec = 0;
         // Gemini Files API handle for the large-clip path (set below when we
         // upload the original full-res clip directly instead of compressing).
         // null = legacy inline base64 path.
@@ -1514,6 +1523,11 @@ export default function AnalyzePage() {
           b64 = universalUploadData.b64;
           fileName = universalUploadData.fileName || null;
           timeScale = universalUploadData.timeScale || 1;
+          timeOffset = universalUploadData.timeOffset || 0;
+          if (universalUploadData.analyzedWindow) {
+            windowApplied = true;
+            ({ start: windowStartSec, length: windowLenSec, total: windowTotalDur } = universalUploadData.analyzedWindow);
+          }
         } else {
           setLoadingText("Preparing video for Universal AI Coach...");
           setProgress(15);
@@ -1536,6 +1550,39 @@ export default function AnalyzePage() {
               new Promise((res) => setTimeout(() => res(null), 10000)),
             ]);
           } catch { nPeopleEarly = null; }
+
+          // ── Rally-window selection (long videos) ──────────────────────
+          // The compress paths cap capture at ~90s, which used to mean
+          // "silently analyze the first 90s" — on a 12-min tournament video
+          // that's the warm-up. For videos >110s that will go through a
+          // compress path, find the busiest contiguous ~88s stretch via a
+          // cheap motion scan and encode THAT window instead. Timestamps
+          // are mapped back via time_offset. (The 8-60MB original-upload
+          // path analyzes the FULL video, so no windowing there.)
+          try {
+            const metaDur = await new Promise((res) => {
+              const v = document.createElement("video");
+              v.preload = "metadata"; v.muted = true;
+              const u = URL.createObjectURL(file);
+              v.onloadedmetadata = () => { const d = v.duration; URL.revokeObjectURL(u); res(Number.isFinite(d) ? d : null); };
+              v.onerror = () => { URL.revokeObjectURL(u); res(null); };
+              v.src = u;
+              setTimeout(() => res(null), 4000);
+            });
+            const mbForWindow = file.size / 1024 / 1024;
+            const willCompress = mbForWindow < 8 || mbForWindow > 60;
+            if (metaDur && metaDur > 110 && willCompress) {
+              setLoadingText("Finding the most active stretch of your video...");
+              const win = await vp.findBusiestWindow(file, 88);
+              windowApplied = true;
+              windowStartSec = win.start || 0;
+              windowTotalDur = win.totalDuration || metaDur;
+              windowLenSec = Math.min(88, windowTotalDur - windowStartSec);
+              timeOffset = windowStartSec;
+              // eslint-disable-next-line no-console
+              console.info(`[window] analyzing busiest ${windowLenSec.toFixed(0)}s starting at ${windowStartSec.toFixed(0)}s of ${windowTotalDur.toFixed(0)}s`);
+            }
+          } catch { windowApplied = false; timeOffset = 0; }
           const origMbRaw = file.size / 1024 / 1024;
           // ─── Large-clip FULL-RES path: Cloudinary → Gemini Files API ─────
           // For clips ≥8 MB, DON'T compress on-device (slow + lossy, and the
@@ -1611,6 +1658,7 @@ export default function AnalyzePage() {
               // event's timestamp back onto the user's original clip.
               const prepared = await vp.compressUnderSize(file, 16 * 1024 * 1024, {
                 maxDim: 1280, bitrate: 3_500_000, playbackRate: 1.5,
+                startSec: windowApplied ? windowStartSec : 0,
                 onProgress: (pct) => { setLoadingText(`Optimizing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
               });
               // Measure original vs compressed duration — robust even if the
@@ -1627,7 +1675,12 @@ export default function AnalyzePage() {
               });
               try {
                 const [oDur, cDur] = await Promise.all([_measureDur(file), _measureDur(prepared)]);
-                timeScale = (oDur && cDur && oDur / cDur > 1.1) ? Math.min(4, Math.max(1, oDur / cDur)) : 1.5;
+                // When a rally window was encoded, the SOURCE duration for
+                // the ratio is the window length, not the full video —
+                // otherwise a 12-min source vs an ~88s clip computes a
+                // wildly wrong scale.
+                const srcDur = windowApplied ? windowLenSec : oDur;
+                timeScale = (srcDur && cDur && srcDur / cDur > 1.1) ? Math.min(4, Math.max(1, srcDur / cDur)) : 1.5;
               } catch { timeScale = 1.5; }
               // Browser→Gemini direct upload is NOT viable (no CORS headers
               // on Google's resumable endpoint — the bytes upload fully and
@@ -1708,6 +1761,7 @@ export default function AnalyzePage() {
           uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
             maxDim: 480, bitrate: 800_000,
             playbackRate: captureRate,
+            startSec: windowApplied ? windowStartSec : 0,
             onProgress: (pct) => { setLoadingText(`Compressing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
           });
           // Measure BOTH the original and compressed durations. timeScale is
@@ -1748,21 +1802,25 @@ export default function AnalyzePage() {
           // means the capture broke. Retry once now that nothing else is
           // running; if still broken, fail loudly instead of analyzing
           // garbage and charging for it.
-          if (_origDur && _compDur && _compDur < (_origDur / captureRate) * 0.5) {
-            console.warn(`[compress] corrupt output (${_compDur.toFixed(1)}s of ${_origDur.toFixed(1)}s expected ~${(_origDur / captureRate).toFixed(1)}s) — retrying once`);
+          // Window-aware source duration: when a rally window was encoded,
+          // expectations + scaling compare against the WINDOW length.
+          const _srcDur = windowApplied ? windowLenSec : _origDur;
+          if (_srcDur && _compDur && _compDur < (_srcDur / captureRate) * 0.5) {
+            console.warn(`[compress] corrupt output (${_compDur.toFixed(1)}s of ${_srcDur.toFixed(1)}s expected ~${(_srcDur / captureRate).toFixed(1)}s) — retrying once`);
             setLoadingText("Re-compressing video (first attempt failed)...");
             uploadFile = await vp.compressUnderSize(file, 4 * 1024 * 1024, {
               maxDim: 480, bitrate: 800_000, playbackRate: captureRate,
+              startSec: windowApplied ? windowStartSec : 0,
             });
             try { _compDur = await _measureDur(uploadFile); } catch { _compDur = null; }
-            if (_origDur && _compDur && _compDur < (_origDur / captureRate) * 0.5) {
+            if (_srcDur && _compDur && _compDur < (_srcDur / captureRate) * 0.5) {
               throw new Error("Video compression failed on this device — please close other tabs/apps and try again.");
             }
           }
-          if (_origDur && _compDur && _origDur / _compDur > 1.1) {
+          if (_srcDur && _compDur && _srcDur / _compDur > 1.1) {
             // Clamp to [1, 4] so a bad measurement can't wildly mis-scale.
-            timeScale = Math.min(4, Math.max(1, _origDur / _compDur));
-          } else if (captureRate > 1 && !(_origDur && _compDur)) {
+            timeScale = Math.min(4, Math.max(1, _srcDur / _compDur));
+          } else if (captureRate > 1 && !(_srcDur && _compDur)) {
             // Measurement failed but we explicitly sped up — best estimate
             // is the rate we requested.
             timeScale = captureRate;
@@ -1860,7 +1918,12 @@ export default function AnalyzePage() {
             }
             if (players.length >= 2) {
               // Multiple athletes visible → show picker and pause.
-              setUniversalUploadData({ uploadFile, b64, fileName, midFrame, timeScale });
+              setUniversalUploadData({
+                uploadFile, b64, fileName, midFrame, timeScale, timeOffset,
+                analyzedWindow: windowApplied
+                  ? { start: windowStartSec, length: windowLenSec, total: windowTotalDur }
+                  : null,
+              });
               setUniversalPlayers(players);
               setAnalyzing(false);
               setProgress(0);
@@ -1995,6 +2058,7 @@ export default function AnalyzePage() {
             fast_mode: fastMode,
             previous_session_focus: prevFocus,
             time_scale: timeScale,
+            time_offset: timeOffset,
             push_endpoint: pushEndpoint,
           }, { timeout: 45000 });
           const jobId = submitResp.data?.job_id;
@@ -2049,6 +2113,7 @@ export default function AnalyzePage() {
             // Tell the backend how to map Gemini's (possibly sped-up)
             // timestamps back to the original clip the user views.
             if (timeScale && timeScale !== 1) fd.append("time_scale", String(timeScale));
+            if (timeOffset > 0) fd.append("time_offset", String(timeOffset));
             const token = localStorage.getItem("playsmart_token");
             const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
             // NOTE: do NOT set Content-Type — fetch sets it (with the
@@ -2179,6 +2244,7 @@ export default function AnalyzePage() {
             fast_mode: fastMode,
             previous_session_focus: prevFocus,
             time_scale: timeScale,
+            time_offset: timeOffset,
             // Bumped to 210s so we don't false-fail when Gemini has a slow
             // moment on a dense clip. The backend caps Gemini at 180s and
             // returns 504 if it overruns — these are upper bounds for
@@ -2220,6 +2286,11 @@ export default function AnalyzePage() {
           );
         }
         const universalResult = buildUniversalResult(data, targetDesc, options.universalPick);
+        if (windowApplied) {
+          universalResult._analyzed_window = {
+            start: windowStartSec, length: windowLenSec, total: windowTotalDur,
+          };
+        }
         notifyAnalysisReady(universalResult.sport, events.length);
         // If the user navigated away mid-job, DON'T clear the persisted job
         // here — this poll resolved on an unmounted tree, so setResult is a
@@ -4221,6 +4292,26 @@ export default function AnalyzePage() {
             is the FIRST thing the user sees after the universal-mode
             banner so the rich coach voice is the lead, not buried under
             metric tiles. Renders nothing if Gemini returned empty. */}
+        {/* Honest coverage banner — long videos analyze their busiest
+            ~88s window, not the whole file. Without this, a 12-minute
+            tournament video showed a full-length player with markers in
+            only one stretch and no explanation. */}
+        {result?._analyzed_window && (() => {
+          const w = result._analyzed_window;
+          const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+          return (
+            <div className="bg-sky-400/8 border border-sky-400/30 rounded-2xl p-3.5 mb-4 flex items-start gap-2.5">
+              <span className="text-base mt-0.5">🎬</span>
+              <p className="text-[12px] text-zinc-200 leading-snug">
+                Long video — we analyzed the <span className="text-sky-300 font-semibold">most
+                active {Math.round(w.length)}s</span> ({fmt(w.start)}–{fmt(w.start + w.length)})
+                of your {fmt(w.total)} clip. For full-match coverage, upload
+                shorter clips of the rallies you care about.
+              </p>
+            </div>
+          );
+        })()}
+
         {/* Doubles "who's who" — Gemini's visual descriptions of which
             player it treated as YOU vs PARTNER. Without this, a doubles
             analysis with player_role tags was unreadable ("which one am

@@ -2769,17 +2769,39 @@ function PostureCheckPanel({ videoFile, timestamp, thumbnail, sport, shotType, c
     setState({ status: "loading" });
     (async () => {
       try {
-        let frame = null;
-        if (videoFile && typeof timestamp === "number" && Number.isFinite(timestamp)) {
-          frame = await _captureFrameAt(videoFile, timestamp, 720, contactBox || null);
-        }
-        if (!frame) frame = thumbnail || null;
-        if (!frame) { if (!cancelled) setState({ status: "no-frame" }); return; }
         const mod = await import("@/ai/poseOverlay");
-        const r = await mod.analyzePoseOnFrame(frame, sport, shotType, { maxDim: 600 });
+        // Gemini's timestamp is approximate — a single frame can land on
+        // the setup or follow-through and produce garbage angles ("Elbow
+        // 52° — Off" measured on the wrong moment). Try three candidate
+        // frames around contact and keep the one with the most gradable,
+        // confident joints.
+        const haveVideo = videoFile && typeof timestamp === "number" && Number.isFinite(timestamp);
+        const offsets = haveVideo ? [0, -0.25, 0.3] : [null];
+        let best = null;
+        for (const off of offsets) {
+          if (cancelled) return;
+          let frame = null;
+          if (off !== null) {
+            frame = await _captureFrameAt(videoFile, Math.max(0.05, timestamp + off), 720, contactBox || null);
+          }
+          if (!frame) frame = thumbnail || null;
+          if (!frame) continue;
+          const r = await mod.analyzePoseOnFrame(frame, sport, shotType, { maxDim: 600 });
+          if (!r || r.error || !r.annotatedDataUrl) continue;
+          const graded = (r.measurements || []).filter((m) => m.ideal).length;
+          const score = graded * 2 + (r.measurements || []).length;
+          if (!best || score > best.score) best = { r, score, graded };
+          if (best.graded >= 2) break; // good enough — stop burning frames
+        }
         if (cancelled) return;
-        if (!r || r.error || !r.annotatedDataUrl) { setState({ status: "failed" }); return; }
-        setState({ status: "ready", result: r });
+        // Meaningful-or-nothing: without at least one joint graded against
+        // a curated ideal range (or two raw measurements), the numbers are
+        // noise — show the honest fallback instead of a misleading card.
+        if (!best || (best.graded === 0 && (best.r.measurements || []).length < 2)) {
+          setState({ status: "failed" });
+          return;
+        }
+        setState({ status: "ready", result: best.r });
       } catch {
         if (!cancelled) setState({ status: "failed" });
       }

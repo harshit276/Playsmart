@@ -1801,6 +1801,12 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     // most of the time it wasn't even saving meaningful bytes. Raised from
     // 3 MB → 15 MB.
     skipBelowBytes = 15 * 1024 * 1024,
+    // Start of the capture window in source-video seconds. Used by the
+    // rally-window selector so long match videos encode their BUSIEST
+    // stretch instead of always the first maxDurationSec (which was often
+    // warmup/walk-on). Timestamps come back relative to this window; the
+    // caller maps them back with time_offset.
+    startSec = 0,
     // playbackRate MUST be 1.0 for correct output.
     //
     // Strategy A records the canvas in WALL-CLOCK time while the source
@@ -1864,10 +1870,19 @@ export async function compressVideoForUpload(videoFile, options = {}) {
 
   const vw = video.videoWidth;
   const vh = video.videoHeight;
-  const duration = Math.min(video.duration || 0, maxDurationSec);
-  if (!duration || !vw || !vh) {
+  const totalDur = video.duration || 0;
+  const clampedStart = Math.max(0, Math.min(startSec || 0, Math.max(0, totalDur - 5)));
+  const duration = Math.min(totalDur - clampedStart, maxDurationSec);
+  const endSec = clampedStart + duration;
+  if (!duration || duration <= 0 || !vw || !vh) {
     URL.revokeObjectURL(objectUrl);
     return videoFile;
+  }
+  if (clampedStart > 0) {
+    try {
+      video.currentTime = clampedStart;
+      await _waitForEvent(video, "seeked", 5000);
+    } catch { /* capture falls back to t=0 */ }
   }
 
   const scale = Math.min(1, maxDim / Math.max(vw, vh));
@@ -1916,12 +1931,12 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     let rafId = null;
     let lastDrawnTime = -1;
     const drawLoop = () => {
-      if (video.ended || video.currentTime >= duration) return;
+      if (video.ended || video.currentTime >= endSec) return;
       const t = video.currentTime;
       if (t !== lastDrawnTime) {
         try { ctx.drawImage(video, 0, 0, outW, outH); } catch {}
         lastDrawnTime = t;
-        if (onProgress) onProgress(Math.min(99, Math.round((t / duration) * 100)));
+        if (onProgress) onProgress(Math.min(99, Math.round(((t - clampedStart) / duration) * 100)));
       }
       rafId = requestAnimationFrame(drawLoop);
     };
@@ -1939,7 +1954,7 @@ export async function compressVideoForUpload(videoFile, options = {}) {
       let stalls = 0;
       const iv = setInterval(() => {
         const t = video.currentTime;
-        if (t >= duration - 0.05 || video.ended) { clearInterval(iv); finish(); return; }
+        if (t >= endSec - 0.05 || video.ended) { clearInterval(iv); finish(); return; }
         if (t - lastT < 0.02) {
           stalls += 1;
           if (stalls >= 24) { clearInterval(iv); finish(); }  // ~12s no progress
@@ -1955,7 +1970,7 @@ export async function compressVideoForUpload(videoFile, options = {}) {
       // is longer than maxDurationSec and `ended` never fires within our window)
       const hitCap = new Promise((resolve) => {
         const check = () => {
-          if (video.currentTime >= duration - 0.05 || video.ended) resolve();
+          if (video.currentTime >= endSec - 0.05 || video.ended) resolve();
           else setTimeout(check, 100);
         };
         check();
@@ -1991,13 +2006,13 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     }
     const fps = 15;
     const step = 1 / fps;
-    for (let t = 0; t < duration; t += step) {
+    for (let t = clampedStart; t < endSec; t += step) {
       try {
         video.currentTime = t;
         await _waitForEvent(video, "seeked", 1500);
         ctx.drawImage(video, 0, 0, outW, outH);
         if (requestFrame) requestFrame();
-        if (onProgress) onProgress(Math.round((t / duration) * 100));
+        if (onProgress) onProgress(Math.round(((t - clampedStart) / duration) * 100));
       } catch { /* skip undecodable frames */ }
     }
   }
@@ -2054,6 +2069,70 @@ export async function compressVideoForUpload(videoFile, options = {}) {
  *   3. After all rungs, throw with a clear "trim this clip" message
  *      that includes the actual size + the cap.
  */
+/**
+ * findBusiestWindow — pick the most action-dense contiguous window of a
+ * long video. Samples ~48 low-res frames evenly, scores motion between
+ * consecutive samples, and slides a window over the scores. This is what
+ * lets a 12-minute tournament video analyze its best rally stretch instead
+ * of the warm-up that happens to sit in the first 90 seconds.
+ *
+ * Cheap by construction: 48 seeks on a 160px canvas ≈ 5-12s wall time.
+ * Throws/returns 0 on any failure — callers treat 0 as "start at 0".
+ *
+ * @param {File|Blob} videoFile
+ * @param {number} windowSec - length of the analysis window (e.g. 88)
+ * @returns {Promise<{start: number, totalDuration: number}>}
+ */
+export async function findBusiestWindow(videoFile, windowSec = 88) {
+  const video = document.createElement("video");
+  const url = URL.createObjectURL(videoFile);
+  video.src = url; video.muted = true; video.playsInline = true;
+  video.load();
+  try {
+    await _waitForEvent(video, "loadedmetadata", 8000);
+    const dur = video.duration;
+    if (!dur || !isFinite(dur)) return { start: 0, totalDuration: 0 };
+    if (dur <= windowSec * 1.2) return { start: 0, totalDuration: dur };
+
+    const SAMPLES = 48;
+    const stepSec = dur / SAMPLES;
+    const size = 160;
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    let prev = null;
+    const scores = []; // motion score at sample i (vs i-1), time = i*stepSec
+    for (let i = 0; i < SAMPLES; i++) {
+      await _seekTo(video, Math.min(dur - 0.1, i * stepSec), 2500);
+      ctx.drawImage(video, 0, 0, size, size);
+      const d = ctx.getImageData(0, 0, size, size).data;
+      if (prev) {
+        let sum = 0;
+        for (let p = 0; p < d.length; p += 16) sum += Math.abs(d[p] - prev[p]);
+        scores.push(sum);
+      } else {
+        scores.push(0);
+      }
+      prev = d.slice ? d.slice(0) : new Uint8ClampedArray(d);
+    }
+    // Slide a window of windowSec over the sampled scores.
+    const winSamples = Math.max(2, Math.round(windowSec / stepSec));
+    let bestStartIdx = 0, bestSum = -1;
+    for (let i = 0; i + winSamples <= scores.length; i++) {
+      let s = 0;
+      for (let j = i; j < i + winSamples; j++) s += scores[j];
+      if (s > bestSum) { bestSum = s; bestStartIdx = i; }
+    }
+    const start = Math.max(0, Math.min(dur - windowSec, bestStartIdx * stepSec));
+    return { start, totalDuration: dur };
+  } catch {
+    return { start: 0, totalDuration: 0 };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+
 export async function compressUnderSize(videoFile, targetBytes, options = {}) {
   const {
     maxDim = 480,
@@ -2067,6 +2146,7 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
     maxDurationSec = 90,
     onProgress,
     playbackRate,  // optional override; auto-picked below when undefined
+    startSec = 0,  // capture-window start (rally-window selection)
   } = options;
 
   // playbackRate is forced to 1.0 (real-time capture). The old size-based
@@ -2099,7 +2179,8 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
       bitrate: Math.max(220_000, Math.round(br)),
       maxDurationSec: dur,
       playbackRate: effectiveRate,
-      skipBelowBytes: targetBytes,
+      skipBelowBytes: startSec > 0 ? 0 : targetBytes,
+      startSec,
       onProgress: withProgress ? onProgress : undefined,
     });
 

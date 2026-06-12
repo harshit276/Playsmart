@@ -3411,6 +3411,10 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     # multiply each event's timestamp back into the original timeline. 1.0 =
     # no scaling (small clips captured at real-time).
     time_scale: float = 1.0
+    # Start of the analyzed window in the ORIGINAL video (seconds). Non-zero
+    # when the client encoded the busiest stretch of a long video instead of
+    # the whole thing — every Gemini timestamp shifts by this.
+    time_offset: float = 0.0
     # Web Push subscription endpoint of the submitting browser, so we can
     # notify THIS device when the job finishes regardless of whether it's
     # tied to a signed-in account (covers guests + avoids user-id mismatch).
@@ -3425,7 +3429,7 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     previous_session_focus: list | None = None
 
 
-def _apply_time_scale(events: list, time_scale: float) -> list:
+def _apply_time_scale(events: list, time_scale: float, time_offset: float = 0.0) -> list:
     """Multiply each event's timestamp into the original clip's timeline.
 
     Gemini sees a (possibly sped-up) compressed clip, so its timestamps live
@@ -3436,8 +3440,16 @@ def _apply_time_scale(events: list, time_scale: float) -> list:
     try:
         ts = float(time_scale)
     except (TypeError, ValueError):
-        return events
-    if not events or ts <= 1.001:
+        ts = 1.0
+    try:
+        off = float(time_offset or 0.0)
+    except (TypeError, ValueError):
+        off = 0.0
+    # time_offset: when the client encoded a WINDOW of a long video (rally-
+    # window selection), Gemini's t=0 is the window start — every timestamp
+    # must shift by the window's start in the original video.
+    off = min(36000.0, max(0.0, off))
+    if not events or (ts <= 1.001 and off <= 0.001):
         return events
     ts = min(4.0, max(1.0, ts))
     for ev in events:
@@ -3446,7 +3458,7 @@ def _apply_time_scale(events: list, time_scale: float) -> list:
         for key in ("timestamp_sec", "timestamp", "time_sec", "end_sec", "start_sec"):
             v = ev.get(key)
             if isinstance(v, (int, float)):
-                ev[key] = round(v * ts, 3)
+                ev[key] = round(v * ts + off, 3)
         # Ball-trajectory points carry their own timestamps ([t, x, y]) —
         # scale t into the original timeline too so the overlay lands on
         # the right video frames. x/y are frame-normalized, unaffected.
@@ -3454,7 +3466,7 @@ def _apply_time_scale(events: list, time_scale: float) -> list:
         if isinstance(traj, list):
             for p in traj:
                 if isinstance(p, list) and len(p) == 3 and isinstance(p[0], (int, float)):
-                    p[0] = round(p[0] * ts, 3)
+                    p[0] = round(p[0] * ts + off, 3)
     return events
 
 
@@ -3587,7 +3599,7 @@ async def analyze_video_universal_endpoint(
     # Map Gemini's (possibly sped-up) timestamps back to the original clip's
     # timeline before caching — same compressed bytes always yield the same
     # time_scale, so the cached scaled result stays correct.
-    payload["events"] = _apply_time_scale(payload["events"], req.time_scale)
+    payload["events"] = _apply_time_scale(payload["events"], req.time_scale, req.time_offset)
 
     # ─── Cache write (best-effort) ───────────────────────────────────
     try:
@@ -3635,6 +3647,8 @@ async def analyze_video_stream_endpoint(
     # the clip the user views (see _apply_time_scale + AnalyzeVideoUniversal
     # Request.time_scale). Form string; "1.0" = no scaling.
     time_scale: str = "1.0",
+    # Analyzed-window start in the original video, seconds (form string).
+    time_offset: str = "0",
     # Short-clip fast path (Flash, no thinking). Form string "true"/"false".
     fast_mode: str = "false",
     # Previous session's top fixes as a JSON array string (multipart can't
@@ -3745,6 +3759,10 @@ async def analyze_video_stream_endpoint(
             _ts = float(time_scale)
         except (TypeError, ValueError):
             _ts = 1.0
+        try:
+            _toff = float(time_offset)
+        except (TypeError, ValueError):
+            _toff = 0.0
 
         def _runner():
             try:
@@ -3807,7 +3825,7 @@ async def analyze_video_stream_endpoint(
                     # Scale the live badge's timestamp into the original
                     # timeline too, so the per-shot marker matches the video.
                     if isinstance(_shot, dict):
-                        _apply_time_scale([_shot], _ts)
+                        _apply_time_scale([_shot], _ts, _toff)
                     yield _sse_event({
                         "phase": "shot_detected",
                         "shot": _shot,
@@ -3825,7 +3843,7 @@ async def analyze_video_stream_endpoint(
             if final_payload is not None:
                 events = final_payload.get("events") or []
                 # Map all final timestamps into the original clip's timeline.
-                events = _apply_time_scale(events, _ts)
+                events = _apply_time_scale(events, _ts, _toff)
                 yield _sse_event({
                     "phase": "complete",
                     # Alias events → shots so the frontend's existing
@@ -4127,7 +4145,8 @@ async def _process_job(job: dict, claimed: bool = False):
         "_debug": result.get("_debug") or {},
         "_meta": {**(result.get("_meta") or {}), "async_job": True},
     }
-    payload["events"] = _apply_time_scale(payload["events"], job.get("time_scale", 1.0))
+    payload["events"] = _apply_time_scale(payload["events"], job.get("time_scale", 1.0),
+                                          job.get("time_offset", 0.0))
     await _update_job(job_id, status="complete", result=payload,
                       finished_at=datetime.now(timezone.utc))
 
@@ -4558,6 +4577,7 @@ async def analyze_video_async_submit(
             if isinstance(req.previous_session_focus, list) else None
         ),
         "time_scale": req.time_scale,
+        "time_offset": req.time_offset,
         "push_endpoint": req.push_endpoint,
         # Files API handle for large clips — the worker re-fetches by this name
         # instead of reloading bytes. None for the legacy inline path.
