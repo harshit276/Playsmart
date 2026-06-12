@@ -8109,6 +8109,15 @@ async def get_analysis_detail(analysis_id: str, authorization: str = Header(None
         "date": analysis.get("date"),
         "gear_tips": _generate_gear_tips(analysis, profile),
         "training_priorities": _generate_training_priorities(analysis),
+        # Universal-mode payload: per-shot cards, narrative, and the spatial
+        # layers. This endpoint predates universal mode and silently dropped
+        # them — history detail rendered a legacy stub (empty "Technique"
+        # rows, no shots, no Coach's Read).
+        "shots": analysis.get("shots") or [],
+        "coach_narrative": analysis.get("coach_narrative"),
+        "court_map": analysis.get("court_map"),
+        "movement": analysis.get("movement"),
+        "player_legend": analysis.get("player_legend"),
     }
 
     return result
