@@ -5118,6 +5118,22 @@ export default function AnalyzePage() {
           >
             <Share2 className="w-4 h-4 mr-2" /> Share Results
           </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const m = await import("@/lib/coachReport");
+                const ok = m.openCoachReport(result, { playerName: user?.name || profile?.name || "Player" });
+                if (!ok) toast.error("Allow pop-ups to download the Coach Report.");
+              } catch {
+                toast.error("Couldn't generate the report — please try again.");
+              }
+            }}
+            className="flex-1 bg-zinc-900/80 border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 font-bold rounded-2xl h-12 min-h-[44px]"
+            variant="outline"
+            title="A print-ready coach report — save it as PDF from the print dialog"
+          >
+            📄 Coach Report (PDF)
+          </Button>
           <Button onClick={() => { clearFile(); setActiveTab("upload"); setAnalysisMode(null); }}
             className="flex-1 bg-zinc-900/80 border border-zinc-800 text-zinc-300 hover:border-lime-400/30 hover:text-lime-400 rounded-2xl h-12 min-h-[44px]"
             variant="outline">
