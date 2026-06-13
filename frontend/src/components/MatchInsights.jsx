@@ -178,7 +178,12 @@ function ProComparisonModal({ open, onClose, userShot, reference, sport }) {
   );
 }
 
-const MAX_SHOTS = 10;
+// Per-shot pose extraction cap. Gemini already caps the events array at 20
+// server-side and provides coach data for every one, so matching this to 20
+// means the per-shot CARDS equal the headline "I watched N shots" count
+// (was 10 → headline said "18 shots / 6 types" while cards showed only the
+// top-10-by-score → "10 shots / 2 types", a mismatch users noticed).
+const MAX_SHOTS = 20;
 const FRAMES_PER_SHOT = 4;
 const SEEK_TIMEOUT_MS = 1500;
 const PER_SHOT_TIMEOUT_MS = 8000;  // hard ceiling per shot, including pose inference
@@ -618,7 +623,7 @@ export default function MatchInsights({
         <div className="space-y-4">
           {wasTruncated && (
             <div className="bg-amber-500/5 border border-amber-500/30 rounded-lg px-3 py-2 text-[11px] text-amber-300">
-              Analyzed your top {MAX_SHOTS} shots for technique consistency.
+              This session had a lot of shots — analyzed your top {MAX_SHOTS} for technique consistency.
             </div>
           )}
 

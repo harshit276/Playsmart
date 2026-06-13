@@ -47,7 +47,12 @@ function _summarize(shots, opts = {}) {
     counts.set(t, (counts.get(t) || 0) + 1);
     if (typeof s.confidence === "number") { totalConf += s.confidence; confSamples++; }
   }
-  const total = Array.from(counts.values()).reduce((a, b) => a + b, 0);
+  // Headline count = EVERY detected shot (matches the number of per-shot
+  // cards and total_shots_detected). `typedTotal` is the subset with a
+  // known category, used only to decide how specific the wording can be —
+  // we never claim "N smash shots" if some of the N were unclassified.
+  const total = shots.length;
+  const typedTotal = Array.from(counts.values()).reduce((a, b) => a + b, 0);
   const avgConf = confSamples > 0 ? totalConf / confSamples : 0;
   const ranked = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   const distinct = ranked.length;
@@ -59,9 +64,11 @@ function _summarize(shots, opts = {}) {
              : avgConf >= 0.5 ? "Looks like"
              : "Best guess —";
 
-  // Build the "what" clause.
+  // Build the "what" clause. Only name a single type when EVERY detected
+  // shot was that type (typedTotal === total) — otherwise the count and the
+  // type would disagree with the cards.
   let what;
-  if (top && distinct === 1) {
+  if (top && distinct === 1 && typedTotal === total) {
     what = `${total} ${_titleCase(top[0]).toLowerCase()} ${total === 1 ? "shot" : "shots"}`;
   } else if (top && distinct === 2) {
     what = `${total} shots — mostly ${_titleCase(top[0]).toLowerCase()}s with some ${_titleCase(ranked[1][0]).toLowerCase()}s`;
@@ -69,7 +76,7 @@ function _summarize(shots, opts = {}) {
     const named = ranked.slice(0, 3).map(([t]) => _titleCase(t).toLowerCase()).join(", ");
     what = `${total} shots across ${distinct} types (${named})`;
   } else {
-    what = `${shots.length} moments`;
+    what = `${total} ${total === 1 ? "shot" : "shots"}`;
   }
 
   // Session-shape qualifier.
