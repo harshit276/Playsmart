@@ -1,14 +1,23 @@
 import api from "./api";
 
 /**
- * Compress a video in the browser using ffmpeg.wasm if it's > 100MB.
+ * Compress a video in the browser using ffmpeg.wasm if it's large.
  * Returns the original file if compression isn't needed or fails.
+ *
+ * Threshold 45MB (was 100): big iPhone HD/4K originals (50-200MB for a
+ * 1-2 min clip) are the slow case — both the upload AND Gemini's
+ * processing scale with file size. ffmpeg.wasm down-rezzes to 720p with a
+ * REAL encoder (reliable, unlike the canvas/MediaRecorder path), turning a
+ * 78MB upload into ~10-15MB: far faster to upload AND faster for Gemini to
+ * analyze. Already-small clips (<45MB, incl. WhatsApp) upload untouched —
+ * we never re-encode something that's already small. On any ffmpeg error
+ * we fall back to uploading the original, so this can only help.
  */
 async function compressIfNeeded(file, onProgress) {
-  if (file.size < 100 * 1024 * 1024) return file; // Under 100MB, skip
+  if (file.size < 45 * 1024 * 1024) return file; // Under 45MB, upload as-is
 
   try {
-    onProgress?.({ percent: 5, message: "Compressing video to save bandwidth..." });
+    onProgress?.({ percent: 5, message: "Optimizing video for faster upload..." });
     const { compressVideo, resetEditor } = await import("@/ai/videoEditor");
     const compressed = await compressVideo(file, {
       maxHeight: 720,
