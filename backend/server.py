@@ -13473,8 +13473,22 @@ async def coach_ask(req: CoachAskRequest):
     user_message = (
         f"USER QUESTION: {q}\n\n"
         f"CONTEXT FROM OUR DATABASE:\n{context}\n\n"
-        "Respond following the system rules. If you recommend a product, use its BUY_LINK as the markdown href."
+        "Respond following the system rules. If you recommend a product, "
+        "link it as [Product Name](BUY_LINK url) — the product's NAME is the "
+        "visible link text, never the literal word 'BUY_LINK'."
     )
+
+    def _fix_buy_links(text: str) -> str:
+        """Defensive: if the model used the literal 'BUY_LINK' as markdown
+        link text ([BUY_LINK](url)), swap in a sensible label so users never
+        see the placeholder. Belt-and-suspenders for the prompt rule."""
+        if not text or "BUY_LINK" not in text:
+            return text
+        import re as _re
+        # [BUY_LINK](url) → [View product](url)
+        text = _re.sub(r"\[\s*BUY_LINK\s*\]\(", "[View product](", text)
+        # Any stray bare "BUY_LINK" tokens left over.
+        return text.replace("BUY_LINK", "").strip()
 
     # Call Groq (OpenAI-compatible). When Groq isn't configured fall through
     # to our VLM backend (Gemini), so the chatbot still works in production.
@@ -13490,7 +13504,7 @@ async def coach_ask(req: CoachAskRequest):
             )
             if res and res.get("answer"):
                 return {
-                    "answer": res["answer"],
+                    "answer": _fix_buy_links(res["answer"]),
                     "sources": [
                         {"kind": d["kind"], "title": d["meta"].get("name") or d["meta"].get("title"),
                          "url": d["meta"].get("url"), "sport": d["meta"].get("sport")}
@@ -13528,7 +13542,7 @@ async def coach_ask(req: CoachAskRequest):
             )
             resp.raise_for_status()
             data = resp.json()
-            answer = data["choices"][0]["message"]["content"].strip()
+            answer = _fix_buy_links(data["choices"][0]["message"]["content"].strip())
     except httpx.HTTPStatusError as e:
         logger.error(f"Groq API error: {e.response.status_code} {e.response.text}")
         answer = _retrieval_only_answer(q, docs[:3])
