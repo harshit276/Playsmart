@@ -469,6 +469,17 @@ export default function AnalyzePage() {
   // first analysis of a session.
   useEffect(() => {
     api.get("/warm", { timeout: 8000 }).catch(() => { /* silent */ });
+    // Preload the MoveNet model so the pre-upload "how many players"
+    // person-count scan isn't paying a 10-15s cold model download on the
+    // critical path. Fire-and-forget; downloads while the user picks a file.
+    const preloadIdle = (typeof window !== "undefined" && window.requestIdleCallback)
+      ? window.requestIdleCallback
+      : (fn) => setTimeout(fn, 1200);
+    preloadIdle(() => {
+      import("@/ai/poseDetector")
+        .then((pd) => pd.initMultiPoseModel?.())
+        .catch(() => { /* model warms lazily at scan time if this fails */ });
+    });
   }, []);
 
   // Check for a pending reminder from a prior session
@@ -1645,14 +1656,22 @@ export default function AnalyzePage() {
           // redoing it. Only <2MB clips inline (their base64 fits Vercel's
           // 4.5MB body cap and compressUnderSize skips them, so no encode).
           const DIRECT_UPLOAD_MIN_MB = 2;
-          // ── FASTEST path: ship the ORIGINAL via Cloudinary ──
-          // ONE upload, no re-encode, exact timestamps (timeScale stays 1),
-          // full-res quality. NOTE: browsers CANNOT upload straight to
-          // Gemini's resumable endpoint (no CORS headers). Cloudinary →
-          // /upload-video-url is the one browser-viable route; the server
-          // hands the bytes to Gemini. >60MB still takes the 720p optimize
-          // chain below (upload time dominates there).
-          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB && origMbRaw <= 60) {
+          // ── PRIMARY path for ALL clips ≥2MB: Cloudinary, server-side ──
+          // uploadToCloudinary uploads the original (and ffmpeg-compresses
+          // >100MB to 720p with a REAL encoder — not the fragile canvas/
+          // MediaRecorder capture). We then hand the backend a Cloudinary
+          // 720p TRANSFORM URL, so:
+          //   • no slow/fragile on-device re-encode for 2-100MB clips
+          //     (just an upload),
+          //   • Gemini receives a small ~720p file (faster upload from our
+          //     server + faster Gemini processing) even for 4K iPhone HD,
+          //   • the backend only fetches the small transform, so the big
+          //     original never hits the 200MB server cap → 50-200MB iPhone
+          //     videos are supported.
+          // Full video (no window truncation), exact timestamps. Falls
+          // through to the legacy MediaRecorder optimize only if Cloudinary
+          // genuinely fails.
+          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
             try {
               setLoadingText("Uploading your video...");
               setProgress(15);
@@ -1666,22 +1685,35 @@ export default function AnalyzePage() {
               if (cloudOrig?.secure_url) {
                 setLoadingText("Preparing analysis...");
                 setProgress(42);
+                // Insert a Cloudinary video transformation right after
+                // "/upload/" so Cloudinary transcodes to a Gemini-friendly
+                // 720p H.264 derivative server-side (downscales 4K, caps
+                // bitrate). Falls back to the raw URL if the pattern isn't
+                // found (non-standard URL shape).
+                const txUrl = cloudOrig.secure_url.includes("/upload/")
+                  ? cloudOrig.secure_url.replace(
+                      "/upload/",
+                      "/upload/q_auto:good,w_1280,c_limit,vc_h264,br_2500k/")
+                  : cloudOrig.secure_url;
                 const { data: regOrig } = await api.post("/upload-video-url", {
-                  video_url: cloudOrig.secure_url,
-                  mime_type: file.type || "video/mp4",
+                  video_url: txUrl,
+                  mime_type: "video/mp4",
                   cloudinary_public_id: cloudOrig.public_id || null,
                 }, { timeout: 200000 });
                 if (regOrig?.file_name) {
                   fileName = regOrig.file_name;
                   uploadFile = file;
                   b64 = null;
+                  // Whole original analyzed (no window) → no time remap.
                   timeScale = 1;
+                  timeOffset = 0;
+                  windowApplied = false;
                   // eslint-disable-next-line no-console
-                  console.info(`[upload] ORIGINAL→Cloudinary→Files API: ${origMbRaw.toFixed(1)}MB, timeScale=1 → ${fileName}`);
+                  console.info(`[upload] Cloudinary 720p transform → Files API: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
                 }
               }
             } catch (origUpErr) {
-              console.warn("[upload] original upload failed, falling back to optimize route:",
+              console.warn("[upload] Cloudinary path failed, falling back to optimize route:",
                            origUpErr?.response?.data?.detail || origUpErr?.message);
             }
           }
