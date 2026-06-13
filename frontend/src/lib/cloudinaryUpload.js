@@ -14,30 +14,19 @@ import api from "./api";
  *   4. original        → final fallback (never block the analysis).
  */
 async function compressIfNeeded(file, onProgress) {
-  if (file.size < 25 * 1024 * 1024) return file; // small/WhatsApp: upload as-is
+  // ── WebCodecs transcode DISABLED (regression) ───────────────────────
+  // Commit 0508aac routed >=25MB clips through a WebCodecs (Mediabunny)
+  // 720p transcode. It ran fast, but the OUTPUT mp4 was unanalyzable by
+  // Gemini — every >=25MB video came back "no shots detected" (40MB
+  // badminton, gym, WhatsApp clips all broke; <25MB clips that skip this
+  // path kept working). The transcoded container/profile evidently isn't
+  // something Gemini's Files API decodes. Disabled until the output is
+  // verified frame-by-frame; uploading the original is the known-good path.
+  // The webcodecsTranscode lib is kept for that future investigation.
 
-  // Tier 2 — hardware transcode (fast). Works on Chrome/Edge/Android and
-  // iOS Safari 16.4+. Falls through on unsupported codec / no win / error.
-  try {
-    const { webcodecsTranscode, webcodecsSupported } = await import("@/lib/webcodecsTranscode");
-    if (webcodecsSupported()) {
-      onProgress?.({ percent: 4, message: "Optimizing video (hardware-accelerated)…" });
-      const out = await webcodecsTranscode(file, {
-        maxHeight: 720,
-        onProgress: (pct) => onProgress?.({ percent: 4 + pct * 0.18, message: `Optimizing video… ${pct}%` }),
-      });
-      // eslint-disable-next-line no-console
-      console.info(`[transcode] WebCodecs: ${(file.size / 1048576).toFixed(1)}MB → ${(out.size / 1048576).toFixed(1)}MB`);
-      return out;
-    }
-  } catch (e) {
-    console.warn("[transcode] WebCodecs unavailable/failed, falling back:", e?.message || e);
-  }
-
-  // Tier 3 — ffmpeg.wasm, ONLY for very large files where uploading the
-  // original would exceed Cloudinary / the 200MB backend fetch cap. It's
-  // slow (single-thread software), so we never use it for the 25-130MB
-  // range where uploading the original is faster.
+  // Upload the original up to 130MB (verified-working). ffmpeg.wasm only
+  // beyond that, where the raw upload would exceed Cloudinary / the 200MB
+  // backend fetch cap.
   if (file.size < 130 * 1024 * 1024) return file;
   try {
     onProgress?.({ percent: 5, message: "Optimizing a large video (this one takes a bit)…" });
