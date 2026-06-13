@@ -1685,19 +1685,16 @@ export default function AnalyzePage() {
               if (cloudOrig?.secure_url) {
                 setLoadingText("Preparing analysis...");
                 setProgress(42);
-                // Insert a Cloudinary video transformation right after
-                // "/upload/" so Cloudinary transcodes to a Gemini-friendly
-                // 720p H.264 derivative server-side (downscales 4K, caps
-                // bitrate). Falls back to the raw URL if the pattern isn't
-                // found (non-standard URL shape).
-                const txUrl = cloudOrig.secure_url.includes("/upload/")
-                  ? cloudOrig.secure_url.replace(
-                      "/upload/",
-                      "/upload/q_auto:good,w_1280,c_limit,vc_h264,br_2500k/")
-                  : cloudOrig.secure_url;
+                // Send the RAW Cloudinary URL. (We tried inserting an
+                // on-the-fly 720p transform here, but Cloudinary transcodes
+                // synchronously on first fetch — that added ~100s of latency
+                // for large 1080p sources, far more than it saved on Gemini.
+                // Gemini's Files API ingests the original fine.) For >100MB,
+                // uploadToCloudinary already ffmpeg-downscaled to 720p before
+                // upload, so the original IS small in that case.
                 const { data: regOrig } = await api.post("/upload-video-url", {
-                  video_url: txUrl,
-                  mime_type: "video/mp4",
+                  video_url: cloudOrig.secure_url,
+                  mime_type: cloudOrig.secure_url.endsWith(".mp4") ? "video/mp4" : (file.type || "video/mp4"),
                   cloudinary_public_id: cloudOrig.public_id || null,
                 }, { timeout: 200000 });
                 if (regOrig?.file_name) {
@@ -1709,7 +1706,7 @@ export default function AnalyzePage() {
                   timeOffset = 0;
                   windowApplied = false;
                   // eslint-disable-next-line no-console
-                  console.info(`[upload] Cloudinary 720p transform → Files API: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
+                  console.info(`[upload] Cloudinary → Files API: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
                 }
               }
             } catch (origUpErr) {
