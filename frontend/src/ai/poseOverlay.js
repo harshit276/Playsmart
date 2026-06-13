@@ -1,8 +1,8 @@
-/**
+﻿/**
  * @module poseOverlay
  * Draws a pose skeleton on a shot thumbnail with joints color-coded
  * by whether their measured angles fall inside the "ideal range" for
- * that shot type. Pedagogical alternative to AI video regeneration —
+ * that shot type. Pedagogical alternative to AI video regeneration â€”
  * users see exactly which joints are off and by how much.
  */
 import { initModel, detectPose, getKeypointByName, calculateAngle, KEYPOINT_NAMES, SKELETON_EDGES } from "./poseDetector.js";
@@ -12,12 +12,12 @@ import { initModel, detectPose, getKeypointByName, calculateAngle, KEYPOINT_NAME
  * Hand-curated ideal joint-angle ranges PER (sport, shot_type) at the
  * CONTACT moment. Based on coaching literature + slow-motion analysis
  * of pro players. Numbers are degrees. `null` ranges mean "not part of
- * the signature for this shot — don't grade it."
+ * the signature for this shot â€” don't grade it."
  *
  * Joint angles measured:
- *   shoulder = shoulder→elbow vs shoulder→hip axis
- *   elbow    = shoulder→elbow→wrist (interior angle)
- *   knee     = hip→knee→ankle (interior angle)
+ *   shoulder = shoulderâ†’elbow vs shoulderâ†’hip axis
+ *   elbow    = shoulderâ†’elbowâ†’wrist (interior angle)
+ *   knee     = hipâ†’kneeâ†’ankle (interior angle)
  *
  * "side": which side to grade (the racket arm). MoveNet doesn't
  * automatically know left vs right dominant hand, so we measure
@@ -27,67 +27,67 @@ import { initModel, detectPose, getKeypointByName, calculateAngle, KEYPOINT_NAME
 const IDEAL_ANGLES = {
   badminton: {
     smash: {
-      label: "Smash — overhead contact",
+      label: "Smash â€” overhead contact",
       elbow: { min: 150, max: 175, ideal: 165, why: "Near-straight arm at contact transfers max power" },
       shoulder: { min: 150, max: 180, ideal: 170, why: "Racket arm high overhead, body coiled and uncoiling" },
       knee: { min: 130, max: 175, ideal: 160, why: "Slight bend = athletic stance, fully extended = post-jump landing" },
     },
     clear: {
-      label: "Clear — high deep arc",
+      label: "Clear â€” high deep arc",
       elbow: { min: 160, max: 180, ideal: 175, why: "Fully extended at contact for maximum height" },
       shoulder: { min: 155, max: 180, ideal: 170, why: "Throwing-motion: shoulder peaks above ear" },
       knee: { min: 130, max: 170, ideal: 155, why: "Stable base, weight transfer front-to-back" },
     },
     drop: {
-      label: "Drop — soft just-over-net",
+      label: "Drop â€” soft just-over-net",
       elbow: { min: 140, max: 175, ideal: 160, why: "Same as smash setup; deception comes from slice" },
-      shoulder: { min: 145, max: 180, ideal: 165, why: "Identical to smash from address — the disguise is critical" },
+      shoulder: { min: 145, max: 180, ideal: 165, why: "Identical to smash from address â€” the disguise is critical" },
     },
     drive: {
-      label: "Drive — flat fast",
+      label: "Drive â€” flat fast",
       elbow: { min: 100, max: 145, ideal: 125, why: "Bent arm, racket head leads through contact zone" },
       shoulder: { min: 70, max: 120, ideal: 95, why: "Shoulder-height contact, body rotated to side" },
     },
     net_shot: {
-      label: "Net shot — soft touch",
+      label: "Net shot â€” soft touch",
       elbow: { min: 130, max: 170, ideal: 150, why: "Relaxed grip, racket lifted up to shuttle" },
-      shoulder: { min: 30, max: 90, ideal: 55, why: "Low, in front of body — wrist does the work" },
+      shoulder: { min: 30, max: 90, ideal: 55, why: "Low, in front of body â€” wrist does the work" },
     },
     serve: {
-      label: "Serve — backhand low",
+      label: "Serve â€” backhand low",
       elbow: { min: 60, max: 110, ideal: 85, why: "Compact L-shape, fingers push the shuttle" },
       shoulder: { min: 10, max: 60, ideal: 30, why: "Low to waist height, no big swing" },
     },
     lift: {
-      label: "Lift — underarm deep",
+      label: "Lift â€” underarm deep",
       elbow: { min: 130, max: 175, ideal: 155, why: "Lower-body drives, arm extends through contact" },
       shoulder: { min: 30, max: 100, ideal: 65, why: "Below waist at contact, follows through up" },
     },
     block: {
-      label: "Block — short defense from smash",
-      elbow: { min: 90, max: 140, ideal: 115, why: "Compact, no backswing — racket absorbs pace" },
+      label: "Block â€” short defense from smash",
+      elbow: { min: 90, max: 140, ideal: 115, why: "Compact, no backswing â€” racket absorbs pace" },
       shoulder: { min: 30, max: 90, ideal: 60, why: "Hip-height, paddle out front" },
     },
   },
   tennis: {
     forehand: {
-      label: "Forehand — topspin drive",
+      label: "Forehand â€” topspin drive",
       elbow: { min: 120, max: 170, ideal: 150, why: "Slight bend at contact, full extension on follow-through" },
       shoulder: { min: 60, max: 110, ideal: 90, why: "Contact in front of body at hip-to-shoulder height" },
     },
     backhand: {
-      label: "Backhand — two-handed drive",
+      label: "Backhand â€” two-handed drive",
       elbow: { min: 110, max: 165, ideal: 140, why: "Both arms bent at setup, extending through contact" },
       shoulder: { min: 50, max: 100, ideal: 80, why: "Compact, rotation drives the racket" },
     },
     serve: {
-      label: "Serve — flat / kick",
+      label: "Serve â€” flat / kick",
       elbow: { min: 155, max: 180, ideal: 175, why: "Full extension at contact, ball at peak racket reach" },
       shoulder: { min: 160, max: 180, ideal: 175, why: "Arm above ear, body fully stretched" },
     },
     volley: {
-      label: "Volley — punch",
-      elbow: { min: 90, max: 140, ideal: 115, why: "Short stab, no swing — racket head LEADS contact" },
+      label: "Volley â€” punch",
+      elbow: { min: 90, max: 140, ideal: 115, why: "Short stab, no swing â€” racket head LEADS contact" },
       shoulder: { min: 40, max: 90, ideal: 65, why: "In front of body at shoulder height, knees bent" },
     },
     overhead: {
@@ -101,19 +101,19 @@ const IDEAL_ANGLES = {
       shoulder: { min: 60, max: 110, ideal: 85, why: "Compact prep, knife-through-butter feel" },
     },
     lob: {
-      label: "Lob — defensive high",
+      label: "Lob â€” defensive high",
       elbow: { min: 130, max: 175, ideal: 160, why: "Open face lifts ball deep, racket finishes high" },
       shoulder: { min: 40, max: 100, ideal: 70, why: "Low to high swing path" },
     },
     drop_shot: {
-      label: "Drop shot — soft just-over",
+      label: "Drop shot â€” soft just-over",
       elbow: { min: 120, max: 165, ideal: 145, why: "Soft hands, racket head under ball" },
       shoulder: { min: 40, max: 100, ideal: 70, why: "Disguise as a drive, then check the swing" },
     },
   },
   table_tennis: {
     forehand_drive: {
-      label: "Forehand drive — topspin",
+      label: "Forehand drive â€” topspin",
       elbow: { min: 100, max: 150, ideal: 125, why: "Bent at setup, opens through contact" },
       shoulder: { min: 30, max: 80, ideal: 55, why: "Below shoulder, hip drives the rotation" },
     },
@@ -123,27 +123,27 @@ const IDEAL_ANGLES = {
       shoulder: { min: 30, max: 70, ideal: 50, why: "Close to the body, low setup" },
     },
     smash: {
-      label: "Smash — high-ball kill",
+      label: "Smash â€” high-ball kill",
       elbow: { min: 130, max: 170, ideal: 150, why: "Near-straight at contact, ball is well above table" },
       shoulder: { min: 80, max: 150, ideal: 120, why: "Reaches up to high ball, body weight forward" },
     },
     forehand_loop: {
-      label: "Forehand loop — heavy topspin",
+      label: "Forehand loop â€” heavy topspin",
       elbow: { min: 100, max: 155, ideal: 130, why: "Closed bat brushes up the back of the ball" },
       shoulder: { min: 30, max: 90, ideal: 60, why: "Legs and hip push the loop, not arm" },
     },
     backhand_flick: {
-      label: "Backhand flick — over the table",
+      label: "Backhand flick â€” over the table",
       elbow: { min: 70, max: 120, ideal: 95, why: "Wrist snap from above the ball" },
       shoulder: { min: 20, max: 70, ideal: 45, why: "Low body, racket comes up and forward" },
     },
     push: {
-      label: "Push — short backspin",
+      label: "Push â€” short backspin",
       elbow: { min: 110, max: 160, ideal: 135, why: "Open face slides under ball, soft hands" },
       shoulder: { min: 20, max: 70, ideal: 45, why: "Low arc just over net, compact" },
     },
     chop: {
-      label: "Chop — defensive backspin",
+      label: "Chop â€” defensive backspin",
       elbow: { min: 130, max: 175, ideal: 155, why: "Long carving stroke, racket finishes low" },
       shoulder: { min: 30, max: 90, ideal: 60, why: "Wait for ball to drop, slice under" },
     },
@@ -155,13 +155,13 @@ const IDEAL_ANGLES = {
   },
   cricket: {
     cover_drive: {
-      label: "Cover drive — front foot",
+      label: "Cover drive â€” front foot",
       elbow: { min: 120, max: 170, ideal: 150, why: "Top hand controls; bat face stays under ball" },
       shoulder: { min: 30, max: 90, ideal: 60, why: "Front shoulder points to where ball is going" },
       knee: { min: 90, max: 145, ideal: 120, why: "Front knee bent, weight on it" },
     },
     pull_shot: {
-      label: "Pull shot — back foot",
+      label: "Pull shot â€” back foot",
       elbow: { min: 90, max: 160, ideal: 130, why: "Bottom hand drives the horizontal bat" },
       shoulder: { min: 60, max: 120, ideal: 90, why: "Body opens up to leg side" },
     },
@@ -172,29 +172,29 @@ const IDEAL_ANGLES = {
       knee: { min: 90, max: 150, ideal: 125, why: "Front knee bent over front foot" },
     },
     fast_bowling: {
-      label: "Fast bowling — release",
-      elbow: { min: 155, max: 180, ideal: 175, why: "High-arm release at the very top of the action (laws allow ≤15° flexion)" },
+      label: "Fast bowling â€” release",
+      elbow: { min: 155, max: 180, ideal: 175, why: "High-arm release at the very top of the action (laws allow â‰¤15Â° flexion)" },
       shoulder: { min: 155, max: 180, ideal: 175, why: "Front arm pulls down as bowling arm comes over" },
       knee: { min: 150, max: 180, ideal: 170, why: "Braced front leg at release transfers momentum" },
     },
     spin_bowling: {
-      label: "Spin bowling — release",
+      label: "Spin bowling â€” release",
       elbow: { min: 120, max: 170, ideal: 150, why: "Wrist & finger work, arm comes over at controlled height" },
       shoulder: { min: 130, max: 175, ideal: 160, why: "Side-on action, arm comes over close to head" },
       knee: { min: 130, max: 175, ideal: 160, why: "Stable braced front leg" },
     },
     hook_shot: {
-      label: "Hook shot — short ball off back foot",
+      label: "Hook shot â€” short ball off back foot",
       elbow: { min: 80, max: 150, ideal: 120, why: "Cross-bat swing across the body to leg side" },
       shoulder: { min: 80, max: 140, ideal: 110, why: "Body rotates away from line of ball" },
     },
     cut_shot: {
-      label: "Cut shot — short wide ball",
+      label: "Cut shot â€” short wide ball",
       elbow: { min: 100, max: 165, ideal: 135, why: "Horizontal bat, ball under the eyes" },
       shoulder: { min: 40, max: 100, ideal: 70, why: "Open shoulders to off side" },
     },
     sweep_shot: {
-      label: "Sweep — front knee down",
+      label: "Sweep â€” front knee down",
       elbow: { min: 90, max: 150, ideal: 125, why: "Horizontal bat across the line of ball" },
       shoulder: { min: 30, max: 90, ideal: 60, why: "Low body, front shoulder dips" },
       knee: { min: 30, max: 90, ideal: 60, why: "Front knee bent + grounded behind front pad" },
@@ -205,7 +205,7 @@ const IDEAL_ANGLES = {
       shoulder: { min: 20, max: 70, ideal: 45, why: "Compact, head over ball" },
     },
     wicket_keeping: {
-      label: "Wicket keeping — gather",
+      label: "Wicket keeping â€” gather",
       elbow: { min: 60, max: 130, ideal: 95, why: "Soft give of the hands as ball arrives" },
       shoulder: { min: 20, max: 80, ideal: 50, why: "Low body, head still" },
       knee: { min: 40, max: 100, ideal: 70, why: "Deep squat position" },
@@ -213,22 +213,22 @@ const IDEAL_ANGLES = {
   },
   pickleball: {
     dink: {
-      label: "Dink — soft kitchen drop",
+      label: "Dink â€” soft kitchen drop",
       elbow: { min: 130, max: 170, ideal: 150, why: "Paddle face open, lift from the shoulder" },
       shoulder: { min: 30, max: 80, ideal: 55, why: "Below the chest, paddle in front of body" },
     },
     drive: {
-      label: "Drive — flat groundstroke",
+      label: "Drive â€” flat groundstroke",
       elbow: { min: 110, max: 155, ideal: 130, why: "Compact swing, paddle head LEADS contact" },
       shoulder: { min: 50, max: 100, ideal: 75, why: "Hip-to-shoulder level, body rotates" },
     },
     volley: {
-      label: "Volley — kitchen punch",
+      label: "Volley â€” kitchen punch",
       elbow: { min: 90, max: 140, ideal: 115, why: "Stab not swing, paddle head in front" },
       shoulder: { min: 40, max: 100, ideal: 70, why: "Knees bent, paddle out in front" },
     },
     serve: {
-      label: "Serve — underhand",
+      label: "Serve â€” underhand",
       elbow: { min: 130, max: 175, ideal: 155, why: "Below the waist contact, smooth swing" },
       shoulder: { min: 20, max: 70, ideal: 45, why: "Low-to-high pendulum motion" },
     },
@@ -240,7 +240,7 @@ const IDEAL_ANGLES = {
   },
   squash: {
     forehand_drive: {
-      label: "Forehand drive — straight rail",
+      label: "Forehand drive â€” straight rail",
       elbow: { min: 130, max: 175, ideal: 155, why: "Extended arm, racket head leads at contact" },
       shoulder: { min: 50, max: 120, ideal: 85, why: "Side-on stance, big shoulder turn" },
     },
@@ -260,20 +260,20 @@ const IDEAL_ANGLES = {
       shoulder: { min: 60, max: 120, ideal: 90, why: "Punch motion, no backswing" },
     },
     boast: {
-      label: "Boast — angle off side wall",
+      label: "Boast â€” angle off side wall",
       elbow: { min: 130, max: 175, ideal: 155, why: "Open face cuts across the ball" },
       shoulder: { min: 50, max: 110, ideal: 80, why: "Square hips to side wall, slice angle" },
     },
   },
   golf: {
     full_swing: {
-      label: "Full swing — driver / long iron at impact",
+      label: "Full swing â€” driver / long iron at impact",
       elbow: { min: 160, max: 180, ideal: 175, why: "Lead arm straight at impact, trail elbow tucked" },
       shoulder: { min: 80, max: 130, ideal: 105, why: "Shoulders rotated through, trail shoulder lower" },
       knee: { min: 140, max: 175, ideal: 160, why: "Lead knee extending into the lead heel" },
     },
     iron_shot: {
-      label: "Iron shot — mid iron at impact",
+      label: "Iron shot â€” mid iron at impact",
       elbow: { min: 155, max: 180, ideal: 170, why: "Lead arm extended, hands ahead of ball" },
       shoulder: { min: 70, max: 120, ideal: 95, why: "Body covers the ball, shaft leans forward" },
       knee: { min: 130, max: 170, ideal: 155, why: "Athletic flex, weight shifted to lead side" },
@@ -296,13 +296,13 @@ const IDEAL_ANGLES = {
   },
   basketball: {
     jump_shot: {
-      label: "Jump shot — release",
+      label: "Jump shot â€” release",
       elbow: { min: 75, max: 110, ideal: 90, why: "Shooting elbow under ball, L-shape at release" },
       shoulder: { min: 130, max: 175, ideal: 155, why: "Arm extends fully, hand finishes in the cookie jar" },
       knee: { min: 150, max: 180, ideal: 170, why: "Fully extended jump powers the shot" },
     },
     free_throw: {
-      label: "Free throw — release",
+      label: "Free throw â€” release",
       elbow: { min: 75, max: 105, ideal: 90, why: "Same L-shape mechanics, no jump" },
       shoulder: { min: 130, max: 175, ideal: 155, why: "Smooth extension to follow-through" },
       knee: { min: 150, max: 180, ideal: 170, why: "Slight rise from the legs into release" },
@@ -320,12 +320,12 @@ const IDEAL_ANGLES = {
   },
   volleyball: {
     spike: {
-      label: "Spike — attack hit",
+      label: "Spike â€” attack hit",
       elbow: { min: 155, max: 180, ideal: 175, why: "Arm fully extended at contact above net" },
       shoulder: { min: 160, max: 180, ideal: 175, why: "High-elbow draw and swing" },
     },
     serve: {
-      label: "Serve — float/jump",
+      label: "Serve â€” float/jump",
       elbow: { min: 150, max: 180, ideal: 170, why: "Straight arm contact behind the ball" },
       shoulder: { min: 155, max: 180, ideal: 175, why: "Reaching high, full body extension" },
     },
@@ -335,27 +335,27 @@ const IDEAL_ANGLES = {
       shoulder: { min: 80, max: 145, ideal: 115, why: "Push up and forward" },
     },
     dig: {
-      label: "Dig — defensive platform",
+      label: "Dig â€” defensive platform",
       elbow: { min: 150, max: 180, ideal: 170, why: "Locked-out arms create flat platform" },
       shoulder: { min: 10, max: 60, ideal: 30, why: "Low body, platform in front" },
     },
   },
   baseball: {
     pitching: {
-      label: "Pitching — release",
-      elbow: { min: 140, max: 175, ideal: 160, why: "Pronation at release, ~90° at front-foot strike then extends" },
+      label: "Pitching â€” release",
+      elbow: { min: 140, max: 175, ideal: 160, why: "Pronation at release, ~90Â° at front-foot strike then extends" },
       shoulder: { min: 160, max: 180, ideal: 175, why: "Lay-back into release, full extension" },
       knee: { min: 140, max: 180, ideal: 170, why: "Front leg braces, drives chest down over plant" },
     },
     batting_swing: {
-      label: "Batting swing — contact",
+      label: "Batting swing â€” contact",
       elbow: { min: 130, max: 175, ideal: 155, why: "Lead arm extending, top arm in palm-up position" },
       shoulder: { min: 60, max: 110, ideal: 85, why: "Shoulders rotate through contact" },
     },
   },
 };
 
-// Aliases — Gemini's freeform shot names mapped onto the canonical
+// Aliases â€” Gemini's freeform shot names mapped onto the canonical
 // keys above. Matched LAST so direct hits + word-boundary matches win
 // first. Extend liberally as we observe new VLM outputs.
 const SHOT_ALIASES = {
@@ -368,7 +368,7 @@ const SHOT_ALIASES = {
     seam_bowling: "fast_bowling",
     pace_bowling: "fast_bowling",
     spin_delivery: "spin_bowling",
-    drive: "cover_drive",          // generic drive → cover drive default
+    drive: "cover_drive",          // generic drive â†’ cover drive default
     off_drive: "cover_drive",
     on_drive: "straight_drive",
     forward_defense: "defensive_block",
@@ -511,7 +511,7 @@ function getIdealAngles(sport, shotType) {
   const aliased = SHOT_ALIASES[s]?.[t];
   if (aliased && sportMap[aliased]) return sportMap[aliased];
 
-  // 3. Word-boundary match. "drive" → "cover_drive" only if "drive" is a
+  // 3. Word-boundary match. "drive" â†’ "cover_drive" only if "drive" is a
   // whole token in the key. Prevents "forehand_swing" matching "swing"
   // OR "drive" picking "cover_drive" arbitrarily across sports.
   const tTokens = new Set(t.split("_").filter(Boolean));
@@ -525,7 +525,7 @@ function getIdealAngles(sport, shotType) {
       bestKey = key;
     }
   }
-  // Require ≥2 token overlap OR ≥1 if the candidate has only 1 token,
+  // Require â‰¥2 token overlap OR â‰¥1 if the candidate has only 1 token,
   // otherwise we're back to generic substring guessing.
   if (bestKey) {
     const kTokens = bestKey.split("_").filter(Boolean);
@@ -538,7 +538,7 @@ function getIdealAngles(sport, shotType) {
 
 
 /**
- * Pick which side (left or right) is the "racket arm" — heuristic:
+ * Pick which side (left or right) is the "racket arm" â€” heuristic:
  * the arm with the wrist HIGHER in the frame at contact (smaller y).
  * For non-overhead shots, the arm whose elbow is FURTHER from the
  * shoulder horizontally. Returns "left" or "right".
@@ -549,7 +549,7 @@ function detectRacketSide(kps) {
   if (!lw || !rw) return "right";
   if ((lw.score || 0) < 0.3 && (rw.score || 0) >= 0.3) return "right";
   if ((rw.score || 0) < 0.3 && (lw.score || 0) >= 0.3) return "left";
-  // Higher wrist (smaller y) wins — that's typically the racket-bearing arm
+  // Higher wrist (smaller y) wins â€” that's typically the racket-bearing arm
   return lw.y < rw.y ? "left" : "right";
 }
 
@@ -562,16 +562,16 @@ function angleAt(kps, sideName, joint) {
     const b = get(`${sideName}_elbow`);
     const c = get(`${sideName}_wrist`);
     if (!a || !b || !c) return null;
-    if ((a.score || 0) < 0.2 || (b.score || 0) < 0.2 || (c.score || 0) < 0.2) return null;
+    if ((a.score || 0) < 0.3 || (b.score || 0) < 0.3 || (c.score || 0) < 0.3) return null;
     return calculateAngle(a, b, c);
   }
   if (joint === "shoulder") {
-    // shoulder→elbow vs shoulder→hip axis (how high the upper arm is)
+    // shoulderâ†’elbow vs shoulderâ†’hip axis (how high the upper arm is)
     const sh = get(`${sideName}_shoulder`);
     const el = get(`${sideName}_elbow`);
     const hp = get(`${sideName}_hip`);
     if (!sh || !el || !hp) return null;
-    if ((sh.score || 0) < 0.2 || (el.score || 0) < 0.2 || (hp.score || 0) < 0.2) return null;
+    if ((sh.score || 0) < 0.3 || (el.score || 0) < 0.3 || (hp.score || 0) < 0.3) return null;
     return calculateAngle(hp, sh, el);
   }
   if (joint === "knee") {
@@ -579,7 +579,7 @@ function angleAt(kps, sideName, joint) {
     const k = get(`${sideName}_knee`);
     const a = get(`${sideName}_ankle`);
     if (!h || !k || !a) return null;
-    if ((h.score || 0) < 0.2 || (k.score || 0) < 0.2 || (a.score || 0) < 0.2) return null;
+    if ((h.score || 0) < 0.3 || (k.score || 0) < 0.3 || (a.score || 0) < 0.3) return null;
     return calculateAngle(h, k, a);
   }
   return null;
@@ -628,12 +628,37 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
   const racketSide = detectRacketSide(keypoints);
   const ideal = getIdealAngles(sport, shotType);
 
+  // â”€â”€ Pose-reliability gate for overhead shots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Overhead shots (smash, clear, serve, overhead, spike, jump shot, bowling
+  // â€¦) have a high ideal shoulder elevation. At contact the racket wrist
+  // MUST sit at or above the shoulder. When MoveNet says otherwise â€” common
+  // on multi-person frames, motion-blurred overhead arms, or an arm partway
+  // out of the crop â€” the arm keypoints are mis-detected and ANY angle they
+  // produce is garbage (the "55Â° Â· Off" on a clearly-overhead smash bug).
+  // In that case we DROP the arm measurements rather than flag good
+  // technique as a fault.
+  const isOverhead = !!(ideal?.shoulder && ideal.shoulder.ideal >= 150);
+  const rWristK = getKeypointByName(keypoints, `${racketSide}_wrist`);
+  const rShoulderK = getKeypointByName(keypoints, `${racketSide}_shoulder`);
+  const armReliable = !isOverhead || !!(
+    rWristK && rShoulderK
+    && (rWristK.score || 0) > 0.3 && (rShoulderK.score || 0) > 0.3
+    // y grows downward; wrist must be at/above shoulder (small tolerance).
+    && rWristK.y < rShoulderK.y + (img.height * 0.04)
+  );
+
   // Measure angles on the racket side
   const measurements = [];
   for (const joint of ["elbow", "shoulder", "knee"]) {
+    // Arm joints suppressed when the overhead pose check failed.
+    if (!armReliable && (joint === "elbow" || joint === "shoulder")) continue;
     const value = angleAt(keypoints, racketSide, joint);
     if (value == null) continue;
     const range = ideal?.[joint];
+    // Gross-contradiction guard: a high-ideal joint (overhead arm) measuring
+    // far BELOW its range is a detection failure, not a coaching fault â€” skip
+    // it instead of rendering a misleading "Off".
+    if (range && range.ideal >= 150 && value < range.min - 40) continue;
     let status = "neutral";
     let delta = null;
     if (range) {
@@ -676,7 +701,7 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
     ctx.stroke();
   }
 
-  // Then dots — color-coded for the measured joints on the racket side
+  // Then dots â€” color-coded for the measured joints on the racket side
   const racketJointMap = {
     [`${racketSide}_elbow`]: measurements.find((m) => m.joint === "elbow")?.status,
     [`${racketSide}_shoulder`]: measurements.find((m) => m.joint === "shoulder")?.status,

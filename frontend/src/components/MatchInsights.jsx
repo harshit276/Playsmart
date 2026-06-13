@@ -220,6 +220,12 @@ export default function MatchInsights({
   // per-shot detail + pose extraction + video player + improvement
   // cards + drill recs still render as usual.
   hideOverviewBlocks = false,
+  // Guest conversion gate: when true, the deep per-shot coaching breakdown
+  // is blurred behind a "sign in free to unlock" overlay. The session
+  // verdict, metrics, and overview stay visible so guests still get the
+  // "wow" — they just can't read the shot-by-shot fixes without an account.
+  lockDetail = false,
+  onUnlock = null,
 }) {
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -878,8 +884,26 @@ export default function MatchInsights({
           <AutoProReferencePanel perShot={perShot} sport={sport} videoFile={videoFile} />
 
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
-            <div id="analysis-section-shot-analysis" className="scroll-mt-24">
+            <div id="analysis-section-shot-analysis" className="scroll-mt-24 relative">
               <PerShotCoachSection perShot={perShot} sport={sport} />
+              {lockDetail && (
+                <div className="absolute inset-0 z-10 flex items-end justify-center"
+                  style={{ backdropFilter: "blur(7px)", WebkitBackdropFilter: "blur(7px)",
+                    background: "linear-gradient(to bottom, rgba(9,9,11,0.35) 0%, rgba(9,9,11,0.82) 60%)" }}>
+                  <div className="text-center px-5 pb-8 max-w-sm">
+                    <div className="text-3xl mb-2">🔒</div>
+                    <p className="text-white font-bold text-base mb-1">Unlock your full shot-by-shot breakdown</p>
+                    <p className="text-zinc-300 text-[13px] leading-snug mb-3">
+                      See the priority fix on every shot, jump-to-video, and download your
+                      coach report — free with an account (300 tokens to start).
+                    </p>
+                    <button onClick={() => onUnlock?.()}
+                      className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6 h-11 text-sm">
+                      Sign in free to unlock →
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

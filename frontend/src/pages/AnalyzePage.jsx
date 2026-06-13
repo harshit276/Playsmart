@@ -416,6 +416,10 @@ export default function AnalyzePage() {
   const [insufficientBalance, setInsufficientBalance] = useState(0);
   const [showGuestUpgrade, setShowGuestUpgrade] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  // Coach Report download prompt — auto-opens once when a fresh analysis
+  // finishes. Guests are routed to sign-in (the report is a logged-in perk).
+  const [reportPromptOpen, setReportPromptOpen] = useState(false);
+  const reportPromptedRef = useRef(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isGuest = !user?.id;
@@ -821,6 +825,34 @@ export default function AnalyzePage() {
   // from the explicit "Notify me" button), then register a Web Push
   // subscription so we can ping the user even when the tab is closed / phone
   // locked. Fire-and-forget — never blocks the flow.
+  // Coach Report download — gated behind login (the report is the
+  // take-home artifact that justifies an account). Guests are routed to
+  // sign-up; logged-in users get the print-to-PDF report.
+  const handleDownloadReport = useCallback(async () => {
+    if (isGuest) { setReportPromptOpen(false); navigate("/auth"); return; }
+    try {
+      const m = await import("@/lib/coachReport");
+      const ok = m.openCoachReport(result, { playerName: user?.name || profile?.name || "Player" });
+      if (!ok) toast.error("Allow pop-ups to download the Coach Report.");
+      else setReportPromptOpen(false);
+    } catch {
+      toast.error("Couldn't generate the report — please try again.");
+    }
+  }, [isGuest, navigate, result, user, profile]);
+
+  // Auto-open the report prompt once per fresh analysis (not on history
+  // views or re-renders). The ref keys on analysis_id so it fires exactly
+  // once per result.
+  useEffect(() => {
+    if (!result?.success || viewingHistorical) return;
+    if (!(result.shots?.length > 0)) return;
+    const key = result.analysis_id || result.quick_summary?.slice(0, 40) || "fresh";
+    if (reportPromptedRef.current === key) return;
+    reportPromptedRef.current = key;
+    const t = setTimeout(() => setReportPromptOpen(true), 1800);
+    return () => clearTimeout(t);
+  }, [result, viewingHistorical]);
+
   const requestAnalysisNotifyPermission = useCallback(() => {
     (async () => {
       try {
@@ -3812,6 +3844,29 @@ export default function AnalyzePage() {
           <AnalysisQuickNav sections={analysisScrollerSections} />
         )}
 
+        {/* Coach Report — top CTA. The take-home artifact, surfaced
+            immediately so users (and coaches/academies) grab it. Guests
+            are routed to sign-in via handleDownloadReport. */}
+        {result?.shots?.length > 0 && (
+          <button
+            onClick={handleDownloadReport}
+            className="w-full flex items-center justify-between gap-3 bg-gradient-to-r from-amber-400/12 to-lime-400/12 border border-amber-400/40 rounded-2xl px-4 py-3 hover:from-amber-400/20 hover:to-lime-400/20 transition-colors text-left"
+          >
+            <span className="flex items-center gap-3 min-w-0">
+              <span className="text-2xl shrink-0">📄</span>
+              <span className="min-w-0">
+                <span className="block text-white font-bold text-sm leading-tight">Download your Coach Report</span>
+                <span className="block text-zinc-400 text-[11px] leading-tight truncate">
+                  {isGuest ? "Sign in free — printable PDF you can take to the court" : "Printable PDF: verdict, priority fixes, shot-by-shot table"}
+                </span>
+              </span>
+            </span>
+            <span className="shrink-0 bg-amber-400 text-black font-bold text-xs rounded-full px-3.5 h-9 flex items-center">
+              {isGuest ? "Sign in" : "Get PDF"}
+            </span>
+          </button>
+        )}
+
         {/* Progress comparison — rich multi-section card surfaced after a
             Reanalyze flow. Sections: hero deltas, AI-coach visual verdict,
             drill attribution (did the focus areas improve?), narrative. */}
@@ -4469,6 +4524,11 @@ export default function AnalyzePage() {
             // match-metrics row. Hide them inside MatchInsights so
             // users don't see the same content twice.
             hideOverviewBlocks={!!result._universal}
+            // Guests get the verdict + metrics free, but the deep
+            // shot-by-shot breakdown is blurred behind a sign-in gate.
+            // Never lock historical views (those are already the user's own).
+            lockDetail={isGuest && !viewingHistorical}
+            onUnlock={() => navigate("/auth")}
           />
         )}
 
@@ -5119,20 +5179,12 @@ export default function AnalyzePage() {
             <Share2 className="w-4 h-4 mr-2" /> Share Results
           </Button>
           <Button
-            onClick={async () => {
-              try {
-                const m = await import("@/lib/coachReport");
-                const ok = m.openCoachReport(result, { playerName: user?.name || profile?.name || "Player" });
-                if (!ok) toast.error("Allow pop-ups to download the Coach Report.");
-              } catch {
-                toast.error("Couldn't generate the report — please try again.");
-              }
-            }}
+            onClick={handleDownloadReport}
             className="flex-1 bg-zinc-900/80 border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 font-bold rounded-2xl h-12 min-h-[44px]"
             variant="outline"
             title="A print-ready coach report — save it as PDF from the print dialog"
           >
-            📄 Coach Report (PDF)
+            📄 {isGuest ? "Coach Report (sign in)" : "Coach Report (PDF)"}
           </Button>
           <Button onClick={() => { clearFile(); setActiveTab("upload"); setAnalysisMode(null); }}
             className="flex-1 bg-zinc-900/80 border border-zinc-800 text-zinc-300 hover:border-lime-400/30 hover:text-lime-400 rounded-2xl h-12 min-h-[44px]"
@@ -5790,6 +5842,35 @@ export default function AnalyzePage() {
 
       {/* Guest upgrade prompt — shown after the free analysis completes
           and on the second guest analyze attempt. */}
+      {/* Coach Report ready — auto-popup after a fresh analysis. The
+          take-home artifact; for guests it's the sign-in hook. */}
+      {reportPromptOpen && result && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setReportPromptOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()}
+            className="bg-gradient-to-br from-amber-400/10 via-zinc-900 to-zinc-950 border border-amber-400/30 rounded-3xl p-6 sm:p-7 max-w-md w-full text-center relative">
+            <div className="text-5xl mb-3">📄</div>
+            <h2 className="font-heading font-black text-2xl text-white uppercase tracking-tight mb-2">
+              Your Coach Report is ready
+            </h2>
+            <p className="text-zinc-300 text-sm mb-5 leading-relaxed">
+              {isGuest
+                ? "A printable PDF with your session verdict, priority fixes in order, and a shot-by-shot table. Sign in free to download it (300 tokens to start)."
+                : "A printable PDF you can take to the court or share with your coach — session verdict, priority fixes in order, and a shot-by-shot table."}
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleDownloadReport}
+                className="w-full bg-amber-400 text-black hover:bg-amber-500 font-bold rounded-full h-11">
+                {isGuest ? "Sign in to download →" : "Download PDF →"}
+              </Button>
+              <button onClick={() => setReportPromptOpen(false)}
+                className="text-xs text-zinc-500 hover:text-zinc-300">
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showGuestUpgrade && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={() => setShowGuestUpgrade(false)}>
