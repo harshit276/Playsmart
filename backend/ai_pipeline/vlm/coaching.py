@@ -1319,6 +1319,14 @@ def _build_universal_prompt(
         "AND the same shot_category AND clearly from the same player, "
         "they are almost certainly the same physical motion — merge them "
         "into one entry at the contact moment.\n"
+        "NEVER emit the same contact twice. A player physically cannot "
+        "repeat the SAME shot category within ~1 second — the ball/"
+        "shuttle has to travel away and come back first. So two entries "
+        "with the same shot_category less than 1s apart are a DUPLICATE of "
+        "one contact: keep only one. In doubles, if you are unsure which "
+        "of two near-court players hit a contact, emit it ONCE with your "
+        "best-guess role — do not log the same contact under both 'you' "
+        "and 'partner'.\n"
         "\n"
         "ANTI-UNDERCOUNT RULE — equally important: do NOT collapse "
         "SEPARATE attempts into one event. If the athlete performs the "
@@ -1912,6 +1920,46 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
     }
 
 
+def _dedupe_events(events: list) -> list:
+    """Collapse near-duplicate events that describe the SAME physical contact
+    counted twice. Gemini occasionally emits a shot's windup and its impact
+    as two entries, or — in doubles — logs one contact under two player
+    roles when it can't tell the two near-court players apart. The prompt's
+    merge rule catches most of it, but isn't reliable, so this is the
+    guarantee.
+
+    A real player cannot repeat the SAME shot category within ~0.8s (the
+    ball/shuttle has to travel away and back — 1s+ even in fast doubles), so:
+      • same shot_category + same player_role within 0.8s  → duplicate
+      • same shot_category + ANY role within 0.45s          → duplicate
+        (one physical contact can't be two different players that fast)
+    Genuinely distinct shots (different category, or far enough apart) are
+    preserved. Keeps the higher-confidence entry of each duplicate pair.
+    """
+    if not events or len(events) < 2:
+        return events
+    ordered = sorted(events, key=lambda e: e.get("timestamp_sec", 0.0) or 0.0)
+    kept: list = []
+    for ev in ordered:
+        cat = ev.get("shot_category")
+        role = ev.get("player_role", "you")
+        ts = ev.get("timestamp_sec", 0.0) or 0.0
+        dup_at = None
+        for i, k in enumerate(kept):
+            if k.get("shot_category") != cat:
+                continue
+            dt = abs((k.get("timestamp_sec", 0.0) or 0.0) - ts)
+            same_role = (k.get("player_role", "you") == role)
+            if (same_role and dt <= 0.8) or (dt <= 0.45):
+                dup_at = i
+                break
+        if dup_at is None:
+            kept.append(ev)
+        elif (ev.get("confidence", 0) or 0) > (kept[dup_at].get("confidence", 0) or 0):
+            kept[dup_at] = ev  # keep the more confident read of this contact
+    return kept
+
+
 def _get_sport_vocab(detected_sport: str) -> list:
     try:
         from .prompts import SHOT_VOCAB  # type: ignore
@@ -2113,6 +2161,12 @@ def analyze_video_universal(
             "player_role": role_raw,
         })
     raw_events_total = len(data.get("events") or [])
+    # Collapse same-contact duplicates (Gemini double-emitting one shot).
+    _pre_dedup = len(events_out)
+    events_out = _dedupe_events(events_out)
+    _dupes_removed = _pre_dedup - len(events_out)
+    if _dupes_removed:
+        _log.info("[universal] deduped %d duplicate contact(s)", _dupes_removed)
 
     # Post-Gemini diagnostic — pairs with the pre-call log so we can
     # tell whether under-counting came from Gemini emitting few events
@@ -2181,6 +2235,7 @@ def analyze_video_universal(
             "raw_event_count": raw_events_total,
             "filtered_event_count": len(events_out),
             "events_dropped": max(0, raw_events_total - len(events_out)),
+            "duplicate_contacts_removed": _dupes_removed,
             "target_player_description": target_player_description,
             # Coverage sniff: highest timestamp Gemini emitted. If a 30s
             # clip comes back with ts_max=5.0 the model only saw the
@@ -2426,6 +2481,10 @@ def stream_analyze_video_universal(
         norm = _normalize_universal_event(e, sport_vocab, target_player_description)
         if norm:
             events_out.append(norm)
+    # Collapse same-contact duplicates (see _dedupe_events). The streamed
+    # live badges may still show a transient duplicate, but the AUTHORITATIVE
+    # `complete` payload below carries the deduped list the UI renders.
+    events_out = _dedupe_events(events_out)
 
     # If incremental scanning missed everything, we still emit the full
     # batch here so the client renders something.
