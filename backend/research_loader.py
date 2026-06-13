@@ -132,9 +132,9 @@ def get_videos_for_skill(
 
     results = []
     for v in videos:
-        if level and v.get("level", "").lower() != level.lower():
+        if level and (v.get("level") or "").lower() != level.lower():
             continue
-        if content_type and v.get("content_type", "").lower() != content_type.lower():
+        if content_type and (v.get("content_type") or "").lower() != content_type.lower():
             continue
         results.append(v)
 
@@ -146,7 +146,7 @@ def get_all_videos(sport: str, level: Optional[str] = None) -> List[dict]:
     _load_all()
     videos = _videos_data.get(sport, {}).get("videos", [])
     if level:
-        videos = [v for v in videos if v.get("level", "").lower() == level.lower()]
+        videos = [v for v in videos if (v.get("level") or "").lower() == level.lower()]
     return videos
 
 
@@ -200,7 +200,7 @@ def get_equipment_by_budget(
 
         # Level filter
         if level:
-            item_level = item.get("level", "").lower()
+            item_level = (item.get("level") or "").lower()
             if item_level and item_level != level.lower():
                 continue
 
@@ -274,7 +274,7 @@ def get_drills_for_issues(sport: str, issues_list: List[str]) -> List[dict]:
             matched_fix = None
             for cm in skill.get("common_mistakes", []):
                 if isinstance(cm, dict):
-                    if issue_lower in cm.get("mistake", "").lower():
+                    if issue_lower in (cm.get("mistake") or "").lower():
                         mistake_match = True
                         matched_fix = cm
                         break
@@ -428,13 +428,18 @@ def get_videos_for_issues(
     # Score and sort
     def _score(v):
         s = 0
-        if prefer_hindi and v.get("language", "").lower() in ("hindi", "hindi/english"):
+        # NOTE: dict.get(k, default) returns the DEFAULT only when the key is
+        # ABSENT — a present-but-None value (common in the videos JSON) slips
+        # through, so `.get("language","").lower()` crashed on null language.
+        # `(... or "")` guards both the missing AND null cases. This crash
+        # 500'd the whole training-videos endpoint.
+        if prefer_hindi and (v.get("language") or "").lower() in ("hindi", "hindi/english"):
             s += 10
         if prefer_shorts and v.get("has_shorts"):
             s += 5
         if prefer_shorts and v.get("content_type") == "shorts":
             s += 8
-        if level and v.get("level", "").lower() == level.lower():
+        if level and (v.get("level") or "").lower() == level.lower():
             s += 5
         return s
 
