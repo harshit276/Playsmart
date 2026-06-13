@@ -64,19 +64,21 @@ function _summarize(shots, opts = {}) {
              : avgConf >= 0.5 ? "Looks like"
              : "Best guess —";
 
-  // Build the "what" clause. Only name a single type when EVERY detected
-  // shot was that type (typedTotal === total) — otherwise the count and the
-  // type would disagree with the cards.
+  // Build the "what" clause — TYPE-focused, NO hard count. The raw event
+  // count is inherently noisy (doubles picks up the partner, Gemini over/
+  // under-detects fast exchanges), so a precise "7 shots" next to a clip
+  // where the player hit 2 reads as broken. We describe WHAT was played
+  // instead of HOW MANY; the per-shot cards below carry the detail.
   let what;
-  if (top && distinct === 1 && typedTotal === total) {
-    what = `${total} ${_titleCase(top[0]).toLowerCase()} ${total === 1 ? "shot" : "shots"}`;
+  if (top && distinct === 1) {
+    what = `your ${_titleCase(top[0]).toLowerCase()} technique`;
   } else if (top && distinct === 2) {
-    what = `${total} shots — mostly ${_titleCase(top[0]).toLowerCase()}s with some ${_titleCase(ranked[1][0]).toLowerCase()}s`;
+    what = `mostly ${_titleCase(top[0]).toLowerCase()}s with some ${_titleCase(ranked[1][0]).toLowerCase()}s`;
   } else if (top && distinct >= 3) {
     const named = ranked.slice(0, 3).map(([t]) => _titleCase(t).toLowerCase()).join(", ");
-    what = `${total} shots across ${distinct} types (${named})`;
+    what = `a mix of ${named}`;
   } else {
-    what = `${total} ${total === 1 ? "shot" : "shots"}`;
+    what = "your technique";
   }
 
   // Session-shape qualifier.
@@ -115,7 +117,7 @@ export default function SessionSummaryHero({ result, sport }) {
   // Build the spoken script — combines opener + top-2 shot-type read so
   // the user can audio-confirm the identification matches what they shot.
   const breakdownLine = data.ranked.length > 0
-    ? `Shot breakdown — ${data.ranked.slice(0, 3).map(([t, n]) => `${n} ${_titleCase(t).toLowerCase()}${n === 1 ? "" : "s"}`).join(", ")}.`
+    ? `You played ${data.ranked.slice(0, 3).map(([t]) => `${_titleCase(t).toLowerCase()}s`).join(", ")}.`
     : "";
   const speechScript = [data.opener, breakdownLine].filter(Boolean).join(" ");
 
@@ -162,14 +164,13 @@ export default function SessionSummaryHero({ result, sport }) {
           {data.ranked.length > 0 && (
             <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Identified shots:</span>
-              {data.ranked.slice(0, 5).map(([t, n]) => (
+              {data.ranked.slice(0, 5).map(([t]) => (
                 <span
                   key={t}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold rounded-full bg-zinc-800/80 border border-zinc-700 text-zinc-200 px-2 py-0.5"
-                  title={`${n} ${_titleCase(t).toLowerCase()} ${n === 1 ? "shot" : "shots"} detected`}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold rounded-full bg-zinc-800/80 border border-zinc-700 text-zinc-200 px-2 py-0.5 capitalize"
+                  title={`${_titleCase(t).toLowerCase()} detected`}
                 >
-                  <span className="capitalize">{_titleCase(t).toLowerCase()}</span>
-                  <span className="font-mono text-lime-300">×{n}</span>
+                  {_titleCase(t).toLowerCase()}
                 </span>
               ))}
               {data.distinct > 5 && (
