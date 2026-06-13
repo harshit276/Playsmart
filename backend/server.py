@@ -304,7 +304,10 @@ def _derive_profile_from_analyses(analyses: list, sport: str | None = None) -> d
         return None
     skills = [a.get("skill_level") for a in analyses if a.get("skill_level")]
     sports = [a.get("sport") for a in analyses if a.get("sport")]
-    skill_level = (_C(skills).most_common(1)[0][0] if skills else "Intermediate")
+    # analyses are date-desc, so analyses[0] is the MOST RECENT — prefer its
+    # skill level (reflects current ability) over the all-time mode, which
+    # dragged toward old/beginner sessions on a mixed history.
+    skill_level = (skills[0] if skills else "Intermediate")
     active_sport = (sport or (_C(sports).most_common(1)[0][0] if sports else "badminton"))
     # Normalise a Title-Cased sport label ("Table Tennis") to the key form.
     active_sport = str(active_sport).strip().lower().replace(" ", "_")
@@ -8718,6 +8721,15 @@ async def get_training_video_recommendations(user_id: str, sport: Optional[str] 
         if focus_issues:
             focus_skill_area = shot.get("shot_name", "Technique")
             focus_reason = f"Your latest analysis showed issues with {', '.join(focus_issues[:2])}"
+    # Fallback: when the latest analysis carried no explicit weaknesses (some
+    # universal-mode saves don't), use the profile's focus areas so training
+    # recs key off the user's actual issues instead of the generic
+    # "based on your skill level" line.
+    if not focus_issues:
+        prof_focus = [f for f in (profile.get("focus_areas") or []) if isinstance(f, str) and f.strip()]
+        if prof_focus:
+            focus_issues = prof_focus[:3]
+            focus_reason = f"Based on your recent sessions — working on {', '.join(focus_issues[:2])}"
 
     # Get today's focus videos
     today_videos = get_videos_for_issues(

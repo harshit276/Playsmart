@@ -1593,9 +1593,10 @@ export default function AnalyzePage() {
           // path analyzes the FULL video, so no windowing there.)
           try {
             const mbForWindow = file.size / 1024 / 1024;
-            // Only compress paths truncate; the 8-60MB original-upload path
-            // analyzes the full video and needs no windowing.
-            const willCompress = mbForWindow < 8 || mbForWindow > 60;
+            // Only the >60MB optimize path truncates to a window now; the
+            // 2-60MB original-upload path analyzes the FULL video, and tiny
+            // <2MB clips are short. So windowing applies only to >60MB.
+            const willCompress = mbForWindow > 60;
             if (willCompress) {
               // findBusiestWindow reads the duration itself (8s budget) and
               // short-circuits cheaply for clips that fit the window — a
@@ -1634,17 +1635,23 @@ export default function AnalyzePage() {
           // Cloudinary's 100MB cap, so there's no slow ffmpeg pre-pass and no
           // big-clip "too large" failure. Any error falls through to the
           // legacy inline-compress path below (no regression).
-          const DIRECT_UPLOAD_MIN_MB = 8;
-          // ── FASTEST big-clip path: ship the ORIGINAL via Cloudinary ──
-          // ONE upload, no "Optimizing" re-encode (which took duration/1.5s
-          // of wall time), exact timestamps (timeScale stays 1), full-res
-          // quality. NOTE: browsers CANNOT upload straight to Gemini's
-          // resumable endpoint — it sends no CORS headers, so that "direct"
-          // attempt uploaded all the bytes and then failed reading the
-          // response (live-QA confirmed). Cloudinary → /upload-video-url is
-          // the one browser-viable route; the server hands the bytes to
-          // Gemini. The 720p optimize chain below remains the fallback and
-          // the path for >60MB files where upload time dominates.
+          // 2MB floor (was 8): the on-device canvas/MediaRecorder
+          // compressor is lossy AND fragile — it chokes on some phone/
+          // WhatsApp codecs and threw "compression failed" on perfectly
+          // good 4-8MB clips (WhatsApp-saved videos land exactly here).
+          // Anything ≥2MB now uploads the ORIGINAL via Cloudinary→Files API:
+          // no re-encode, full quality, exact timestamps, and we simply
+          // TRUST WhatsApp's (already excellent) compression instead of
+          // redoing it. Only <2MB clips inline (their base64 fits Vercel's
+          // 4.5MB body cap and compressUnderSize skips them, so no encode).
+          const DIRECT_UPLOAD_MIN_MB = 2;
+          // ── FASTEST path: ship the ORIGINAL via Cloudinary ──
+          // ONE upload, no re-encode, exact timestamps (timeScale stays 1),
+          // full-res quality. NOTE: browsers CANNOT upload straight to
+          // Gemini's resumable endpoint (no CORS headers). Cloudinary →
+          // /upload-video-url is the one browser-viable route; the server
+          // hands the bytes to Gemini. >60MB still takes the 720p optimize
+          // chain below (upload time dominates there).
           if (origMbRaw >= DIRECT_UPLOAD_MIN_MB && origMbRaw <= 60) {
             try {
               setLoadingText("Uploading your video...");
