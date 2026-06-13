@@ -245,6 +245,113 @@ def _guest_default_profile():
     }
 
 
+async def _effective_profile(user_id: str, sport: str | None = None) -> dict:
+    """The profile to drive recommendations from.
+
+    Priority: explicit quiz profile → profile DERIVED from the user's analysis
+    history → guest default. Most users analyze videos but never take the
+    quiz, so without the derive step every recommender (equipment, training
+    videos) either 404'd or fell back to generic guest defaults — ignoring
+    the rich signal already sitting in their analyses. This makes the whole
+    recommendation surface personalized for analyze-only users.
+    """
+    prof = None
+    if user_id and user_id != "guest":
+        try:
+            prof = await asyncio.wait_for(
+                db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=3.0)
+        except (Exception, asyncio.TimeoutError):
+            prof = None
+    if prof:
+        if sport:
+            prof = {**prof, "active_sport": sport}
+        return prof
+    # No explicit profile — derive from recent analyses.
+    derived = None
+    if user_id and user_id != "guest":
+        try:
+            analyses = await asyncio.wait_for(
+                db.video_analyses.find(
+                    {"user_id": user_id},
+                    {"_id": 0, "sport": 1, "skill_level": 1, "shot_analysis": 1,
+                     "shots": 1, "date": 1},
+                ).sort("date", -1).limit(10).to_list(length=10),
+                timeout=3.0,
+            )
+        except (Exception, asyncio.TimeoutError):
+            analyses = []
+        if analyses:
+            derived = _derive_profile_from_analyses(analyses, sport)
+    if derived:
+        return derived
+    gp = _guest_default_profile()
+    if sport:
+        gp["active_sport"] = sport
+    return gp
+
+
+def _derive_profile_from_analyses(analyses: list, sport: str | None = None) -> dict | None:
+    """Build a recommendation profile from a user's recent analyses.
+
+    skill_level   = most-common per-analysis skill level
+    active_sport  = explicit param, else most-analyzed sport
+    play_style    = inferred from the attacking vs control shot mix
+    strengths / focus_areas = aggregated from shot_analysis
+    budget/injury = unknown from analyses → sensible defaults (Medium/none)
+    """
+    from collections import Counter as _C
+    if not analyses:
+        return None
+    skills = [a.get("skill_level") for a in analyses if a.get("skill_level")]
+    sports = [a.get("sport") for a in analyses if a.get("sport")]
+    skill_level = (_C(skills).most_common(1)[0][0] if skills else "Intermediate")
+    active_sport = (sport or (_C(sports).most_common(1)[0][0] if sports else "badminton"))
+    # Normalise a Title-Cased sport label ("Table Tennis") to the key form.
+    active_sport = str(active_sport).strip().lower().replace(" ", "_")
+
+    # Attacking vs control mix across all shots → play style.
+    _ATTACK = {"smash", "drive", "kill", "net_kill", "loop", "spike", "pull", "cut", "flick"}
+    _CONTROL = {"block", "push", "chop", "drop", "net_shot", "lift", "clear", "defense", "dink", "slice"}
+    atk = ctl = 0
+    strengths, weaknesses = [], []
+    for a in analyses:
+        for s in (a.get("shots") or []):
+            cat = str(s.get("shot_category") or s.get("type") or "").lower()
+            if any(k in cat for k in _ATTACK):
+                atk += 1
+            elif any(k in cat for k in _CONTROL):
+                ctl += 1
+        sa = a.get("shot_analysis") or {}
+        for w in (sa.get("weaknesses") or [])[:2]:
+            wt = w.get("issue") if isinstance(w, dict) else w
+            if isinstance(wt, str) and wt.strip() and wt not in weaknesses:
+                weaknesses.append(wt.strip())
+        for st in (sa.get("strengths") or [])[:2]:
+            stt = st.get("point") if isinstance(st, dict) else st
+            if isinstance(stt, str) and stt.strip() and stt not in strengths:
+                strengths.append(stt.strip())
+    if atk + ctl >= 3:
+        play_style = "Power" if atk >= ctl * 1.5 else "Control" if ctl >= atk * 1.5 else "All-round"
+    else:
+        play_style = "All-round"
+
+    return {
+        "user_id": (analyses[0] or {}).get("user_id", "derived"),
+        "selected_sports": [active_sport],
+        "active_sport": active_sport,
+        "skill_level": skill_level,
+        "play_style": play_style,
+        "playing_frequency": "1-2 days/week",
+        "budget_range": "Medium",
+        "injury_history": "none",
+        "primary_goal": "Improve technique",
+        "goals": ["Improve technique"],
+        "strengths": strengths[:3] or ["Versatile play style"],
+        "focus_areas": weaknesses[:3] or ["Shot consistency"],
+        "_derived_from_analyses": True,
+    }
+
+
 async def get_current_user_or_none(authorization: str = Header(None)):
     """Like get_current_user but returns None instead of raising for guests."""
     if not authorization or not authorization.startswith("Bearer "):
@@ -2143,14 +2250,10 @@ async def get_equipment_recommendations(
         if sport:
             profile["active_sport"] = sport
     else:
-        try:
-            profile = await asyncio.wait_for(db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=3.0)
-        except (Exception, asyncio.TimeoutError):
-            profile = None
-        if not profile:
-            profile = _guest_default_profile()
-            if sport:
-                profile["active_sport"] = sport
+        # Explicit quiz profile → profile DERIVED from analysis history →
+        # guest default. So an analyze-only user (no quiz) still gets recs
+        # tuned to their actual skill level + play style, not generic ones.
+        profile = await _effective_profile(user_id, sport)
 
     try:
         # Sport resolution: explicit param → profile's active_sport → default.
@@ -8578,9 +8681,10 @@ async def get_training_video_recommendations(user_id: str, sport: Optional[str] 
     user = await get_current_user_or_none(authorization)
     if not user:
         return {"videos": [], "weekly_plan": None, "skill_drills": []}
-    profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+    # Explicit profile → derived-from-analyses → guest default. Was a hard
+    # 404 when no quiz profile existed, so analyze-only users got NO training
+    # video recommendations at all despite having analysis history.
+    profile = await _effective_profile(user_id, sport)
 
     # Use explicit sport param first, then latest analysis sport, then profile active_sport
     if sport:
@@ -9832,7 +9936,10 @@ async def get_badges(user_id: str, authorization: str = Header(None)):
         return {"earned_badges": [], "all_badges": [], "total_earned": 0, "total_available": 0, "current_upload_streak": 0, "longest_upload_streak": 0}
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        # No profile yet (common for users who only analyze videos without
+        # taking the quiz) — return ALL badges as un-earned instead of a 404
+        # so the Badges tab renders the locked set rather than erroring.
+        profile = {}
 
     earned = profile.get("badges", [])
 
