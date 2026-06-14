@@ -17,23 +17,6 @@ from .backends import pick_backend
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
 
 
-def _premium_model_override() -> str:
-    """Resolve the model used for Premium-tier universal analyses.
-
-    Priority:
-      1. GEMINI_PREMIUM_MODEL — explicit override just for Premium tier.
-      2. GEMINI_MODEL — single env var that upgrades both Standard and
-         Premium together. Set this on Vercel to e.g. 'gemini-3.1-pro'
-         and every analysis path picks it up.
-      3. 'gemini-2.5-pro' — historical default.
-    """
-    return (
-        os.getenv("GEMINI_PREMIUM_MODEL")
-        or os.getenv("GEMINI_MODEL")
-        or "gemini-2.5-pro"
-    ).strip() or "gemini-2.5-pro"
-
-
 def _thinking_budget_for(model_name: str, tier: str = "standard"):
     """Thinking-token budget for a Gemini call, or None to leave the API
     default (dynamic thinking).
@@ -2150,21 +2133,17 @@ def analyze_video_universal(
         (target_player_description or "")[:80],
     )
 
-    # Premium tier swaps Gemini Flash → a Pro model for sharper detection
-    # on noisy / fast-action / multi-shot clips. Costs more in tokens but
-    # typically catches every shot vs Flash sometimes missing.
-    # Model selection is env-driven so ops can ship a newer Pro model
-    # without code changes: GEMINI_PREMIUM_MODEL overrides specifically
-    # for premium tier; if unset, falls back to GEMINI_MODEL (so a single
-    # env-var change upgrades both tiers); final fallback is gemini-2.5-pro.
-    #
     # FAST MODE (short clips, ≤~15s, set by the frontend): a Flash model
     # with thinking disabled. Short single-drill clips don't need a Pro
     # model's depth, and Flash-no-thinking cuts the analysis wait roughly
     # in half — the single biggest contributor to "2 minutes for a 10s
     # clip". GEMINI_FAST_MODEL overrides the model; quality guardrail is
     # the clip-length cutoff at the caller, not anything here.
-    model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
+    # Pro-tier routing REMOVED (per product decision): Pro models are
+    # quota-blocked on the current key (429) and gemini-3.5-flash is reliable
+    # at finding shots, so EVERY tier uses the same Flash model (the
+    # GEMINI_MODEL default). `tier` now only affects token accounting.
+    model_override = None
     if fast_mode:
         model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
                           or "gemini-3.5-flash")
@@ -2484,7 +2463,11 @@ def stream_analyze_video_universal(
     sys_prompt, user_msg = _build_universal_prompt(
         target_player_description, doubles_mode=doubles_mode,
         previous_session_focus=previous_session_focus)
-    model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
+    # Pro-tier routing REMOVED (per product decision): Pro models are
+    # quota-blocked on the current key (429) and gemini-3.5-flash is reliable
+    # at finding shots, so EVERY tier uses the same Flash model (the
+    # GEMINI_MODEL default). `tier` now only affects token accounting.
+    model_override = None
     if fast_mode:
         # Short-clip fast path — see analyze_video_universal for rationale.
         model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
