@@ -1438,7 +1438,11 @@ export default function AnalyzePage() {
     }
     // Use detected sport when user picked Auto OR when detection disagrees
     // with the user's pick (with high confidence).
-    if (detected) {
+    // "other" = the pre-detector saw a non-racquet activity (gym/golf/etc.).
+    // It's a valid picker hint but NOT a usable sport label for downstream
+    // recommendations/history — let the full analysis (Gemini Step 1) name
+    // the real sport, and leave sportToAnalyze on its fallback for now.
+    if (detected && detected.sport !== "other") {
       if (selectedSport === "auto" || !selectedSport) {
         sportToAnalyze = detected.sport;
       } else if (detected.sport !== selectedSport && detected.confidence >= 0.75) {

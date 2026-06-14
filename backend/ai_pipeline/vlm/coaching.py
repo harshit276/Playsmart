@@ -2790,37 +2790,49 @@ def describe_players_in_video(
 
 
 def detect_sport(frames_jpeg: list[bytes], backend: str = "auto") -> dict:
-    """Quick VLM call: which of our 5 sports is this video?
+    """Quick VLM call: which sport/activity is this video?
 
     Send 1-2 keyframes, get back the sport name + confidence. ~$0.0001 per call.
+    This is only a lightweight PRE-detector for the picker UI hint — the
+    authoritative sport ID happens inside the full universal analysis
+    (Gemini's Step 1 on the whole clip). It is intentionally honest: if the
+    clip is NOT one of our curated racquet sports, it returns "other" rather
+    than force-fitting it to badminton (which used to mislabel gym/golf/etc.
+    as "badminton" in the picker).
     Returns: {sport, confidence, _meta}.
     """
     if not frames_jpeg:
-        return {"sport": "badminton", "confidence": 0.0, "_meta": {"error": "no frames"}}
+        return {"sport": "other", "confidence": 0.0, "_meta": {"error": "no frames"}}
 
     sys_prompt = (
-        "Identify which racquet/bat sport is shown in these frames. "
-        f"Choose exactly one of: {', '.join(SUPPORTED_SPORTS)}. "
-        "Look for the playing surface, equipment (racket size, ball type, court markings), "
-        "and player stance.\n\n"
+        "Identify the sport or activity shown in these frames. "
+        f"If it is clearly one of these, return that exact name: "
+        f"{', '.join(SUPPORTED_SPORTS)}. "
+        "If it is ANY other activity (gym/strength workout, swimming, "
+        "running, cycling, golf, football, yoga, etc.) OR you genuinely "
+        "cannot tell, return \"other\" — do NOT force-fit it to a racquet "
+        "sport. Look at the playing surface, equipment and player stance.\n\n"
         "Respond with valid JSON only:\n"
-        '{"sport": "<one of the listed sports>", "confidence": <float 0-1>, "reasoning": "<one sentence>"}'
+        '{"sport": "<one of the listed sports, or \\"other\\">", '
+        '"confidence": <float 0-1>, "reasoning": "<one sentence naming what you see>"}'
     )
-    usr_msg = "Identify the sport in these keyframes."
+    usr_msg = "Identify the sport/activity in these keyframes."
 
     backend_obj = pick_backend(backend)
     try:
         raw = backend_obj.call(sys_prompt, usr_msg, frames_jpeg[:2])
     except Exception as exc:
-        return {"sport": "badminton", "confidence": 0.0,
+        return {"sport": "other", "confidence": 0.0,
                 "_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
 
     data = _parse_json_safe(raw)
-    sport = str(data.get("sport", "badminton")).lower().strip().replace(" ", "_")
+    sport = str(data.get("sport", "other")).lower().strip().replace(" ", "_")
+    # Fuzzy match a few well-known synonyms into our curated set; anything
+    # else falls through to "other" (NOT badminton — honest over confident).
+    synonyms = {"ping_pong": "table_tennis", "padel": "tennis"}
+    sport = synonyms.get(sport, sport)
     if sport not in SUPPORTED_SPORTS:
-        # Fuzzy match (e.g. "ping_pong" -> "table_tennis")
-        synonyms = {"ping_pong": "table_tennis", "padel": "tennis"}
-        sport = synonyms.get(sport, "badminton")
+        sport = "other"
     return {
         "sport": sport,
         "confidence": max(0.0, min(1.0, float(data.get("confidence", 0.5) or 0.5))),

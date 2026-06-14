@@ -34,6 +34,12 @@ export default function PlayerSelectionModal({
   const [hoveredIdx, setHoveredIdx] = useState(null);
   const [sportOverrideOpen, setSportOverrideOpen] = useState(false);
   const sportInfo = (detectedSport && SPORT_LABELS[detectedSport]) || null;
+  // "other" = the quick pre-detector saw a non-racquet activity (gym, golf,
+  // swimming…). We deliberately show an honest "another activity" note
+  // instead of a wrong "Badminton 50%" guess — the full AI analysis names
+  // the real sport. The override list (racquet sports) stays available in
+  // case it actually was one and the keyframe detector missed it.
+  const isOther = detectedSport === "other";
 
   // Pick the BEST frame: maximize (people_count × avg_confidence).
   // Earlier we picked purely by people count, which sometimes selected a
@@ -124,16 +130,27 @@ export default function PlayerSelectionModal({
           </p>
 
           {/* Detected sport — surfaces what the VLM thinks this video is so
-              the user can correct before the heavy analysis runs. */}
-          {sportInfo && (
+              the user can correct before the heavy analysis runs. For
+              non-racquet activities we show an honest "another activity"
+              note rather than a wrong racquet guess. */}
+          {(sportInfo || isOther) && (
             <div className="mb-4 bg-sky-400/5 border border-sky-400/30 rounded-lg px-3 py-2 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-lg">{sportInfo.icon}</span>
+                <span className="text-lg">{isOther ? "🎯" : sportInfo.icon}</span>
                 <div>
-                  <span className="text-zinc-200">Detected sport: </span>
-                  <span className="font-semibold text-sky-300">{sportInfo.label}</span>
-                  {detectedSportConfidence != null && (
-                    <span className="text-[10px] text-zinc-500 ml-2">{Math.round(detectedSportConfidence * 100)}% sure</span>
+                  {isOther ? (
+                    <>
+                      <span className="text-zinc-200">Looks like another activity</span>
+                      <span className="block text-[10px] text-zinc-500">Our AI will identify the exact sport during analysis</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-zinc-200">Detected sport: </span>
+                      <span className="font-semibold text-sky-300">{sportInfo.label}</span>
+                      {detectedSportConfidence != null && (
+                        <span className="text-[10px] text-zinc-500 ml-2">{Math.round(detectedSportConfidence * 100)}% sure</span>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
