@@ -90,6 +90,38 @@ def _normalize_video_mime(mime: str | None) -> str:
     return m if m in _GEMINI_VIDEO_MIMES else "video/mp4"
 
 
+# Gemini's DEFAULT safety thresholds over-block legitimate sports/fitness
+# footage — a close-up of someone doing push-ups or a contact sport can trip
+# the filter, which surfaces to the user as "no shots detected"
+# (block_reason). This is a coaching app analyzing human bodies in motion, so
+# we turn the category filters OFF for the analysis calls. (block_reason
+# OTHER, which is uncategorized, can't always be relaxed — but the common
+# category blocks can.)
+_SAFETY_CATEGORIES = (
+    "HARM_CATEGORY_HARASSMENT",
+    "HARM_CATEGORY_HATE_SPEECH",
+    "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+    "HARM_CATEGORY_DANGEROUS_CONTENT",
+)
+
+
+def _new_sdk_safety_settings(gt):
+    """Build BLOCK_NONE safety settings for the new google-genai SDK."""
+    out = []
+    for cat in _SAFETY_CATEGORIES:
+        try:
+            out.append(gt.SafetySetting(category=cat, threshold="BLOCK_NONE"))
+        except Exception:
+            # Unknown category on this SDK version — skip it, don't fail.
+            pass
+    return out or None
+
+
+def _legacy_safety_settings():
+    """BLOCK_NONE safety settings as a dict the legacy SDK accepts."""
+    return {c: "BLOCK_NONE" for c in _SAFETY_CATEGORIES}
+
+
 def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
                         video_bytes, mime_type: str, file_ref=None,
                         fps: float = 4.0, tier: str = "standard",
@@ -134,6 +166,7 @@ def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
         system_instruction=sys_prompt,
         temperature=0.0,
         response_mime_type="application/json",
+        safety_settings=_new_sdk_safety_settings(gt),
     )
     budget = _thinking_budget_for(model_name, tier)
     if budget is not None:
@@ -160,10 +193,14 @@ def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
         # (e.g. budget=0 on a Pro model). Strip the optional knobs and retry
         # once before giving up — never fail an analysis over a tuning flag.
         s = str(exc).lower()
-        if ("thinking" in s or "media_resolution" in s or "budget" in s) and (
-                "thinking_config" in cfg_kwargs or "media_resolution" in cfg_kwargs):
+        if ("thinking" in s or "media_resolution" in s or "budget" in s
+                or "safety" in s) and (
+                "thinking_config" in cfg_kwargs or "media_resolution" in cfg_kwargs
+                or "safety_settings" in cfg_kwargs):
             cfg_kwargs.pop("thinking_config", None)
             cfg_kwargs.pop("media_resolution", None)
+            if "safety" in s:
+                cfg_kwargs.pop("safety_settings", None)
             return _call(cfg_kwargs)
         raise
 
@@ -1036,6 +1073,7 @@ def analyze_video_full(
         resp = model.generate_content(
             parts,
             generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+            safety_settings=_legacy_safety_settings(),
         )
         raw = resp.text
     except Exception as exc:
@@ -2144,6 +2182,7 @@ def analyze_video_universal(
             resp = model.generate_content(
                 parts,
                 generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+                safety_settings=_legacy_safety_settings(),
             )
             raw = resp.text
     except Exception as exc:
@@ -2476,6 +2515,7 @@ def stream_analyze_video_universal(
                         "temperature": 0.0,
                         "response_mime_type": "application/json",
                     },
+                    safety_settings=_legacy_safety_settings(),
                 )
             except Exception as exc:
                 if _owns_ref and _file_ref is not None:
@@ -2736,6 +2776,7 @@ def describe_players_in_video(
             resp = model.generate_content(
                 parts,
                 generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
+                safety_settings=_legacy_safety_settings(),
             )
             raw = resp.text
         if _owns_ref and _file_ref is not None:

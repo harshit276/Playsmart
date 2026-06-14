@@ -58,8 +58,16 @@ async function compressIfNeeded(file, onProgress) {
 export async function uploadToCloudinary(videoFile, options = {}) {
   const { onProgress } = options;
 
+  // Step 0: portrait phone clips carry a rotation FLAG (the pixels are stored
+  // sideways). Gemini analyzes the raw pixels and ignores the flag, so a
+  // push-up reads as a "wall squat" etc. Re-encode rotated clips upright
+  // BEFORE upload so Gemini sees what the user sees. No-op for landscape /
+  // unrotated clips (returns the original), and never throws.
+  const { normalizeRotationIfNeeded } = await import("./videoRotation");
+  const uprightFile = await normalizeRotationIfNeeded(videoFile, onProgress);
+
   // Step 1: compress in-browser if the file is large
-  const fileToUpload = await compressIfNeeded(videoFile, onProgress);
+  const fileToUpload = await compressIfNeeded(uprightFile, onProgress);
 
   // Step 2: ask our backend for signed upload params
   onProgress?.({ percent: 22, message: "Preparing upload..." });
