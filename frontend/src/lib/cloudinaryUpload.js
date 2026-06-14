@@ -58,20 +58,28 @@ async function compressIfNeeded(file, onProgress) {
 export async function uploadToCloudinary(videoFile, options = {}) {
   const { onProgress } = options;
 
-  // Step 0: DETECT a rotation flag (portrait phone clips store sideways
-  // pixels + a flag). Gemini ignores the flag and analyzes the raw sideways
-  // pixels → push-up reads as "wall squat", "no shots". We do NOT re-encode
-  // on-device anymore (real-time MediaRecorder was slow + unreliable on iOS
-  // Safari) — instead we flag it so the backend fetches a Cloudinary
-  // rotation-baked derivative. Detection is a fast header parse (no decode).
-  let rotation = 0;
-  try {
-    const { getVideoRotationDegrees } = await import("./videoRotation");
-    rotation = await getVideoRotationDegrees(videoFile);
-  } catch { /* best-effort; default to no rotation */ }
+  const { getVideoRotationDegrees, downscaleForUpload } = await import("./videoRotation");
 
-  // Step 1: compress in-browser if the file is large
-  const fileToUpload = await compressIfNeeded(videoFile, onProgress);
+  // Step 0a: LARGE / 4K clips → downscale to ~720p on-device first. A 295MB
+  // 4K clip is over the 200MB backend cap and Gemini doesn't need 4K (720p
+  // detects shots identically). The canvas re-encode ALSO bakes in rotation,
+  // so a downscaled clip is already upright (rotated=false). Never throws.
+  let workFile = videoFile;
+  let rotation = 0;
+  const ds = await downscaleForUpload(videoFile, onProgress);
+  if (ds.downscaled) {
+    workFile = ds.file; // already upright + small
+  } else {
+    // Step 0b: not downscaled → DETECT the rotation flag so the backend can
+    // fetch a Cloudinary rotation-baked derivative (fast header parse, no
+    // decode; no on-device re-encode which was slow/fragile on iOS Safari).
+    try { rotation = await getVideoRotationDegrees(videoFile); }
+    catch { /* best-effort; default to no rotation */ }
+  }
+
+  // Step 1: compress in-browser if STILL large (ffmpeg path; rarely hit now
+  // that big clips are downscaled above).
+  const fileToUpload = await compressIfNeeded(workFile, onProgress);
 
   // Step 2: ask our backend for signed upload params
   onProgress?.({ percent: 22, message: "Preparing upload..." });

@@ -138,9 +138,13 @@ function _pickRecorderMime() {
  * @param {Object} [opts]
  * @param {(p:{percent:number,message:string})=>void} [opts.onProgress]
  * @param {number} [opts.maxSeconds=180] safety cap on clip length to process
+ * @param {number} [opts.maxDim] if set, downscale so the longer side ≤ maxDim
+ *   (e.g. 1280 for 720p) — shrinks large/4K clips before upload.
+ * @param {string} [opts.label] progress message text
  */
 export async function reencodeUpright(file, opts = {}) {
-  const { onProgress, maxSeconds = 180 } = opts;
+  const { onProgress, maxSeconds = 180, maxDim = 0,
+          label = "Rotating video to the right orientation…" } = opts;
   const mime = _pickRecorderMime();
   if (!mime || typeof MediaRecorder === "undefined") {
     throw new Error("MediaRecorder unsupported");
@@ -163,8 +167,16 @@ export async function reencodeUpright(file, opts = {}) {
     // rotation flag), so the canvas captures the upright orientation.
     const w = v.videoWidth, h = v.videoHeight;
     if (!w || !h) throw new Error("no video dimensions");
+    // Optional downscale: shrink the longer side to maxDim (keep aspect, even
+    // dims for H.264). 4K → 720p turns a 295MB clip into a few MB.
+    let cw = w, ch = h;
+    if (maxDim && Math.max(w, h) > maxDim) {
+      const s = maxDim / Math.max(w, h);
+      cw = Math.round((w * s) / 2) * 2;
+      ch = Math.round((h * s) / 2) * 2;
+    }
     const canvas = document.createElement("canvas");
-    canvas.width = w; canvas.height = h;
+    canvas.width = cw; canvas.height = ch;
     const ctx = canvas.getContext("2d", { willReadFrequently: false });
 
     const stream = canvas.captureStream(30);
@@ -173,15 +185,15 @@ export async function reencodeUpright(file, opts = {}) {
     rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
 
     const dur = Math.min(v.duration || maxSeconds, maxSeconds);
-    onProgress?.({ percent: 2, message: "Rotating video to the right orientation…" });
+    onProgress?.({ percent: 2, message: label });
     await v.play().catch(() => {});
     rec.start(500);
     await new Promise((res) => {
       const tick = () => {
-        ctx.drawImage(v, 0, 0, w, h);
+        ctx.drawImage(v, 0, 0, cw, ch);
         const t = v.currentTime || 0;
         if (onProgress && dur > 0) {
-          onProgress({ percent: 2 + Math.min(1, t / dur) * 16, message: "Rotating video to the right orientation…" });
+          onProgress({ percent: 2 + Math.min(1, t / dur) * 16, message: label });
         }
         if (v.ended || t >= dur) {
           try { rec.stop(); } catch { /* already stopped */ }
@@ -222,5 +234,48 @@ export async function normalizeRotationIfNeeded(file, onProgress) {
   } catch (e) {
     console.warn("[rotation] normalize failed, uploading original:", e?.message || e);
     return file;
+  }
+}
+
+// Read a video's DISPLAY dimensions (browser applies the rotation flag).
+async function _readDims(file) {
+  const v = document.createElement("video");
+  v.muted = true; v.preload = "metadata";
+  const url = URL.createObjectURL(file);
+  v.src = url;
+  try {
+    await new Promise((res, rej) => {
+      v.onloadedmetadata = res;
+      v.onerror = () => rej(new Error("metadata load failed"));
+    });
+    return { w: v.videoWidth, h: v.videoHeight };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Large/4K clips can't go through the app (over the 200MB backend cap, and
+ * Gemini doesn't need 4K — 720p detects shots identically; 4K→720p turned a
+ * 295MB clip into ~4MB with no loss in detection). If the clip is high-res
+ * (longer side > 1920) or very large (>150MB), re-encode it down to ~720p
+ * BEFORE upload. The canvas re-encode ALSO bakes in any rotation, so the
+ * result is already upright → caller sets rotated=false. Never throws.
+ *
+ * Returns { file, downscaled, rotationBaked }.
+ */
+export async function downscaleForUpload(file, onProgress) {
+  try {
+    const dims = await _readDims(file).catch(() => null);
+    const big = dims && Math.max(dims.w, dims.h) > 1920;
+    const huge = file.size > 150 * 1024 * 1024;
+    if (!big && !huge) return { file, downscaled: false, rotationBaked: false };
+    console.info(`[downscale] ${dims ? `${dims.w}x${dims.h}` : "?"} ${(file.size / 1024 / 1024).toFixed(0)}MB → 720p before upload`);
+    const out = await reencodeUpright(file, { onProgress, maxDim: 1280, label: "Optimizing a large video for upload…" });
+    console.info(`[downscale] done: ${(out.size / 1024 / 1024).toFixed(1)}MB ${out.type}`);
+    return { file: out, downscaled: true, rotationBaked: true };
+  } catch (e) {
+    console.warn("[downscale] failed, using original:", e?.message || e);
+    return { file, downscaled: false, rotationBaked: false };
   }
 }
