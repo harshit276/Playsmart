@@ -2167,7 +2167,7 @@ def analyze_video_universal(
     model_override = _premium_model_override() if (tier or "").lower() == "premium" else None
     if fast_mode:
         model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
-                          or "gemini-2.5-flash")
+                          or "gemini-3.5-flash")
     backend_obj = pick_backend(backend, model=model_override) if model_override else pick_backend(backend)
     _file_ref = None
     _owns_ref = False
@@ -2488,7 +2488,7 @@ def stream_analyze_video_universal(
     if fast_mode:
         # Short-clip fast path — see analyze_video_universal for rationale.
         model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
-                          or "gemini-2.5-flash")
+                          or "gemini-3.5-flash")
     backend_obj = (
         pick_backend(backend, model=model_override) if model_override
         else pick_backend(backend)

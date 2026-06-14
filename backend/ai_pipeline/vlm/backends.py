@@ -32,10 +32,12 @@ class GeminiBackend(VLMBackend):
     name = "gemini"
 
     def __init__(self, model: str | None = None):
-        # Google retired gemini-2.0-flash for new accounts. Current stable
-        # model is gemini-2.5-flash. Override via GEMINI_MODEL env var if you
-        # want flash-lite (cheaper) or pro (better, ~10x cost).
-        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        # Default is gemini-3.5-flash: in A/B tests on fast badminton clips it
+        # RELIABLY identified the smash (4/4 runs) where gemini-2.5-flash
+        # collapsed shots into "drives"/"clears" and dropped the smash. It's
+        # far cheaper than Pro and needs no Pro quota. Override via GEMINI_MODEL
+        # (e.g. flash-lite for cheaper, or a pro model for max accuracy).
+        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
         self._client = None
 
     def is_available(self) -> tuple[bool, str]:
