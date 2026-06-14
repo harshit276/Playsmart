@@ -1496,6 +1496,24 @@ const PRO_BENCHMARKS = {
   baseball:     { tempo: 1,   aggression: 30, variety: 3, recovery: 20 },
 };
 
+// Which metric SET to show. The racquet metrics (tempo as shots/min,
+// aggression %, FH/BH) are meaningless for a gym or running clip, so we
+// branch the panel by the sport Gemini detected. Keyword-matched (the
+// detector returns free-form names like "Strength Training",
+// "Bodyweight Exercise", "Weightlifting").
+const _RACQUET_SPORTS = ["badminton", "tennis", "table_tennis", "ping_pong", "pickleball", "squash", "padel"];
+const _STRENGTH_SPORTS = ["weightlift", "strength", "gym", "workout", "calisthenic", "bodybuild", "crossfit", "bodyweight", "fitness", "powerlift"];
+const _CONTINUOUS_SPORTS = ["run", "jog", "sprint", "cycl", "swim", "row", "tread", "ellipt", "skip"];
+
+function _sportFamily(sport) {
+  const s = (sport || "").toLowerCase().replace(/\s+/g, "_");
+  if (!s) return "racquet"; // default keeps legacy behaviour for blank sport
+  if (_RACQUET_SPORTS.some((k) => s.includes(k))) return "racquet";
+  if (_STRENGTH_SPORTS.some((k) => s.includes(k))) return "strength";
+  if (_CONTINUOUS_SPORTS.some((k) => s.includes(k))) return "continuous";
+  return "other";
+}
+
 function _shotMatchesKeyword(shot, kws) {
   const t = ((shot.type || shot.label || shot.name || "") + "").toLowerCase();
   for (const k of kws) if (t.includes(k)) return true;
@@ -1543,11 +1561,19 @@ function computeMatchMetrics(perShot, durationSec, sport) {
   }
   const aggressionPct = N > 0 ? (attack / N) * 100 : 0;
 
-  // 3. Variety — distinct shot types in this session
-  const types = new Set(
-    perShot.map((s) => (s.type || s.label || "").toLowerCase()).filter(Boolean),
-  );
-  const varietyCount = types.size;
+  // 3. Variety — distinct shot/exercise types in this session, plus a
+  // per-type count breakdown (reliable: direct from the events). Used for
+  // the "reps per exercise" list in the strength panel.
+  const typeCounts = new Map();
+  for (const s of perShot) {
+    const t = (s.shot_category || s.type || s.label || "").toString().toLowerCase();
+    if (!t || t === "unknown") continue;
+    typeCounts.set(t, (typeCounts.get(t) || 0) + 1);
+  }
+  const byType = [...typeCounts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count);
+  const varietyCount = typeCounts.size;
 
   // 4. Recovery — avg seconds between consecutive shots
   const ts = perShot
@@ -1587,6 +1613,7 @@ function computeMatchMetrics(perShot, durationSec, sport) {
     tempo,
     aggressionPct, attackCount: attack, defenseCount: defense,
     varietyCount,
+    byType,
     recoveryAvg,
     forehandCount: fh, backhandCount: bh, sideTotal,
     trend,
@@ -1634,6 +1661,135 @@ const _CLIENT_VARIETY_SUGGESTIONS = {
   squash: "Add boasts, drops or volleys to round out the session.",
 };
 
+function _fmtDuration(sec) {
+  if (!sec || sec <= 0) return null;
+  const mm = Math.floor(sec / 60), ss = Math.round(sec % 60);
+  return mm > 0 ? `${mm}m ${ss}s` : `${ss}s`;
+}
+
+// Metrics panel for NON-racquet sports. Every tile is reliability-gated:
+// we only render a number we can stand behind (counts from the events,
+// timestamp-derived rates only with enough samples), and otherwise omit it
+// rather than print a shaky stat. Continuous sports stay deliberately
+// sparse — two solid metrics beat six padded ones.
+function NonRacquetMetricsPanel({ m, family, sportLc }) {
+  const tiles = [];
+  if (family === "strength") {
+    tiles.push({ label: "Reps", value: String(m.totalShots), unit: `total rep${m.totalShots === 1 ? "" : "s"}` });
+    tiles.push({ label: "Exercises", value: String(m.varietyCount), unit: `distinct exercise${m.varietyCount === 1 ? "" : "s"}` });
+    if (m.tempo != null) tiles.push({ label: "Pace", value: m.tempo.toFixed(1), unit: "reps/min" });
+    if (m.recoveryAvg != null) tiles.push({ label: "Per rep", value: `${m.recoveryAvg.toFixed(1)}s`, unit: "avg time/rep" });
+  } else if (family === "continuous") {
+    const dur = _fmtDuration(m.durationSec);
+    if (dur) tiles.push({ label: "Duration", value: dur, unit: "session length" });
+    if (m.tempo != null) tiles.push({ label: "Cadence", value: m.tempo.toFixed(1), unit: "cycles/min" });
+    if (m.varietyCount > 1) tiles.push({ label: "Phases", value: String(m.varietyCount), unit: "distinct phases" });
+  } else { // other skill sports (golf, bowling, …)
+    tiles.push({ label: "Attempts", value: String(m.totalShots), unit: `total attempt${m.totalShots === 1 ? "" : "s"}` });
+    if (m.varietyCount > 1) tiles.push({ label: "Types", value: String(m.varietyCount), unit: "distinct types" });
+    if (m.recoveryAvg != null) tiles.push({ label: "Pace", value: `${m.recoveryAvg.toFixed(1)}s`, unit: "between attempts" });
+  }
+  // Speed only when Gemini actually returned a sane estimate.
+  if (m.peakSpeed) tiles.push({ label: "Peak speed", value: String(Math.round(m.peakSpeed)), unit: "km/h" });
+
+  const cols = tiles.length >= 4 ? "sm:grid-cols-4"
+    : tiles.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2";
+  const showBreakdown = family === "strength" && (m.byType?.length || 0) > 1;
+  const curveLabel = family === "strength" ? "Form over time" : "Quality over time";
+
+  // Quality/form sparkline (same geometry as the racquet panel).
+  const sparkW = 280, sparkH = 60;
+  let sparkPath = null;
+  if (m.trend.length >= 2) {
+    const minT = m.trend[0].t;
+    const maxT = m.trend[m.trend.length - 1].t || (minT + 1);
+    const xs = (t) => ((t - minT) / Math.max(0.001, maxT - minT)) * sparkW;
+    const ys = (q) => sparkH - (q / 100) * sparkH;
+    sparkPath = m.trend.map((p, i) => `${i === 0 ? "M" : "L"}${xs(p.t).toFixed(1)},${ys(p.q).toFixed(1)}`).join(" ");
+  }
+
+  const familyLabel = family === "strength" ? "Strength session"
+    : family === "continuous" ? "Endurance session" : "Session";
+
+  return (
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1">
+          <TrendingUp className="w-3 h-3 text-lime-400" /> Session metrics
+        </p>
+        <p className="text-[10px] text-zinc-500">{sportLc ? `${sportLc.replace(/_/g, " ")}` : familyLabel}</p>
+      </div>
+
+      <div className={`grid grid-cols-2 ${cols} gap-2`}>
+        {tiles.map((t) => (
+          <div key={t.label} className="bg-zinc-800/40 rounded-lg p-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">{t.label}</p>
+            <p className="text-xl font-bold mt-0.5 text-white">{t.value}</p>
+            <p className="text-[10px] text-zinc-500">{t.unit}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Reps-per-exercise breakdown — direct counts from the events, fully
+          reliable. The most useful "what did I do" view for a gym session. */}
+      {showBreakdown && (
+        <div className="bg-zinc-800/40 rounded-lg p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1.5">Reps per exercise</p>
+          <div className="space-y-1">
+            {m.byType.slice(0, 8).map((e) => (
+              <div key={e.type} className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-zinc-300 capitalize truncate">{e.type.replace(/_/g, " ")}</span>
+                <span className="text-[11px] text-white font-mono">{e.count} rep{e.count === 1 ? "" : "s"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {family === "continuous" && (
+        <p className="text-[11px] text-zinc-500 leading-snug">
+          Endurance clips are best judged on form and pacing — see the coach
+          notes below for the detailed read.
+        </p>
+      )}
+
+      {/* Quality/form curve — fatigue indicator. For strength this shows
+          whether form held up across reps. */}
+      {m.trend.length >= 3 && (
+        <div className="bg-zinc-800/40 rounded-lg p-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">{curveLabel}</p>
+            {m.trend.length >= 4 && (() => {
+              const first = m.trend.slice(0, Math.ceil(m.trend.length / 2));
+              const last = m.trend.slice(Math.floor(m.trend.length / 2));
+              const avg = (arr) => arr.reduce((s, p) => s + p.q, 0) / arr.length;
+              const delta = avg(last) - avg(first);
+              const tone = delta >= 3 ? "text-lime-400" : delta <= -3 ? "text-red-400" : "text-zinc-400";
+              const label = delta >= 3 ? "↑ improving" : delta <= -3 ? "↓ form dropping" : "→ steady";
+              return <p className={`text-[10px] font-bold ${tone}`}>{label} ({delta >= 0 ? "+" : ""}{Math.round(delta)})</p>;
+            })()}
+          </div>
+          <svg viewBox={`0 0 ${sparkW} ${sparkH}`} className="w-full h-12">
+            <defs>
+              <linearGradient id="qFillNR" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#84cc16" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#84cc16" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {sparkPath && <path d={`${sparkPath} L${sparkW},${sparkH} L0,${sparkH} Z`} fill="url(#qFillNR)" />}
+            {sparkPath && <path d={sparkPath} fill="none" stroke="#84cc16" strokeWidth="1.5" />}
+          </svg>
+          <p className="text-[10px] text-zinc-500">
+            {family === "strength"
+              ? "Each dot is one rep's form quality. Downward slope late = form breaking down under fatigue."
+              : "Each dot is one segment's quality over the session."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MatchMetricsPanel({ perShot, durationSec, sport, sessionType, contextualBenchmarks }) {
   const m = useMemo(
     () => computeMatchMetrics(perShot, durationSec, sport),
@@ -1641,6 +1797,14 @@ function MatchMetricsPanel({ perShot, durationSec, sport, sessionType, contextua
   );
   if (!m) return null;
   const sportLc = (sport || "").toLowerCase();
+
+  // Non-racquet sports (gym/strength, running/cycling, golf, etc.) get a
+  // completely different, reliability-gated metric set — the racquet stats
+  // (shots/min, aggression %, FH/BH) are meaningless for them.
+  const family = _sportFamily(sport);
+  if (family !== "racquet") {
+    return <NonRacquetMetricsPanel m={m} family={family} sportLc={sportLc} />;
+  }
 
   // Prefer backend session_type, but compute one client-side as a
   // fallback so older cached analyses (no narrative payload) and the
