@@ -71,6 +71,25 @@ def _media_resolution_env():
     return None
 
 
+# Gemini's video decoder accepts a known set of mime hints. Phone uploads
+# (esp. iPhone .mov) often arrive as video/quicktime, and browsers tag webm
+# variants inconsistently — feeding those to the Files API / FileData part
+# could make the call fail and drop us into the (previously broken) legacy
+# fallback. Normalize anything we're unsure about to video/mp4, which Gemini
+# container-sniffs correctly regardless of the hint.
+_GEMINI_VIDEO_MIMES = {
+    "video/mp4", "video/mpeg", "video/mov", "video/avi",
+    "video/x-flv", "video/webm", "video/wmv", "video/3gpp",
+}
+
+
+def _normalize_video_mime(mime: str | None) -> str:
+    m = (mime or "").strip().lower()
+    if m == "video/quicktime":
+        return "video/mp4"          # iPhone .mov — Gemini reads it as mp4
+    return m if m in _GEMINI_VIDEO_MIMES else "video/mp4"
+
+
 def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
                         video_bytes, mime_type: str, file_ref=None,
                         fps: float = 4.0, tier: str = "standard",
@@ -97,14 +116,16 @@ def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
     meta = gt.VideoMetadata(fps=fps) if fps else None
     if file_ref is not None:
         uri = getattr(file_ref, "uri", None) or str(file_ref)
+        # Prefer the mime the file was actually registered with; fall back to
+        # the request mime. Normalize either way (quicktime → mp4, etc.).
+        fmime = _normalize_video_mime(getattr(file_ref, "mime_type", None) or mime_type)
         video_part = gt.Part(
-            file_data=gt.FileData(file_uri=uri,
-                                  mime_type=mime_type or "video/mp4"),
+            file_data=gt.FileData(file_uri=uri, mime_type=fmime),
             video_metadata=meta,
         )
     else:
         video_part = gt.Part(
-            inline_data=gt.Blob(mime_type=mime_type or "video/mp4",
+            inline_data=gt.Blob(mime_type=_normalize_video_mime(mime_type),
                                 data=video_bytes),
             video_metadata=meta,
         )
@@ -200,7 +221,7 @@ def files_api_upload(video_bytes: bytes, mime_type: str = "video/mp4",
         client = genai_new.Client(api_key=_os.environ["GEMINI_API_KEY"])
         f = client.files.upload(
             file=_io.BytesIO(video_bytes),
-            config=gt.UploadFileConfig(mime_type=mime_type or "video/mp4"),
+            config=gt.UploadFileConfig(mime_type=_normalize_video_mime(mime_type)),
         )
         deadline = _t.monotonic() + timeout_sec
         poll = 0.4
@@ -344,13 +365,24 @@ def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes,
     try:
         import google.generativeai as genai  # type: ignore
         if file_ref is not None:
-            # Files API path — pass the uploaded File handle OBJECT directly.
-            # This is the SDK's documented, reliable way to reference a file
-            # in generate_content. (An earlier attempt that hand-built a proto
-            # FileData Part with explicit fps VideoMetadata caused Gemini to
-            # return ZERO events for every large clip — it apparently didn't
-            # read the video from that part shape. The bare handle works; the
-            # only cost is fps defaults to Gemini's sampling instead of 4 fps.)
+            # Files API path. CRITICAL: file_ref is a NEW google-genai File
+            # object (files_api_get/upload use the new SDK first). Passing it
+            # straight to the LEGACY SDK's generate_content raises
+            # "Could not create `Blob`, expected `Blob`, `dict`..." — that was
+            # silently turning every new-SDK hiccup into a "no shots detected"
+            # for the user. Rebuild a legacy-native file_data part from the
+            # handle's uri/mime instead of handing over the foreign object.
+            uri = getattr(file_ref, "uri", None)
+            fmime = _normalize_video_mime(getattr(file_ref, "mime_type", None) or mime_type)
+            if uri:
+                try:
+                    part = genai.protos.Part(
+                        file_data=genai.protos.FileData(file_uri=uri, mime_type=fmime))
+                    return [{"text": sys_prompt}, {"text": user_msg}, part]
+                except Exception:
+                    return [{"text": sys_prompt}, {"text": user_msg},
+                            {"file_data": {"file_uri": uri, "mime_type": fmime}}]
+            # No uri (shouldn't happen) — last resort, the bare handle.
             return [{"text": sys_prompt}, {"text": user_msg}, file_ref]
         # SDK proto-based inline path (preferred — explicit VideoMetadata)
         try:
