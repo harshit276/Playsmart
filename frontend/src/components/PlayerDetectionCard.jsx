@@ -3,6 +3,7 @@ import {
   Sparkles, Flame, Navigation, Users,
   Star, ThumbsUp, AlertTriangle, Target, Gauge, BarChart3, Clock, Repeat,
 } from "lucide-react";
+import { sportFamily } from "@/lib/sportFamily";
 
 // PlayerDetectionCard — replaces the bare "Analyzing: …" universal-mode
 // banner with a rich, premium card that summarizes WHO we analyzed
@@ -66,17 +67,22 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
     : null;
   const confidencePct = avgConf !== null ? Math.round(avgConf * 100) : null;
 
-  // Count distinct shot types — used by the Variety match-metric tile.
-  // We no longer render the top-shot chips row, so we don't track
-  // per-type counts past `size`.
+  // Which metric set to show — racquet stats are meaningless for gym/run.
+  const family = sportFamily(sport || result.sport);
+
+  // Per-type counts — distinct count (Variety/Exercises tile) AND the
+  // occurrence count per type (the gym "reps per exercise" breakdown).
   const counts = new Map();
   for (const s of shots) {
-    const key = (s.type || s.shot_category || s.shot_type || s.name || "")
+    const key = (s.shot_category || s.type || s.shot_type || s.name || "")
       .toString()
       .toLowerCase()
       .trim();
-    if (key) counts.set(key, true);
+    if (key && key !== "unknown") counts.set(key, (counts.get(key) || 0) + 1);
   }
+  const byType = [...counts.entries()]
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count);
 
   // Movement-style summary — extract the FIRST sentence of
   // coach_narrative.intro (which the prompt encourages to lead with the
@@ -267,50 +273,88 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
     },
   ].filter(Boolean);
 
-  // Match-metrics row. Same gating: only shown when there's anything
-  // useful to say.
-  const matchMetricTiles = [
-    tempoShotsPerMin !== null && {
-      key: "tempo",
-      label: "Tempo",
-      value: `${tempoShotsPerMin}`,
-      sub: "shots / min",
-      icon: Gauge,
-      tone: "lime",
-    },
-    aggressionPct !== null && {
-      key: "aggression-metric",
-      label: "Aggression",
-      value: `${aggressionPct}%`,
-      sub: "attack shots",
-      icon: Flame,
-      tone: "amber",
-    },
-    distinctTypes > 0 && {
-      key: "variety",
-      label: "Variety",
-      value: String(distinctTypes),
-      sub: `distinct shot${distinctTypes === 1 ? "" : "s"}`,
-      icon: BarChart3,
-      tone: "sky",
-    },
-    avgRecoverySec !== null && {
-      key: "recovery-metric",
-      label: "Recovery",
-      value: `${avgRecoverySec}s`,
-      sub: "between shots",
-      icon: Clock,
-      tone: "purple",
-    },
-    sideTotal >= 2 && {
-      key: "fhbh",
-      label: "FH vs BH",
-      value: `${fhPct}% / ${bhPct}%`,
-      sub: `${fhCount} FH · ${bhCount} BH`,
-      icon: Navigation,
-      tone: "purple",
-    },
-  ].filter(Boolean);
+  // Match-metrics row. Reliability-gated: a tile only renders when we have
+  // enough signal to back it up; otherwise it's omitted (never "—"/"n/a").
+  // The SET depends on the sport family — racquet stats (shots/min,
+  // aggression %, FH/BH) are meaningless for gym/run, so those families get
+  // rep/pace metrics instead.
+  let matchMetricTiles;
+  if (family === "racquet") {
+    matchMetricTiles = [
+      tempoShotsPerMin !== null && {
+        key: "tempo", label: "Tempo", value: `${tempoShotsPerMin}`,
+        sub: "shots / min", icon: Gauge, tone: "lime",
+      },
+      aggressionPct !== null && {
+        key: "aggression-metric", label: "Aggression", value: `${aggressionPct}%`,
+        sub: "attack shots", icon: Flame, tone: "amber",
+      },
+      distinctTypes > 0 && {
+        key: "variety", label: "Variety", value: String(distinctTypes),
+        sub: `distinct shot${distinctTypes === 1 ? "" : "s"}`, icon: BarChart3, tone: "sky",
+      },
+      avgRecoverySec !== null && {
+        key: "recovery-metric", label: "Recovery", value: `${avgRecoverySec}s`,
+        sub: "between shots", icon: Clock, tone: "purple",
+      },
+      sideTotal >= 2 && {
+        key: "fhbh", label: "FH vs BH", value: `${fhPct}% / ${bhPct}%`,
+        sub: `${fhCount} FH · ${bhCount} BH`, icon: Navigation, tone: "purple",
+      },
+    ].filter(Boolean);
+  } else if (family === "strength") {
+    matchMetricTiles = [
+      total > 0 && {
+        key: "reps", label: "Reps", value: String(total),
+        sub: `total rep${total === 1 ? "" : "s"}`, icon: Repeat, tone: "lime",
+      },
+      distinctTypes > 0 && {
+        key: "exercises", label: "Exercises", value: String(distinctTypes),
+        sub: `distinct exercise${distinctTypes === 1 ? "" : "s"}`, icon: BarChart3, tone: "sky",
+      },
+      tempoShotsPerMin !== null && total >= 3 && {
+        key: "pace", label: "Pace", value: `${tempoShotsPerMin}`,
+        sub: "reps / min", icon: Gauge, tone: "lime",
+      },
+      avgRecoverySec !== null && {
+        key: "perrep", label: "Per rep", value: `${avgRecoverySec}s`,
+        sub: "avg time / rep", icon: Clock, tone: "purple",
+      },
+    ].filter(Boolean);
+  } else if (family === "continuous") {
+    const durLabel = durationSec
+      ? (durationSec >= 60 ? `${Math.floor(durationSec / 60)}m ${Math.round(durationSec % 60)}s` : `${Math.round(durationSec)}s`)
+      : null;
+    matchMetricTiles = [
+      durLabel && {
+        key: "duration", label: "Duration", value: durLabel,
+        sub: "session length", icon: Clock, tone: "sky",
+      },
+      tempoShotsPerMin !== null && total >= 3 && {
+        key: "cadence", label: "Cadence", value: `${tempoShotsPerMin}`,
+        sub: "cycles / min", icon: Gauge, tone: "lime",
+      },
+      distinctTypes > 1 && {
+        key: "phases", label: "Phases", value: String(distinctTypes),
+        sub: "distinct phases", icon: BarChart3, tone: "purple",
+      },
+    ].filter(Boolean);
+  } else { // other skill sports (golf, bowling, …)
+    matchMetricTiles = [
+      total > 0 && {
+        key: "attempts", label: "Attempts", value: String(total),
+        sub: `total attempt${total === 1 ? "" : "s"}`, icon: Repeat, tone: "lime",
+      },
+      distinctTypes > 1 && {
+        key: "types", label: "Types", value: String(distinctTypes),
+        sub: "distinct types", icon: BarChart3, tone: "sky",
+      },
+      avgRecoverySec !== null && {
+        key: "pace-other", label: "Pace", value: `${avgRecoverySec}s`,
+        sub: "between attempts", icon: Clock, tone: "purple",
+      },
+    ].filter(Boolean);
+  }
 
   return (
     <motion.section
@@ -395,7 +439,9 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold leading-none">
-              ⭐ Best shot of the session
+              ⭐ {family === "strength" ? "Best rep of the session"
+                : family === "racquet" ? "Best shot of the session"
+                : "Best moment of the session"}
             </p>
             <p className="text-[13px] sm:text-sm text-white font-semibold mt-1 leading-tight truncate">
               {bestShot.shot_label || bestShot.name || (bestShot.type || "Shot").replace(/_/g, " ")}
@@ -463,8 +509,11 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
       {matchMetricTiles.length > 0 && (
         <div className="mt-3 bg-zinc-950/40 border border-zinc-800 rounded-xl p-2.5">
           <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold mb-2 flex items-center gap-1.5">
-            <BarChart3 className="w-3 h-3 text-zinc-400" /> Match metrics
-            <span className="text-zinc-600 font-normal normal-case tracking-normal">· {sessionType} session</span>
+            <BarChart3 className="w-3 h-3 text-zinc-400" />
+            {family === "racquet" ? "Match metrics" : "Session metrics"}
+            {family === "racquet" && (
+              <span className="text-zinc-600 font-normal normal-case tracking-normal">· {sessionType} session</span>
+            )}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
             {matchMetricTiles.map((t) => {
@@ -493,6 +542,23 @@ export default function PlayerDetectionCard({ result, player, sport, emphasis = 
               );
             })}
           </div>
+
+          {/* Reps-per-exercise breakdown — direct counts from the events,
+              fully reliable. The most useful "what did I actually do" view
+              for a gym session. */}
+          {family === "strength" && byType.length > 1 && (
+            <div className="mt-2.5 pt-2.5 border-t border-zinc-800">
+              <p className="text-[9.5px] uppercase tracking-wider text-zinc-500 font-bold mb-1.5">Reps per exercise</p>
+              <div className="space-y-1">
+                {byType.slice(0, 8).map((e) => (
+                  <div key={e.type} className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-zinc-300 capitalize truncate">{e.type.replace(/_/g, " ")}</span>
+                    <span className="text-[11px] text-white font-mono shrink-0">{e.count} rep{e.count === 1 ? "" : "s"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
