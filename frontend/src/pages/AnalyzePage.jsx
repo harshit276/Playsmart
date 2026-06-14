@@ -2072,7 +2072,7 @@ export default function AnalyzePage() {
           fastMode = clipDur != null && clipDur <= 24;
           if (fastMode) {
             // eslint-disable-next-line no-console
-            console.info(`[universal] ${clipDur.toFixed(1)}s clip → fast mode (Flash, thinking off)`);
+            console.info(`[universal] ${clipDur.toFixed(1)}s clip → fast mode (Flash, thinking on)`);
           }
         } catch { fastMode = false; }
 
@@ -5722,10 +5722,10 @@ export default function AnalyzePage() {
                 </h3>
               </div>
               <p className="text-sm text-zinc-400 mb-1">
-                Tap the player you want to analyze. We'll focus the AI Coach on them.
+                Tap the player you want to analyze <span className="text-zinc-300 font-medium">from the list below</span> — we'll focus the AI Coach on them.
               </p>
               <p className="text-[11px] text-zinc-500 mb-2">
-                Boxes are approximate — if one looks off, pick by clothing color or court position from the list below.
+                The numbered markers on the frame are approximate — match them to the exact descriptions below, which are what get selected.
               </p>
               <div className="flex items-start gap-2 rounded-lg bg-lime-400/10 border border-lime-400/30 px-2.5 py-1.5 mb-4">
                 <CheckCircle2 className="w-3.5 h-3.5 text-lime-400 flex-shrink-0 mt-0.5" />
@@ -5740,29 +5740,29 @@ export default function AnalyzePage() {
               {midFrame?.dataUrl ? (
                 <div className="relative w-full bg-black rounded-xl overflow-hidden mb-4">
                   <img src={midFrame.dataUrl} alt="Video frame" className="w-full h-auto block" />
-                  <div className="absolute inset-0">
+                  {/* Numbered PIN markers (reference only, non-interactive).
+                      Gemini's video bounding boxes are coarse and on portrait
+                      frames render misaligned — clickable boxes caused users to
+                      tap one player and select another. A pin at the box CENTRE
+                      is forgiving (only rough position matters) and selection
+                      happens ONLY via the exact-description list below, so a
+                      misplaced marker can never pick the wrong player. */}
+                  <div className="absolute inset-0 pointer-events-none">
                     {universalPlayers.map((p, idx) => {
                       const c = BOX_COLORS[idx % BOX_COLORS.length];
                       const b = p.bbox;
-                      if (!b || !b.width || !b.height) return null;
+                      if (!b || b.x == null || b.y == null) return null;
+                      const cx = (b.x + (b.width || 0) / 2) * 100;
+                      const cy = (b.y + (b.height || 0) / 2) * 100;
                       return (
-                        <button
+                        <div
                           key={p.id || idx}
-                          onClick={() => onPick(p)}
-                          className={`absolute border-2 rounded transition-all hover:scale-[1.02] ${c.border} ${c.bg} hover:shadow-lg`}
-                          style={{
-                            left: `${b.x * 100}%`,
-                            top: `${b.y * 100}%`,
-                            width: `${b.width * 100}%`,
-                            height: `${b.height * 100}%`,
-                          }}
-                          aria-label={`Select ${p.description}`}
+                          className={`absolute -translate-x-1/2 -translate-y-1/2 ${c.label} w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shadow-lg ring-2 ring-black/40`}
+                          style={{ left: `${cx}%`, top: `${cy}%` }}
                           title={p.description}
                         >
-                          <div className={`absolute -top-6 left-0 ${c.label} text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap`}>
-                            Player {idx + 1}
-                          </div>
-                        </button>
+                          {idx + 1}
+                        </div>
                       );
                     })}
                   </div>

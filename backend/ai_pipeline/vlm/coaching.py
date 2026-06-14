@@ -56,7 +56,24 @@ def _thinking_budget_for(model_name: str, tier: str = "standard"):
             pass
     name = (model_name or "").lower()
     if "flash" in name and "pro" not in name:
-        return 0
+        # Previously 0 (thinking OFF) as a latency lever. That UNDER-DETECTED
+        # on hard clips: fast multi-player badminton where telling a smash
+        # from a clear needs shuttle-TRAJECTORY reasoning, and catching every
+        # brief contact needs a re-watch — both of which thinking-off skips
+        # (it collapsed a 3-shot rally incl. a smash into "2 clears"). Slow,
+        # single-subject clips (gym reps) survived thinking-off because they
+        # need no such reasoning. Give Flash a MODEST thinking budget so
+        # detection reasons about shot variety/completeness without the full
+        # dynamic-thinking latency. Tunable via GEMINI_FLASH_THINKING_BUDGET
+        # (-1 = dynamic, 0 = off/old behaviour).
+        fb = os.getenv("GEMINI_FLASH_THINKING_BUDGET", "").strip()
+        if fb:
+            try:
+                v = int(fb)
+                return None if v < 0 else v
+            except ValueError:
+                pass
+        return 6144
     return None
 
 
@@ -1467,9 +1484,12 @@ def _build_universal_prompt(
         "  • NET SHOT / NET KILL: contact within ~1m of the net at or "
         "below tape height. Gentle touch arcing just over = net_shot; "
         "sharp downward punch at the tape = net_kill.\n"
-        "  • SMASH: overhead contact, arm fully extended UP, shuttle/ball "
-        "then travels STEEPLY DOWNWARD at pace. Any jump + steep downward "
-        "trajectory is a smash — not a drive.\n"
+        "  • SMASH vs CLEAR (both are overhead — decide by the SHUTTLE PATH, "
+        "not the swing): SMASH = shuttle travels STEEPLY DOWNWARD at pace "
+        "after contact (often with a jump); CLEAR = shuttle travels in a HIGH "
+        "ARC up and to the back court. An overhead with a downward, attacking "
+        "trajectory is a SMASH — never default it to 'clear'. If two overheads "
+        "look the same, look at where the shuttle GOES.\n"
         "  • CLEAR / LOB / LIFT: contact sends the shuttle in a HIGH arc "
         "to the back court (overhead = clear, underarm = lift/lob).\n"
         "  • DRIVE only when contact is at shoulder/chest height AND the "
@@ -1478,6 +1498,10 @@ def _build_universal_prompt(
         "Sanity check: if more than ~70% of your events share one category "
         "on a competitive rally clip, re-watch the contacts — you are "
         "almost certainly mislabeling serves, net shots, and smashes.\n"
+        "COMPLETENESS: before finalizing, re-watch the whole clip and confirm "
+        "you captured EVERY distinct contact by the target player — do not "
+        "drop a shot or merge separate shots. If the player visibly hit the "
+        "shuttle N times, return N events (a 3-shot rally must yield 3).\n"
         "════════ END RACQUET-SPORTS-ONLY SECTION ════════\n\n"
         "════════ NON-RACQUET ACTIVITIES (gym / strength / golf / cycling / "
         "swimming / running / etc.) ════════\n"

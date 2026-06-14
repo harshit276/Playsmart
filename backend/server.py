@@ -3608,7 +3608,7 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
-    PROMPT_VERSION = "v2026-06-14-strength-module"
+    PROMPT_VERSION = "v2026-06-15-thinking-on-completeness"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
@@ -4498,10 +4498,16 @@ async def register_video_url_to_files_api(
     # Cloudinary (off-device), so it can take a while on big clips — give the
     # fetch a longer budget.
     fetch_timeout = 120.0
-    if req.rotated and "/video/upload/" in url and "/video/upload/q_auto" not in url:
-        url = url.replace("/video/upload/", "/video/upload/q_auto/", 1)
+    if req.rotated and "/video/upload/" in url and "/q_auto" not in url:
+        # q_auto:best (quality-priority) instead of plain q_auto: any transform
+        # bakes the rotation, but plain q_auto compresses ~3x and softens
+        # FAST-motion frames — exactly the smash-contact frames where
+        # smash-vs-clear is decided on a fast badminton clip. :best keeps those
+        # sharp. Resolution is preserved (no w_/h_). Tunable via env.
+        tx = os.environ.get("CLOUDINARY_ROTATE_TRANSFORM", "q_auto:best").strip() or "q_auto:best"
+        url = url.replace("/video/upload/", f"/video/upload/{tx}/", 1)
         fetch_timeout = 230.0
-        logger.info("[upload-video-url] rotated clip → Cloudinary q_auto derivative: %s", url[:140])
+        logger.info("[upload-video-url] rotated clip → Cloudinary %s derivative: %s", tx, url[:140])
     try:
         async with httpx.AsyncClient(timeout=fetch_timeout, follow_redirects=True) as client:
             resp = await client.get(url)
