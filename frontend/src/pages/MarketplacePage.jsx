@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Filter, ArrowUpDown, ShoppingCart, ExternalLink, MapPin,
   CheckCircle2, X, Sparkles, ChevronRight, ArrowDown, Target, Wand2,
+  Footprints, Backpack, Shirt, Dumbbell, Grip,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -614,6 +615,50 @@ const SPORT_GRADIENT = {
   football: "from-green-500/20 via-emerald-700/20 to-zinc-900",
 };
 
+// Category → icon for the branded placeholder. lucide has no racket/shuttle
+// icons, so racket/ball/shuttle categories fall back to the sport emoji
+// (which is more recognizable anyway); shoes/bags/apparel/grips get a real
+// glyph. Keyword-matched so it works across the 7 sports' category names.
+const _CATEGORY_ICON = [
+  [/shoe|footwear/i, Footprints],
+  [/bag|kit|backpack/i, Backpack],
+  [/apparel|cloth|jersey|shirt|wear|sock/i, Shirt],
+  [/grip|string|tape|accessor/i, Grip],
+  [/fitness|train|gym|weight|band|conditioning/i, Dumbbell],
+];
+function _categoryIcon(cat) {
+  const c = String(cat || "");
+  for (const [re, Icon] of _CATEGORY_ICON) if (re.test(c)) return Icon;
+  return null;
+}
+
+// Premium branded placeholder shown when a product has no photo. A frosted
+// icon disc (category glyph or sport emoji) over the sport gradient with a
+// glossy top-light, then bold brand + category·type. Looks intentional and
+// never breaks (no external image dependency).
+function BrandedPlaceholder({ item, sportEmoji }) {
+  const CatIcon = _categoryIcon(item._category);
+  const sub = [item._category ? String(item._category).replace(/_/g, " ") : null, item.type]
+    .filter(Boolean).join(" · ");
+  return (
+    <div className="w-full h-full relative flex flex-col items-center justify-center text-center px-3">
+      {/* glossy top light + faint giant sport watermark */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/10 pointer-events-none" />
+      <span className="absolute text-[150px] opacity-[0.06] select-none leading-none">{sportEmoji}</span>
+      {/* frosted icon disc */}
+      <div className="relative z-10 w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 shadow-lg flex items-center justify-center mb-2.5">
+        {CatIcon ? <CatIcon className="w-7 h-7 text-white/90" /> : <span className="text-3xl leading-none">{sportEmoji}</span>}
+      </div>
+      <p className="relative z-10 font-heading font-black text-xl uppercase tracking-tight text-white drop-shadow-lg leading-none">
+        {item.brand}
+      </p>
+      {sub && (
+        <p className="relative z-10 text-[9px] uppercase tracking-widest text-white/70 mt-1.5">{sub}</p>
+      )}
+    </div>
+  );
+}
+
 function ProductCard({ item, delay }) {
   const prices = item.marketplace_prices || [];
   const cheapest = prices.length ? prices.reduce((m, p) => (p.price < m.price ? p : m), prices[0]) : null;
@@ -639,21 +684,7 @@ function ProductCard({ item, delay }) {
             className="w-full h-full object-contain"
             onError={() => setImgErr(true)} />
         ) : (
-          // Polished placeholder: huge sport emoji watermark + bold brand
-          // name + product type label. Looks intentional, never broken.
-          <div className="w-full h-full flex flex-col items-center justify-center text-center px-3 relative">
-            <span className="absolute text-[140px] opacity-[0.07] select-none leading-none">{sportEmoji}</span>
-            <div className="relative z-10">
-              <p className="font-heading font-black text-2xl uppercase tracking-tight text-white drop-shadow-lg">
-                {item.brand}
-              </p>
-              {item.type && (
-                <p className="text-[10px] uppercase tracking-widest text-zinc-300/80 mt-1.5">
-                  {item.type}
-                </p>
-              )}
-            </div>
-          </div>
+          <BrandedPlaceholder item={item} sportEmoji={sportEmoji} />
         )}
         {item.level && (
           <Badge className="absolute top-2 left-2 bg-zinc-900/80 text-zinc-200 border-zinc-700 text-[9px] backdrop-blur-sm">
@@ -885,15 +916,7 @@ function RecommendedProductCard({ item, delay, level, bucket, goal, serverPick }
             className="w-full h-full object-contain"
             onError={() => setImgErr(true)} />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-center px-3 relative">
-            <span className="absolute text-[140px] opacity-[0.07] select-none leading-none">{sportEmoji}</span>
-            <div className="relative z-10">
-              <p className="font-heading font-black text-2xl uppercase tracking-tight text-white drop-shadow-lg">{item.brand}</p>
-              {item.type && (
-                <p className="text-[10px] uppercase tracking-widest text-zinc-300/80 mt-1.5">{item.type}</p>
-              )}
-            </div>
-          </div>
+          <BrandedPlaceholder item={item} sportEmoji={sportEmoji} />
         )}
         {item.level && (
           <Badge className="absolute top-2 left-2 bg-zinc-900/80 text-zinc-200 border-zinc-700 text-[9px] backdrop-blur-sm">{item.level}</Badge>
