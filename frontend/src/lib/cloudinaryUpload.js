@@ -58,16 +58,20 @@ async function compressIfNeeded(file, onProgress) {
 export async function uploadToCloudinary(videoFile, options = {}) {
   const { onProgress } = options;
 
-  // Step 0: portrait phone clips carry a rotation FLAG (the pixels are stored
-  // sideways). Gemini analyzes the raw pixels and ignores the flag, so a
-  // push-up reads as a "wall squat" etc. Re-encode rotated clips upright
-  // BEFORE upload so Gemini sees what the user sees. No-op for landscape /
-  // unrotated clips (returns the original), and never throws.
-  const { normalizeRotationIfNeeded } = await import("./videoRotation");
-  const uprightFile = await normalizeRotationIfNeeded(videoFile, onProgress);
+  // Step 0: DETECT a rotation flag (portrait phone clips store sideways
+  // pixels + a flag). Gemini ignores the flag and analyzes the raw sideways
+  // pixels → push-up reads as "wall squat", "no shots". We do NOT re-encode
+  // on-device anymore (real-time MediaRecorder was slow + unreliable on iOS
+  // Safari) — instead we flag it so the backend fetches a Cloudinary
+  // rotation-baked derivative. Detection is a fast header parse (no decode).
+  let rotation = 0;
+  try {
+    const { getVideoRotationDegrees } = await import("./videoRotation");
+    rotation = await getVideoRotationDegrees(videoFile);
+  } catch { /* best-effort; default to no rotation */ }
 
   // Step 1: compress in-browser if the file is large
-  const fileToUpload = await compressIfNeeded(uprightFile, onProgress);
+  const fileToUpload = await compressIfNeeded(videoFile, onProgress);
 
   // Step 2: ask our backend for signed upload params
   onProgress?.({ percent: 22, message: "Preparing upload..." });
@@ -117,6 +121,10 @@ export async function uploadToCloudinary(videoFile, options = {}) {
     duration: uploadResponse.duration,
     width: uploadResponse.width,
     height: uploadResponse.height,
+    // Rotation flag (deg) of the source clip. The caller forwards
+    // `rotated: rotation > 0` to /upload-video-url so the backend bakes the
+    // rotation server-side via a Cloudinary transform.
+    rotation,
   };
 }
 

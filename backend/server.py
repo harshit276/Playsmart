@@ -4447,6 +4447,14 @@ class RegisterVideoUrlRequest(BaseModel):
     # Gemini Files API we don't need the Cloudinary copy anymore, so we delete
     # it here (best-effort) to avoid accumulating storage. Optional.
     cloudinary_public_id: str | None = None
+    # True when the source clip carries a rotation flag (portrait phone
+    # video). Gemini analyzes the RAW pixels and ignores the flag, so a
+    # rotated clip reaches it sideways (push-up → "wall squat", "no shots").
+    # When set, we fetch a Cloudinary-TRANSFORMED derivative instead of the
+    # raw URL — any transform makes Cloudinary bake the rotation into the
+    # pixels server-side (verified), so Gemini sees it upright. This replaced
+    # an on-device re-encode that was slow + unreliable on iOS Safari.
+    rotated: bool = False
 
 
 async def _cloudinary_destroy_video(public_id: str) -> None:
@@ -4483,8 +4491,19 @@ async def register_video_url_to_files_api(
     url = (req.video_url or "").strip()
     if not url.startswith("http"):
         raise HTTPException(status_code=400, detail="video_url required")
+    # Rotated (portrait) clip → ask Cloudinary for a transformed derivative so
+    # it bakes the rotation into the pixels. q_auto also compresses, which
+    # shrinks the Gemini upload + speeds analysis. Only Cloudinary URLs that
+    # aren't already transformed get the insert. The transcode runs on
+    # Cloudinary (off-device), so it can take a while on big clips — give the
+    # fetch a longer budget.
+    fetch_timeout = 120.0
+    if req.rotated and "/video/upload/" in url and "/video/upload/q_auto" not in url:
+        url = url.replace("/video/upload/", "/video/upload/q_auto/", 1)
+        fetch_timeout = 230.0
+        logger.info("[upload-video-url] rotated clip → Cloudinary q_auto derivative: %s", url[:140])
     try:
-        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=fetch_timeout, follow_redirects=True) as client:
             resp = await client.get(url)
             resp.raise_for_status()
             video_bytes = resp.content

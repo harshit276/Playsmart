@@ -1700,7 +1700,10 @@ export default function AnalyzePage() {
                   video_url: cloudOrig.secure_url,
                   mime_type: cloudOrig.secure_url.endsWith(".mp4") ? "video/mp4" : (file.type || "video/mp4"),
                   cloudinary_public_id: cloudOrig.public_id || null,
-                }, { timeout: 200000 });
+                  // Portrait clip → backend bakes rotation via a Cloudinary
+                  // transform (server-side, off-device).
+                  rotated: (cloudOrig.rotation || 0) > 0,
+                }, { timeout: 240000 });
                 if (regOrig?.file_name) {
                   fileName = regOrig.file_name;
                   uploadFile = file;
@@ -1772,7 +1775,8 @@ export default function AnalyzePage() {
                   video_url: cloud.secure_url,
                   mime_type: prepared.type || file.type || "video/mp4",
                   cloudinary_public_id: cloudinaryPublicId,
-                }, { timeout: 200000 });
+                  rotated: (cloud.rotation || 0) > 0,
+                }, { timeout: 240000 });
                 if (reg?.file_name) {
                   fileName = reg.file_name;
                   uploadFile = prepared;   // 720p clip; picker keyframes still use original `file`
