@@ -5304,6 +5304,20 @@ export default function AnalyzePage() {
       ) : (
         <div className="space-y-3">
 
+          {/* Pointer to the richer Progress page — History here is the
+              quick in-flow list (open / re-analyze a past clip); the full
+              per-sport trends, per-shot charts and recurring focus areas
+              live on /progress. Link rather than redirect so users keep
+              their place in the analyze flow. */}
+          <Link to="/progress"
+            className="flex items-center justify-between gap-3 bg-lime-400/10 border border-lime-400/30 rounded-2xl px-4 py-3 hover:bg-lime-400/15 transition-colors">
+            <span className="flex items-center gap-2 text-sm text-lime-200 font-medium">
+              <TrendingUp className="w-4 h-4 text-lime-400" />
+              See your full progress &amp; trends
+            </span>
+            <ArrowRight className="w-4 h-4 text-lime-400 shrink-0" />
+          </Link>
+
           {/* Sport selector chips — keeps cross-sport progress from
               mixing, so a cricket bowling speed isn't compared against a
               badminton smash. */}
