@@ -8224,9 +8224,19 @@ async def get_analysis_history(user_id: str, authorization: str = Header(None)):
     if not user:
         return {"analyses": [], "total": 0}
 
+    # LIST view only needs summary fields (sport, date, skill_level,
+    # shot_analysis, quick_summary). Exclude the heavy per-analysis payloads
+    # (shots[], coach_narrative, court_map, movement, …) — those are fetched
+    # on demand via /analysis/{id} when a card is opened. Including them made
+    # this response ~488KB / 2.5s for 50 analyses, slowing the Progress and
+    # History pages on every load.
     analyses = await db.video_analyses.find(
         {"user_id": user_id},
-        {"_id": 0, "coaching": 0, "comprehensive_coaching": 0, "metrics": 0}
+        {"_id": 0, "coaching": 0, "comprehensive_coaching": 0, "metrics": 0,
+         "shots": 0, "coach_narrative": 0, "court_map": 0, "movement": 0,
+         "player_legend": 0, "vlm_coaching": 0, "detailed_metrics": 0,
+         "speed_analysis": 0, "highlights": 0, "segments_summary": 0,
+         "pro_comparison": 0, "performance_scores": 0},
     ).sort("date", -1).to_list(50)
 
     return {"analyses": analyses, "total": len(analyses)}

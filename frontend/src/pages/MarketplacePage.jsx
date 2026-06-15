@@ -606,6 +606,25 @@ function BottomSheet({ open, onClose, title, children }) {
   );
 }
 
+// Resolve a RELIABLE buy URL for a price row. marketplace_prices[].url are
+// often LLM-generated direct product pages (amazon.../dp/<ASIN>) that can
+// 404; prefer the platform's SEARCH link from item.buy_links (always
+// resolves), and fall back to a name-based search. This kills dead buy
+// buttons while keeping the price as an indicative guide.
+function reliableBuyUrl(priceEntry, item) {
+  const platform = (priceEntry?.platform || "").toLowerCase();
+  const bl = item?.buy_links || {};
+  if (platform.includes("amazon") && bl.amazon) return bl.amazon;
+  if (platform.includes("flipkart") && bl.flipkart) return bl.flipkart;
+  const m = (bl.india || []).find((s) => (s.store || "").toLowerCase().includes(platform.split(" ")[0] || "_"));
+  if (m?.url) return m.url;
+  const q = encodeURIComponent(item?.name || "");
+  if (platform.includes("flipkart")) return `https://www.flipkart.com/search?q=${q}`;
+  if (platform.includes("decathlon")) return `https://www.decathlon.in/search?q=${q}`;
+  if (q) return `https://www.amazon.in/s?k=${q}`;
+  return priceEntry?.url || bl.amazon || "#";
+}
+
 const SPORT_GRADIENT = {
   badminton: "from-lime-500/20 via-emerald-700/20 to-zinc-900",
   tennis: "from-amber-500/20 via-orange-700/20 to-zinc-900",
@@ -734,7 +753,7 @@ function ProductCard({ item, delay }) {
         <div className="mt-auto flex flex-col gap-1.5">
           {/* Best price button — primary */}
           {cheapest && (
-            <a href={withAffiliate(cheapest.url)} target="_blank" rel="noopener noreferrer sponsored"
+            <a href={withAffiliate(reliableBuyUrl(cheapest, item))} target="_blank" rel="noopener noreferrer sponsored"
               className="w-full inline-flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[11px] font-bold bg-lime-400 text-black hover:bg-lime-500 transition-colors">
               <ShoppingCart className="w-3 h-3" /> Buy on {cheapest.platform}
             </a>
@@ -743,7 +762,7 @@ function ProductCard({ item, delay }) {
           {prices.length > 1 && (
             <div className="flex gap-1 flex-wrap">
               {prices.filter(p => p !== cheapest).slice(0, 2).map((p, i) => (
-                <a key={i} href={withAffiliate(p.url)} target="_blank" rel="noopener noreferrer sponsored"
+                <a key={i} href={withAffiliate(reliableBuyUrl(p, item))} target="_blank" rel="noopener noreferrer sponsored"
                   className="flex-1 inline-flex items-center justify-center gap-1 px-1.5 py-1 rounded-md text-[10px] bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors min-w-0">
                   <span className="truncate">{p.platform}</span>
                   <span className="font-mono shrink-0">₹{p.price}</span>
@@ -1029,7 +1048,7 @@ function RecommendedProductCard({ item, delay, level, bucket, goal, serverPick }
         {/* Buy buttons */}
         <div className="flex flex-col gap-1.5 mt-auto">
           {cheapest && (
-            <a href={withAffiliate(cheapest.url)} target="_blank" rel="noopener noreferrer sponsored"
+            <a href={withAffiliate(reliableBuyUrl(cheapest, item))} target="_blank" rel="noopener noreferrer sponsored"
               className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-lime-400 text-black hover:bg-lime-500 transition-colors">
               <ShoppingCart className="w-3.5 h-3.5" /> Buy on {cheapest.platform} · ₹{cheapest.price?.toLocaleString("en-IN")}
             </a>
@@ -1037,7 +1056,7 @@ function RecommendedProductCard({ item, delay, level, bucket, goal, serverPick }
           {prices.length > 1 && (
             <div className="flex gap-1.5 flex-wrap">
               {prices.filter(p => p !== cheapest).slice(0, 3).map((p, i) => (
-                <a key={i} href={withAffiliate(p.url)} target="_blank" rel="noopener noreferrer sponsored"
+                <a key={i} href={withAffiliate(reliableBuyUrl(p, item))} target="_blank" rel="noopener noreferrer sponsored"
                   className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-[11px] bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors min-w-0">
                   <span className="truncate">{p.platform}</span>
                   <span className="font-mono shrink-0">₹{p.price}</span>
