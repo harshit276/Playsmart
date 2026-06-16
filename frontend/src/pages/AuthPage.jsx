@@ -170,7 +170,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex" data-testid="auth-page">
+    <div className="min-h-[100dvh] flex" data-testid="auth-page">
       {/* Left - Image */}
       <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-zinc-900" style={{
@@ -189,13 +189,15 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* Right - Login */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-zinc-950">
+      {/* Right - Login. flex-col + overflow-y-auto + my-auto: centers when
+          the form fits, scrolls from the top when it's taller than the
+          screen (fixes the form getting clipped on short Android viewports). */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-zinc-950 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="w-full max-w-sm"
+          className="w-full max-w-sm my-auto"
         >
           <div className="lg:hidden flex items-center gap-2 mb-10">
             <Zap className="w-6 h-6 text-lime-400" />

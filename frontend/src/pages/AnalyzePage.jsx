@@ -1099,6 +1099,10 @@ export default function AnalyzePage() {
             try { loadHistory(); } catch {}
           }
         } catch { /* best-effort */ }
+        // Tokens were debited server-side by the job runner — sync the top
+        // wallet chip so it doesn't show a stale balance (universal mode
+        // never refreshed it, unlike the legacy path).
+        try { refreshTokens?.(); } catch {}
       } catch {
         // Errored / expired — drop it silently; the user can re-upload.
       } finally {
@@ -2409,6 +2413,9 @@ export default function AnalyzePage() {
             console.warn("[universal] history save failed:",
                          saveErr?.response?.data?.detail || saveErr?.message);
           }
+          // Sync the top wallet chip with the server's post-debit balance
+          // (the job runner already charged tokens for this analysis).
+          try { refreshTokens?.(); } catch {}
         }
         toast.success(`Detected: ${universalResult.sport} — ${events.length} events analyzed`);
         setActiveTab("results");
@@ -3227,12 +3234,12 @@ export default function AnalyzePage() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       {/* Token-cost banner — always visible so user knows the price BEFORE
           uploading. Three states: guest, signed-in + enough, signed-in + short. */}
-      <div className={`mb-4 rounded-2xl border p-3 sm:p-4 flex items-center gap-3 flex-wrap ${
+      <div className={`mb-3 rounded-xl border px-3 py-2 flex items-center gap-2.5 flex-wrap ${
         user && tokens != null && tokens < 100
           ? "bg-amber-400/5 border-amber-400/30"
           : "bg-purple-400/5 border-purple-400/30"
       }`}>
-        <div className="w-10 h-10 rounded-xl bg-purple-400/15 flex items-center justify-center shrink-0 text-xl">
+        <div className="w-8 h-8 rounded-lg bg-purple-400/15 flex items-center justify-center shrink-0 text-base">
           🪙
         </div>
         <div className="flex-1 min-w-0">
@@ -3278,8 +3285,8 @@ export default function AnalyzePage() {
           one line + action. Analysis runs in the background; this is just
           how we ping them when it's done. */}
       {typeof window !== "undefined" && "Notification" in window && (
-        <div className="mb-4 rounded-2xl border border-sky-400/30 bg-sky-400/5 p-3 sm:p-4 flex items-center gap-3">
-          <Bell className="w-5 h-5 text-sky-400 shrink-0" strokeWidth={1.75} />
+        <div className="mb-3 rounded-xl border border-sky-400/30 bg-sky-400/5 px-3 py-2 flex items-center gap-2.5">
+          <Bell className="w-4 h-4 text-sky-400 shrink-0" strokeWidth={1.75} />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Leave anytime — we'll ping you</p>
             <p className="text-[11px] text-zinc-400">
@@ -5728,7 +5735,7 @@ export default function AnalyzePage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
             onClick={() => { setUniversalPlayers(null); setUniversalUploadData(null); clearPickerSession(); }}>
             <div onClick={(e) => e.stopPropagation()}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 max-w-2xl w-full max-h-[90vh] overflow-auto">
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-5 max-w-2xl w-full max-h-[88dvh] overflow-auto">
               <div className="flex items-center gap-2 mb-1">
                 <Users className="w-5 h-5 text-lime-400" />
                 <h3 className="font-heading font-bold text-lg text-white">
@@ -5752,8 +5759,11 @@ export default function AnalyzePage() {
                   clickable buttons — same pattern as the old MoveNet
                   PlayerSelectionModal, just sourced from Gemini. */}
               {midFrame?.dataUrl ? (
-                <div className="relative w-full bg-black rounded-xl overflow-hidden mb-4">
-                  <img src={midFrame.dataUrl} alt="Video frame" className="w-full h-auto block" />
+                // Shrink-wrap the frame + cap its height so a tall PORTRAIT
+                // keyframe doesn't blow the modal off-screen on mobile. The
+                // container hugs the image so the % pin overlay stays aligned.
+                <div className="relative mx-auto w-fit max-w-full bg-black rounded-xl overflow-hidden mb-4">
+                  <img src={midFrame.dataUrl} alt="Video frame" className="block w-auto max-w-full max-h-[42vh] object-contain mx-auto" />
                   {/* Numbered PIN markers (reference only, non-interactive).
                       Gemini's video bounding boxes are coarse and on portrait
                       frames render misaligned — clickable boxes caused users to
