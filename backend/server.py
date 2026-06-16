@@ -1862,6 +1862,192 @@ async def cashfree_webhook(request: Request):
     return {"ok": True, "credited": new_balance is not None, "balance": new_balance}
 
 
+# ──────────────────────────────────────────────────────────────────────
+# Razorpay payment provider. Flow: create-order -> Razorpay Checkout.js ->
+# verify HMAC signature -> idempotent credit; webhook is the backstop.
+# Demo mode (DEMO_ order ids, no real charge) when keys are unset.
+# ──────────────────────────────────────────────────────────────────────
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "").strip()
+RAZORPAY_DEMO = not (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET)
+
+
+class RazorpayVerifyRequest(BaseModel):
+    razorpay_order_id: str = ""
+    razorpay_payment_id: str = ""
+    razorpay_signature: str = ""
+    order_id: str = ""  # demo path uses this
+
+
+async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> Optional[int]:
+    """Idempotent credit keyed on razorpay_payment_id (so verify + webhook
+    can't double-credit)."""
+    pack = _get_pack(order.get("pack_key", ""))
+    if not pack:
+        return None
+    try:
+        already = await asyncio.wait_for(db.token_transactions.find_one(
+            {"user_id": user_id, "kind": "purchase",
+             "metadata.razorpay_payment_id": payment_id}, {"_id": 0, "id": 1}), timeout=2.0)
+        if already:
+            return None
+    except Exception:
+        pass
+    new_balance = await _credit_tokens(user_id, "purchase", pack["tokens"], {
+        "pack_key": pack["key"], "amount_inr": pack["price_inr"],
+        "razorpay_order_id": order.get("razorpay_order_id"),
+        "razorpay_payment_id": payment_id, "provider": "razorpay"})
+    try:
+        await asyncio.wait_for(db.payment_orders.update_one(
+            {"razorpay_order_id": order.get("razorpay_order_id")},
+            {"$set": {"status": "paid", "razorpay_payment_id": payment_id,
+                      "paid_at": datetime.now(timezone.utc).isoformat()}}), timeout=2.0)
+    except Exception:
+        pass
+    try:
+        asyncio.create_task(_notify_admin(
+            f"\U0001f4b0 Purchase · ₹{pack['price_inr']} (Razorpay)",
+            f"User: {user_id[:12]}…\nPack: {pack['key']} (+{pack['tokens']} tokens)\nNew balance: {new_balance}"))
+    except Exception:
+        pass
+    return new_balance
+
+
+@api_router.post("/payments/razorpay/create-order")
+async def razorpay_create_order(req: CreateOrderRequest, authorization: str = Header(None)):
+    """Create a Razorpay order; returns what Checkout.js needs (order_id +
+    key_id + amount)."""
+    user = await get_current_user(authorization)
+    pack = _get_pack(req.pack_key)
+    if not pack:
+        raise HTTPException(status_code=400, detail="Unknown pack")
+
+    if RAZORPAY_DEMO:
+        order_id = f"DEMO_{pack['key']}_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
+        try:
+            await asyncio.wait_for(db.payment_orders.insert_one({
+                "id": str(uuid.uuid4()), "user_id": user["id"], "razorpay_order_id": order_id,
+                "pack_key": pack["key"], "tokens_amount": pack["tokens"], "amount_inr": pack["price_inr"],
+                "status": "created", "provider": "razorpay_demo", "demo": True,
+                "created_at": datetime.now(timezone.utc).isoformat()}), timeout=4.0)
+        except Exception as e:
+            logger.warning(f"razorpay demo create-order persist failed: {e}")
+        return {"order_id": order_id, "amount": int(pack["price_inr"] * 100), "currency": "INR",
+                "key_id": "demo", "provider": "razorpay", "demo_mode": True}
+
+    payload = {"amount": int(round(pack["price_inr"] * 100)), "currency": "INR",
+               "receipt": f"ath_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
+               "notes": {"user_id": user["id"], "pack_key": pack["key"], "tokens": str(pack["tokens"])}}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post("https://api.razorpay.com/v1/orders",
+                                  auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET), json=payload)
+            if r.status_code >= 400:
+                msg = r.text[:300]
+                try:
+                    msg = (r.json().get("error") or {}).get("description") or msg
+                except Exception:
+                    pass
+                logger.error(f"Razorpay create-order failed {r.status_code}: {r.text[:300]}")
+                raise HTTPException(status_code=502, detail=f"Razorpay: {msg}")
+            data = r.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"razorpay create-order exception: {e}")
+        raise HTTPException(status_code=503, detail="Payment provider unreachable")
+
+    order_id = data.get("id")
+    if not order_id:
+        raise HTTPException(status_code=502, detail="No order id from Razorpay")
+    try:
+        await asyncio.wait_for(db.payment_orders.insert_one({
+            "id": str(uuid.uuid4()), "user_id": user["id"], "razorpay_order_id": order_id,
+            "pack_key": pack["key"], "tokens_amount": pack["tokens"], "amount_inr": pack["price_inr"],
+            "status": "created", "provider": "razorpay", "paid_at": None,
+            "created_at": datetime.now(timezone.utc).isoformat()}), timeout=2.0)
+    except Exception as e:
+        logger.warning(f"razorpay create-order persist failed: {e}")
+    return {"order_id": order_id, "amount": data.get("amount"), "currency": "INR",
+            "key_id": RAZORPAY_KEY_ID, "provider": "razorpay", "name": "Atheonics",
+            "description": f"{pack['tokens']} tokens",
+            "prefill_email": user.get("email") or "", "prefill_contact": user.get("phone") or ""}
+
+
+@api_router.post("/payments/razorpay/verify")
+async def razorpay_verify(req: RazorpayVerifyRequest, authorization: str = Header(None)):
+    """Verify the Razorpay signature server-side, then credit (idempotent).
+    Demo orders (DEMO_<pack>_…) self-describe and skip signature."""
+    user = await get_current_user(authorization)
+    oid = req.razorpay_order_id or req.order_id
+
+    if (oid or "").startswith("DEMO_"):
+        parts = oid.split("_")
+        pack = _get_pack("_".join(parts[1:3]) if len(parts) >= 3 else "")
+        if not pack:
+            raise HTTPException(status_code=400, detail="Unknown demo pack")
+        bal = await _credit_tokens(user["id"], "purchase", pack["tokens"], {
+            "pack_key": pack["key"], "amount_inr": pack["price_inr"], "demo": True, "provider": "razorpay_demo"})
+        return {"ok": True, "balance": bal, "tokens_credited": pack["tokens"]}
+
+    if not (oid and req.razorpay_payment_id and req.razorpay_signature):
+        raise HTTPException(status_code=400, detail="Missing payment fields")
+    import hmac as _hmac, hashlib as _hl
+    expected = _hmac.new(RAZORPAY_KEY_SECRET.encode(),
+                         f"{oid}|{req.razorpay_payment_id}".encode(), _hl.sha256).hexdigest()
+    if not _hmac.compare_digest(expected, req.razorpay_signature):
+        logger.warning("Razorpay verify: signature mismatch")
+        raise HTTPException(status_code=400, detail="Invalid payment signature")
+    try:
+        order = await asyncio.wait_for(
+            db.payment_orders.find_one({"razorpay_order_id": oid}, {"_id": 0}), timeout=3.0)
+    except Exception:
+        order = None
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Order belongs to another user")
+    pack = _get_pack(order.get("pack_key", ""))
+    bal = await _credit_razorpay_order(user["id"], order, req.razorpay_payment_id)
+    if bal is None:  # already credited (duplicate)
+        bal = await _get_balance(user["id"])
+    return {"ok": True, "balance": bal, "tokens_credited": pack["tokens"] if pack else 0}
+
+
+@api_router.post("/payments/razorpay/webhook")
+async def razorpay_webhook(request: Request):
+    """Razorpay webhook backstop (payment.captured / order.paid). Verifies
+    x-razorpay-signature = HMAC-SHA256(raw_body, webhook_secret)."""
+    raw = await request.body()
+    sig = request.headers.get("x-razorpay-signature", "")
+    if RAZORPAY_WEBHOOK_SECRET and sig:
+        import hmac as _hmac, hashlib as _hl
+        expected = _hmac.new(RAZORPAY_WEBHOOK_SECRET.encode(), raw, _hl.sha256).hexdigest()
+        if not _hmac.compare_digest(expected, sig):
+            logger.warning("Razorpay webhook: signature mismatch")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+    try:
+        body = json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    if body.get("event") not in ("payment.captured", "order.paid"):
+        return {"ok": True, "ignored": body.get("event")}
+    pay = (((body.get("payload") or {}).get("payment") or {}).get("entity") or {})
+    order_id, payment_id = pay.get("order_id"), pay.get("id")
+    if not order_id or not payment_id:
+        return {"ok": False, "error": "missing fields"}
+    try:
+        order = await asyncio.wait_for(
+            db.payment_orders.find_one({"razorpay_order_id": order_id}, {"_id": 0}), timeout=2.0)
+    except Exception:
+        order = None
+    if not order:
+        return {"ok": False, "error": "order not found"}
+    bal = await _credit_razorpay_order(order["user_id"], order, payment_id)
+    return {"ok": True, "credited": bal is not None, "balance": bal}
+
+
 async def _settle_pending_referrals(user_id: str) -> None:
     """When a referred user completes their first analysis, credit both
     sides 200 tokens. Idempotent — checks `completed_at` to avoid double
