@@ -60,26 +60,51 @@ export async function uploadToCloudinary(videoFile, options = {}) {
 
   const { getVideoRotationDegrees, downscaleForUpload } = await import("./videoRotation");
 
-  // Step 0a: LARGE / 4K clips → downscale to ~720p on-device first. A 295MB
-  // 4K clip is over the 200MB backend cap and Gemini doesn't need 4K (720p
-  // detects shots identically). The canvas re-encode ALSO bakes in rotation,
-  // so a downscaled clip is already upright (rotated=false). Never throws.
   let workFile = videoFile;
   let rotation = 0;
-  const ds = await downscaleForUpload(videoFile, onProgress);
-  if (ds.downscaled) {
-    workFile = ds.file; // already upright + small
-  } else {
-    // Step 0b: not downscaled → DETECT the rotation flag so the backend can
-    // fetch a Cloudinary rotation-baked derivative (fast header parse, no
-    // decode; no on-device re-encode which was slow/fragile on iOS Safari).
-    try { rotation = await getVideoRotationDegrees(videoFile); }
-    catch { /* best-effort; default to no rotation */ }
+  let handledClientSide = false; // rotation baked + downscaled on-device already
+
+  // Detect the rotation flag first (fast header parse, no decode).
+  try { rotation = await getVideoRotationDegrees(videoFile); }
+  catch { /* best-effort */ }
+
+  // Step 0 — PRIMARY: hardware WebCodecs transcode to ~720p. GPU, faster than
+  // real-time, so a 170MB 4K clip shrinks to a few MB in SECONDS (the
+  // real-time canvas/MediaRecorder path took minutes and stalled on mobile).
+  // We transcode when it helps: a rotated clip (bake it upright + drop the
+  // server-side transcode) OR a large clip (shrink before the upload).
+  // allowRotationMetadata:false inside the transcoder bakes orientation so
+  // Gemini sees it upright. Falls through to the canvas path on any failure.
+  const isBig = videoFile.size > 20 * 1024 * 1024;
+  if (rotation !== 0 || isBig) {
+    try {
+      const { webcodecsSupported, webcodecsTranscode } = await import("./webcodecsTranscode");
+      if (webcodecsSupported()) {
+        onProgress?.({ percent: 4, message: "Optimizing video…" });
+        workFile = await webcodecsTranscode(videoFile, {
+          maxDim: 1280,
+          allowGrow: rotation !== 0, // rotated: keep the upright output even if not smaller
+          onProgress: (p) => onProgress?.({ percent: 4 + Math.min(1, p / 100) * 18, message: "Optimizing video…" }),
+        });
+        handledClientSide = true; // rotation baked + downscaled by WebCodecs
+      }
+    } catch (e) {
+      console.warn("[upload] WebCodecs transcode failed, falling back:", e?.message || e);
+    }
   }
 
-  // Step 1: compress in-browser if STILL large (ffmpeg path; rarely hit now
-  // that big clips are downscaled above).
+  // Step 0b — FALLBACK (no WebCodecs / it failed): the canvas downscale for
+  // very large clips so we never push a 200MB+ original over the wire.
+  if (!handledClientSide) {
+    const ds = await downscaleForUpload(workFile, onProgress);
+    if (ds.downscaled) { workFile = ds.file; handledClientSide = true; }
+  }
+
+  // Step 1: ffmpeg.wasm only as the last resort beyond 130MB.
   const fileToUpload = await compressIfNeeded(workFile, onProgress);
+
+  // If rotation was baked client-side, the backend needs no rotation transform.
+  if (handledClientSide) rotation = 0;
 
   // Step 2: ask our backend for signed upload params
   onProgress?.({ percent: 22, message: "Preparing upload..." });
