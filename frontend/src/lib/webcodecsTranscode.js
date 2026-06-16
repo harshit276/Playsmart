@@ -51,13 +51,33 @@ export async function webcodecsTranscode(file, opts = {}) {
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
 
+  // Compute the EXACT target dims from the source's display size (post-rotation),
+  // fitting within a maxDim box and NEVER upscaling. Setting width+height to the
+  // fitted dims (rather than maxDim×maxDim with fit:contain) avoids letterbox
+  // padding — a portrait 576×1024 stays 576×1024, a 4K landscape 3840×2160
+  // becomes 1280×720, with no black bars and no pointless upscale/bitrate bloat.
+  let tw = maxDim, th = maxDim;
+  try {
+    const track = await input.getPrimaryVideoTrack();
+    const dw = track?.displayWidth || 0;
+    const dh = track?.displayHeight || 0;
+    if (dw > 0 && dh > 0) {
+      const scale = Math.min(1, maxDim / Math.max(dw, dh)); // ≤1: never upscale
+      // Round to even dims (H.264 requires 2-divisible width/height).
+      tw = Math.max(2, Math.round((dw * scale) / 2) * 2);
+      th = Math.max(2, Math.round((dh * scale) / 2) * 2);
+    }
+  } catch { /* fall back to the maxDim box below */ }
+
   const conversion = await Conversion.init({
     input,
     output,
     video: {
-      // Fit within a maxDim box, preserve aspect (no distortion/crop) — works
-      // for portrait (→ ~720×1280) and landscape (→ 1280×720) alike.
-      width: maxDim, height: maxDim, fit: "contain",
+      // Exact fitted dims (computed above) — preserves the native aspect with
+      // no padding. fit:contain is a no-op here since the box matches content,
+      // but we keep it so a dims-read failure (tw=th=maxDim) still letterboxes
+      // safely rather than distorting.
+      width: tw, height: th, fit: "contain",
       codec: "avc",                  // H.264 — max Gemini/backend compatibility
       bitrate: QUALITY_MEDIUM,
       // Bake the source rotation into the frames instead of writing a metadata
