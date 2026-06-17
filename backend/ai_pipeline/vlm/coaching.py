@@ -30,6 +30,12 @@ def _thinking_budget_for(model_name: str, tier: str = "standard"):
 
     Override via GEMINI_THINKING_BUDGET (int; -1 = dynamic/default).
     """
+    # Lightweight perception pre-passes (sport ID, player listing) are pure
+    # perception with no reasoning — force thinking OFF for snappy latency
+    # regardless of model. (Flash on the "standard" tier keeps a 6144 budget
+    # below because shot-vs-shot reasoning genuinely helps detection.)
+    if tier == "fast":
+        return 0
     raw = os.getenv("GEMINI_THINKING_BUDGET", "").strip()
     if raw:
         try:
@@ -117,6 +123,85 @@ def _new_sdk_safety_settings(gt):
     return out or None
 
 
+def _is_transient_gemini_error(exc) -> bool:
+    """429 (rate limit) / 503 (model overloaded) / transient network — the
+    kind of error a short backoff+retry recovers from. Verified live: Gemini
+    intermittently returns 503 'high demand' that clears within seconds."""
+    s = str(exc).lower()
+    return any(x in s for x in (
+        "429", "503", "resource_exhausted", "unavailable", "high demand",
+        "overloaded", "rate limit", "too many requests", "deadline",
+        "timeout", "temporarily",
+    ))
+
+
+def _gemini_with_backoff(fn, *, tries: int = 3, base: float = 1.5):
+    """Run a Gemini call with exponential backoff on transient 429/503 errors
+    so a real-world burst (many users at once) or a model-overload spike
+    smooths out instead of failing the analysis. Non-transient errors raise
+    immediately. Total added wait is bounded (≈1.5s+3s) to stay well within
+    the analyze-job budget."""
+    import time as _t
+    last = None
+    for i in range(tries):
+        try:
+            return fn()
+        except Exception as exc:  # noqa: BLE001 — re-raised below if not transient
+            last = exc
+            if _is_transient_gemini_error(exc) and i < tries - 1:
+                _t.sleep(base * (2 ** i))
+                continue
+            raise
+    if last:
+        raise last
+
+
+def _new_sdk_image_call(model_name: str, sys_prompt: str, user_msg: str,
+                        frames_jpeg: list, thinking_budget: int = 0):
+    """Lightweight IMAGE (keyframe) call through the NEW google-genai SDK with
+    thinking OFF by default — for snappy perception pre-passes (sport ID).
+    The legacy SDK can't disable thinking, so a trivial classification on a
+    thinking model (gemini-3.5-flash) burns 10-20s 'thinking'; this kills that.
+    Includes 429/503 backoff. Raises ImportError if google-genai is missing
+    (caller falls back to the legacy backend)."""
+    from google import genai as genai_new  # raises ImportError → legacy fallback
+    from google.genai import types as gt
+
+    client = genai_new.Client(api_key=os.environ["GEMINI_API_KEY"])
+    parts = [gt.Part(text=user_msg)]
+    for j in (frames_jpeg or []):
+        parts.append(gt.Part(inline_data=gt.Blob(mime_type="image/jpeg", data=j)))
+    contents = [gt.Content(role="user", parts=parts)]
+
+    cfg_kwargs = dict(
+        system_instruction=sys_prompt,
+        temperature=0.0,
+        response_mime_type="application/json",
+        safety_settings=_new_sdk_safety_settings(gt),
+    )
+    if thinking_budget is not None:
+        cfg_kwargs["thinking_config"] = gt.ThinkingConfig(thinking_budget=thinking_budget)
+
+    def _call(kwargs):
+        return _gemini_with_backoff(lambda: client.models.generate_content(
+            model=model_name, contents=contents,
+            config=gt.GenerateContentConfig(**kwargs)))
+
+    try:
+        return _call(cfg_kwargs)
+    except Exception as exc:
+        # Some model/SDK combos reject thinking_config or safety_settings —
+        # strip the optional knobs and retry once before giving up.
+        s = str(exc).lower()
+        if ("thinking" in s or "budget" in s or "safety" in s) and (
+                "thinking_config" in cfg_kwargs or "safety_settings" in cfg_kwargs):
+            cfg_kwargs.pop("thinking_config", None)
+            if "safety" in s:
+                cfg_kwargs.pop("safety_settings", None)
+            return _call(cfg_kwargs)
+        raise
+
+
 def _legacy_safety_settings():
     """BLOCK_NONE safety settings as a dict the legacy SDK accepts."""
     return {c: "BLOCK_NONE" for c in _SAFETY_CATEGORIES}
@@ -178,13 +263,17 @@ def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
     contents = [gt.Content(role="user", parts=[gt.Part(text=user_msg), video_part])]
 
     def _call(kwargs):
-        if stream:
-            return client.models.generate_content_stream(
+        def _do():
+            if stream:
+                return client.models.generate_content_stream(
+                    model=model_name, contents=contents,
+                    config=gt.GenerateContentConfig(**kwargs))
+            return client.models.generate_content(
                 model=model_name, contents=contents,
                 config=gt.GenerateContentConfig(**kwargs))
-        return client.models.generate_content(
-            model=model_name, contents=contents,
-            config=gt.GenerateContentConfig(**kwargs))
+        # 429/503 backoff so a burst or model-overload spike retries instead
+        # of failing the analysis (verified: Gemini returns transient 503s).
+        return _gemini_with_backoff(_do)
 
     try:
         return _call(cfg_kwargs)
@@ -2764,7 +2853,7 @@ def describe_players_in_video(
             resp = _new_sdk_video_call(
                 backend_obj.model_name, sys_prompt, user_msg, video_bytes,
                 mime_type or "video/mp4", file_ref=_file_ref, fps=0.75,
-                tier="standard", stream=False,
+                tier="fast", stream=False,   # listing players needs no thinking
             )
             raw = resp.text
         except ImportError:
@@ -2899,11 +2988,27 @@ def detect_sport(frames_jpeg: list[bytes], backend: str = "auto") -> dict:
     usr_msg = "Identify the sport/activity in these keyframes."
 
     backend_obj = pick_backend(backend)
+    # PRIMARY: new SDK with thinking OFF — a 1-2 frame sport guess needs no
+    # reasoning, and the legacy SDK can't disable thinking on gemini-3.5-flash
+    # (a thinking model), so it burned 10-20s per call. Falls back to the
+    # legacy backend on any failure (no regression).
+    raw = None
     try:
-        raw = backend_obj.call(sys_prompt, usr_msg, frames_jpeg[:2])
-    except Exception as exc:
-        return {"sport": "other", "confidence": 0.0,
-                "_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
+        resp = _new_sdk_image_call(
+            backend_obj.model_name, sys_prompt, usr_msg, frames_jpeg[:2],
+            thinking_budget=0,
+        )
+        raw = resp.text
+    except ImportError:
+        raw = None
+    except Exception:
+        raw = None
+    if raw is None:
+        try:
+            raw = backend_obj.call(sys_prompt, usr_msg, frames_jpeg[:2])
+        except Exception as exc:
+            return {"sport": "other", "confidence": 0.0,
+                    "_meta": {"error": str(exc)[:200], "backend": backend_obj.name}}
 
     data = _parse_json_safe(raw)
     sport = str(data.get("sport", "other")).lower().strip().replace(" ", "_")
