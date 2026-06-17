@@ -1420,25 +1420,38 @@ export default function AnalyzePage() {
       : (VIDEO_ANALYSIS_SPORTS.includes(activeSport) ? activeSport : "badminton");
     let detected = null;
 
-    setLoadingText("Detecting sport from video...");
-    try {
-      const mod = await import("@/ai/videoProcessor");
-      // 1 mid-video keyframe is plenty for sport detection — halves the
-      // payload + Gemini processing vs 2 frames, leaves more headroom for
-      // Vercel cold-start latency.
-      const keyframes = await mod.extractDetectKeyframes(file, { count: 1 });
-      if (keyframes.length > 0) {
-        // 45s timeout — Vercel cold-start + first Gemini call can take 25-35s.
-        const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 45000 });
-        if (data?.success && data.sport) {
-          detected = { sport: data.sport, confidence: data.confidence ?? 0 };
-          setDetectedSport(data.sport);
-          setDetectedSportConfidence(data.confidence ?? 0);
-          console.info(`[sport] detected: ${data.sport} (conf=${data.confidence?.toFixed?.(2)})`);
+    // Sport-detection pre-pass — ONLY when the user left the sport on "Auto".
+    // When they explicitly picked a sport we trust it: the full universal
+    // analysis re-detects the real sport during its own Step 1 anyway, so this
+    // keyframe guess is just a (redundant) early hint. It used to run on EVERY
+    // analysis with a 45s timeout and routinely timed out → ~45s of dead wait
+    // before the upload even started (measured: the #1 cause of the "60s for a
+    // 2MB clip" stall). Skip it unless we genuinely need it.
+    const needSportDetect =
+      (!selectedSport || selectedSport === "auto") && !reanalyzeContext?.sport;
+    if (needSportDetect) {
+      setLoadingText("Detecting sport from video...");
+      try {
+        const mod = await import("@/ai/videoProcessor");
+        // 1 mid-video keyframe is plenty for sport detection — halves the
+        // payload + Gemini processing vs 2 frames.
+        const keyframes = await mod.extractDetectKeyframes(file, { count: 1 });
+        if (keyframes.length > 0) {
+          // Tight 12s timeout: this is only a picker hint and the full
+          // analysis detects the real sport regardless, so never block the
+          // pipeline for the old 45s. If it's slow, we just proceed on the
+          // fallback sport (no functional loss).
+          const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 12000 });
+          if (data?.success && data.sport) {
+            detected = { sport: data.sport, confidence: data.confidence ?? 0 };
+            setDetectedSport(data.sport);
+            setDetectedSportConfidence(data.confidence ?? 0);
+            console.info(`[sport] detected: ${data.sport} (conf=${data.confidence?.toFixed?.(2)})`);
+          }
         }
+      } catch (e) {
+        console.warn("[sport] detection failed, falling back to selection:", e?.response?.data || e.message);
       }
-    } catch (e) {
-      console.warn("[sport] detection failed, falling back to selection:", e?.response?.data || e.message);
     }
     // Use detected sport when user picked Auto OR when detection disagrees
     // with the user's pick (with high confidence).
@@ -1945,29 +1958,24 @@ export default function AnalyzePage() {
           try {
             // Reference the uploaded handle for big clips; inline base64 for
             // small ones. Same picker UI either way.
-            // Two attempts: a Gemini latency spike or serverless cold start
-            // routinely killed the single 45s attempt on phones ("player
-            // detection still failing sometimes") — the retry usually lands
-            // on a warm instance and succeeds in a few seconds.
+            // Single attempt, 25s cap. The old 2-attempt loop (45s + 35s)
+            // could burn ~80s of wall time before giving up — measured as the
+            // #2 cause of the slow pipeline. The picker is a nice-to-have:
+            // when it can't disambiguate in time we fall straight through and
+            // analyze the whole clip (graceful degrade), so a tight budget is
+            // the right trade. 25s comfortably covers a warm-instance call
+            // (a few seconds) while bailing fast on a cold-start/latency spike.
             let descData = null;
-            for (let descAttempt = 0; descAttempt < 2 && !descData; descAttempt++) {
-              try {
-                const resp = await api.post("/describe-players",
-                  fileName
-                    ? { mime_type: uploadFile.type || file.type || "video/mp4", file_name: fileName }
-                    : { mime_type: uploadFile.type || file.type || "video/mp4", video_b64: b64 },
-                  // Must exceed the backend's own 40s Gemini cap so the
-                  // backend's result/504 actually reaches us.
-                  { timeout: descAttempt === 0 ? 45000 : 35000 });
-                descData = resp.data;
-              } catch (descAttemptErr) {
-                if (descAttempt === 0) {
-                  console.warn("[universal] describe-players attempt 1 failed, retrying once:",
-                               descAttemptErr?.message);
-                } else {
-                  throw descAttemptErr;
-                }
-              }
+            try {
+              const resp = await api.post("/describe-players",
+                fileName
+                  ? { mime_type: uploadFile.type || file.type || "video/mp4", file_name: fileName }
+                  : { mime_type: uploadFile.type || file.type || "video/mp4", video_b64: b64 },
+                { timeout: 25000 });
+              descData = resp.data;
+            } catch (descAttemptErr) {
+              console.warn("[universal] describe-players failed, proceeding without picker:",
+                           descAttemptErr?.message);
             }
             let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
             // Also extract a single mid-frame keyframe of the whole
