@@ -161,7 +161,11 @@ export async function uploadToCloudinary(videoFile, options = {}) {
   // original/Cloudinary path below (no regression). Gemini bills by frames
   // sampled, not resolution, so 720p doesn't change the token cost.
   const origMb = videoFile.size / (1024 * 1024);
-  const TRANSCODE_MIN_MB = 20;
+  // Clips above this size get the on-device 720p transcode. 8MB is low enough
+  // to be testable with typical sample clips and still a real win on slow
+  // uplinks; raise toward ~25-30MB in production if you'd rather only
+  // transcode genuinely large clips (the decode-verify makes either safe).
+  const TRANSCODE_MIN_MB = 8;
   let didTranscode = false;
   if (rotation === 0 && origMb > TRANSCODE_MIN_MB) {
     try {
