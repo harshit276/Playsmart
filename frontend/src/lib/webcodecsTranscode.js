@@ -110,10 +110,21 @@ export async function webcodecsTranscode(file, opts = {}) {
   // height only → Mediabunny preserves aspect ratio. Force H.264 ("avc") for
   // maximum Gemini/back-end compatibility; QUALITY_HIGH keeps fast-motion
   // contact frames sharp; drop audio (analysis ignores it, shrinks the file).
+  //   • frameRate: 30 — cap output FPS. 60fps phone/tutorial clips were the
+  //     killer (2x the frames to decode+encode → ~2min transcodes); 30fps is
+  //     plenty since Gemini samples at 1fps and the analysis upsamples to ~4fps.
+  //   • hardwareAcceleration: 'prefer-hardware' — avoid the slow software
+  //     encoder when the device has a hardware H.264 encoder.
   const conversion = await Conversion.init({
     input,
     output,
-    video: { height: maxHeight, codec: "avc", bitrate: QUALITY_HIGH },
+    video: {
+      height: maxHeight,
+      codec: "avc",
+      bitrate: QUALITY_HIGH,
+      frameRate: 30,
+      hardwareAcceleration: "prefer-hardware",
+    },
     audio: { discard: true },
   });
 
@@ -127,7 +138,24 @@ export async function webcodecsTranscode(file, opts = {}) {
     conversion.onProgress = (p) => { try { onProgress(Math.round((p || 0) * 100)); } catch { /* noop */ } };
   }
 
-  await conversion.execute();
+  // Hard timeout so a slow/stuck transcode can't make things WORSE than just
+  // uploading the original. If we blow the budget, cancel the conversion and
+  // throw → the caller falls back to the original-upload path. Tuned to keep
+  // the whole compress+upload under the ~45s target on typical clips.
+  const TRANSCODE_TIMEOUT_MS = 45_000;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    conversion.cancel().catch(() => { /* noop */ });
+  }, TRANSCODE_TIMEOUT_MS);
+  try {
+    await conversion.execute();
+  } catch (execErr) {
+    if (timedOut) { const e = new Error("transcode_timeout"); e.code = "timeout"; throw e; }
+    throw execErr;
+  } finally {
+    clearTimeout(timer);
+  }
 
   const buf = output.target.buffer;
   if (!buf || buf.byteLength < 2000) throw new Error("transcode_empty");
