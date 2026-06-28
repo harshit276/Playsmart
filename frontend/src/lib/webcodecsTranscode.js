@@ -124,6 +124,13 @@ export async function webcodecsTranscode(file, opts = {}) {
       bitrate: QUALITY_HIGH,
       frameRate: 30,
       hardwareAcceleration: "prefer-hardware",
+      // BAKE rotation into the pixels instead of writing a rotation flag.
+      // A flag-only rotation is what made portrait clips analyze sideways
+      // ("no shots") — Gemini ignores the container flag. With this false,
+      // Mediabunny rotates the actual pixels so the output is upright with no
+      // flag, and the caller can treat it as rotation=0. (This is the trick
+      // the previously-working transcode used before it was reverted.)
+      allowRotationMetadata: false,
     },
     audio: { discard: true },
   });

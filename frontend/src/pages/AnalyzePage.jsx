@@ -1393,6 +1393,23 @@ export default function AnalyzePage() {
     if (!file) return;
     // mode selector removed — always run full analysis
 
+    // Very large clips on a phone: the on-device 720p transcode can't keep up
+    // (memory + frame count) and gets stuck in "Optimizing…", and uploading the
+    // raw file over a mobile uplink is impractical. Rather than hang, ask the
+    // user to trim — which is what the app recommends anyway (5–30s clips).
+    // Desktop (fast connection, uploads the original) is unaffected.
+    const _fileMb = file.size / (1024 * 1024);
+    const _isMobile = typeof navigator !== "undefined"
+      && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    if (_isMobile && _fileMb > 150) {
+      toast.error(
+        `This video is ${Math.round(_fileMb)} MB — too large to process smoothly on a phone. ` +
+        `Trim it to your key 10–30 seconds and try again for a faster, more accurate analysis.`,
+        { duration: 8000 },
+      );
+      return;
+    }
+
     // Token spend gate — UX hint, server enforces. If we know the user
     // is short, intercept now so they don't burn an upload only to
     // hit a 402 later. Guests/missing-balance get through (server gates).

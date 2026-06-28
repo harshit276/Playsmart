@@ -161,13 +161,32 @@ export async function uploadToCloudinary(videoFile, options = {}) {
   // original/Cloudinary path below (no regression). Gemini bills by frames
   // sampled, not resolution, so 720p doesn't change the token cost.
   const origMb = videoFile.size / (1024 * 1024);
-  // Clips above this size get the on-device 720p transcode. 8MB is low enough
-  // to be testable with typical sample clips and still a real win on slow
-  // uplinks; raise toward ~25-30MB in production if you'd rather only
-  // transcode genuinely large clips (the decode-verify makes either safe).
-  const TRANSCODE_MIN_MB = 8;
+  // Transcode window: clips between MIN and MAX MB get the on-device 720p
+  // transcode (mobile only). Below MIN they're already small enough to upload
+  // as-is. Above MAX the transcode itself is too heavy on a phone (memory +
+  // frame count) and was observed to get stuck in "Optimizing…" — those are
+  // blocked earlier in AnalyzePage with a "trim your clip" message, so we also
+  // hard-cap here as a safety net.
+  const TRANSCODE_MIN_MB = 20;
+  const TRANSCODE_MAX_MB = 150;
+
+  // MOBILE-ONLY (2026-06): the WebCodecs transcode is only safe where a real
+  // HARDWARE H.264 encoder exists. On a DESKTOP without one, Chrome falls back
+  // to a software encoder — a 1080p/60fps clip then takes 100s+ and Mediabunny's
+  // cancel() can't interrupt the saturated loop, so even the 45s timeout can't
+  // rescue it (live-tested on desktop). Phones (iPhone VideoToolbox / Android
+  // MediaCodec) virtually always have a hardware H.264 encoder, which is exactly
+  // what this path was built for ("the WhatsApp trick"), so we gate it to mobile
+  // user agents. Desktop uploads the original (with the timeout/retry/cancel
+  // resilience already in place). Rotated clips still use the Cloudinary
+  // rotation-bake path. A future hardware-encode probe + Web Worker could let
+  // desktop opt in safely.
+  const isMobile = typeof navigator !== "undefined"
+    && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   let didTranscode = false;
-  if (rotation === 0 && origMb > TRANSCODE_MIN_MB) {
+  // Note: no rotation gate — webcodecsTranscode bakes rotation into the pixels
+  // (allowRotationMetadata:false), so portrait phone clips transcode upright too.
+  if (isMobile && origMb > TRANSCODE_MIN_MB && origMb <= TRANSCODE_MAX_MB) {
     try {
       const { webcodecsSupported, webcodecsTranscode } = await import("./webcodecsTranscode");
       if (webcodecsSupported()) {
@@ -179,8 +198,11 @@ export async function uploadToCloudinary(videoFile, options = {}) {
         });
         workFile = small;
         didTranscode = true;
+        // Output is upright (rotation baked into pixels) → no server-side
+        // rotation transform needed.
+        rotation = 0;
         // eslint-disable-next-line no-console
-        console.info(`[upload] WebCodecs 720p transcode: ${origMb.toFixed(1)}MB → ${(small.size / 1024 / 1024).toFixed(1)}MB (verified)`);
+        console.info(`[upload] WebCodecs 720p transcode: ${origMb.toFixed(1)}MB → ${(small.size / 1024 / 1024).toFixed(1)}MB (verified, upright)`);
       }
     } catch (twErr) {
       console.warn("[upload] WebCodecs transcode skipped/failed, using original:",
