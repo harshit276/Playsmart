@@ -25,10 +25,20 @@ import httpx
 import json
 
 # ─── Cloudinary credentials ───
-# TODO: move these to env vars in Vercel / Railway dashboards.
-CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "dz6anvjej").strip()
-CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "547874763431433").strip()
-CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "mK2zxGmmzsipNsb1XreEtu4Q0Kk").strip()
+# Read from env ONLY — never hardcode secrets in source (they end up in git
+# history and any leaked checkout). Set these in the Vercel / Railway project
+# environment. If unset, the highlight/upload endpoints that need Cloudinary
+# will return a clear error at request time instead of silently using a
+# baked-in (and now-rotated) key.
+CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "").strip()
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+if not (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET):
+    logging.getLogger(__name__).warning(
+        "Cloudinary credentials not fully set (CLOUDINARY_CLOUD_NAME / "
+        "CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET) — video upload + highlight "
+        "endpoints will fail until they're configured in the environment."
+    )
 
 # ─── Simple in-memory cache for equipment data ───
 _equipment_cache: dict = {}

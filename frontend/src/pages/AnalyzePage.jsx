@@ -511,6 +511,9 @@ export default function AnalyzePage() {
   const [expandedIssue, setExpandedIssue] = useState(null);
   const fileRef = useRef(null);
   const dropRef = useRef(null);
+  // Lets the user cancel an in-flight upload/analysis (and lets us abort a
+  // stalled upload). Recreated at the start of every analysis run.
+  const analysisAbortRef = useRef(null);
 
   const [improvementData, setImprovementData] = useState(null);
   // History sport filter — null/"all" shows everything; a specific sport
@@ -1369,6 +1372,23 @@ export default function AnalyzePage() {
     }
   };
 
+  // Cancel an in-flight upload/analysis and return to the upload screen.
+  // Aborting the controller makes the stalled/streaming upload reject with
+  // code "abort", which the analyze() catch swallows silently.
+  const cancelAnalysis = () => {
+    try { analysisAbortRef.current?.abort(); } catch { /* noop */ }
+    setAnalyzing(false);
+    setProgress(0);
+    setDisplayProgress(0);
+    setLoadingText("");
+    setLoadingSubtext("");
+    setPlayerSelectorOpen(false);
+    setUniversalPlayers(null);
+    setUniversalUploadData(null);
+    try { clearPickerSession(); } catch { /* noop */ }
+    toast("Analysis cancelled.");
+  };
+
   const analyze = async () => {
     if (!file) return;
     // mode selector removed — always run full analysis
@@ -1399,6 +1419,11 @@ export default function AnalyzePage() {
         return;
       }
     }
+
+    // Fresh abort controller for this run so Cancel (and the upload stall
+    // watchdog) can tear down an in-flight upload.
+    try { analysisAbortRef.current?.abort(); } catch { /* noop */ }
+    analysisAbortRef.current = new AbortController();
 
     setAnalyzing(true);
     setResult(null);
@@ -1677,6 +1702,59 @@ export default function AnalyzePage() {
           // redoing it. Only <2MB clips inline (their base64 fits Vercel's
           // 4.5MB body cap and compressUnderSize skips them, so no encode).
           const DIRECT_UPLOAD_MIN_MB = 2;
+
+          // ── FAST PATH for big clips: one-hop browser → Gemini Files API ──
+          // The Cloudinary path below moves the bytes THREE times
+          // (browser→Cloudinary→backend→Gemini); for a 50-130MB phone clip
+          // that's the dominant wait. This uploads ONCE, straight to Google,
+          // which is the biggest win for large clips. Gemini bills by frames
+          // sampled (fps × duration), NOT source resolution, so skipping the
+          // Cloudinary 720p transform here does NOT raise the Gemini cost.
+          // Gated to NON-rotated clips only — the direct path can't bake
+          // rotation, so portrait/rotated clips must keep using Cloudinary
+          // (which applies a server-side rotation transform). Any failure
+          // (incl. a proxy/CORS-blocked PUT) falls straight through to the
+          // Cloudinary path below — worst case is exactly today's behaviour.
+          // Small clips (<8MB) skip this: Cloudinary is already fast for them
+          // and the extra round-trip-then-fallback risk isn't worth it.
+          const DIRECT_GEMINI_MIN_MB = 8;
+          if (!fileName && origMbRaw >= DIRECT_GEMINI_MIN_MB) {
+            try {
+              let rotDeg = 0;
+              try {
+                const { getVideoRotationDegrees } = await import("@/lib/videoRotation");
+                rotDeg = await getVideoRotationDegrees(file);
+              } catch { rotDeg = 0; }
+              if (!rotDeg) {
+                setLoadingText("Uploading your video...");
+                setProgress(15);
+                const { uploadDirectToGemini } = await import("@/lib/geminiDirectUpload");
+                const direct = await uploadDirectToGemini(file, {
+                  signal: analysisAbortRef.current?.signal,
+                  onProgress: ({ percent, message }) => {
+                    setLoadingText(message || "Uploading your video...");
+                    setProgress(15 + Math.round((percent || 0) * 0.26));
+                  },
+                });
+                if (direct?.file_name) {
+                  fileName = direct.file_name;
+                  uploadFile = file;
+                  b64 = null;
+                  // Whole original analyzed (no window) → no time remap.
+                  timeScale = 1;
+                  timeOffset = 0;
+                  windowApplied = false;
+                  // eslint-disable-next-line no-console
+                  console.info(`[upload] Direct → Gemini Files API: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
+                }
+              }
+            } catch (directErr) {
+              if (directErr?.code === "abort" || analysisAbortRef.current?.signal?.aborted) throw directErr;
+              console.warn("[upload] Direct→Gemini failed, falling back to Cloudinary:",
+                           directErr?.message || directErr);
+            }
+          }
+
           // ── PRIMARY path for ALL clips ≥2MB: Cloudinary, server-side ──
           // uploadToCloudinary uploads the original (and ffmpeg-compresses
           // >100MB to 720p with a REAL encoder — not the fragile canvas/
@@ -1691,13 +1769,15 @@ export default function AnalyzePage() {
           //     videos are supported.
           // Full video (no window truncation), exact timestamps. Falls
           // through to the legacy MediaRecorder optimize only if Cloudinary
-          // genuinely fails.
-          if (origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
+          // genuinely fails. Skipped entirely when the fast direct→Gemini
+          // path above already produced a fileName.
+          if (!fileName && origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
             try {
               setLoadingText("Uploading your video...");
               setProgress(15);
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
               const cloudOrig = await uploadToCloudinary(file, {
+                signal: analysisAbortRef.current?.signal,
                 onProgress: ({ percent, message }) => {
                   setLoadingText(message || "Uploading your video...");
                   setProgress(15 + Math.round((percent || 0) * 0.26));
@@ -1734,6 +1814,11 @@ export default function AnalyzePage() {
                 }
               }
             } catch (origUpErr) {
+              // User cancelled mid-upload — stop entirely, don't silently
+              // fall through to the legacy optimize/upload path.
+              if (origUpErr?.code === "abort" || analysisAbortRef.current?.signal?.aborted) {
+                throw origUpErr;
+              }
               console.warn("[upload] Cloudinary path failed, falling back to optimize route:",
                            origUpErr?.response?.data?.detail || origUpErr?.message);
             }
@@ -2431,6 +2516,15 @@ export default function AnalyzePage() {
         setUniversalPlayers(null);
         setUniversalUploadData(null);
       } catch (err) {
+        // User cancelled — cancelAnalysis() already reset the UI. Don't show
+        // an error or toast; just stop here.
+        if (err?.code === "abort" || analysisAbortRef.current?.signal?.aborted) {
+          try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
+          setAnalysisJobId(null);
+          releaseWakeLock();
+          setAnalyzing(false);
+          return;
+        }
         const raw = err?.response?.data?.detail || err.message || "";
         const status = err?.response?.status;
         // Translate any failure into a clear, actionable on-screen message
@@ -3098,7 +3192,11 @@ export default function AnalyzePage() {
 
   const renderPlayerSelector = () => (
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-5">
-        {/* Doubles match toggle */}
+        {/* Player picker expander. NOTE: this is NOT the doubles-mode toggle
+            (that lives below, bound to `doublesMode`). This one opens the
+            court diagram so the user can focus the analysis on one specific
+            player. It was previously mislabeled "Doubles Match", which made it
+            look like a second, conflicting doubles toggle. */}
         <button
           onClick={() => {
             const opening = !playerSelectorOpen;
@@ -3108,7 +3206,7 @@ export default function AnalyzePage() {
           className="flex items-center gap-3 text-xs text-zinc-500 uppercase tracking-wide font-medium mb-3 hover:text-zinc-300 transition-colors"
         >
           <Users className="w-3.5 h-3.5" />
-          <span>Doubles Match</span>
+          <span>Focus on one player</span>
           {/* Toggle switch */}
           <div className={`relative w-9 h-5 rounded-full transition-colors ${playerSelectorOpen ? "bg-lime-400/40" : "bg-zinc-700"}`}>
             <div className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${playerSelectorOpen ? "left-[18px] bg-lime-400" : "left-0.5 bg-zinc-400"}`} />
@@ -3495,12 +3593,25 @@ export default function AnalyzePage() {
                 className={`text-center text-[10px] mt-2 ${elapsed > 90 ? "text-amber-400/80" : "text-zinc-600"}`}
               >
                 {elapsed > 150
-                  ? "Still working — busy doubles rallies are the slowest to analyze. It won't fail silently; please keep this page open."
+                  ? `Still working — ${doublesMode ? "busy doubles rallies" : "dense clips"} take the longest. If it doesn't move, use Cancel below and try a shorter clip.`
                   : elapsed > 90
-                  ? "Deep analysis of a dense clip can take up to 2-3 minutes. Hang tight — keep this page open and it'll finish on its own."
-                  : "Longer videos take a bit more time — hang tight, this won't fail silently."}
+                  ? "Deep analysis of a dense clip can take up to 2-3 minutes. Hang tight — you can also Cancel and retry with a shorter clip."
+                  : "Longer videos take a bit more time — hang tight."}
               </motion.p>
             )}
+
+            {/* Cancel / Start over — always available so a stuck or slow run
+                is never a dead end. Aborts the in-flight upload via the
+                AbortController and returns to the upload screen. */}
+            <div className="flex justify-center mt-4">
+              <button
+                type="button"
+                onClick={cancelAnalysis}
+                className="text-[11px] text-zinc-500 hover:text-red-400 underline underline-offset-2 transition-colors"
+              >
+                Cancel and start over
+              </button>
+            </div>
 
             {/* Live shots strip — only shown when the streaming endpoint is
                 feeding shots in incrementally. Each badge appears the moment

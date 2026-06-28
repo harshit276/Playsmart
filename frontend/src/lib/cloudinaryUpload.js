@@ -47,16 +47,98 @@ async function compressIfNeeded(file, onProgress) {
   }
 }
 
+// ── Upload resilience knobs ──────────────────────────────────────────
+// A *stall* (no bytes for a while) is not an `onerror` — a naked XHR will
+// hang forever if the connection silently drops. We treat "no upload
+// progress for STALL_TIMEOUT_MS" as a failure, then retry the whole upload
+// a few times with backoff. This turns the old infinite "stuck at 23%" hang
+// into a fast fail-and-recover.
+const STALL_TIMEOUT_MS = 25_000;   // no progress for 25s → abort this attempt
+const MAX_UPLOAD_ATTEMPTS = 3;     // total tries before giving up
+const RETRY_BACKOFF_MS = [1500, 4000]; // wait before attempt 2, then 3
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * One Cloudinary upload attempt with a stall watchdog + external abort.
+ * Rejects with err.code === "stall" | "abort" | "network" | "http" so the
+ * caller can decide whether to retry.
+ */
+function uploadAttemptXHR(uploadUrl, formData, { onProgress, signal } = {}) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      const e = new Error("Upload cancelled"); e.code = "abort"; return reject(e);
+    }
+    const xhr = new XMLHttpRequest();
+    let stallTimer = null;
+    const armStall = () => {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        try { xhr.abort(); } catch { /* noop */ }
+        const e = new Error("Upload stalled (no progress)"); e.code = "stall";
+        reject(e);
+      }, STALL_TIMEOUT_MS);
+    };
+    const clearStall = () => { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } };
+
+    const onAbort = () => { try { xhr.abort(); } catch { /* noop */ } };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => { clearStall(); signal?.removeEventListener("abort", onAbort); };
+
+    xhr.open("POST", uploadUrl);
+    // Hard ceiling in case the browser never fires progress at all.
+    xhr.timeout = STALL_TIMEOUT_MS * 4;
+    xhr.upload.onprogress = (e) => {
+      armStall(); // reset the watchdog every time bytes actually move
+      if (e.lengthComputable) {
+        const pct = 25 + (e.loaded / e.total) * 50; // 25-75%
+        onProgress?.({
+          percent: pct,
+          message: `Uploading... ${Math.round((e.loaded / e.total) * 100)}%`,
+        });
+      }
+    };
+    xhr.upload.onloadstart = armStall;
+    xhr.onload = () => {
+      cleanup();
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          const e = new Error("Invalid upload response from Cloudinary"); e.code = "parse";
+          reject(e);
+        }
+      } else {
+        const e = new Error(`Upload failed: ${xhr.status} ${xhr.responseText}`);
+        // 4xx (bad signature/params) won't fix itself — don't retry those.
+        e.code = xhr.status >= 400 && xhr.status < 500 ? "fatal" : "http";
+        reject(e);
+      }
+    };
+    xhr.onerror = () => { cleanup(); const e = new Error("Upload network error"); e.code = "network"; reject(e); };
+    xhr.ontimeout = () => { cleanup(); const e = new Error("Upload timed out"); e.code = "stall"; reject(e); };
+    xhr.onabort = () => {
+      cleanup();
+      // If we aborted because of the external signal, surface "abort"; the
+      // stall path already rejected with its own error before calling abort.
+      if (signal?.aborted) { const e = new Error("Upload cancelled"); e.code = "abort"; reject(e); }
+    };
+    armStall();
+    xhr.send(formData);
+  });
+}
+
 /**
  * Upload a video to Cloudinary using a signed upload from our backend.
  *
  * @param {File} videoFile
  * @param {Object} [options]
  * @param {function} [options.onProgress] - ({percent, message})
+ * @param {AbortSignal} [options.signal] - cancel an in-flight upload
  * @returns {Promise<{public_id: string, secure_url: string, duration: number, width: number, height: number}>}
  */
 export async function uploadToCloudinary(videoFile, options = {}) {
-  const { onProgress } = options;
+  const { onProgress, signal } = options;
 
   const { getVideoRotationDegrees, downscaleForUpload } = await import("./videoRotation");
 
@@ -96,32 +178,32 @@ export async function uploadToCloudinary(videoFile, options = {}) {
 
   onProgress?.({ percent: 25, message: "Uploading to cloud..." });
 
-  const uploadResponse = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", signed.upload_url);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        const pct = 25 + (e.loaded / e.total) * 50; // 25-75%
-        onProgress?.({
-          percent: pct,
-          message: `Uploading... ${Math.round((e.loaded / e.total) * 100)}%`,
-        });
-      }
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve(JSON.parse(xhr.responseText));
-        } catch (err) {
-          reject(new Error("Invalid upload response from Cloudinary"));
-        }
-      } else {
-        reject(new Error(`Upload failed: ${xhr.status} ${xhr.responseText}`));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Upload network error"));
-    xhr.send(formData);
-  });
+  // Retry the whole attempt on transient failures (stall / network / 5xx).
+  // A stalled upload aborts after STALL_TIMEOUT_MS and we try again instead
+  // of hanging forever. User-initiated abort and 4xx are NOT retried.
+  let uploadResponse;
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_UPLOAD_ATTEMPTS; attempt++) {
+    try {
+      uploadResponse = await uploadAttemptXHR(signed.upload_url, formData, { onProgress, signal });
+      lastErr = null;
+      break;
+    } catch (err) {
+      lastErr = err;
+      if (err?.code === "abort") throw err;             // user cancelled
+      if (err?.code === "fatal") throw err;             // 4xx — won't recover
+      if (attempt >= MAX_UPLOAD_ATTEMPTS) break;        // out of tries
+      onProgress?.({
+        percent: 25,
+        message: `Upload interrupted — retrying (${attempt + 1}/${MAX_UPLOAD_ATTEMPTS})...`,
+      });
+      await sleep(RETRY_BACKOFF_MS[attempt - 1] ?? 4000);
+      if (signal?.aborted) { const e = new Error("Upload cancelled"); e.code = "abort"; throw e; }
+    }
+  }
+  if (!uploadResponse) {
+    throw lastErr || new Error("Upload failed after multiple attempts");
+  }
 
   return {
     public_id: uploadResponse.public_id,
