@@ -142,25 +142,65 @@ export async function uploadToCloudinary(videoFile, options = {}) {
 
   const { getVideoRotationDegrees, downscaleForUpload } = await import("./videoRotation");
 
-  // Step 0a: LARGE / 4K clips → downscale to ~720p on-device first. A 295MB
-  // 4K clip is over the 200MB backend cap and Gemini doesn't need 4K (720p
-  // detects shots identically). The canvas re-encode ALSO bakes in rotation,
-  // so a downscaled clip is already upright (rotated=false). Never throws.
   let workFile = videoFile;
   let rotation = 0;
-  const ds = await downscaleForUpload(videoFile, onProgress);
-  if (ds.downscaled) {
-    workFile = ds.file; // already upright + small
-  } else {
-    // Step 0b: not downscaled → DETECT the rotation flag so the backend can
-    // fetch a Cloudinary rotation-baked derivative (fast header parse, no
-    // decode; no on-device re-encode which was slow/fragile on iOS Safari).
-    try { rotation = await getVideoRotationDegrees(videoFile); }
-    catch { /* best-effort; default to no rotation */ }
+
+  // Detect rotation up front (cheap MP4 header parse). Needed to decide whether
+  // the fast on-device transcode is safe: WebCodecs re-encodes the pixels but
+  // can't reliably bake a container rotation flag, so rotated (portrait phone)
+  // clips must take the Cloudinary rotation-bake path instead.
+  try { rotation = await getVideoRotationDegrees(videoFile); }
+  catch { rotation = 0; }
+
+  // ── Step 0 — FAST PATH: hardware WebCodecs transcode to 720p H.264 ──
+  // For big, NON-rotated clips this is the dominant speed win for >50MB:
+  // it shrinks the upload 5-10x in ~10-20s (vs uploading the full original).
+  // The output is DECODE-VERIFIED inside webcodecsTranscode() before it's
+  // returned, so a malformed transcode (the old "Gemini sees no shots" bug)
+  // can never reach the server — on any failure we fall through to the
+  // original/Cloudinary path below (no regression). Gemini bills by frames
+  // sampled, not resolution, so 720p doesn't change the token cost.
+  const origMb = videoFile.size / (1024 * 1024);
+  const TRANSCODE_MIN_MB = 20;
+  let didTranscode = false;
+  if (rotation === 0 && origMb > TRANSCODE_MIN_MB) {
+    try {
+      const { webcodecsSupported, webcodecsTranscode } = await import("./webcodecsTranscode");
+      if (webcodecsSupported()) {
+        onProgress?.({ percent: 2, message: "Optimizing video on your device…" });
+        const small = await webcodecsTranscode(videoFile, {
+          maxHeight: 720,
+          onProgress: (pct) =>
+            onProgress?.({ percent: 2 + (pct || 0) * 0.18, message: "Optimizing video on your device…" }),
+        });
+        workFile = small;
+        didTranscode = true;
+        // eslint-disable-next-line no-console
+        console.info(`[upload] WebCodecs 720p transcode: ${origMb.toFixed(1)}MB → ${(small.size / 1024 / 1024).toFixed(1)}MB (verified)`);
+      }
+    } catch (twErr) {
+      console.warn("[upload] WebCodecs transcode skipped/failed, using original:",
+                   twErr?.message || twErr);
+      workFile = videoFile;
+      didTranscode = false;
+    }
+  }
+
+  // Step 0b — if we didn't transcode, fall back to the existing large/4K
+  // real-time canvas downscale (which also bakes rotation). A 295MB 4K clip is
+  // over the 200MB backend cap and Gemini doesn't need 4K. Never throws.
+  if (!didTranscode) {
+    const ds = await downscaleForUpload(videoFile, onProgress);
+    if (ds.downscaled) {
+      workFile = ds.file; // already upright + small
+      rotation = 0;       // rotation baked by the re-encode
+    }
+    // else: rotation already detected above; the backend bakes it via a
+    // Cloudinary transform on the uploaded original.
   }
 
   // Step 1: compress in-browser if STILL large (ffmpeg path; rarely hit now
-  // that big clips are downscaled above).
+  // that big clips are transcoded/downscaled above).
   const fileToUpload = await compressIfNeeded(workFile, onProgress);
 
   // Step 2: ask our backend for signed upload params

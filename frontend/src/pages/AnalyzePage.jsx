@@ -1717,8 +1717,19 @@ export default function AnalyzePage() {
           // Cloudinary path below — worst case is exactly today's behaviour.
           // Small clips (<8MB) skip this: Cloudinary is already fast for them
           // and the extra round-trip-then-fallback risk isn't worth it.
+          //
+          // DISABLED (2026-06): live testing proved the browser→Gemini PUT is
+          // CORS-blocked ("Direct upload network error (possibly CORS)") — the
+          // resumable-upload URL Google returns doesn't allow a cross-origin
+          // browser PUT, so every attempt fails and falls back to Cloudinary,
+          // adding a wasted round-trip + a console error with no speed gain.
+          // This is why the path was built but never wired in. Kept behind a
+          // flag (and the resilience plumbing kept) in case a future
+          // backend-proxied upload makes it viable. Flip to true only if the
+          // CORS issue is solved server-side.
+          const ENABLE_DIRECT_GEMINI = false;
           const DIRECT_GEMINI_MIN_MB = 8;
-          if (!fileName && origMbRaw >= DIRECT_GEMINI_MIN_MB) {
+          if (ENABLE_DIRECT_GEMINI && !fileName && origMbRaw >= DIRECT_GEMINI_MIN_MB) {
             try {
               let rotDeg = 0;
               try {
