@@ -14244,13 +14244,34 @@ async def coach_voice_chat(
                             )
                         else:
                             raise
+                    last_finish = None
                     for chunk in stream_iter:
                         try:
                             txt = chunk.text or ""
                         except Exception:
                             txt = ""
+                        # Capture Gemini's finish_reason so a truncated reply
+                        # (ending mid-sentence) reveals WHY — most often
+                        # RECITATION (the model thinks it's reproducing known
+                        # text, common when the clip is a real pro match) or
+                        # SAFETY, which silently cut replies with no error.
+                        try:
+                            cands = getattr(chunk, "candidates", None) or []
+                            if cands:
+                                fr = getattr(cands[0], "finish_reason", None)
+                                if fr is not None:
+                                    last_finish = fr
+                        except Exception:
+                            pass
                         if txt:
                             q.put({"chunk": txt})
+                    if last_finish is not None and str(last_finish) not in (
+                        "1", "STOP", "FinishReason.STOP",
+                    ):
+                        logger.warning(
+                            "[voice-chat] gemini finish_reason=%s — reply may be "
+                            "truncated mid-sentence", last_finish,
+                        )
                 except Exception as exc:
                     q.put({"error": f"gemini_call_failed: {str(exc)[:200]}"})
                 finally:

@@ -628,30 +628,37 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
             if (!line) continue;
             const payload = line.slice(6).trim();
             if (!payload) continue;
+            // Parse first; ONLY a JSON-parse failure is "skip malformed frame".
+            // Previously an error-frame `throw` was caught by this same try,
+            // so backend errors (timeouts, Gemini stops) were silently
+            // swallowed and the reply just appeared truncated with no reason.
+            let evt;
             try {
-              const evt = JSON.parse(payload);
-              if (evt.done) {
-                done = true;
-                break;
-              }
-              if (typeof evt.chunk === "string" && evt.chunk) {
-                fullText += evt.chunk;
-                setMessages((prev) => {
-                  const copy = prev.slice();
-                  for (let i = copy.length - 1; i >= 0; i--) {
-                    if (copy[i].streaming) {
-                      copy[i] = { ...copy[i], text: fullText };
-                      break;
-                    }
-                  }
-                  return copy;
-                });
-              }
-              if (evt.error) {
-                throw new Error(String(evt.error).slice(0, 200));
-              }
+              evt = JSON.parse(payload);
             } catch (parseErr) {
-              // Non-fatal — skip malformed frame.
+              continue; // malformed SSE frame — skip it, keep streaming
+            }
+            if (evt.done) {
+              done = true;
+              break;
+            }
+            if (typeof evt.chunk === "string" && evt.chunk) {
+              fullText += evt.chunk;
+              setMessages((prev) => {
+                const copy = prev.slice();
+                for (let i = copy.length - 1; i >= 0; i--) {
+                  if (copy[i].streaming) {
+                    copy[i] = { ...copy[i], text: fullText };
+                    break;
+                  }
+                }
+                return copy;
+              });
+            }
+            if (evt.error) {
+              // Propagates to the outer catch → surfaces to the user instead
+              // of being hidden behind a half-finished reply.
+              throw new Error(String(evt.error).slice(0, 200));
             }
           }
         }
