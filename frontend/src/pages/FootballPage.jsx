@@ -74,7 +74,7 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "How can I improve my football skills at home?",
-    a: "Focus on high-touch ball mastery: wall passes, cone dribbling, juggling, and both-foot control. Short, daily sessions beat occasional long ones. Film yourself and upload to Atheonics so the AI football coach can flag technique habits to fix.",
+    a: "Focus on high-touch ball mastery: wall passes, cone dribbling, juggling, and both-foot control. Short, daily sessions beat occasional long ones. Film yourself and upload to Formanti so the AI football coach can flag technique habits to fix.",
   },
   {
     q: "How do I shoot a football with more power and accuracy?",
@@ -89,7 +89,7 @@ const FAQS = [
     a: "Beginners should prioritise comfort and the right surface: firm-ground (FG) studs for natural grass, and astro/turf (TF) soles for artificial pitches. A comfortable, well-fitting entry model like the Nike Tiempo or Puma Future is better than an expensive boot that doesn't fit.",
   },
   {
-    q: "Is the Atheonics football app free?",
+    q: "Is the Formanti football app free?",
     a: "Yes. You can analyze videos, generate training plans, and browse boot recommendations for free. No credit card required to get started.",
   },
 ];
@@ -101,13 +101,13 @@ export default function FootballPage() {
         title="AI Football Coach - Skills & Technique Video Analysis App"
         description="Free AI football coach: analyze your shooting, dribbling, and ball control, get personalized training plans and boot recommendations. Upload a training video and improve fast."
         keywords="football video analysis, AI football coach, soccer skills, how to improve football skills, dribbling drills, shooting technique, football training plan, best football boots"
-        url="https://atheonics.com/football"
+        url="https://formanti.com/football"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Football Coach - Skills & Technique Video Analysis",
           description: "AI-powered football video analysis, shooting and dribbling breakdown, ball-control feedback, and personalized training plans.",
-          url: "https://atheonics.com/football",
+          url: "https://formanti.com/football",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -173,7 +173,7 @@ export default function FootballPage() {
               Built for Footballers
             </h2>
             <p className="text-zinc-400 mt-3 max-w-2xl mx-auto">
-              Every tool on Atheonics is tuned to the technique, movement, and skills that win games.
+              Every tool on Formanti is tuned to the technique, movement, and skills that win games.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

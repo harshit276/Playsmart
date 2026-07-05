@@ -36,7 +36,7 @@ export default function HighlightsPage() {
   const recordedChunksRef = useRef([]);
   const fileRef = useRef(null);
 
-  useEffect(() => { document.title = "Highlights | Atheonics"; }, []);
+  useEffect(() => { document.title = "Highlights | Formanti"; }, []);
 
   const activeSport = profile?.active_sport || "badminton";
   useEffect(() => { if (!selectedSport) setSelectedSport(activeSport); }, [activeSport, selectedSport]);
@@ -46,7 +46,7 @@ export default function HighlightsPage() {
 
   // Cloudinary-hosted reel URL (replaces the broken in-browser ffmpeg blob).
   // Server-side splice composition produces a real concatenated reel from
-  // non-contiguous moments — no browser memory issues, no ffmpeg.wasm.
+  // non-contiguous moments â€” no browser memory issues, no ffmpeg.wasm.
   const [reelUrl, setReelUrl] = useState(null);
   const [reelClips, setReelClips] = useState(null); // per-clip Cloudinary URLs
   const [cloudinaryPublicId, setCloudinaryPublicId] = useState(null);
@@ -68,7 +68,7 @@ export default function HighlightsPage() {
       toast.error("Unsupported format. Use MP4, AVI, MOV, MKV, or WEBM.");
       return;
     }
-    // Guard rail for large phone uploads — browsers / MediaRecorder blow up
+    // Guard rail for large phone uploads â€” browsers / MediaRecorder blow up
     // over ~400 MB. Warn and let the user choose.
     const sizeMB = f.size / 1024 / 1024;
     if (sizeMB > 400) {
@@ -78,7 +78,7 @@ export default function HighlightsPage() {
       );
       if (!ok) return;
     } else if (sizeMB > 200) {
-      toast.info(`${sizeMB.toFixed(0)} MB video — analysis may take a minute.`);
+      toast.info(`${sizeMB.toFixed(0)} MB video â€” analysis may take a minute.`);
     }
     setFile(f);
     setHighlights(null);
@@ -99,7 +99,7 @@ export default function HighlightsPage() {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  // ─── Analyze video for highlights ───
+  // â”€â”€â”€ Analyze video for highlights â”€â”€â”€
   const analyzeVideo = async () => {
     if (!file) return;
     setAnalyzing(true);
@@ -155,7 +155,7 @@ export default function HighlightsPage() {
     setAnalyzing(false);
   };
 
-  // ─── Play highlight reel (seeks through moments) ───
+  // â”€â”€â”€ Play highlight reel (seeks through moments) â”€â”€â”€
   const playHighlightReel = useCallback(() => {
     if (!highlights?.highlights?.length || !videoRef.current) return;
     setCurrentClipIndex(0);
@@ -190,8 +190,8 @@ export default function HighlightsPage() {
     }
   }, [isPlayingReel, currentClipIndex, highlights, stopReel]);
 
-  // ─── Compose reel server-side via Cloudinary ───
-  // Old approach used ffmpeg.wasm in the browser → constant memory failures
+  // â”€â”€â”€ Compose reel server-side via Cloudinary â”€â”€â”€
+  // Old approach used ffmpeg.wasm in the browser â†’ constant memory failures
   // on long videos. New approach: upload once to Cloudinary, generate a
   // splice-transformation URL that concatenates the detected moments.
   // No browser ffmpeg, no concat fragility.
@@ -201,7 +201,7 @@ export default function HighlightsPage() {
     setRecordedBlob(null);
     setReelUrl(null);
     setReelClips(null);
-    setLoadingText("Uploading to cloud…");
+    setLoadingText("Uploading to cloudâ€¦");
     setProgress(0);
     try {
       const { uploadToCloudinary, generateReel } = await import("@/lib/cloudinaryUpload");
@@ -216,7 +216,7 @@ export default function HighlightsPage() {
       setCloudinaryPublicId(uploaded.public_id);
 
       // Step 2: generate the spliced reel + per-clip URLs
-      setLoadingText("Composing reel server-side…");
+      setLoadingText("Composing reel server-sideâ€¦");
       setProgress(85);
       const reel = await generateReel(
         uploaded.public_id,
@@ -249,7 +249,7 @@ export default function HighlightsPage() {
     }
   };
 
-  // ─── Play individual moment ───
+  // â”€â”€â”€ Play individual moment â”€â”€â”€
   const playMoment = (moment) => {
     if (!videoRef.current) return;
     setIsPlayingReel(false);
@@ -443,8 +443,8 @@ export default function HighlightsPage() {
                     : "bg-amber-500/90 text-black"
                 }`}>
                   {highlights.detector === "pose"
-                    ? "Pose-based detection · clean shots"
-                    : "Motion fallback · clips may be approximate"}
+                    ? "Pose-based detection Â· clean shots"
+                    : "Motion fallback Â· clips may be approximate"}
                 </div>
               )}
               {/* Hidden canvas for recording */}
@@ -454,7 +454,7 @@ export default function HighlightsPage() {
               {isPlayingReel && (
                 <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
                   <Badge className="bg-red-500/90 text-white border-none animate-pulse">
-                    Playing Reel · {currentClipIndex + 1}/
+                    Playing Reel Â· {currentClipIndex + 1}/
                     {highlights.highlights.length}
                   </Badge>
                   <Button
@@ -511,7 +511,7 @@ export default function HighlightsPage() {
                   ) : (
                     <Sparkles className="w-4 h-4 mr-1" />
                   )}
-                  {isRecording ? "Composing…" : "Create Shareable Reel"}
+                  {isRecording ? "Composingâ€¦" : "Create Shareable Reel"}
                 </Button>
               </div>
 
@@ -528,7 +528,7 @@ export default function HighlightsPage() {
               {reelUrl && (
                 <a
                   href={reelUrl}
-                  download="atheonics_highlights.mp4"
+                  download="formanti_highlights.mp4"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full inline-flex items-center justify-center gap-2 bg-lime-400 text-black hover:bg-lime-500 font-bold h-11 rounded-md mb-3"
@@ -571,8 +571,8 @@ export default function HighlightsPage() {
                       {String(moment.type || "moment").replace(/_/g, " ")}
                     </p>
                     <p className="text-[10px] text-zinc-500">
-                      {formatTime(moment.start_time)} —{" "}
-                      {formatTime(moment.end_time)} · {moment.duration}s
+                      {formatTime(moment.start_time)} â€”{" "}
+                      {formatTime(moment.end_time)} Â· {moment.duration}s
                     </p>
                   </div>
                   <Badge

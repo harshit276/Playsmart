@@ -16,7 +16,7 @@ export default function TokenEconomyStrip() {
     <section className="py-12 sm:py-16 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-8">
-          <p className="text-[11px] uppercase tracking-wider text-purple-300 font-bold mb-2">🪙 Atheonics tokens</p>
+          <p className="text-[11px] uppercase tracking-wider text-purple-300 font-bold mb-2">🪙 Formanti tokens</p>
           <h2 className="font-heading font-bold text-3xl sm:text-4xl uppercase tracking-tight text-white">
             Earn free, or top up.
           </h2>

@@ -164,7 +164,7 @@ export default function ProgressPage() {
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
-  useEffect(() => { document.title = "Progress | Atheonics"; }, []);
+  useEffect(() => { document.title = "Progress | Formanti"; }, []);
 
   // Group analyses by sport, pick the most-analyzed as the default view.
   const bySport = useMemo(() => {
@@ -463,10 +463,10 @@ export default function ProgressPage() {
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         shareData={{
-          title: "My Atheonics Progress",
-          text: `My Atheonics progress:\n${totalAnalyses} video analyses across ${sports.length} sport(s)\n${badgesData?.total_earned || 0} badges\n\nTrain smarter with Atheonics!`,
+          title: "My Formanti Progress",
+          text: `My Formanti progress:\n${totalAnalyses} video analyses across ${sports.length} sport(s)\n${badgesData?.total_earned || 0} badges\n\nTrain smarter with Formanti!`,
           card: {
-            player_name: user?.name || "Atheonics Player",
+            player_name: user?.name || "Formanti Player",
             skill_level: stats?.latestLevel || "",
             sport: activeSport ? labelFor(activeSport) : "",
             badges_count: badgesData?.total_earned || 0,

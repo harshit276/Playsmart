@@ -25,7 +25,7 @@ export default function ReferralPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { document.title = "Refer & Earn | Atheonics"; }, []);
+  useEffect(() => { document.title = "Refer & Earn | Formanti"; }, []);
 
   useEffect(() => {
     if (!user?.id) { setLoading(false); return; }
@@ -68,7 +68,7 @@ export default function ReferralPage() {
 
   const shareWhatsApp = () => {
     const text =
-      `🏸 Try Atheonics — AI coach for your game.\n\n` +
+      `🏸 Try Formanti — AI coach for your game.\n\n` +
       `Get 500 free tokens (300 signup + 200 referral bonus) when you sign up via my link:\n${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
@@ -76,7 +76,7 @@ export default function ReferralPage() {
   const shareNative = () => {
     if (navigator.share) {
       navigator.share({
-        title: "Atheonics",
+        title: "Formanti",
         text: "AI coach for your game. Get 500 free tokens with my link:",
         url: link,
       }).catch(() => {});
@@ -85,7 +85,7 @@ export default function ReferralPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO title="Refer & Earn · Atheonics" description="Invite friends and earn Atheonics tokens." />
+      <SEO title="Refer & Earn · Formanti" description="Invite friends and earn Formanti tokens." />
       <div className="container mx-auto px-4 max-w-3xl">
 
         {/* Hero */}

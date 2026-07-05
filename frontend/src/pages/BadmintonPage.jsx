@@ -74,11 +74,11 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "How fast is a professional badminton smash?",
-    a: "The fastest recorded smash exceeds 500 km/h (Mads Pieler Kolding). Most professional men smash at 350-420 km/h and recreational players typically hit 100-200 km/h. Atheonics's badminton video analyzer estimates your smash speed directly from footage.",
+    a: "The fastest recorded smash exceeds 500 km/h (Mads Pieler Kolding). Most professional men smash at 350-420 km/h and recreational players typically hit 100-200 km/h. Formanti's badminton video analyzer estimates your smash speed directly from footage.",
   },
   {
     q: "Can I use my phone to analyze my badminton game?",
-    a: "Yes. Record any rally from the back of the court with your phone, upload it to Atheonics, and our AI badminton coach will classify every shot, measure smash speed, and suggest drills — no extra sensors required.",
+    a: "Yes. Record any rally from the back of the court with your phone, upload it to Formanti, and our AI badminton coach will classify every shot, measure smash speed, and suggest drills — no extra sensors required.",
   },
   {
     q: "What is the best badminton racket for beginners?",
@@ -89,7 +89,7 @@ const FAQS = [
     a: "Most improving players train 3-5 times per week, mixing technical drills, footwork, match play, and strength work. Our AI-generated badminton training plans balance these automatically based on your goals and schedule.",
   },
   {
-    q: "Is the Atheonics badminton training app free?",
+    q: "Is the Formanti badminton training app free?",
     a: "Yes, you can analyze videos, generate training plans, and browse equipment recommendations completely free. No credit card required to get started.",
   },
 ];
@@ -101,13 +101,13 @@ export default function BadmintonPage() {
         title="AI Badminton Coach - Video Analysis & Training App"
         description="Free AI badminton coach: analyze your smash speed, get shot classification, personalized training plans, and racket recommendations. Upload any video and improve fast."
         keywords="badminton video analysis, AI badminton coach, badminton training app, badminton shot analyzer, smash speed measurement, badminton drills, best badminton racket India"
-        url="https://atheonics.com/badminton"
+        url="https://formanti.com/badminton"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Badminton Coach - Video Analysis & Training",
           description: "AI-powered badminton video analysis, smash speed detection, shot classification, and personalized training plans.",
-          url: "https://atheonics.com/badminton",
+          url: "https://formanti.com/badminton",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -174,7 +174,7 @@ export default function BadmintonPage() {
               Built for Badminton Players
             </h2>
             <p className="text-zinc-400 mt-3 max-w-2xl mx-auto">
-              Every tool on Atheonics is tuned to the pace, geometry, and technique of badminton.
+              Every tool on Formanti is tuned to the pace, geometry, and technique of badminton.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

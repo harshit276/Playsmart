@@ -1,6 +1,6 @@
-﻿{
+{
   "appId": "com.atheonics.app",
-  "appName": "Atheonics",
+  "appName": "Formanti",
   "webDir": "build",
   "server": {
     "androidScheme": "https",

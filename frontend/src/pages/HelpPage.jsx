@@ -60,7 +60,7 @@ export default function HelpPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  useEffect(() => { document.title = "Help & Support · Atheonics"; }, []);
+  useEffect(() => { document.title = "Help & Support · Formanti"; }, []);
 
   // Re-prime form when user changes
   useEffect(() => {
@@ -87,8 +87,8 @@ export default function HelpPage() {
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
       <SEO
-        title="Help & Customer Support · Atheonics"
-        description="Contact Atheonics customer care. Get help with sign-in, tokens, video analysis, equipment orders, or report a bug."
+        title="Help & Customer Support · Formanti"
+        description="Contact Formanti customer care. Get help with sign-in, tokens, video analysis, equipment orders, or report a bug."
       />
       <div className="container mx-auto px-4 max-w-3xl">
         {/* Hero */}
@@ -102,7 +102,7 @@ export default function HelpPage() {
           </div>
           <p className="text-zinc-300 text-sm">
             We typically reply within <span className="text-lime-400 font-medium">24 hours</span>.
-            For urgent issues, email <a href="mailto:hello@atheonics.com" className="underline text-lime-300">hello@atheonics.com</a>.
+            For urgent issues, email <a href="mailto:hello@formanti.com" className="underline text-lime-300">hello@formanti.com</a>.
           </p>
         </motion.div>
 
@@ -182,12 +182,12 @@ export default function HelpPage() {
         {/* Direct contact alternatives */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-          <a href="mailto:hello@atheonics.com"
+          <a href="mailto:hello@formanti.com"
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 transition-colors flex items-start gap-3">
             <Mail className="w-5 h-5 text-lime-400 mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-bold text-white">Email us</p>
-              <p className="text-[11px] text-zinc-400">hello@atheonics.com</p>
+              <p className="text-[11px] text-zinc-400">hello@formanti.com</p>
               <p className="text-[10px] text-zinc-500 mt-1">Reply within 24 hours</p>
             </div>
           </a>

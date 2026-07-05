@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Atheonics</string>
-    <string name="title_activity_main">Atheonics</string>
+    <string name="app_name">Formanti</string>
+    <string name="title_activity_main">Formanti</string>
     <string name="package_name">com.atheonics.app</string>
     <string name="custom_url_scheme">com.atheonics.app</string>
 </resources>

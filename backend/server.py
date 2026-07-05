@@ -105,7 +105,7 @@ if IS_PRODUCTION and JWT_SECRET == 'playsmart_default_secret':
     )
 
 app = FastAPI(
-    title="Atheonics API",
+    title="Formanti API",
     docs_url=None if IS_PRODUCTION else "/docs",
     redoc_url=None if IS_PRODUCTION else "/redoc",
 )
@@ -123,9 +123,10 @@ if IS_SERVERLESS:
     if _vercel_url and f"https://{_vercel_url}" not in _cors_origins:
         _cors_origins.append(f"https://{_vercel_url}")
     if "*" not in _cors_origins:
+        # Old domain kept during the migration (existing links, Android
+        # wrapper still pointing at atheonics.com); drop once fully moved.
         _cors_origins.append("https://atheonics.com")
         _cors_origins.append("https://athlyticai.vercel.app")
-        # New brand domains (migration target) — harmless until DNS points here.
         _cors_origins.append("https://formanti.com")
         _cors_origins.append("https://www.formanti.com")
         _cors_origins.append("https://formanti.in")
@@ -690,7 +691,7 @@ async def get_me(authorization: str = Header(None)):
 # but ALWAYS returns 5000 tokens in the auth response regardless of
 # DB state — the demo button must never feel broken.
 
-DEMO_USER_EMAIL = "demo@atheonics.com"
+DEMO_USER_EMAIL = "demo@formanti.com"
 DEMO_USER_ID = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{DEMO_USER_EMAIL}"))
 DEMO_USER_TOKENS = 5000
 
@@ -1041,8 +1042,8 @@ async def _notify_admin(subject: str, body: str) -> None:
             async with httpx.AsyncClient(timeout=10.0) as c:
                 await c.post("https://api.resend.com/emails",
                     headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-                    json={"from": "Atheonics <noreply@atheonics.com>", "to": [ADMIN_EMAIL],
-                          "subject": f"[Atheonics] {subject}", "text": body})
+                    json={"from": "Formanti <noreply@formanti.com>", "to": [ADMIN_EMAIL],
+                          "subject": f"[Formanti] {subject}", "text": body})
         except Exception as e:
             logger.warning(f"Email notify failed: {e}")
 
@@ -1121,7 +1122,7 @@ async def admin_cashfree_ping(x_admin_key: str = Header(None, alias="X-Admin-Key
         "order_currency": "INR",
         "customer_details": {
             "customer_id": "pingtest",
-            "customer_email": "ping@atheonics.com",
+            "customer_email": "ping@formanti.com",
             "customer_phone": "9999999999",
         },
     }
@@ -1202,7 +1203,7 @@ async def admin_wipe_all_accounts(x_admin_key: str = Header(None, alias="X-Admin
 
 
 # ─── Tokens (in-app currency) ─────────────────────────────────────
-# Atheonics tokens are how users pay for video analysis. Earned via
+# Formanti tokens are how users pay for video analysis. Earned via
 # signup, referrals, hosting community games, completing training days.
 # Buyable via Cashfree (wired in Phase 3). Rules of thumb:
 #   - Mongo writes are best-effort (other endpoints time out at 2-5s
@@ -1562,14 +1563,14 @@ async def create_payment_order(req: CreateOrderRequest, authorization: str = Hea
         "order_currency": "INR",
         "customer_details": {
             "customer_id": cust_id,
-            "customer_email": (user.get("email") or "noemail@atheonics.com")[:80],
+            "customer_email": (user.get("email") or "noemail@formanti.com")[:80],
             "customer_phone": cust_phone,
         },
         "order_meta": {
-            "return_url": f"https://atheonics.com/wallet?order_id={{order_id}}",
-            "notify_url": "https://atheonics.com/api/payments/webhook",
+            "return_url": f"https://formanti.com/wallet?order_id={{order_id}}",
+            "notify_url": "https://formanti.com/api/payments/webhook",
         },
-        "order_note": f"Atheonics {pack['tokens']} tokens",
+        "order_note": f"Formanti {pack['tokens']} tokens",
     }
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -1985,7 +1986,7 @@ async def razorpay_create_order(req: CreateOrderRequest, authorization: str = He
     except Exception as e:
         logger.warning(f"razorpay create-order persist failed: {e}")
     return {"order_id": order_id, "amount": data.get("amount"), "currency": "INR",
-            "key_id": RAZORPAY_KEY_ID, "provider": "razorpay", "name": "Atheonics",
+            "key_id": RAZORPAY_KEY_ID, "provider": "razorpay", "name": "Formanti",
             "description": f"{pack['tokens']} tokens",
             "prefill_email": user.get("email") or "", "prefill_contact": user.get("phone") or ""}
 
@@ -4045,7 +4046,7 @@ async def analyze_video_stream_endpoint(
         yield _sse_event({
             "phase": "analyzing",
             "elapsed_ms": 0,
-            "msg": "Atheonics Coach is watching the whole clip...",
+            "msg": "Formanti Coach is watching the whole clip...",
         })
 
         # Bridge sync generator → async via a thread + queue.
@@ -5164,7 +5165,7 @@ async def analyze_job_run(job_id: str, authorization: str = Header(None)):
 # rebuild is needed when keys rotate. Push is a no-op if keys are unset.
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "").strip()
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
-VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:support@atheonics.com").strip()
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:support@formanti.com").strip()
 # The VAPID `sub` claim MUST be a valid mailto: or https:// URI. FCM
 # (Android/Chrome) returns 403 and drops the push when it isn't — while Apple
 # (iOS Safari) is lenient and still delivers. That asymmetry is the classic
@@ -5452,7 +5453,7 @@ async def reengagement_test(authorization: str = Header(None)):
     except Exception:
         latest = None
     payload = (_reengage_copy(latest, 7) if latest else
-               {"title": "Atheonics", "body": "Push test — you're all set.",
+               {"title": "Formanti", "body": "Push test — you're all set.",
                 "url": "/analyze", "job_id": "test"})
     try:
         subs = await db.push_subscriptions.find({"user_id": user["id"]}).to_list(length=10)
@@ -5526,7 +5527,7 @@ class SupportRequestPayload(BaseModel):
 async def support_request(req: SupportRequestPayload, authorization: str = Header(None)):
     """A user reported a problem / asked for help via the coach. Persist it and
     notify the admin (Telegram + admin email via _notify_admin). The UI tells
-    the user we'll follow up at support@atheonics.com."""
+    the user we'll follow up at support@formanti.com."""
     user = await get_current_user_or_none(authorization)
     msg = (req.message or "").strip()[:2000]
     if not msg:
@@ -5552,7 +5553,7 @@ async def support_request(req: SupportRequestPayload, authorization: str = Heade
             f"Context: {record['context'] or '—'}"))
     except Exception:
         pass
-    return {"success": True, "support_email": "support@atheonics.com"}
+    return {"success": True, "support_email": "support@formanti.com"}
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -10339,7 +10340,7 @@ async def generate_share_card(analysis_id: str, authorization: str = Header(None
 
     # Build share card data
     card = {
-        "player_name": (user_data or {}).get("name", "Atheonics Player"),
+        "player_name": (user_data or {}).get("name", "Formanti Player"),
         "sport": sport.replace("_", " ").title(),
         "skill_level": skill_level,
         "shot_name": shot.get("shot_name", shot.get("shot_type", "Analysis")),
@@ -10356,7 +10357,7 @@ async def generate_share_card(analysis_id: str, authorization: str = Header(None
 
     # Build share text
     share_text_lines = [
-        f"My Atheonics Analysis Result!",
+        f"My Formanti Analysis Result!",
         f"Sport: {card['sport']}",
         f"Shot: {card['shot_name']}",
     ]
@@ -10368,14 +10369,14 @@ async def generate_share_card(analysis_id: str, authorization: str = Header(None
     if card["pro_comparison_score"]:
         share_text_lines.append(f"Pro Comparison: {card['pro_comparison_score']}%")
     share_text_lines.append("")
-    share_text_lines.append("Analyze your game at Atheonics!")
+    share_text_lines.append("Analyze your game at Formanti!")
 
     share_text = "\n".join(share_text_lines)
 
     return {
         "card": card,
         "share_text": share_text,
-        "share_url": f"https://atheonics.com/share/{analysis_id}",
+        "share_url": f"https://formanti.com/share/{analysis_id}",
     }
 
 
@@ -10383,10 +10384,10 @@ async def generate_share_card(analysis_id: str, authorization: str = Header(None
 async def generate_player_share_card(user_id: str, authorization: str = Header(None)):
     """Generate shareable player card data."""
     if user_id == "guest":
-        return {"card": None, "share_text": "Check out Atheonics!"}
+        return {"card": None, "share_text": "Check out Formanti!"}
     user_obj = await get_current_user_or_none(authorization)
     if not user_obj:
-        return {"card": None, "share_text": "Check out Atheonics!"}
+        return {"card": None, "share_text": "Check out Formanti!"}
 
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
@@ -10398,7 +10399,7 @@ async def generate_player_share_card(user_id: str, authorization: str = Header(N
     badges = profile.get("badges", [])
 
     card = {
-        "player_name": (user_data or {}).get("name", "Atheonics Player"),
+        "player_name": (user_data or {}).get("name", "Formanti Player"),
         "sport": (profile.get("active_sport", "badminton")).replace("_", " ").title(),
         "skill_level": profile.get("skill_level", "Unknown"),
         "play_style": profile.get("play_style", ""),
@@ -10414,19 +10415,19 @@ async def generate_player_share_card(user_id: str, authorization: str = Header(N
     }
 
     share_text = (
-        f"My Atheonics Player Card\n"
+        f"My Formanti Player Card\n"
         f"Sport: {card['sport']}\n"
         f"Skill: {card['skill_level']}\n"
         f"Style: {card['play_style']}\n"
         f"Badges: {card['badges_count']} earned\n"
         f"Analyses: {card['analysis_count']}\n\n"
-        f"Train smarter with Atheonics!"
+        f"Train smarter with Formanti!"
     )
 
     return {
         "card": card,
         "share_text": share_text,
-        "share_url": f"https://atheonics.com/card/{user_id}",
+        "share_url": f"https://formanti.com/card/{user_id}",
     }
 
 
@@ -10492,7 +10493,7 @@ BLOG_POSTS = [
 <li><strong>Advanced attacker:</strong> 3U or 2U, head-heavy, stiff shaft, 27-30 lbs</li>
 <li><strong>Doubles specialist:</strong> 4U, head-light, medium flex, 24-26 lbs</li>
 </ul>
-<p>Use Atheonics's equipment recommendation engine to get personalized racket suggestions based on your exact playing profile, skill level, and budget.</p>"""
+<p>Use Formanti's equipment recommendation engine to get personalized racket suggestions based on your exact playing profile, skill level, and budget.</p>"""
     },
     {
         "id": "common-badminton-mistakes-beginners",
@@ -10541,15 +10542,15 @@ BLOG_POSTS = [
 <p><strong>The golden rule:</strong> Always recover to center before your opponent hits the shuttle. Watch the shuttle and your opponent simultaneously — their body position tells you where they'll hit next.</p>
 
 <h3>Track Your Progress</h3>
-<p>Upload your match videos to Atheonics and our AI analysis will automatically identify these technical errors and track your improvement over time.</p>"""
+<p>Upload your match videos to Formanti and our AI analysis will automatically identify these technical errors and track your improvement over time.</p>"""
     },
     {
         "id": "ai-video-analysis-sports-performance",
         "title": "How AI Video Analysis Can Improve Your Sports Performance",
-        "description": "Discover how AI-powered video analysis tools like Atheonics can break down your technique, identify weaknesses, and accelerate your improvement.",
+        "description": "Discover how AI-powered video analysis tools like Formanti can break down your technique, identify weaknesses, and accelerate your improvement.",
         "category": "tutorials",
         "sport": "general",
-        "tags": ["AI", "video analysis", "sports technology", "performance", "Atheonics"],
+        "tags": ["AI", "video analysis", "sports technology", "performance", "Formanti"],
         "published_date": "2024-11-05",
         "read_time": "6 min read",
         "thumbnail_emoji": "\U0001f3be",
@@ -10565,8 +10566,8 @@ BLOG_POSTS = [
 <li><strong>Pattern recognition:</strong> Over multiple sessions, AI identifies patterns in your play — tendencies, strengths, weaknesses, and areas of improvement or regression.</li>
 </ul>
 
-<h3>How Atheonics Works</h3>
-<p>Atheonics is built specifically for racket sports players. Here's how our AI analysis pipeline works:</p>
+<h3>How Formanti Works</h3>
+<p>Formanti is built specifically for racket sports players. Here's how our AI analysis pipeline works:</p>
 <ol>
 <li><strong>Upload your video:</strong> Record yourself playing — a match, practice session, or even shadow practice. You can use any smartphone camera.</li>
 <li><strong>AI processing:</strong> Our TensorFlow-powered engine analyzes every frame, detecting your body position, racket angle, footwork patterns, and shot timing.</li>
@@ -10592,7 +10593,7 @@ BLOG_POSTS = [
 <li>Keep the camera stable (use a tripod or prop it against something solid)</li>
 <li>Record from the side for technique analysis, or from behind the baseline for tactical analysis</li>
 </ul>
-<p>Sign up for Atheonics to start analyzing your game today — no coaching experience required.</p>"""
+<p>Sign up for Formanti to start analyzing your game today — no coaching experience required.</p>"""
     },
     {
         "id": "table-tennis-grip-techniques-guide",
@@ -10671,7 +10672,7 @@ BLOG_POSTS = [
 <li><strong>Inconsistent finger pressure:</strong> In shakehand, varying your index finger and thumb pressure between shots causes inconsistency. Find your natural resting pressure and maintain it.</li>
 <li><strong>Ignoring the grip in training:</strong> Periodically check your grip during practice. Bad habits creep in when you're focused on other aspects of your game.</li>
 </ul>
-<p>Track your technique development with Atheonics's video analysis — our AI can detect grip-related technique issues in your uploaded match footage.</p>"""
+<p>Track your technique development with Formanti's video analysis — our AI can detect grip-related technique issues in your uploaded match footage.</p>"""
     },
     {
         "id": "analyze-tennis-serve-step-by-step",
@@ -10738,7 +10739,7 @@ BLOG_POSTS = [
 <li><strong>Rushing:</strong> Not completing the trophy position before swinging. Usually caused by a toss that's too low.</li>
 <li><strong>Falling away:</strong> Leaning sideways instead of moving up and into the court. This reduces power and makes placement inconsistent.</li>
 </ul>
-<p>Use Atheonics to record and analyze your serve. Our AI will track your body mechanics across all five phases and highlight specific areas for improvement.</p>"""
+<p>Use Formanti to record and analyze your serve. Our AI will track your body mechanics across all five phases and highlight specific areas for improvement.</p>"""
     },
     {
         "id": "best-badminton-shoes-guide",
@@ -10820,23 +10821,23 @@ BLOG_POSTS = [
 
 <h3>Budget Considerations</h3>
 <p>You don't need the most expensive shoes to play well. Mid-range badminton shoes ($50-80) from brands like Yonex, Li-Ning, Victor, and Asics offer excellent performance for most players. Premium shoes ($80-150+) provide marginal improvements in cushioning and weight that matter more at competitive levels.</p>
-<p>Use Atheonics's equipment recommendations to find shoes that match your playing style and budget.</p>"""
+<p>Use Formanti's equipment recommendations to find shoes that match your playing style and budget.</p>"""
     },
     {
         "id": "how-to-use-athlyticai-training-progress",
-        "title": "How to Use Atheonics to Track Your Training Progress",
-        "description": "A step-by-step walkthrough of using Atheonics to upload videos, get AI analysis, read your performance data, and set training goals effectively.",
+        "title": "How to Use Formanti to Track Your Training Progress",
+        "description": "A step-by-step walkthrough of using Formanti to upload videos, get AI analysis, read your performance data, and set training goals effectively.",
         "category": "tutorials",
         "sport": "general",
-        "tags": ["Atheonics", "tutorial", "training", "progress tracking", "app guide"],
+        "tags": ["Formanti", "tutorial", "training", "progress tracking", "app guide"],
         "published_date": "2024-10-05",
         "read_time": "5 min read",
         "thumbnail_emoji": "\U0001f4f1",
-        "content": """<h2>Getting the Most Out of Atheonics</h2>
-<p>Atheonics is designed to be your AI-powered training companion. Whether you play badminton, tennis, or table tennis, the app helps you track progress, get personalized equipment recommendations, and improve your game with structured training plans. Here's how to use every feature effectively.</p>
+        "content": """<h2>Getting the Most Out of Formanti</h2>
+<p>Formanti is designed to be your AI-powered training companion. Whether you play badminton, tennis, or table tennis, the app helps you track progress, get personalized equipment recommendations, and improve your game with structured training plans. Here's how to use every feature effectively.</p>
 
 <h3>Step 1: Set Up Your Player Profile</h3>
-<p>When you first sign up, Atheonics asks you a series of questions to build your player profile:</p>
+<p>When you first sign up, Formanti asks you a series of questions to build your player profile:</p>
 <ul>
 <li><strong>Sport selection:</strong> Choose your primary sport(s). You can add multiple sports and switch between them.</li>
 <li><strong>Skill level:</strong> Be honest about your current level (beginner, intermediate, advanced). This determines the difficulty of your training plans and the type of equipment recommended.</li>
@@ -10847,7 +10848,7 @@ BLOG_POSTS = [
 <p>Your profile can be updated anytime as your game develops. We recommend revisiting it every few months.</p>
 
 <h3>Step 2: Upload and Analyze Videos</h3>
-<p>The Analyze feature is the heart of Atheonics. Here's how to get the best results:</p>
+<p>The Analyze feature is the heart of Formanti. Here's how to get the best results:</p>
 <ol>
 <li>Navigate to the <strong>Analyze</strong> tab from the dashboard</li>
 <li>Click <strong>Upload Video</strong> and select a video from your phone or camera</li>
@@ -10863,7 +10864,7 @@ BLOG_POSTS = [
 </ul>
 
 <h3>Step 3: Follow Your Training Plan</h3>
-<p>Atheonics generates personalized 30-day training plans based on your profile and analysis results.</p>
+<p>Formanti generates personalized 30-day training plans based on your profile and analysis results.</p>
 <ul>
 <li>Each plan includes daily exercises, drills, and focus areas</li>
 <li>Mark sessions as complete to track your progress streak</li>
@@ -10881,7 +10882,7 @@ BLOG_POSTS = [
 </ul>
 
 <h3>Step 5: Get Equipment Recommendations</h3>
-<p>Based on your playing profile and skill level, Atheonics recommends equipment that matches your game:</p>
+<p>Based on your playing profile and skill level, Formanti recommends equipment that matches your game:</p>
 <ul>
 <li>Rackets matched to your playing style, skill level, and budget</li>
 <li>Shoes suited to your movement patterns and court type</li>
@@ -10890,7 +10891,7 @@ BLOG_POSTS = [
 </ul>
 
 <h3>Step 6: Create and Share Highlights</h3>
-<p>Atheonics can automatically generate highlight reels from your match videos:</p>
+<p>Formanti can automatically generate highlight reels from your match videos:</p>
 <ul>
 <li>The AI identifies exciting rallies, winning shots, and impressive plays</li>
 <li>Highlights are compiled into shareable clips</li>
@@ -10899,7 +10900,7 @@ BLOG_POSTS = [
 
 <h3>Step 7: Join the Community</h3>
 <p>Connect with other players, share tips, and find training partners through the Community feature. Compare your player card stats, challenge friends, and stay motivated together.</p>
-<p>The key to improvement is consistency. Use Atheonics regularly — upload videos weekly, follow your training plan daily, and review your progress monthly. Small, consistent improvements compound into dramatic results over time.</p>"""
+<p>The key to improvement is consistency. Use Formanti regularly — upload videos weekly, follow your training plan daily, and review your progress monthly. Small, consistent improvements compound into dramatic results over time.</p>"""
     },
     {
         "id": "table-tennis-spin-guide-beginners",
@@ -10971,7 +10972,7 @@ BLOG_POSTS = [
 <li><strong>Week 5-6:</strong> Add sidespin serves to your game</li>
 <li><strong>Week 7-8:</strong> Work on reading and returning different spins</li>
 </ol>
-<p>Upload your practice sessions to Atheonics to track your spin technique development and get AI-powered feedback on your brushing angles and contact quality.</p>"""
+<p>Upload your practice sessions to Formanti to track your spin technique development and get AI-powered feedback on your brushing angles and contact quality.</p>"""
     },
     {
         "id": "why-athletes-need-training-plan",
@@ -11044,9 +11045,9 @@ BLOG_POSTS = [
 <p>A plan is only as good as your adherence and adaptation. Track completed sessions, record how drills feel, and adjust difficulty as you improve. If a drill becomes easy, make it harder. If you're consistently failing, simplify.</p>
 
 <h3>Using AI to Build Better Plans</h3>
-<p>Atheonics automates much of this process. Based on your player profile, video analysis results, and progress data, the app generates personalized 30-day training plans that adapt to your improvement. Each plan includes daily sessions with specific drills, video tutorials, and progress milestones.</p>
+<p>Formanti automates much of this process. Based on your player profile, video analysis results, and progress data, the app generates personalized 30-day training plans that adapt to your improvement. Each plan includes daily sessions with specific drills, video tutorials, and progress milestones.</p>
 <p>The AI also identifies when you're plateauing and suggests new drills or focus areas to break through. It's like having a coach who's always analyzing your data and adjusting your program.</p>
-<p>Start your first structured training plan today on Atheonics — it takes less than 5 minutes to set up and can accelerate your improvement dramatically.</p>"""
+<p>Start your first structured training plan today on Formanti — it takes less than 5 minutes to set up and can accelerate your improvement dramatically.</p>"""
     },
     {
         "id": "create-match-highlights-sports-videos",
@@ -11097,8 +11098,8 @@ BLOG_POSTS = [
 <li>Ask a friend to hold the camera if you want dynamic angles (following the play)</li>
 </ul>
 
-<h3>How Atheonics Creates Highlights Automatically</h3>
-<p>Manually editing highlights from a 30-60 minute match video is time-consuming. Atheonics automates this process using AI:</p>
+<h3>How Formanti Creates Highlights Automatically</h3>
+<p>Manually editing highlights from a 30-60 minute match video is time-consuming. Formanti automates this process using AI:</p>
 <ol>
 <li><strong>Upload your full match video</strong> through the Analyze tab</li>
 <li><strong>AI detection:</strong> Our computer vision model identifies every rally, shot, and point in the video. It detects shot types (smashes, drops, clears), rally length, and winning shots.</li>
@@ -11113,7 +11114,7 @@ BLOG_POSTS = [
 <li><strong>WhatsApp:</strong> Share directly with your playing group or friends</li>
 <li><strong>Instagram Reels/Stories:</strong> Highlight reels are perfectly sized for social media</li>
 <li><strong>YouTube:</strong> Upload longer highlight compilations for your channel</li>
-<li><strong>Atheonics Community:</strong> Share with other players on the platform and see their highlights too</li>
+<li><strong>Formanti Community:</strong> Share with other players on the platform and see their highlights too</li>
 </ul>
 
 <h3>Tips for Better Highlights</h3>
@@ -11121,9 +11122,9 @@ BLOG_POSTS = [
 <li><strong>Focus on variety:</strong> A good highlight reel shows different types of winning shots, not just smashes</li>
 <li><strong>Include context:</strong> Show enough of the rally leading up to the winning shot so viewers understand the setup</li>
 <li><strong>Keep it short:</strong> 2-3 minutes is the sweet spot. Longer compilations lose viewer attention</li>
-<li><strong>Add slow-motion:</strong> Atheonics can slow down key moments for dramatic effect</li>
+<li><strong>Add slow-motion:</strong> Formanti can slow down key moments for dramatic effect</li>
 </ul>
-<p>Start creating your match highlights today — upload your next match video to Atheonics and let AI find your best moments automatically.</p>"""
+<p>Start creating your match highlights today — upload your next match video to Formanti and let AI find your best moments automatically.</p>"""
     },
     {
         "id": "increase-badminton-smash-speed",
@@ -11513,7 +11514,7 @@ BLOG_POSTS = [
 
 <h3>Computer Vision Goes Mainstream</h3>
 <p>The biggest leap has been in pose estimation. Models like MediaPipe, OpenPose, and the newer transformer-based trackers can now extract 30+ body landmarks from a phone video at 60 fps on a mid-range laptop. Once you know where an athlete's joints are at every frame, you can calculate shoulder rotation, knee angles, hip velocity — all the things that used to require motion-capture suits.</p>
-<p>This is the engine behind services like Atheonics: you shoot a video with your phone, upload it, and within 30 seconds you get back specific, actionable feedback on your technique. No studio, no sensors, no $20,000 setup.</p>
+<p>This is the engine behind services like Formanti: you shoot a video with your phone, upload it, and within 30 seconds you get back specific, actionable feedback on your technique. No studio, no sensors, no $20,000 setup.</p>
 
 <h3>Personalized Training Plans Built by LLMs</h3>
 <p>Large language models have quietly become incredible at structuring training plans. Given your skill level, training history, injuries, goals, and weekly availability, an LLM can generate a 4-week plan that rivals what a good coach would produce — and update it weekly based on your feedback. This is not a replacement for elite coaching, but for the 99% of amateur athletes who've never worked with a coach, it's a massive upgrade from "doing whatever drills I saw on YouTube."</p>
@@ -11534,7 +11535,7 @@ BLOG_POSTS = [
 
 <h2>What's Different for Amateurs in 2026</h2>
 <p>The shift from "pro-only tools" to "anyone with a phone" is the real story. A decade ago, if you wanted biomechanics feedback on your badminton smash, you needed a sports science department. Today, you film the rally and upload it. The analysis isn't quite as detailed as a lab report, but it's 95% as useful for 0.1% of the cost.</p>
-<p>At Atheonics, we designed our analyzer around this principle: the right feedback at the right time beats perfect feedback you never see. You upload a video, you get three things you can fix this week, and you come back next week with a new video to check progress. That feedback loop — not fancy graphics — is what creates improvement.</p>
+<p>At Formanti, we designed our analyzer around this principle: the right feedback at the right time beats perfect feedback you never see. You upload a video, you get three things you can fix this week, and you come back next week with a new video to check progress. That feedback loop — not fancy graphics — is what creates improvement.</p>
 
 <h2>The Honest Limitations</h2>
 <p>AI in sports isn't magic. A few things it still doesn't do well:</p>
@@ -12670,7 +12671,7 @@ BLOG_POSTS = [
 <p>Read our <a href="/blog/yonex-vs-lining-vs-victor-india">brand comparison guide</a> to pick the right racket for an attacking style.</p>
 
 <h2>Test Your Smash With AI</h2>
-<p>The fastest way to identify what is wrong with your smash is to film it and analyse frame by frame. Upload a clip to Atheonics's <a href="/analyze?sport=badminton">free swing analysis</a> tool. The AI will tell you whether you are rotating your hips, where your contact point is, and how your follow-through compares to elite players like Sindhu.</p>
+<p>The fastest way to identify what is wrong with your smash is to film it and analyse frame by frame. Upload a clip to Formanti's <a href="/analyze?sport=badminton">free swing analysis</a> tool. The AI will tell you whether you are rotating your hips, where your contact point is, and how your follow-through compares to elite players like Sindhu.</p>
 <p>For a complete training programme to build the legs, core and shoulders that produce a Sindhu-style smash, see our <a href="/training">badminton training plans</a> built by Indian academy coaches.</p>"""
     },
     {
@@ -13165,7 +13166,7 @@ BLOG_POSTS = [
 
 <h2>Track Your Progress With AI</h2>
 <p>The best way to know if your footwork is improving is to record yourself and compare. Film a 2-minute multi-shuttle drill today and another in 6 weeks. Side-by-side, the difference will be obvious — fewer wasted steps, more time in balance, faster recovery.</p>
-<p>Upload your drill clips to Atheonics's <a href="/analyze?sport=badminton">free analysis tool</a> to get specific feedback on your footwork patterns. For a complete training programme that combines footwork, fitness and stroke practice, see our <a href="/training">badminton training plans</a>.</p>"""
+<p>Upload your drill clips to Formanti's <a href="/analyze?sport=badminton">free analysis tool</a> to get specific feedback on your footwork patterns. For a complete training programme that combines footwork, fitness and stroke practice, see our <a href="/training">badminton training plans</a>.</p>"""
     },
     {
         "id": "best-tennis-racquet-under-5000-india",
@@ -13673,7 +13674,7 @@ BLOG_POSTS = [
 <p>Within a decade, expect at least 30-40 academies in India offering training comparable to what Gopichand and Padukone academies offer today. India's depth of badminton talent will keep expanding.</p>
 
 <h2>Track Your Own Development</h2>
-<p>Whether you train at one of these top academies or play at your local club, tracking progress matters. Use Atheonics's <a href="/analyze?sport=badminton">free swing analyzer</a> to compare your technique to elite players. Use our <a href="/training">training plans</a> built by Indian academy coaches to structure your weekly practice.</p>
+<p>Whether you train at one of these top academies or play at your local club, tracking progress matters. Use Formanti's <a href="/analyze?sport=badminton">free swing analyzer</a> to compare your technique to elite players. Use our <a href="/training">training plans</a> built by Indian academy coaches to structure your weekly practice.</p>
 <p>Want a personalised academy or training programme recommendation based on your level, location and goals? Try our <a href="/equipment">equipment and training recommender</a>.</p>"""
     },
 ]
@@ -13697,7 +13698,7 @@ _COACH_CORPUS_CACHE: list = []
 _COACH_BLOG_SNIPPETS_CACHE: list = []
 
 _COACH_SYSTEM_PROMPT = (
-    "You are Atheonics's Virtual Coach — a helpful, concise sports advisor. "
+    "You are Formanti's Virtual Coach — a helpful, concise sports advisor. "
     "You ONLY answer questions about: (a) sports equipment (rackets, paddles, balls, shoes, strings, grips), "
     "(b) training plans and technique tips, (c) general sports knowledge (rules, players, history, "
     "tournaments, India-specific context). "
@@ -13906,7 +13907,7 @@ async def coach_ask(req: CoachAskRequest):
     if _is_off_topic(q):
         return {
             "answer": (
-                "I'm Atheonics's Virtual Coach — I only help with sports questions "
+                "I'm Formanti's Virtual Coach — I only help with sports questions "
                 "(equipment, training, technique, rules, players). "
                 "Try asking me something like _\"best badminton racket under 2000 rupees\"_ "
                 "or _\"how do I improve my tennis serve?\"_"
@@ -14123,7 +14124,7 @@ def _coach_voice_system_prompt(ctx: VoiceChatContext) -> str:
 
     tpd = (ctx.target_player_description or "").strip()[:180]
 
-    return f"""You are Atheonics's live voice coach speaking directly to the player
+    return f"""You are Formanti's live voice coach speaking directly to the player
 about the {sport} clip you just analysed. You are NOT a generic chatbot — you
 are this player's coach for THIS clip.
 
@@ -15149,7 +15150,7 @@ def _aggregate_top_fix(top_fixes: list[str] | None) -> str | None:
 
 
 _COACHING_SYSTEM_PROMPT = (
-    "You are Atheonics, a concise coaching narrator. The frontend has detected "
+    "You are Formanti, a concise coaching narrator. The frontend has detected "
     "shot moments and identified each shot's TYPE via a vision model. For each "
     "shot type it also computed pose-derived quality metrics (smoothness, speed, "
     "consistency).\n\n"
@@ -15839,7 +15840,7 @@ async def get_blog_post(slug: str):
 
 @api_router.get("/")
 async def root():
-    return {"message": "Atheonics API", "version": "3.0.0"}
+    return {"message": "Formanti API", "version": "3.0.0"}
 
 
 @api_router.get("/health")
@@ -15964,7 +15965,7 @@ async def startup():
     _host = os.environ.get("HOST", "0.0.0.0")
     _port = os.environ.get("PORT", "8000")
     logger.info("=" * 50)
-    logger.info(f"Atheonics + AI Coach ready ({ENVIRONMENT}) at http://{_host}:{_port}")
+    logger.info(f"Formanti + AI Coach ready ({ENVIRONMENT}) at http://{_host}:{_port}")
     logger.info("=" * 50)
 
 

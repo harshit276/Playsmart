@@ -55,7 +55,7 @@ function AndroidSteps() {
     <ol className="space-y-3 text-sm text-zinc-300">
       <li className="flex gap-3">
         <span className="shrink-0 w-6 h-6 rounded-full bg-lime-400/15 text-lime-400 text-xs font-bold flex items-center justify-center">1</span>
-        <span>Tap the <span className="font-semibold text-white">"Install Atheonics"</span> button above.</span>
+        <span>Tap the <span className="font-semibold text-white">"Install Formanti"</span> button above.</span>
       </li>
       <li className="flex gap-3">
         <span className="shrink-0 w-6 h-6 rounded-full bg-lime-400/15 text-lime-400 text-xs font-bold flex items-center justify-center">2</span>
@@ -63,7 +63,7 @@ function AndroidSteps() {
       </li>
       <li className="flex gap-3">
         <span className="shrink-0 w-6 h-6 rounded-full bg-lime-400/15 text-lime-400 text-xs font-bold flex items-center justify-center">3</span>
-        <span>The Atheonics icon appears on your home screen. Tap to launch — done!</span>
+        <span>The Formanti icon appears on your home screen. Tap to launch — done!</span>
       </li>
       <li className="flex gap-3 pt-2 text-xs text-zinc-500 border-t border-zinc-800">
         <span className="shrink-0">💡</span>
@@ -109,7 +109,7 @@ function DesktopSteps() {
       </li>
       <li className="flex gap-3">
         <span className="shrink-0 w-6 h-6 rounded-full bg-purple-400/15 text-purple-400 text-xs font-bold flex items-center justify-center">3</span>
-        <span>Atheonics opens in its own window and gets pinned to your taskbar / dock.</span>
+        <span>Formanti opens in its own window and gets pinned to your taskbar / dock.</span>
       </li>
     </ol>
   );
@@ -171,9 +171,9 @@ export default function DownloadPage() {
   return (
     <div className="min-h-screen bg-background text-white">
       <SEO
-        title="Get the Atheonics App — Install on Android, iPhone & Desktop"
-        description="Install Atheonics on your phone in seconds. Works on Android, iPhone, and Desktop. No app store needed. AI sports coaching at your fingertips."
-        url="https://atheonics.com/download"
+        title="Get the Formanti App — Install on Android, iPhone & Desktop"
+        description="Install Formanti on your phone in seconds. Works on Android, iPhone, and Desktop. No app store needed. AI sports coaching at your fingertips."
+        url="https://formanti.com/download"
       />
 
       {/* Hero */}
@@ -184,7 +184,7 @@ export default function DownloadPage() {
             <Download className="w-3 h-3" /> Free • No app store needed
           </div>
           <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-4">
-            Get the Atheonics app on <span className="text-lime-400">{platformLabel}</span>
+            Get the Formanti app on <span className="text-lime-400">{platformLabel}</span>
           </h1>
           <p className="text-zinc-400 text-base sm:text-lg max-w-xl mx-auto mb-8">
             Install in 10 seconds. Works offline. Same app as the website — faster, with a home-screen icon.
@@ -203,7 +203,7 @@ export default function DownloadPage() {
                   size="lg"
                   className="bg-lime-400 hover:bg-lime-500 text-black font-semibold text-base h-12 px-6"
                 >
-                  {installing ? "Installing..." : <><Download className="w-5 h-5 mr-2" /> Install Atheonics</>}
+                  {installing ? "Installing..." : <><Download className="w-5 h-5 mr-2" /> Install Formanti</>}
                 </Button>
               )}
               {platform === "android" && !deferredPrompt && (
@@ -327,7 +327,7 @@ export default function DownloadPage() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">Native Android & iOS apps coming soon</p>
               <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                We're packaging Atheonics for the Play Store and App Store. Install the web app today — you'll get a one-tap upgrade prompt the day they ship.
+                We're packaging Formanti for the Play Store and App Store. Install the web app today — you'll get a one-tap upgrade prompt the day they ship.
               </p>
             </div>
           </div>

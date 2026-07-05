@@ -117,7 +117,7 @@ function deriveAnalysisId(result) {
 function formatTranscriptForDownload(messages, ctx) {
   const stamp = new Date().toISOString();
   const header = [
-    `Atheonics — Live Coach Transcript`,
+    `Formanti — Live Coach Transcript`,
     `Saved: ${stamp}`,
     ctx?.sport ? `Sport: ${ctx.sport}` : null,
     ctx?.overall_skill_level ? `Level: ${ctx.overall_skill_level}` : null,
@@ -517,7 +517,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
       }
 
       // Support / help / report-a-problem intent → forward to the support team
-      // (Telegram admin alert + support@atheonics.com) instead of trying to
+      // (Telegram admin alert + support@formanti.com) instead of trying to
       // answer it as a coaching question. Tight phrasing so normal "help me
       // improve my smash" doesn't trigger it.
       if (
@@ -526,7 +526,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
         cancelTts();
         const ctx = `sport=${analysisContext?.sport || ""}; shots=${Array.isArray(result?.shots) ? result.shots.length : 0}`;
         api.post("/support-request", { message: text, context: ctx }).catch(() => {});
-        const ack = "I've passed this to our support team — they'll follow up at support@atheonics.com. Is there anything about your analysis I can help with in the meantime?";
+        const ack = "I've passed this to our support team — they'll follow up at support@formanti.com. Is there anything about your analysis I can help with in the meantime?";
         setMessages((prev) => [
           ...prev,
           { role: "user", text, t: Date.now() },
