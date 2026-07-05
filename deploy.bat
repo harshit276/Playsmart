@@ -64,7 +64,7 @@ echo.
 echo === [3/4] Committing the changed files ===
 REM Stage ONLY the files we actually edited (avoids sweeping the whole repo,
 REM which shows as changed only because of Windows CRLF line endings).
-git add frontend/src/lib/cloudinaryUpload.js frontend/src/lib/geminiDirectUpload.js frontend/src/lib/webcodecsTranscode.js frontend/src/lib/transcode.worker.js frontend/src/lib/transcodeInWorker.js frontend/src/pages/AnalyzePage.jsx frontend/src/pages/ProgressPage.jsx frontend/src/components/LiveVoiceCoach.jsx backend/server.py backend/ai_pipeline/vlm/coaching.py CLAUDE.md ANALYZE_FEATURE_EVALUATION.md UPLOAD_SPEED_RESEARCH.md deploy.bat
+git add frontend/src/lib/cloudinaryUpload.js frontend/src/lib/geminiDirectUpload.js frontend/src/lib/webcodecsTranscode.js frontend/src/lib/transcode.worker.js frontend/src/lib/transcodeInWorker.js frontend/src/lib/videoRotation.js frontend/src/pages/AnalyzePage.jsx frontend/src/pages/ProgressPage.jsx frontend/src/components/LiveVoiceCoach.jsx backend/server.py backend/ai_pipeline/vlm/coaching.py CLAUDE.md ANALYZE_FEATURE_EVALUATION.md UPLOAD_SPEED_RESEARCH.md deploy.bat
 git commit -m "Upload speed: worker-based 720p transcode (desktop too) + backend Cloudinary-to-Gemini streaming + wake lock"
 if errorlevel 1 (
   echo.
