@@ -194,9 +194,16 @@ export async function uploadToCloudinary(videoFile, options = {}) {
   // Note: no rotation gate — webcodecsTranscode bakes rotation into the pixels
   // (allowRotationMetadata:false), so portrait phone clips transcode upright too.
   if (origMb > TRANSCODE_MIN_MB && origMb <= TRANSCODE_MAX_MB) {
-    // Budget scales with size (bigger clip → more frames), capped at 45s so
-    // the transcode alone can never eat the whole time-to-Gemini target.
-    const budgetMs = Math.min(45_000, Math.round((12 + 0.25 * origMb) * 1000));
+    // Budget scales with size (bigger clip → more frames). Desktop caps at
+    // 45s (fast uplink makes uploading the original a viable fallback).
+    // MOBILE gets a bigger budget: a real iPhone took ~70s end-to-end on a
+    // 74MB clip, and the fallback is far worse there — a phone uplink
+    // uploading 100MB+ takes minutes and >100MB breaks Cloudinary's cap —
+    // so aborting a working transcode at 45s would be a regression. The 6s
+    // projection check still kills genuinely-too-slow devices early.
+    const budgetMs = isMobile
+      ? Math.min(75_000, Math.round((15 + 0.45 * origMb) * 1000))
+      : Math.min(45_000, Math.round((12 + 0.25 * origMb) * 1000));
     try {
       const { webcodecsSupported, webcodecsTranscode } = await import("./webcodecsTranscode");
       if (webcodecsSupported()) {

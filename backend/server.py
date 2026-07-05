@@ -125,6 +125,11 @@ if IS_SERVERLESS:
     if "*" not in _cors_origins:
         _cors_origins.append("https://atheonics.com")
         _cors_origins.append("https://athlyticai.vercel.app")
+        # New brand domains (migration target) — harmless until DNS points here.
+        _cors_origins.append("https://formanti.com")
+        _cors_origins.append("https://www.formanti.com")
+        _cors_origins.append("https://formanti.in")
+        _cors_origins.append("https://www.formanti.in")
 
 app.add_middleware(
     CORSMiddleware,
