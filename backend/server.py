@@ -4668,6 +4668,87 @@ async def _cloudinary_destroy_video(public_id: str) -> None:
         pass
 
 
+async def _stream_url_to_gemini_files(url: str, mime_type: str, fetch_timeout: float):
+    """Pipe a remote video STRAIGHT into the Gemini Files API resumable upload
+    — download and upload run concurrently instead of buffer-all-then-upload,
+    which roughly halves the backend hop on a big clip and keeps a 150MB file
+    out of serverless RAM. Returns (file_name, file_uri, size_bytes) once the
+    file is ACTIVE.
+
+    Raises on any failure; the caller falls back to the buffered path. Needs
+    the source to send Content-Length (Cloudinary originals do; an on-the-fly
+    derived transform may stream chunked without one → fallback)."""
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY not configured")
+    base = "https://generativelanguage.googleapis.com"
+    timeout = httpx.Timeout(30.0, read=fetch_timeout)
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+        async with client.stream("GET", url) as src:
+            src.raise_for_status()
+            clen = (src.headers.get("content-length") or "").strip()
+            if not clen.isdigit():
+                raise RuntimeError("source_has_no_content_length")
+            size_bytes = int(clen)
+            if size_bytes < 1000:
+                raise HTTPException(status_code=400, detail="Video too small")
+            if size_bytes > 200 * 1024 * 1024:
+                raise HTTPException(status_code=413, detail="Video too large (>200 MB)")
+            start = await client.post(
+                f"{base}/upload/v1beta/files",
+                headers={
+                    "x-goog-api-key": api_key,
+                    "X-Goog-Upload-Protocol": "resumable",
+                    "X-Goog-Upload-Command": "start",
+                    "X-Goog-Upload-Header-Content-Length": str(size_bytes),
+                    "X-Goog-Upload-Header-Content-Type": mime_type,
+                    "Content-Type": "application/json",
+                },
+                json={"file": {"display_name": "atheonics-clip"}},
+            )
+            start.raise_for_status()
+            upload_url = start.headers.get("x-goog-upload-url")
+            if not upload_url:
+                raise RuntimeError("upload_session_missing_url")
+            # Body is the Cloudinary response stream — bytes flow through
+            # without accumulating. Explicit Content-Length stops httpx from
+            # switching to chunked transfer (the upload endpoint wants the
+            # exact length it was promised at session start).
+            fin = await client.post(
+                upload_url,
+                headers={
+                    "X-Goog-Upload-Command": "upload, finalize",
+                    "X-Goog-Upload-Offset": "0",
+                    "Content-Length": str(size_bytes),
+                },
+                content=src.aiter_bytes(1 << 20),
+            )
+            fin.raise_for_status()
+            info = (fin.json() or {}).get("file") or {}
+        name = info.get("name")
+        uri = info.get("uri")
+        state = (info.get("state") or "").upper()
+        if not name:
+            raise RuntimeError("finalize_returned_no_name")
+        # Block until Gemini's server-side processing finishes — the analysis
+        # endpoints reject a PROCESSING file. (Same contract as files_api_upload.)
+        deadline = time.monotonic() + 120.0
+        poll = 0.4
+        while state in ("", "PROCESSING", "STATE_UNSPECIFIED"):
+            if time.monotonic() > deadline:
+                raise RuntimeError("files_api_processing_timeout")
+            await asyncio.sleep(poll)
+            poll = min(1.5, poll * 1.5)
+            r = await client.get(f"{base}/v1beta/{name}", headers={"x-goog-api-key": api_key})
+            r.raise_for_status()
+            j = r.json() or {}
+            state = (j.get("state") or "").upper()
+            uri = j.get("uri") or uri
+        if state != "ACTIVE":
+            raise RuntimeError(f"files_api_state_{state}")
+    return name, uri, size_bytes
+
+
 @api_router.post("/upload-video-url")
 async def register_video_url_to_files_api(
     req: RegisterVideoUrlRequest, authorization: str = Header(None),
@@ -4704,6 +4785,25 @@ async def register_video_url_to_files_api(
         url = url.replace("/video/upload/", f"/video/upload/{tx}/", 1)
         fetch_timeout = 230.0
         logger.info("[upload-video-url] rotated clip → Cloudinary %s derivative: %s", tx, url[:140])
+    mime_type = req.mime_type or "video/mp4"
+    # ── FAST PATH: stream source → Gemini (download+upload overlap, no 150MB
+    # buffer in RAM). Any failure falls through to the buffered path below.
+    try:
+        name, uri, size_bytes = await _stream_url_to_gemini_files(url, mime_type, fetch_timeout)
+        logger.info("[upload-video-url] streamed %.1fMB → %s (ACTIVE)", size_bytes / 1048576, name)
+        if req.cloudinary_public_id:
+            await _cloudinary_destroy_video(req.cloudinary_public_id)
+        return {
+            "file_name": name,
+            "file_uri": uri,
+            "mime_type": mime_type,
+            "size_bytes": size_bytes,
+        }
+    except HTTPException:
+        raise  # size-limit violations are final, not retryable via buffering
+    except Exception as exc:
+        logger.warning("[upload-video-url] stream path failed (%s) — buffered fallback",
+                       str(exc)[:150])
     try:
         async with httpx.AsyncClient(timeout=fetch_timeout, follow_redirects=True) as client:
             resp = await client.get(url)

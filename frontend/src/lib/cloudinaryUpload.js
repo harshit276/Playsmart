@@ -86,8 +86,10 @@ function uploadAttemptXHR(uploadUrl, formData, { onProgress, signal } = {}) {
     const cleanup = () => { clearStall(); signal?.removeEventListener("abort", onAbort); };
 
     xhr.open("POST", uploadUrl);
-    // Hard ceiling in case the browser never fires progress at all.
-    xhr.timeout = STALL_TIMEOUT_MS * 4;
+    // NO xhr.timeout: it caps TOTAL request time, and a healthy 150MB upload
+    // on a ~10Mbps uplink legitimately takes 2+ minutes — the old
+    // STALL_TIMEOUT*4 ceiling was killing uploads that were still moving.
+    // The stall watchdog (no progress for 25s) already covers dead links.
     xhr.upload.onprogress = (e) => {
       armStall(); // reset the watchdog every time bytes actually move
       if (e.lengthComputable) {
@@ -116,7 +118,6 @@ function uploadAttemptXHR(uploadUrl, formData, { onProgress, signal } = {}) {
       }
     };
     xhr.onerror = () => { cleanup(); const e = new Error("Upload network error"); e.code = "network"; reject(e); };
-    xhr.ontimeout = () => { cleanup(); const e = new Error("Upload timed out"); e.code = "stall"; reject(e); };
     xhr.onabort = () => {
       cleanup();
       // If we aborted because of the external signal, surface "abort"; the
@@ -139,6 +140,13 @@ function uploadAttemptXHR(uploadUrl, formData, { onProgress, signal } = {}) {
  */
 export async function uploadToCloudinary(videoFile, options = {}) {
   const { onProgress, signal } = options;
+
+  // Fire the signed-upload request NOW so its (possibly cold-start) latency
+  // overlaps the on-device transcode instead of adding to it. Awaited at
+  // Step 2; errors are captured, not unhandled.
+  const signedPromise = api.post("/highlights/sign-upload", {})
+    .then((r) => ({ data: r.data }))
+    .catch((err) => ({ err }));
 
   const { getVideoRotationDegrees, downscaleForUpload } = await import("./videoRotation");
 
@@ -167,35 +175,54 @@ export async function uploadToCloudinary(videoFile, options = {}) {
   // frame count) and was observed to get stuck in "Optimizing…" — those are
   // blocked earlier in AnalyzePage with a "trim your clip" message, so we also
   // hard-cap here as a safety net.
-  const TRANSCODE_MIN_MB = 20;
-  const TRANSCODE_MAX_MB = 150;
+  const TRANSCODE_MIN_MB = 25;
 
-  // MOBILE-ONLY (2026-06): the WebCodecs transcode is only safe where a real
-  // HARDWARE H.264 encoder exists. On a DESKTOP without one, Chrome falls back
-  // to a software encoder — a 1080p/60fps clip then takes 100s+ and Mediabunny's
-  // cancel() can't interrupt the saturated loop, so even the 45s timeout can't
-  // rescue it (live-tested on desktop). Phones (iPhone VideoToolbox / Android
-  // MediaCodec) virtually always have a hardware H.264 encoder, which is exactly
-  // what this path was built for ("the WhatsApp trick"), so we gate it to mobile
-  // user agents. Desktop uploads the original (with the timeout/retry/cancel
-  // resilience already in place). Rotated clips still use the Cloudinary
-  // rotation-bake path. A future hardware-encode probe + Web Worker could let
-  // desktop opt in safely.
+  // The transcode now runs in a WEB WORKER (transcodeInWorker), which fixes
+  // the failure that forced the old mobile-only gate: on a desktop that
+  // software-encodes H.264 the pipeline used to saturate the page and become
+  // uncancellable — worker.terminate() is a guaranteed instant kill, and an
+  // early progress-rate projection bails within ~6s if the encode is too slow
+  // to fit the budget (→ falls back to uploading the original, i.e. exactly
+  // the old desktop behaviour). So desktop is enabled now; mobile keeps its
+  // 150MB ceiling (matches the AnalyzePage guard — device memory), desktop
+  // gets 400MB (a 300MB 4K clip only becomes uploadable BECAUSE the transcode
+  // shrinks it under the 200MB backend cap).
   const isMobile = typeof navigator !== "undefined"
     && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  const TRANSCODE_MAX_MB = isMobile ? 150 : 400;
   let didTranscode = false;
   // Note: no rotation gate — webcodecsTranscode bakes rotation into the pixels
   // (allowRotationMetadata:false), so portrait phone clips transcode upright too.
-  if (isMobile && origMb > TRANSCODE_MIN_MB && origMb <= TRANSCODE_MAX_MB) {
+  if (origMb > TRANSCODE_MIN_MB && origMb <= TRANSCODE_MAX_MB) {
+    // Budget scales with size (bigger clip → more frames), capped at 45s so
+    // the transcode alone can never eat the whole time-to-Gemini target.
+    const budgetMs = Math.min(45_000, Math.round((12 + 0.25 * origMb) * 1000));
     try {
       const { webcodecsSupported, webcodecsTranscode } = await import("./webcodecsTranscode");
       if (webcodecsSupported()) {
         onProgress?.({ percent: 2, message: "Optimizing video on your device…" });
-        const small = await webcodecsTranscode(videoFile, {
-          maxHeight: 720,
-          onProgress: (pct) =>
-            onProgress?.({ percent: 2 + (pct || 0) * 0.18, message: "Optimizing video on your device…" }),
-        });
+        const tick = (pct) =>
+          onProgress?.({ percent: 2 + (pct || 0) * 0.18, message: "Optimizing video on your device…" });
+        let small = null;
+        try {
+          const { transcodeInWorker } = await import("./transcodeInWorker");
+          small = await transcodeInWorker(videoFile, {
+            maxHeight: 720, budgetMs, signal, onProgress: tick,
+          });
+        } catch (wErr) {
+          if (wErr?.code === "abort") throw wErr;
+          // Worker unavailable (old browser / bundler edge case): fall back to
+          // the in-page transcode, but MOBILE ONLY — on desktop the in-page
+          // path is uncancellable when a software encoder kicks in, which is
+          // the exact regression the worker exists to prevent.
+          if (wErr?.code === "unsupported" && isMobile) {
+            small = await webcodecsTranscode(videoFile, {
+              maxHeight: 720, timeoutMs: budgetMs, onProgress: tick,
+            });
+          } else {
+            throw wErr;
+          }
+        }
         workFile = small;
         didTranscode = true;
         // Output is upright (rotation baked into pixels) → no server-side
@@ -205,6 +232,7 @@ export async function uploadToCloudinary(videoFile, options = {}) {
         console.info(`[upload] WebCodecs 720p transcode: ${origMb.toFixed(1)}MB → ${(small.size / 1024 / 1024).toFixed(1)}MB (verified, upright)`);
       }
     } catch (twErr) {
+      if (twErr?.code === "abort") throw twErr; // user cancelled — stop, don't upload
       console.warn("[upload] WebCodecs transcode skipped/failed, using original:",
                    twErr?.message || twErr);
       workFile = videoFile;
@@ -229,9 +257,12 @@ export async function uploadToCloudinary(videoFile, options = {}) {
   // that big clips are transcoded/downscaled above).
   const fileToUpload = await compressIfNeeded(workFile, onProgress);
 
-  // Step 2: ask our backend for signed upload params
+  // Step 2: signed upload params — requested up-front (before the transcode),
+  // so by now the response is usually already here.
   onProgress?.({ percent: 22, message: "Preparing upload..." });
-  const { data: signed } = await api.post("/highlights/sign-upload", {});
+  const signedResult = await signedPromise;
+  if (signedResult.err) throw signedResult.err;
+  const signed = signedResult.data;
 
   // Step 3: upload directly to Cloudinary
   const formData = new FormData();

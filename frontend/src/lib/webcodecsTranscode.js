@@ -34,9 +34,12 @@ import {
 } from "mediabunny";
 
 export function webcodecsSupported() {
-  return typeof window !== "undefined"
-    && typeof window.VideoEncoder === "function"
-    && typeof window.VideoDecoder === "function";
+  // globalThis (not window) — WebCodecs is also available inside Web Workers,
+  // which is where transcodeInWorker.js runs this module.
+  const g = typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : null);
+  return !!g
+    && typeof g.VideoEncoder === "function"
+    && typeof g.VideoDecoder === "function";
 }
 
 /**
@@ -89,7 +92,7 @@ async function verifyDecodable(file) {
  * @returns {Promise<File>} a smaller, decode-verified 720p H.264 MP4 (audio dropped)
  */
 export async function webcodecsTranscode(file, opts = {}) {
-  const { maxHeight = 720, onProgress } = opts;
+  const { maxHeight = 720, onProgress, timeoutMs = 45_000 } = opts;
   if (!webcodecsSupported()) throw new Error("webcodecs_unsupported");
 
   // Confirm H.264 encode is actually available (hardware or software) before
@@ -147,9 +150,10 @@ export async function webcodecsTranscode(file, opts = {}) {
 
   // Hard timeout so a slow/stuck transcode can't make things WORSE than just
   // uploading the original. If we blow the budget, cancel the conversion and
-  // throw → the caller falls back to the original-upload path. Tuned to keep
-  // the whole compress+upload under the ~45s target on typical clips.
-  const TRANSCODE_TIMEOUT_MS = 45_000;
+  // throw → the caller falls back to the original-upload path. When run inside
+  // the worker wrapper, the wrapper's budget (worker.terminate()) is the real
+  // authority — this inner timer is aligned to it via opts.timeoutMs.
+  const TRANSCODE_TIMEOUT_MS = timeoutMs;
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;

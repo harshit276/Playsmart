@@ -515,6 +515,39 @@ export default function AnalyzePage() {
   // stalled upload). Recreated at the start of every analysis run.
   const analysisAbortRef = useRef(null);
 
+  // "Background-ish" upload protection while an analysis run is in flight:
+  //   • Screen Wake Lock — on a phone the screen going to sleep suspends the
+  //     page and KILLS an in-progress upload; holding the lock keeps the
+  //     upload alive without the user having to keep tapping. (True
+  //     lock-screen background upload needs the native Capacitor app.)
+  //     Re-acquired on visibilitychange because the browser silently releases
+  //     the lock whenever the tab is backgrounded.
+  //   • beforeunload guard — closing/refreshing the tab mid-upload silently
+  //     loses the run; ask for confirmation first.
+  useEffect(() => {
+    if (!analyzing) return undefined;
+    let lock = null;
+    let done = false;
+    const acquire = async () => {
+      try {
+        lock = await navigator.wakeLock?.request?.("screen");
+      } catch { /* unsupported / low battery — upload still works, screen may sleep */ }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && !done) acquire();
+    };
+    const onBeforeUnload = (e) => { e.preventDefault(); e.returnValue = ""; };
+    acquire();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      done = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      try { lock?.release?.(); } catch { /* noop */ }
+    };
+  }, [analyzing]);
+
   const [improvementData, setImprovementData] = useState(null);
   // History sport filter — null/"all" shows everything; a specific sport
   // scopes the improvement card + history list so we never compare a
