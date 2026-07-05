@@ -1,10 +1,11 @@
 {
   "appId": "com.atheonics.app",
-  "appName": "Atheonics",
+  "appName": "Formanti",
   "webDir": "build",
   "server": {
     "androidScheme": "https",
     "hostname": "atheonics.com",
+    "url": "https://atheonics.com",
     "iosScheme": "https",
     "allowNavigation": [
       "atheonics.com",

@@ -159,8 +159,10 @@ export async function reencodeUpright(file, opts = {}) {
 
   try {
     await new Promise((res, rej) => {
-      v.onloadedmetadata = res;
-      v.onerror = () => rej(new Error("video decode failed"));
+      // Timeout: hidden tabs can defer media loading forever (see _readDims).
+      const to = setTimeout(() => rej(new Error("metadata timeout (hidden tab?)")), 10_000);
+      v.onloadedmetadata = () => { clearTimeout(to); res(); };
+      v.onerror = () => { clearTimeout(to); rej(new Error("video decode failed")); };
     });
 
     // videoWidth/Height are the DISPLAY dims (browser already applied the
@@ -188,20 +190,36 @@ export async function reencodeUpright(file, opts = {}) {
     onProgress?.({ percent: 2, message: label });
     await v.play().catch(() => {});
     rec.start(500);
-    await new Promise((res) => {
+    await new Promise((res, rej) => {
+      // Driven by BOTH rAF and a setInterval: rAF freezes entirely in a
+      // hidden tab (user switched apps mid-encode) — the interval (throttled
+      // to ~1Hz when hidden) keeps the loop alive so the encode still
+      // finishes. The deadline guarantees this promise can NEVER hang the
+      // upload flow forever; on timeout we reject → caller falls back to
+      // uploading the original.
+      const deadline = Date.now() + dur * 1500 + 20_000;
+      let done = false;
+      let iv = null;
       const tick = () => {
+        if (done) return;
         ctx.drawImage(v, 0, 0, cw, ch);
         const t = v.currentTime || 0;
         if (onProgress && dur > 0) {
           onProgress({ percent: 2 + Math.min(1, t / dur) * 16, message: label });
         }
         if (v.ended || t >= dur) {
+          done = true; clearInterval(iv);
           try { rec.stop(); } catch { /* already stopped */ }
           res();
+        } else if (Date.now() > deadline) {
+          done = true; clearInterval(iv);
+          try { rec.stop(); } catch { /* already stopped */ }
+          rej(new Error("reencode timeout (hidden tab?)"));
         } else {
           requestAnimationFrame(tick);
         }
       };
+      iv = setInterval(tick, 500);
       requestAnimationFrame(tick);
     });
     await new Promise((res) => { rec.onstop = res; });
@@ -244,12 +262,19 @@ async function _readDims(file) {
   const url = URL.createObjectURL(file);
   v.src = url;
   try {
+    // TIMEOUT is load-bearing: in a hidden/backgrounded tab (user switched
+    // apps right after tapping Analyze — common on phones) Chrome can defer
+    // media loading indefinitely, so loadedmetadata never fires and neither
+    // does onerror. Without this, the whole upload flow hung forever BEFORE
+    // the first byte was uploaded (observed live: "stuck at 23%").
     await new Promise((res, rej) => {
-      v.onloadedmetadata = res;
-      v.onerror = () => rej(new Error("metadata load failed"));
+      const to = setTimeout(() => rej(new Error("metadata timeout (hidden tab?)")), 8000);
+      v.onloadedmetadata = () => { clearTimeout(to); res(); };
+      v.onerror = () => { clearTimeout(to); rej(new Error("metadata load failed")); };
     });
     return { w: v.videoWidth, h: v.videoHeight };
   } finally {
+    try { v.src = ""; v.load(); } catch { /* release decoder */ }
     URL.revokeObjectURL(url);
   }
 }

@@ -11,28 +11,88 @@
  * ~60-120s ffmpeg.wasm (software, single-thread) takes — and the small
  * output uploads AND analyzes far faster.
  *
- * Throws on any unsupported/failed case (no WebCodecs, undecodable codec
- * e.g. some HEVC on non-Apple, or no real size win) so callers fall back to
+ * WHY THE EARLIER ATTEMPT WAS REVERTED, AND WHAT'S DIFFERENT NOW:
+ * The previous version produced a file and trusted it blindly. When the
+ * output happened to be malformed, Gemini came back "no shots detected" on
+ * every clip, so it was disabled. This version adds the missing safeguard:
+ *   1. Fast Start is set EXPLICITLY ('in-memory' → moov atom at the front),
+ *      so server-side decoders can parse the file.
+ *   2. Higher quality (QUALITY_HIGH) keeps fast badminton/contact frames
+ *      sharp enough for shot classification (MEDIUM blurred them).
+ *   3. A DECODE-VERIFY step re-opens the output and confirms it actually
+ *      decodes to real frames before we return it. If verification fails,
+ *      we throw → the caller falls back to uploading the original (the
+ *      known-good path). A bad transcode can therefore never reach Gemini.
+ *
+ * Throws on any unsupported/failed/unverifiable case so callers fall back to
  * uploading the original or the ffmpeg path.
  */
 import {
   Input, Output, Conversion, BlobSource, BufferTarget,
-  Mp4OutputFormat, ALL_FORMATS, QUALITY_MEDIUM, canEncodeVideo,
+  Mp4OutputFormat, ALL_FORMATS, QUALITY_HIGH, canEncodeVideo,
+  VideoSampleSink,
 } from "mediabunny";
 
 export function webcodecsSupported() {
-  return typeof window !== "undefined"
-    && typeof window.VideoEncoder === "function"
-    && typeof window.VideoDecoder === "function";
+  // globalThis (not window) — WebCodecs is also available inside Web Workers,
+  // which is where transcodeInWorker.js runs this module.
+  const g = typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : null);
+  return !!g
+    && typeof g.VideoEncoder === "function"
+    && typeof g.VideoDecoder === "function";
+}
+
+/**
+ * Re-open a produced file and confirm it's genuinely decodable: a video track
+ * exists, has a sane duration + dimensions, the browser can decode its codec,
+ * and at least one real frame comes out of the decoder. This is the guard the
+ * earlier attempt lacked — it catches structurally-broken output (the cause of
+ * "Gemini sees no shots") before we ever upload it.
+ *
+ * @returns {Promise<{durationSec:number,width:number,height:number,frames:number}>}
+ * @throws if the file can't be verified as decodable
+ */
+async function verifyDecodable(file) {
+  let input = null;
+  try {
+    input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) });
+    const track = await input.getPrimaryVideoTrack();
+    if (!track) throw new Error("verify_no_video_track");
+
+    const durationSec = await track.computeDuration();
+    if (!(durationSec > 0.4)) throw new Error(`verify_bad_duration:${durationSec}`);
+
+    const width = await track.getDisplayWidth();
+    const height = await track.getDisplayHeight();
+    if (!width || !height) throw new Error("verify_bad_dimensions");
+
+    if (!(await track.canDecode())) throw new Error("verify_cannot_decode");
+
+    // Actually pull a few frames through the decoder — the only proof that the
+    // bitstream + codec config are coherent (a valid-looking container can
+    // still decode to nothing).
+    const sink = new VideoSampleSink(track);
+    let frames = 0;
+    for await (const sample of sink.samples()) {
+      frames++;
+      try { sample.close(); } catch { /* noop */ }
+      if (frames >= 3) break;
+    }
+    if (frames < 1) throw new Error("verify_no_frames_decoded");
+
+    return { durationSec, width, height, frames };
+  } finally {
+    try { input?.dispose(); } catch { /* noop */ }
+  }
 }
 
 /**
  * @param {File|Blob} file
  * @param {{maxHeight?: number, onProgress?: (pct:number)=>void}} [opts]
- * @returns {Promise<File>} a smaller 720p H.264 MP4 (audio dropped)
+ * @returns {Promise<File>} a smaller, decode-verified 720p H.264 MP4 (audio dropped)
  */
 export async function webcodecsTranscode(file, opts = {}) {
-  const { maxHeight = 720, onProgress } = opts;
+  const { maxHeight = 720, onProgress, timeoutMs = 45_000 } = opts;
   if (!webcodecsSupported()) throw new Error("webcodecs_unsupported");
 
   // Confirm H.264 encode is actually available (hardware or software) before
@@ -42,15 +102,39 @@ export async function webcodecsTranscode(file, opts = {}) {
   if (!canH264) throw new Error("h264_encode_unsupported");
 
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
-  const output = new Output({ format: new Mp4OutputFormat(), target: new BufferTarget() });
+  // fastStart: 'in-memory' → moov atom written at the FRONT of the file, which
+  // server-side decoders (Gemini's ingestion) need to parse the video. Set it
+  // explicitly rather than relying on the BufferTarget default.
+  const output = new Output({
+    format: new Mp4OutputFormat({ fastStart: "in-memory" }),
+    target: new BufferTarget(),
+  });
 
   // height only → Mediabunny preserves aspect ratio. Force H.264 ("avc") for
-  // maximum Gemini/back-end compatibility; drop audio (analysis ignores it,
-  // and it shrinks the file + avoids audio-codec issues).
+  // maximum Gemini/back-end compatibility; QUALITY_HIGH keeps fast-motion
+  // contact frames sharp; drop audio (analysis ignores it, shrinks the file).
+  //   • frameRate: 30 — cap output FPS. 60fps phone/tutorial clips were the
+  //     killer (2x the frames to decode+encode → ~2min transcodes); 30fps is
+  //     plenty since Gemini samples at 1fps and the analysis upsamples to ~4fps.
+  //   • hardwareAcceleration: 'prefer-hardware' — avoid the slow software
+  //     encoder when the device has a hardware H.264 encoder.
   const conversion = await Conversion.init({
     input,
     output,
-    video: { height: maxHeight, codec: "avc", bitrate: QUALITY_MEDIUM },
+    video: {
+      height: maxHeight,
+      codec: "avc",
+      bitrate: QUALITY_HIGH,
+      frameRate: 30,
+      hardwareAcceleration: "prefer-hardware",
+      // BAKE rotation into the pixels instead of writing a rotation flag.
+      // A flag-only rotation is what made portrait clips analyze sideways
+      // ("no shots") — Gemini ignores the container flag. With this false,
+      // Mediabunny rotates the actual pixels so the output is upright with no
+      // flag, and the caller can treat it as rotation=0. (This is the trick
+      // the previously-working transcode used before it was reverted.)
+      allowRotationMetadata: false,
+    },
     audio: { discard: true },
   });
 
@@ -64,7 +148,25 @@ export async function webcodecsTranscode(file, opts = {}) {
     conversion.onProgress = (p) => { try { onProgress(Math.round((p || 0) * 100)); } catch { /* noop */ } };
   }
 
-  await conversion.execute();
+  // Hard timeout so a slow/stuck transcode can't make things WORSE than just
+  // uploading the original. If we blow the budget, cancel the conversion and
+  // throw → the caller falls back to the original-upload path. When run inside
+  // the worker wrapper, the wrapper's budget (worker.terminate()) is the real
+  // authority — this inner timer is aligned to it via opts.timeoutMs.
+  const TRANSCODE_TIMEOUT_MS = timeoutMs;
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    conversion.cancel().catch(() => { /* noop */ });
+  }, TRANSCODE_TIMEOUT_MS);
+  try {
+    await conversion.execute();
+  } catch (execErr) {
+    if (timedOut) { const e = new Error("transcode_timeout"); e.code = "timeout"; throw e; }
+    throw execErr;
+  } finally {
+    clearTimeout(timer);
+  }
 
   const buf = output.target.buffer;
   if (!buf || buf.byteLength < 2000) throw new Error("transcode_empty");
@@ -73,5 +175,12 @@ export async function webcodecsTranscode(file, opts = {}) {
   if (buf.byteLength >= file.size) throw new Error("transcode_no_win");
 
   const base = (file.name || "clip").replace(/\.[^.]+$/, "");
-  return new File([buf], `${base}_720p.mp4`, { type: "video/mp4" });
+  const outFile = new File([buf], `${base}_720p.mp4`, { type: "video/mp4" });
+
+  // THE SAFEGUARD: prove the output decodes before trusting it. Throws → the
+  // caller uploads the original instead. This is what makes re-enabling the
+  // WebCodecs path safe after the previous "Gemini went blind" regression.
+  await verifyDecodable(outFile);
+
+  return outFile;
 }

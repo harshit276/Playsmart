@@ -74,7 +74,7 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "Can AI analyze my pickleball game?",
-    a: "Yes. Atheonics's pickleball shot analyzer tags dinks, drives, drops, and volleys from any phone video and surfaces patterns like where you're attacking vs. getting attacked.",
+    a: "Yes. Formanti's pickleball shot analyzer tags dinks, drives, drops, and volleys from any phone video and surfaces patterns like where you're attacking vs. getting attacked.",
   },
   {
     q: "What is the best pickleball paddle for intermediate players?",
@@ -82,7 +82,7 @@ const FAQS = [
   },
   {
     q: "How do I improve my third-shot drop?",
-    a: "Contact the ball low with a loose grip, lift gently with your legs (not your wrist), and aim to land the ball in the middle of the non-volley zone. Atheonics can grade your drops from video and suggest drills.",
+    a: "Contact the ball low with a loose grip, lift gently with your legs (not your wrist), and aim to land the ball in the middle of the non-volley zone. Formanti can grade your drops from video and suggest drills.",
   },
   {
     q: "How often should I play pickleball to improve?",
@@ -101,13 +101,13 @@ export default function PickleballPage() {
         title="AI Pickleball Coach - Shot Analyzer & Training App"
         description="Free AI pickleball coach: analyze your dinks, drops, and drives, get personalized training plans, and find the best pickleball paddles for your game."
         keywords="pickleball training app, pickleball shot analyzer, best pickleball paddle, AI pickleball coach, third shot drop, pickleball video analysis, pickleball drills"
-        url="https://atheonics.com/pickleball"
+        url="https://formanti.com/pickleball"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Pickleball Coach - Shot Analysis & Training",
           description: "AI-powered pickleball shot analyzer, training plans, and paddle recommendations.",
-          url: "https://atheonics.com/pickleball",
+          url: "https://formanti.com/pickleball",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -275,7 +275,7 @@ export default function PickleballPage() {
               Sample Weekly Pickleball Training Plan
             </h2>
             <p className="text-zinc-400">
-              A snapshot for a 3.5-to-4.0 player. Atheonics adjusts your real plan based on goals,
+              A snapshot for a 3.5-to-4.0 player. Formanti adjusts your real plan based on goals,
               schedule, and video analysis.
             </p>
           </div>

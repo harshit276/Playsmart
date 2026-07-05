@@ -129,7 +129,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-2 group" data-testid="nav-logo">
             <Zap className={`w-5 h-5 sm:w-6 sm:h-6 ${accent.logo}`} strokeWidth={2.5} />
-            <span className="font-heading font-bold text-lg sm:text-xl tracking-tight uppercase text-white">Atheonics</span>
+            <span className="font-heading font-bold text-lg sm:text-xl tracking-tight uppercase text-white">Formanti</span>
           </Link>
 
           {/* Desktop nav links */}
@@ -162,7 +162,7 @@ export default function Navbar() {
             {isAuthenticated && tokens != null && (
               <Link
                 to="/wallet"
-                title={`${tokens} Atheonics tokens`}
+                title={`${tokens} Formanti tokens`}
                 className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-purple-400/10 hover:bg-purple-400/20 rounded-full transition-colors"
               >
                 <span className="text-xs">🪙</span>

@@ -90,7 +90,7 @@ export default function MarketplacePage() {
   const [serverPicks, setServerPicks] = useState(null); // null | { items: [{item_id, why_this_fits, why_to_be_careful, fit_score, score_breakdown}], parsed_intent }
   const [picksLoading, setPicksLoading] = useState(false);
 
-  useEffect(() => { document.title = "Marketplace · Atheonics"; }, []);
+  useEffect(() => { document.title = "Marketplace · Formanti"; }, []);
 
   const applyRecommendation = async ({ sport: s, level, budget, goal: g, description: desc, categories }) => {
     setSport(s);
@@ -245,7 +245,7 @@ export default function MarketplacePage() {
       <SEO
         title="Sports Equipment Marketplace · Compare Prices Across Amazon, Flipkart, Decathlon"
         description="Browse and compare prices for badminton, tennis, table tennis, and pickleball equipment across Amazon, Flipkart, and Decathlon. Curated for Indian players."
-        url="https://atheonics.com/marketplace"
+        url="https://formanti.com/marketplace"
       />
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl pt-4 sm:pt-6">
         {/* ── Hero: "Get my picks" recommendation flow ── */}

@@ -201,7 +201,7 @@ export default function AuthPage() {
         >
           <div className="lg:hidden flex items-center gap-2 mb-10">
             <Zap className="w-6 h-6 text-lime-400" />
-            <span className="font-heading font-bold text-xl uppercase tracking-tight">Atheonics</span>
+            <span className="font-heading font-bold text-xl uppercase tracking-tight">Formanti</span>
           </div>
 
           <div className="space-y-6">

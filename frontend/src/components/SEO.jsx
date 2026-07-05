@@ -9,15 +9,15 @@ export default function SEO({
   title,
   description,
   keywords,
-  image = "https://atheonics.com/icons/icon-512.png",
+  image = "https://formanti.com/icons/icon-512.png",
   url,
   type = "website",
   structuredData,
   noindex = false,
 }) {
-  const fullTitle = title ? `${title} | Atheonics` : "Atheonics - Your AI Sports Coach";
+  const fullTitle = title ? `${title} | Formanti` : "Formanti - Your AI Sports Coach";
   const canonicalUrl =
-    url || (typeof window !== "undefined" ? window.location.href : "https://atheonics.com");
+    url || (typeof window !== "undefined" ? window.location.href : "https://formanti.com");
 
   const structuredDataArray = Array.isArray(structuredData)
     ? structuredData
@@ -38,7 +38,7 @@ export default function SEO({
       <meta property="og:title" content={fullTitle} />
       {description && <meta property="og:description" content={description} />}
       <meta property="og:image" content={image} />
-      <meta property="og:site_name" content="Atheonics" />
+      <meta property="og:site_name" content="Formanti" />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

@@ -1,6 +1,6 @@
 /**
  * @module ai
- * Atheonics client-side analysis pipeline.
+ * Formanti client-side analysis pipeline.
  *
  * Re-exports every public symbol from the individual AI modules so
  * consumers can do:

@@ -58,7 +58,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [buyOpen, setBuyOpen] = useState(false);
 
-  useEffect(() => { document.title = "Wallet | Atheonics"; }, []);
+  useEffect(() => { document.title = "Wallet | Formanti"; }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -74,7 +74,7 @@ export default function WalletPage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm text-center">
           <Coins className="w-10 h-10 text-purple-400 mx-auto mb-3" />
           <h2 className="text-xl font-bold text-white mb-2">Sign in to see your wallet</h2>
-          <p className="text-zinc-400 text-sm mb-4">Track your Atheonics tokens — earn from referrals, hosting games, and training.</p>
+          <p className="text-zinc-400 text-sm mb-4">Track your Formanti tokens — earn from referrals, hosting games, and training.</p>
           <Button onClick={() => navigate("/auth")} className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full">
             Sign in
           </Button>
@@ -96,14 +96,14 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO title="Wallet · Atheonics Tokens" description="Track your Atheonics token balance and earnings." />
+      <SEO title="Wallet · Formanti Tokens" description="Track your Formanti token balance and earnings." />
       <div className="container mx-auto px-4 max-w-3xl">
 
         {/* Hero balance */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden bg-gradient-to-br from-purple-500/15 via-zinc-900 to-zinc-950 border border-purple-400/30 rounded-3xl p-6 sm:p-8 mb-6">
           <div className="absolute -right-6 -bottom-6 text-[140px] opacity-10 select-none">🪙</div>
-          <p className="text-[11px] uppercase tracking-wider text-purple-300/70 font-bold">Atheonics Tokens</p>
+          <p className="text-[11px] uppercase tracking-wider text-purple-300/70 font-bold">Formanti Tokens</p>
           <p className="font-heading font-black text-5xl sm:text-6xl text-white mt-1">
             {balance.toLocaleString("en-IN")}
           </p>

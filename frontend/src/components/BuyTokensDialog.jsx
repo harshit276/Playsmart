@@ -96,7 +96,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
           amount: data.amount,
           currency: data.currency || "INR",
           order_id: data.order_id,
-          name: data.name || "Atheonics",
+          name: data.name || "Formanti",
           description: data.description || `${pack.tokens} tokens`,
           prefill: { email: data.prefill_email || "", contact: data.prefill_contact || "" },
           theme: { color: "#bef264" },
@@ -134,7 +134,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
         <>
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Coins className="w-5 h-5 text-purple-400" /> Buy Atheonics tokens
+              <Coins className="w-5 h-5 text-purple-400" /> Buy Formanti tokens
             </DialogTitle>
             <DialogDescription className="text-zinc-400 text-sm">
               Pick a pack — UPI, cards, netbanking. Tokens never expire.

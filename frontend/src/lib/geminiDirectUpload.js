@@ -20,29 +20,53 @@ import api from "./api";
  * @param {File|Blob} videoFile
  * @param {Object} [options]
  * @param {function} [options.onProgress] - ({percent, message})
+ * @param {AbortSignal} [options.signal] - cancel an in-flight upload
  * @returns {Promise<{file_name: string, file_uri: string|null}>}
  */
+// Treat "no upload progress for this long" as a stall → abort, so a silently
+// dropped connection fails fast and the caller can fall back to Cloudinary
+// instead of waiting out the 240s hard timeout.
+const DIRECT_STALL_TIMEOUT_MS = 25_000;
+
 export async function uploadDirectToGemini(videoFile, options = {}) {
-  const { onProgress } = options;
+  const { onProgress, signal } = options;
+  if (signal?.aborted) { const e = new Error("Upload cancelled"); e.code = "abort"; throw e; }
   const mimeType = (videoFile.type || "video/mp4").split(";")[0];
 
   onProgress?.({ percent: 2, message: "Preparing fast upload..." });
   const { data: session } = await api.post(
     "/files/upload-session",
     { size_bytes: videoFile.size, mime_type: mimeType },
-    { timeout: 25000 },
+    { timeout: 25000, signal },
   );
   if (!session?.upload_url) throw new Error("no upload_url in session");
 
   onProgress?.({ percent: 5, message: "Uploading your video..." });
   const fileInfo = await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    let stallTimer = null;
+    const armStall = () => {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        try { xhr.abort(); } catch { /* noop */ }
+        const e = new Error("Direct upload stalled (no progress)"); e.code = "stall";
+        reject(e);
+      }, DIRECT_STALL_TIMEOUT_MS);
+    };
+    const onAbort = () => { try { xhr.abort(); } catch { /* noop */ } };
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => {
+      if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+      signal?.removeEventListener("abort", onAbort);
+    };
     xhr.open("POST", session.upload_url);
     // Google's resumable protocol: single-chunk upload + finalize.
     xhr.setRequestHeader("X-Goog-Upload-Command", "upload, finalize");
     xhr.setRequestHeader("X-Goog-Upload-Offset", "0");
     xhr.timeout = 240000;
+    xhr.upload.onloadstart = armStall;
     xhr.upload.onprogress = (e) => {
+      armStall(); // reset the watchdog whenever bytes actually move
       if (e.lengthComputable) {
         const frac = e.loaded / e.total;
         onProgress?.({
@@ -52,6 +76,7 @@ export async function uploadDirectToGemini(videoFile, options = {}) {
       }
     };
     xhr.onload = () => {
+      cleanup();
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           resolve(JSON.parse(xhr.responseText));
@@ -62,8 +87,13 @@ export async function uploadDirectToGemini(videoFile, options = {}) {
         reject(new Error(`Direct upload failed: ${xhr.status}`));
       }
     };
-    xhr.onerror = () => reject(new Error("Direct upload network error (possibly CORS)"));
-    xhr.ontimeout = () => reject(new Error("Direct upload timed out"));
+    xhr.onerror = () => { cleanup(); reject(new Error("Direct upload network error (possibly CORS)")); };
+    xhr.ontimeout = () => { cleanup(); reject(new Error("Direct upload timed out")); };
+    xhr.onabort = () => {
+      cleanup();
+      if (signal?.aborted) { const e = new Error("Upload cancelled"); e.code = "abort"; reject(e); }
+    };
+    armStall();
     xhr.send(videoFile);
   });
 
@@ -74,7 +104,7 @@ export async function uploadDirectToGemini(videoFile, options = {}) {
   const { data: finalized } = await api.post(
     "/files/finalize",
     { file_name: fileName },
-    { timeout: 120000 },
+    { timeout: 120000, signal },
   );
   if (!finalized?.file_name) throw new Error("finalize failed");
   onProgress?.({ percent: 100, message: "Upload complete" });

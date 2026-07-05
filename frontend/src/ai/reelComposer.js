@@ -3,11 +3,11 @@
  * Compose a polished highlight reel in the browser:
  *   - Title card (1.5s opening with username + date)
  *   - Cross-fade transitions (0.4s alpha blend) between clips
- *   - Per-clip text overlay (SHOT N · type) + atheonics watermark
+ *   - Per-clip text overlay (SHOT N Â· type) + formanti watermark
  *   - Optional background music mixed with original audio
  *   - Records to webm/mp4 via MediaRecorder + canvas captureStream
  *
- * Approach: two hidden <video> elements — videoA holds the current clip,
+ * Approach: two hidden <video> elements â€” videoA holds the current clip,
  * videoB holds the next clip. During the overlap window we draw both
  * frames with complementary alpha. Music + both audio tracks are mixed
  * via WebAudio into a MediaStreamDestination and added to the canvas
@@ -21,7 +21,7 @@ const FPS = 30;
 
 const MUSIC_PATH = "/audio/highlights-music.mp3"; // drop a file here to enable
 
-const BRAND = "atheonics.com";
+const BRAND = "formanti.com";
 
 /**
  * @param {Object} opts
@@ -72,7 +72,7 @@ export async function composeReel(opts) {
 
   const stream = canvas.captureStream(FPS);
 
-  // ─── Audio setup ──────────────────────────────────────────────
+  // â”€â”€â”€ Audio setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Mix: video original audio + optional bundled music. WebAudio routes
   // both to a MediaStreamDestination whose track we add to the canvas
   // stream so MediaRecorder picks up the audio.
@@ -82,7 +82,7 @@ export async function composeReel(opts) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const dest = audioCtx.createMediaStreamDestination();
 
-    // Original audio from videoA — use only A as the audio source so we
+    // Original audio from videoA â€” use only A as the audio source so we
     // don't get phasing during crossfades. Lower its gain to make room
     // for music.
     const srcA = audioCtx.createMediaElementSource(videoA);
@@ -106,7 +106,7 @@ export async function composeReel(opts) {
 
     dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
   } catch (e) {
-    // Audio failed (e.g. cross-origin) — proceed silent
+    // Audio failed (e.g. cross-origin) â€” proceed silent
     console.warn("audio mix failed:", e);
   }
 
@@ -125,7 +125,7 @@ export async function composeReel(opts) {
   recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
   const recDone = new Promise((resolve) => { recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType })); });
 
-  // ─── Recording timeline ──────────────────────────────────────
+  // â”€â”€â”€ Recording timeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const totalDuration =
     TITLE_DURATION +
     clips.reduce((s, c) => s + (c.end - c.start), 0) -
@@ -245,7 +245,7 @@ export async function composeReel(opts) {
   return blob;
 }
 
-// ─── helpers ─────────────────────────────────────────────────────
+// â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function makeHiddenVideo(src) {
   const v = document.createElement("video");
@@ -295,7 +295,7 @@ async function tryLoadMusic() {
   return a;
 }
 
-// ─── overlays ────────────────────────────────────────────────────
+// â”€â”€â”€ overlays â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function drawTitleCard(ctx, W, H, title, subtitle, t) {
   // Fade-in feel
@@ -336,11 +336,11 @@ function drawOutro(ctx, W, H, remaining) {
 }
 
 function drawOverlay(ctx, W, H, clip, total) {
-  // Top-left badge: SHOT N · TYPE
+  // Top-left badge: SHOT N Â· TYPE
   const padX = Math.round(W * 0.025);
   const padY = Math.round(H * 0.025);
   const badgeH = Math.round(H * 0.07);
-  const labelText = `SHOT ${clip.idx + 1}/${total} · ${clip.type.toUpperCase().replace(/_/g, " ")}`;
+  const labelText = `SHOT ${clip.idx + 1}/${total} Â· ${clip.type.toUpperCase().replace(/_/g, " ")}`;
   ctx.font = `600 ${Math.round(H * 0.028)}px Inter, system-ui, sans-serif`;
   const textW = ctx.measureText(labelText).width;
   ctx.fillStyle = "rgba(0,0,0,0.55)";

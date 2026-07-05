@@ -74,7 +74,7 @@ const PLAN_SAMPLE = [
 const FAQS = [
   {
     q: "What are the most common freestyle swimming mistakes?",
-    a: "The most common mistakes are lifting the head too high (which sinks the hips), crossing the centreline on entry, a dropped elbow during the pull, holding your breath instead of exhaling underwater, and an over-big knee-bending kick. Atheonics's stroke analysis flags these directly from your video.",
+    a: "The most common mistakes are lifting the head too high (which sinks the hips), crossing the centreline on entry, a dropped elbow during the pull, holding your breath instead of exhaling underwater, and an over-big knee-bending kick. Formanti's stroke analysis flags these directly from your video.",
   },
   {
     q: "How can I swim freestyle without getting tired so quickly?",
@@ -82,14 +82,14 @@ const FAQS = [
   },
   {
     q: "How do I analyze my swimming technique?",
-    a: "Have someone film you from the side of the pool (above and, if possible, below the surface), upload the clip to Atheonics, and the AI swimming coach will break down your body position, catch, pull, and breathing with frame-by-frame feedback.",
+    a: "Have someone film you from the side of the pool (above and, if possible, below the surface), upload the clip to Formanti, and the AI swimming coach will break down your body position, catch, pull, and breathing with frame-by-frame feedback.",
   },
   {
     q: "How do I breathe properly while swimming freestyle?",
     a: "Breathe by rotating your whole body to the side as one arm recovers — keep your head low with one goggle still in the water. Exhale continuously through your nose and mouth while your face is down so you only need to inhale when you turn.",
   },
   {
-    q: "Is the Atheonics swimming app free?",
+    q: "Is the Formanti swimming app free?",
     a: "Yes. You can analyze stroke videos, generate training plans, and browse gear recommendations for free. No credit card required to get started.",
   },
 ];
@@ -101,13 +101,13 @@ export default function SwimmingPage() {
         title="AI Swimming Coach - Stroke & Freestyle Technique Analysis"
         description="Free AI swimming coach: analyze your freestyle and stroke technique, fix common mistakes, get personalized training plans and gear recommendations. Upload a poolside video and swim faster."
         keywords="swimming video analysis, AI swimming coach, freestyle technique, swimming stroke analysis, swimming mistakes, swimming training plan, how to swim faster, best swimming goggles"
-        url="https://atheonics.com/swimming"
+        url="https://formanti.com/swimming"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Swimming Coach - Stroke & Freestyle Technique Analysis",
           description: "AI-powered swimming video analysis, stroke technique breakdown, body-position feedback, and personalized training plans.",
-          url: "https://atheonics.com/swimming",
+          url: "https://formanti.com/swimming",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
@@ -173,7 +173,7 @@ export default function SwimmingPage() {
               Built for Swimmers
             </h2>
             <p className="text-zinc-400 mt-3 max-w-2xl mx-auto">
-              Every tool on Atheonics is tuned to stroke efficiency, body position, and the technique that makes you faster.
+              Every tool on Formanti is tuned to stroke efficiency, body position, and the technique that makes you faster.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -1,9 +1,9 @@
 import axios from 'axios';
 
 let backendUrl = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/+$/, '');
-// Guard against a scheme-less value (e.g. "atheonics.com"): without http(s)://
+// Guard against a scheme-less value (e.g. "formanti.com"): without http(s)://
 // the browser treats it as a RELATIVE path and appends it to the current
-// origin → "https://atheonics.com/atheonics.com/api/..." (a doubled-domain
+// origin → "https://formanti.com/formanti.com/api/..." (a doubled-domain
 // that matches no API route and 405s). Normalise by adding https:// when a
 // host is given but no scheme. An EMPTY value stays empty → same-origin "/api",
 // which is the correct default for our Vercel co-deployed API.

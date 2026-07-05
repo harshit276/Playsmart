@@ -21,10 +21,34 @@ export const PROGRESS_BASELINE_KEY = "playsmart_progress_baseline";
 
 const SPORT_EMOJI = {
   badminton: "🏸", tennis: "🎾", table_tennis: "🏓", pickleball: "⚡",
-  cricket: "🏏", football: "⚽", swimming: "🏊", weightlifting: "🏋️",
-  strength_training: "🏋️", "bodyweight exercise": "💪", running: "🏃", cycling: "🚴",
+  cricket: "🏏", football: "⚽", basketball: "🏀", swimming: "🏊", weightlifting: "🏋️",
+  strength_training: "🏋️", calisthenics: "💪", "bodyweight exercise": "💪", running: "🏃", cycling: "🚴",
 };
-const emojiFor = (s) => SPORT_EMOJI[(s || "").toLowerCase()] || "🎯";
+const emojiFor = (s) =>
+  SPORT_EMOJI[(s || "").toLowerCase().replace(/\s+/g, "_")] || "🎯";
+
+// Collapse Gemini's free-form sport names into a canonical key so the SAME
+// sport doesn't split into near-duplicate groups on the progress page
+// (e.g. "Strength Training", "Gym / Strength Training", "Gym" were each shown
+// as a separate sport). Order matters: more specific checks first
+// (table tennis before tennis; calisthenics before generic strength).
+const canonicalSport = (raw) => {
+  const s = (raw || "").toLowerCase();
+  if (/badminton/.test(s)) return "badminton";
+  if (/table.?tennis|ping.?pong/.test(s)) return "table tennis";
+  if (/tennis/.test(s)) return "tennis";
+  if (/pickle/.test(s)) return "pickleball";
+  if (/cricket/.test(s)) return "cricket";
+  if (/football|soccer/.test(s)) return "football";
+  if (/basketball/.test(s)) return "basketball";
+  if (/swim/.test(s)) return "swimming";
+  if (/weightlift|powerlift|deadlift/.test(s)) return "weightlifting";
+  if (/calisthenic|bodyweight/.test(s)) return "calisthenics";
+  if (/gym|strength|workout|fitness|bodybuild|crossfit/.test(s)) return "strength training";
+  if (/\brun|jog|sprint/.test(s)) return "running";
+  if (/cycl/.test(s)) return "cycling";
+  return s.trim() || "unknown";
+};
 const labelFor = (s) => (s || "sport").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const shortDate = (d) => { try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch { return ""; } };
 const longDate = (d) => { try { return new Date(d).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); } catch { return ""; } };
@@ -140,13 +164,13 @@ export default function ProgressPage() {
   }, [user?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
-  useEffect(() => { document.title = "Progress | Atheonics"; }, []);
+  useEffect(() => { document.title = "Progress | Formanti"; }, []);
 
   // Group analyses by sport, pick the most-analyzed as the default view.
   const bySport = useMemo(() => {
     const m = {};
     for (const a of analysisHistory) {
-      const s = (a.sport || "unknown").toLowerCase();
+      const s = canonicalSport(a.sport);
       (m[s] = m[s] || []).push(a);
     }
     return m;
@@ -439,10 +463,10 @@ export default function ProgressPage() {
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         shareData={{
-          title: "My Atheonics Progress",
-          text: `My Atheonics progress:\n${totalAnalyses} video analyses across ${sports.length} sport(s)\n${badgesData?.total_earned || 0} badges\n\nTrain smarter with Atheonics!`,
+          title: "My Formanti Progress",
+          text: `My Formanti progress:\n${totalAnalyses} video analyses across ${sports.length} sport(s)\n${badgesData?.total_earned || 0} badges\n\nTrain smarter with Formanti!`,
           card: {
-            player_name: user?.name || "Atheonics Player",
+            player_name: user?.name || "Formanti Player",
             skill_level: stats?.latestLevel || "",
             sport: activeSport ? labelFor(activeSport) : "",
             badges_count: badgesData?.total_earned || 0,

@@ -498,7 +498,7 @@ export default function LabelPage() {
   return (
     <div className="min-h-screen bg-background text-zinc-100 pt-20 pb-12 px-4">
       <Helmet>
-        <title>Shot Labeling Tool · Atheonics</title>
+        <title>Shot Labeling Tool · Formanti</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 

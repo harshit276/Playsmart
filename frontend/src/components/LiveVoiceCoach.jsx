@@ -117,7 +117,7 @@ function deriveAnalysisId(result) {
 function formatTranscriptForDownload(messages, ctx) {
   const stamp = new Date().toISOString();
   const header = [
-    `Atheonics — Live Coach Transcript`,
+    `Formanti — Live Coach Transcript`,
     `Saved: ${stamp}`,
     ctx?.sport ? `Sport: ${ctx.sport}` : null,
     ctx?.overall_skill_level ? `Level: ${ctx.overall_skill_level}` : null,
@@ -517,7 +517,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
       }
 
       // Support / help / report-a-problem intent → forward to the support team
-      // (Telegram admin alert + support@atheonics.com) instead of trying to
+      // (Telegram admin alert + support@formanti.com) instead of trying to
       // answer it as a coaching question. Tight phrasing so normal "help me
       // improve my smash" doesn't trigger it.
       if (
@@ -526,7 +526,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
         cancelTts();
         const ctx = `sport=${analysisContext?.sport || ""}; shots=${Array.isArray(result?.shots) ? result.shots.length : 0}`;
         api.post("/support-request", { message: text, context: ctx }).catch(() => {});
-        const ack = "I've passed this to our support team — they'll follow up at support@atheonics.com. Is there anything about your analysis I can help with in the meantime?";
+        const ack = "I've passed this to our support team — they'll follow up at support@formanti.com. Is there anything about your analysis I can help with in the meantime?";
         setMessages((prev) => [
           ...prev,
           { role: "user", text, t: Date.now() },
@@ -628,30 +628,37 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
             if (!line) continue;
             const payload = line.slice(6).trim();
             if (!payload) continue;
+            // Parse first; ONLY a JSON-parse failure is "skip malformed frame".
+            // Previously an error-frame `throw` was caught by this same try,
+            // so backend errors (timeouts, Gemini stops) were silently
+            // swallowed and the reply just appeared truncated with no reason.
+            let evt;
             try {
-              const evt = JSON.parse(payload);
-              if (evt.done) {
-                done = true;
-                break;
-              }
-              if (typeof evt.chunk === "string" && evt.chunk) {
-                fullText += evt.chunk;
-                setMessages((prev) => {
-                  const copy = prev.slice();
-                  for (let i = copy.length - 1; i >= 0; i--) {
-                    if (copy[i].streaming) {
-                      copy[i] = { ...copy[i], text: fullText };
-                      break;
-                    }
-                  }
-                  return copy;
-                });
-              }
-              if (evt.error) {
-                throw new Error(String(evt.error).slice(0, 200));
-              }
+              evt = JSON.parse(payload);
             } catch (parseErr) {
-              // Non-fatal — skip malformed frame.
+              continue; // malformed SSE frame — skip it, keep streaming
+            }
+            if (evt.done) {
+              done = true;
+              break;
+            }
+            if (typeof evt.chunk === "string" && evt.chunk) {
+              fullText += evt.chunk;
+              setMessages((prev) => {
+                const copy = prev.slice();
+                for (let i = copy.length - 1; i >= 0; i--) {
+                  if (copy[i].streaming) {
+                    copy[i] = { ...copy[i], text: fullText };
+                    break;
+                  }
+                }
+                return copy;
+              });
+            }
+            if (evt.error) {
+              // Propagates to the outer catch → surfaces to the user instead
+              // of being hidden behind a half-finished reply.
+              throw new Error(String(evt.error).slice(0, 200));
             }
           }
         }

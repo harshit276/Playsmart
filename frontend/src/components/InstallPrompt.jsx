@@ -74,7 +74,7 @@ export default function InstallPrompt() {
               <Download className="w-5 h-5 text-lime-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white">Install Atheonics</p>
+              <p className="text-sm font-medium text-white">Install Formanti</p>
               <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
                 Tap <Share className="w-3 h-3 inline text-blue-400 mx-0.5" /> Share in Safari, then
                 <span className="text-white font-medium"> "Add to Home Screen"</span>
@@ -104,7 +104,7 @@ export default function InstallPrompt() {
             <Download className="w-5 h-5 text-lime-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white">Install Atheonics</p>
+            <p className="text-sm font-medium text-white">Install Formanti</p>
             <p className="text-xs text-zinc-400 mt-0.5">Add to home screen for a native app experience</p>
             <div className="flex gap-2 mt-3">
               <Button size="sm" onClick={handleInstall}

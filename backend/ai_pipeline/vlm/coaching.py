@@ -915,17 +915,38 @@ def coach_chat(
     try:
         from google import genai as genai_new  # type: ignore
         from google.genai import types as gt  # type: ignore
+        # Use a DEDICATED, reliable conversational model — NOT the analysis
+        # GEMINI_MODEL. Pointing this at the analysis model (e.g. a newer
+        # gemini-3.x flash) made the global "Ask Coach" silently fall back to
+        # retrieval-only "here's what I found" link lists instead of real
+        # answers. gemini-2.5-flash is proven reliable for coach text (it's the
+        # same model /coach/voice-chat uses). Override with GEMINI_COACH_MODEL.
         model_name = (
             os.getenv("GEMINI_COACH_MODEL")
-            or os.getenv("GEMINI_MODEL")
             or "gemini-2.5-flash"
         ).strip() or "gemini-2.5-flash"
+        # Relax safety to BLOCK_NONE — sports coaching language ("attack the
+        # body", "kill shot", "smash it") trips Gemini's default filters, which
+        # return NO text and NO error → an empty reply that silently fell
+        # through to the retrieval-only link list. (Same fix as voice-chat.)
+        _safety = None
+        try:
+            _safety = [
+                gt.SafetySetting(category=c, threshold="BLOCK_NONE") for c in (
+                    "HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH",
+                    "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT",
+                )
+            ]
+        except Exception:
+            _safety = None
         cfg = dict(
             system_instruction=sys_prompt,
             temperature=0.9,
             top_p=0.95,
             max_output_tokens=1024,
         )
+        if _safety:
+            cfg["safety_settings"] = _safety
         if "flash" in model_name and "pro" not in model_name:
             cfg["thinking_config"] = gt.ThinkingConfig(thinking_budget=0)
         client = genai_new.Client(api_key=os.environ["GEMINI_API_KEY"])
