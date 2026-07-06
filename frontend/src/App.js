@@ -22,6 +22,9 @@ const CommunityPage = lazy(() => import("@/pages/CommunityPage"));
 const BlogListPage = lazy(() => import("@/pages/BlogListPage"));
 const BlogPostPage = lazy(() => import("@/pages/BlogPostPage"));
 const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
+const TermsPage = lazy(() => import("@/pages/TermsPage"));
+const RefundPage = lazy(() => import("@/pages/RefundPage"));
+const CancellationPage = lazy(() => import("@/pages/CancellationPage"));
 const BadmintonPage = lazy(() => import("@/pages/BadmintonPage"));
 const TennisPage = lazy(() => import("@/pages/TennisPage"));
 const TableTennisPage = lazy(() => import("@/pages/TableTennisPage"));
@@ -202,6 +205,9 @@ function AppRoutes() {
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/refund" element={<RefundPage />} />
+      <Route path="/cancellation" element={<CancellationPage />} />
       <Route path="/badminton" element={<BadmintonPage />} />
       <Route path="/tennis" element={<TennisPage />} />
       <Route path="/table-tennis" element={<TableTennisPage />} />

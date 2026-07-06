@@ -3372,7 +3372,7 @@ export default function AnalyzePage() {
           )}
           <Cpu className={`w-6 h-6 mb-2 ${processingMode === "client" ? "text-lime-400" : "text-zinc-500"}`} strokeWidth={1.5} />
           <p className="font-heading font-bold text-sm text-white uppercase tracking-tight">On Device</p>
-          <p className="text-zinc-500 text-xs mt-1">Fast, private — video never leaves your device</p>
+          <p className="text-zinc-500 text-xs mt-1">Fast — analysis runs in your browser</p>
         </button>
 
         <button

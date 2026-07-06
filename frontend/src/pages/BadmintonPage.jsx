@@ -90,7 +90,7 @@ const FAQS = [
   },
   {
     q: "Is the Formanti badminton training app free?",
-    a: "Yes, you can analyze videos, generate training plans, and browse equipment recommendations completely free. No credit card required to get started.",
+    a: "You get free tokens on signup to analyze videos, and generating training plans and browsing equipment recommendations is free. No credit card required to get started; further analyses use affordable token packs.",
   },
 ];
 

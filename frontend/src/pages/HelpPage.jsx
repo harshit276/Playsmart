@@ -36,7 +36,7 @@ const FAQS = [
   },
   {
     q: "Is my video data private?",
-    a: "Most of the analysis runs in your browser via TensorFlow.js — your raw video never leaves your device. The summary stats (shot type, technique scores) are sent to our backend for coaching feedback only.",
+    a: "Your video is uploaded over an encrypted connection so our AI can analyze it, and it is not kept as a raw file after your analysis is generated. Only the results (shot type, technique scores, feedback) are saved so you can track your progress. See our Privacy Policy for full details.",
   },
   {
     q: "How do I cancel a token purchase?",

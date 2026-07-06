@@ -240,7 +240,7 @@ export default function DownloadPage() {
           )}
 
           <p className="text-xs text-zinc-600 mt-6">
-            ~ 5 MB • No ads • Free forever
+            ~ 5 MB • No ads • Free to install
           </p>
         </div>
       </section>

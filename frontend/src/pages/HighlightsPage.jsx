@@ -296,11 +296,11 @@ export default function HighlightsPage() {
         <div>
           <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 mb-4 text-xs text-zinc-400">
             <p className="text-blue-300 font-medium mb-1">
-              100% on-device processing
+              Secure video processing
             </p>
             <p>
-              Your video never leaves your phone. We analyze it right here in
-              your browser.
+              Your video is uploaded over an encrypted connection to generate
+              your highlight reel, and isn't kept as a raw file afterwards.
             </p>
           </div>
 
@@ -397,7 +397,7 @@ export default function HighlightsPage() {
                 {loadingText || "Analyzing..."}
               </p>
               <p className="text-xs text-zinc-500">
-                This runs entirely on your device
+                Processing your video securely
               </p>
             </div>
           </div>

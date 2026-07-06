@@ -49,11 +49,11 @@ const FAQS = [
   },
   {
     q: "Is Formanti free?",
-    a: "Yes, Formanti is completely free to use. You can analyze videos, get equipment recommendations, training plans, and create highlight reels at no cost.",
+    a: "You can get started for free — new users receive free tokens to try video analysis. Beyond that, analyses use tokens, which you can top up in affordable packs. Browsing equipment recommendations and training content is free. See our Pricing page for token pack details.",
   },
   {
-    q: "Do I need to upload my video?",
-    a: "No. All video analysis happens directly in your browser using TensorFlow.js. Your video never leaves your device, ensuring complete privacy.",
+    q: "What happens to the video I upload?",
+    a: "Your video is uploaded over an encrypted connection so our AI can analyze it. Where your device supports it, the video is compressed on your device first to speed up the upload. We don't keep your raw video after your analysis is generated — only your results are saved. See our Privacy Policy for details.",
   },
 ];
 
@@ -133,7 +133,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-zinc-950">
       <SEO
         title="AI Sports Coach for Badminton, Tennis & More"
-        description="Get instant AI video analysis, personalized training plans, smart equipment recommendations, and auto-generated highlight reels for badminton, tennis, table tennis, and more. Free to use."
+        description="Get instant AI video analysis, personalized training plans, smart equipment recommendations, and auto-generated highlight reels for badminton, tennis, table tennis, and more. Free to get started."
         keywords="AI sports coach, badminton video analysis, tennis coach app, table tennis training, sports highlights generator, badminton training plan, sports equipment recommendations India, AI shot analysis"
         url="https://formanti.com/"
         structuredData={APP_STRUCTURED_DATA}
@@ -521,6 +521,9 @@ export default function LandingPage() {
                 <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Login</Link></li>
                 <li><Link to="/community" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Community</Link></li>
                 <li><Link to="/privacy" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Terms &amp; Conditions</Link></li>
+                <li><Link to="/refund" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Refund Policy</Link></li>
+                <li><Link to="/cancellation" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Cancellation Policy</Link></li>
               </ul>
             </div>
           </div>
