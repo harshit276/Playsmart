@@ -10,6 +10,21 @@ let backendUrl = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/+$/
 if (backendUrl && !/^https?:\/\//i.test(backendUrl)) {
   backendUrl = `https://${backendUrl}`;
 }
+// CRITICAL (post-rebrand): the API is co-deployed with the frontend on EVERY
+// domain (atheonics.com, formanti.com/.in, *.vercel.app previews, and the
+// Capacitor APK's server.url). So the correct backend is ALWAYS the page's own
+// origin. If REACT_APP_BACKEND_URL points at a DIFFERENT origin than the one
+// the app is being served from (e.g. the build baked in atheonics.com but the
+// user is on formanti.com), honoring it makes every /api call cross-origin →
+// a CORS preflight that fails → "network error" on login/upload/etc. Prefer
+// same-origin whenever we're in a browser on a different host; this makes the
+// app self-contained per domain and immune to a stale REACT_APP_BACKEND_URL.
+if (typeof window !== 'undefined' && window.location && window.location.origin) {
+  const here = window.location.origin;
+  if (!backendUrl || backendUrl.replace(/\/+$/, '') !== here) {
+    backendUrl = ''; // relative → same-origin /api
+  }
+}
 const API_URL = `${backendUrl}/api`;
 
 const api = axios.create({ baseURL: API_URL });
