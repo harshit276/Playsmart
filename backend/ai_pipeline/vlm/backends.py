@@ -32,12 +32,14 @@ class GeminiBackend(VLMBackend):
     name = "gemini"
 
     def __init__(self, model: str | None = None):
-        # Default is gemini-3.5-flash: in A/B tests on fast badminton clips it
-        # RELIABLY identified the smash (4/4 runs) where gemini-2.5-flash
-        # collapsed shots into "drives"/"clears" and dropped the smash. It's
-        # far cheaper than Pro and needs no Pro quota. Override via GEMINI_MODEL
-        # (e.g. flash-lite for cheaper, or a pro model for max accuracy).
-        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+        # Default is gemini-2.5-flash (2026-07): gemini-3.5-flash was A/B-better
+        # at fast-smash detection, BUT Google has been returning sustained 503
+        # 'high demand' for 3.5-flash in production — every analysis timed out on
+        # it and only succeeded via the 2.5-flash fallback. 2.5-flash is stable
+        # (the coach features run on it with zero 503s), so it's the reliable
+        # default. Point GEMINI_MODEL back at gemini-3.5-flash once Google's
+        # capacity recovers; the overload fallback still protects either choice.
+        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self._client = None
 
     def is_available(self) -> tuple[bool, str]:

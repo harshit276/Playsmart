@@ -2520,6 +2520,20 @@ export default function AnalyzePage() {
               used_file_name: !!fileName,
             });
           } catch { /* diagnostic only */ }
+          // Distinguish TWO very different 0-event cases:
+          //  (a) analysis SUCCEEDED but the focused player didn't hit anything
+          //      (e.g. they're feeding/coaching) — a content issue, not a
+          //      network one. Gemini returns a real summary and no error.
+          //  (b) an actual failure (gemini error / interrupted upload).
+          const _gemErr = data?._meta?.error || data?._debug?.error || null;
+          const _summary = (data?.summary || "").trim();
+          if (!_gemErr && _summary) {
+            throw new Error(
+              "We analyzed your video, but didn't detect any strokes by the player we focused on. " +
+              "This usually means that person is feeding or coaching rather than hitting, or the rally isn't clearly visible. " +
+              "Try a clip where the player you want analyzed is actively playing shots."
+            );
+          }
           throw new Error(
             "We couldn't detect any shots in this clip. This usually means the upload was interrupted or the connection dropped — please check your network and try again."
           );
