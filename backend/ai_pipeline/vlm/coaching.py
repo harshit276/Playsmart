@@ -2264,40 +2264,65 @@ def analyze_video_universal(
         # Large clips go through the Files API (full-res, no 20 MB inline cap);
         # small ones inline directly. _resolve_video_ref handles the choice.
         _file_ref, _owns_ref = _resolve_video_ref(video_bytes, mime_type or "video/mp4", file_name)
-        raw = None
-        try:
-            # NEW SDK path (preferred): fps control works on Files API refs
-            # (legacy SDK silently fell back to 1 fps there — the root cause
-            # of large-clip undercounting), and flash runs without thinking
-            # for a 30-60% latency cut.
-            resp = _new_sdk_video_call(
-                backend_obj.model_name, sys_prompt, user_msg, video_bytes,
-                mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
-                tier=tier, stream=False,
-            )
-            raw = resp.text
-            _log.info("[universal] new-SDK call ok (model=%s)", backend_obj.model_name)
-        except ImportError:
-            raw = None
-        except Exception as _new_exc:
-            _log.warning("[universal] new-SDK call failed, falling back to legacy: %s",
-                         str(_new_exc)[:200])
-            raw = None
-        if raw is None:
+        def _attempt(_mname):
+            """One full analysis attempt with a specific model: NEW SDK first
+            (fps control on Files API refs; legacy silently fell back to 1 fps
+            there → large-clip undercounting), legacy SDK as the same-model
+            fallback. Raises on failure so the caller can switch models."""
+            try:
+                _resp = _new_sdk_video_call(
+                    _mname, sys_prompt, user_msg, video_bytes,
+                    mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
+                    tier=tier, stream=False,
+                )
+                _log.info("[universal] new-SDK call ok (model=%s)", _mname)
+                return _resp.text
+            except ImportError:
+                pass  # new SDK missing → legacy path below
+            except Exception as _new_exc:
+                # An OVERLOADED model must bubble up so we can switch models;
+                # every other new-SDK error just falls through to the legacy
+                # SDK on the SAME model (unchanged behaviour).
+                if _is_transient_gemini_error(_new_exc):
+                    raise
+                _log.warning("[universal] new-SDK call failed, falling back to legacy: %s",
+                             str(_new_exc)[:200])
             import google.generativeai as genai  # type: ignore
-            model = backend_obj._get() if hasattr(backend_obj, "_get") else None
-            if model is None:
-                import os as _os
-                genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
-                model = genai.GenerativeModel(backend_obj.model_name)
-            parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
-                                       mime_type or "video/mp4", fps=4.0, file_ref=_file_ref)
-            resp = model.generate_content(
-                parts,
+            import os as _os
+            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+            _model = genai.GenerativeModel(_mname)
+            _parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
+                                        mime_type or "video/mp4", fps=4.0, file_ref=_file_ref)
+            _resp = _model.generate_content(
+                _parts,
                 generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
                 safety_settings=_legacy_safety_settings(),
             )
-            raw = resp.text
+            return _resp.text
+
+        # MODEL FALLBACK: if the primary model (e.g. gemini-3.5-flash) is
+        # reported overloaded by Google (503 'high demand'), retry ONCE on a
+        # stable model instead of failing. Google 3.5-flash overload spikes
+        # were timing analyses out (>200s), after which the pipeline deleted
+        # the uploaded file → the client's retry then hit 403 'file may not
+        # exist'. Falling back to 2.5-flash (which the coach features use with
+        # zero 503s) turns that hard failure into a graceful degrade.
+        _primary_model = backend_obj.model_name
+        _fallback_model = (os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash") or "").strip()
+        _try_models = [_primary_model]
+        if _fallback_model and _fallback_model != _primary_model:
+            _try_models.append(_fallback_model)
+        raw = None
+        for _mi, _mname in enumerate(_try_models):
+            try:
+                raw = _attempt(_mname)
+                break
+            except Exception as _mexc:
+                if _is_transient_gemini_error(_mexc) and _mi < len(_try_models) - 1:
+                    _log.warning("[universal] model %s overloaded — retrying on %s",
+                                 _mname, _try_models[_mi + 1])
+                    continue
+                raise
     except Exception as exc:
         return {
             "sport_detected": "unknown", "summary": "",
