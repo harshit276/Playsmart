@@ -13932,6 +13932,42 @@ def _guard_coach_answer(text: str) -> str:
     return text
 
 
+def _sanitize_coach_links(text: str, docs: list) -> str:
+    """Strip HALLUCINATED links. The coach LLM (esp. the Gemini fallback) can
+    invent product buy-links to domains that don't exist (observed live:
+    'athenics.com/...' → dead link). We only trust:
+      • the exact URLs of the docs we actually retrieved (real products/blogs), and
+      • internal app routes (/blog, /marketplace, /analyze, ...).
+    Any other link is rewritten to the on-site /marketplace so the user still
+    gets a working, monetizable path instead of a 404."""
+    if not text:
+        return text
+    import re as _re
+    allowed = set()
+    for d in (docs or []):
+        u = ((d.get("meta") or {}).get("url") or "").strip()
+        if u:
+            allowed.add(u)
+    internal_prefixes = ("/blog", "/marketplace", "/analyze", "/training",
+                         "/equipment", "/pricing", "/progress", "/dashboard")
+
+    def _ok(url: str) -> bool:
+        url = url.strip()
+        if url in allowed:
+            return True
+        return url.startswith("/") and any(url.startswith(p) for p in internal_prefixes)
+
+    def _repl(m):
+        label, url = m.group(1), m.group(2)
+        if _ok(url):
+            return m.group(0)
+        # Hallucinated / untrusted link → keep the product NAME but point it at
+        # our own marketplace (a real page) rather than a fabricated URL.
+        return f"[{label}](/marketplace)"
+
+    return _re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+|/[^)\s]+)\)", _repl, text)
+
+
 def _format_context_for_llm(docs: list) -> str:
     if not docs:
         return "(no relevant context found — answer from general sports knowledge)"
@@ -14018,7 +14054,7 @@ async def coach_ask(req: CoachAskRequest):
             )
             if res and res.get("answer"):
                 return {
-                    "answer": _guard_coach_answer(_fix_buy_links(res["answer"])),
+                    "answer": _sanitize_coach_links(_guard_coach_answer(_fix_buy_links(res["answer"])), docs),
                     "sources": [
                         {"kind": d["kind"], "title": d["meta"].get("name") or d["meta"].get("title"),
                          "url": d["meta"].get("url"), "sport": d["meta"].get("sport")}
@@ -14056,7 +14092,7 @@ async def coach_ask(req: CoachAskRequest):
             )
             resp.raise_for_status()
             data = resp.json()
-            answer = _guard_coach_answer(_fix_buy_links(data["choices"][0]["message"]["content"].strip()))
+            answer = _sanitize_coach_links(_guard_coach_answer(_fix_buy_links(data["choices"][0]["message"]["content"].strip())), docs)
     except httpx.HTTPStatusError as e:
         logger.error(f"Groq API error: {e.response.status_code} {e.response.text}")
         answer = _retrieval_only_answer(q, docs[:3])

@@ -864,11 +864,17 @@ def coach_chat(
     if context_docs:
         ctx_block = "\n\nRELEVANT KNOWLEDGE BASE EXCERPTS:\n"
         for d in context_docs[:5]:
-            title = (d.get("meta") or {}).get("name") or (d.get("meta") or {}).get("title", "")
+            meta = d.get("meta") or {}
+            title = meta.get("name") or meta.get("title", "")
+            url = (meta.get("url") or "").strip()
             ctx_block += f"- {d.get('kind', 'doc')}: {title}\n  {str(d.get('content', ''))[:300]}\n"
+            # Include the REAL url so the model links the exact one (or omits the
+            # link when absent) instead of fabricating a product URL.
+            if url:
+                ctx_block += f"  BUY_LINK: {url}\n"
 
     sys_prompt = (
-        "You are Coach A — Atheonics's virtual sports coach. You sound like a "
+        "You are Coach A — Formanti's virtual sports coach. You sound like a "
         "real courtside coach: warm, direct, a little demanding, and genuinely "
         "invested in this player's improvement. Never robotic, never a manual.\n\n"
         "How you answer:\n"
@@ -883,14 +889,16 @@ def coach_chat(
         "• When the question is ambiguous (e.g. 'best racket?' with no level/"
         "budget), give your best default answer for a club player AND ask one "
         "sharp follow-up question.\n"
-        "• When the context block includes products, recommend those. Link "
-        "them in markdown with the PRODUCT NAME as the visible link text and "
-        "the product's BUY_LINK url as the href — e.g. "
-        "[Hundred Powertek 1000](https://...). NEVER write the literal word "
-        "'BUY_LINK' as link text. General sports knowledge is fine otherwise, "
-        "but never invent product names or prices.\n"
-        "• Off-topic questions (cooking, politics…): one friendly line steering "
-        "back to sports.\n"
+        "• Product links: ONLY create a markdown link for a product if its "
+        "BUY_LINK url is present in the context excerpts below, and use that "
+        "EXACT url — [Product Name](exact-url-from-context). If a product has "
+        "no url in the context, mention it by name in **bold** with NO link. "
+        "NEVER invent, guess, shorten, or construct a product URL or domain, "
+        "and never write the literal word 'BUY_LINK'. Never invent product "
+        "names or prices — only use what's in the context.\n"
+        "• NEVER write code, scripts, or programs. For anything off-topic "
+        "(coding, cooking, politics, homework…): one friendly line steering "
+        "back to sports, nothing more.\n"
         "• Length: up to ~300 words for training/technique plans, shorter for "
         "simple questions."
         + (("\n\nPlayer's primary sport: " + sport) if sport else "")
