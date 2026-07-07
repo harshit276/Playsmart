@@ -2527,6 +2527,14 @@ export default function AnalyzePage() {
           //  (b) an actual failure (gemini error / interrupted upload).
           const _gemErr = data?._meta?.error || data?._debug?.error || null;
           const _summary = (data?.summary || "").trim();
+          // (a) AI provider is overloaded (all fallback models 503'd) — a
+          //     temporary capacity issue on Google's side, not the user's clip.
+          if (_gemErr && /503|high demand|unavailable|overload/i.test(String(_gemErr))) {
+            throw new Error(
+              "Our AI is under unusually high demand right now. Please try again in a minute — you were not charged."
+            );
+          }
+          // (b) analysis SUCCEEDED but the focused player didn't hit anything.
           if (!_gemErr && _summary) {
             throw new Error(
               "We analyzed your video, but didn't detect any strokes by the player we focused on. " +
@@ -2534,6 +2542,7 @@ export default function AnalyzePage() {
               "Try a clip where the player you want analyzed is actively playing shots."
             );
           }
+          // (c) genuine failure / interrupted upload.
           throw new Error(
             "We couldn't detect any shots in this clip. This usually means the upload was interrupted or the connection dropped — please check your network and try again."
           );

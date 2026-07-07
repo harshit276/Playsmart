@@ -32,14 +32,14 @@ class GeminiBackend(VLMBackend):
     name = "gemini"
 
     def __init__(self, model: str | None = None):
-        # Default is gemini-2.5-flash (2026-07): gemini-3.5-flash was A/B-better
-        # at fast-smash detection, BUT Google has been returning sustained 503
-        # 'high demand' for 3.5-flash in production — every analysis timed out on
-        # it and only succeeded via the 2.5-flash fallback. 2.5-flash is stable
-        # (the coach features run on it with zero 503s), so it's the reliable
-        # default. Point GEMINI_MODEL back at gemini-3.5-flash once Google's
-        # capacity recovers; the overload fallback still protects either choice.
-        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        # Default is gemini-3.5-flash: A/B-better at fast-smash detection (4/4
+        # vs 2.5-flash collapsing shots into drives/clears). Google 503s
+        # ('high demand') on this newer model are now handled by the fast
+        # failover chain (_model_chain: 3.5 → 2.5 → 2.0-flash) in coaching.py,
+        # so an overload spike degrades to a stable model in ~2s instead of
+        # timing the analysis out. Override the primary via GEMINI_MODEL and the
+        # fallbacks via GEMINI_FALLBACK_MODELS.
+        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
         self._client = None
 
     def is_available(self) -> tuple[bool, str]:

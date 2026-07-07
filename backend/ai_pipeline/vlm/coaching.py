@@ -135,6 +135,21 @@ def _is_transient_gemini_error(exc) -> bool:
     ))
 
 
+def _model_chain(primary: str) -> list:
+    """Ordered, de-duplicated model fallback chain: the primary model first,
+    then the configured fallbacks. Lets analysis survive a Google overload
+    (503 'high demand') on any single model by fast-failing to the next one.
+    Configure via GEMINI_FALLBACK_MODELS (comma-separated). Default keeps the
+    accurate primary (e.g. gemini-3.5-flash) but degrades to stable GA models."""
+    raw = os.getenv("GEMINI_FALLBACK_MODELS", "gemini-2.5-flash,gemini-2.0-flash")
+    chain = [primary]
+    for m in (raw or "").split(","):
+        m = m.strip()
+        if m and m not in chain:
+            chain.append(m)
+    return chain
+
+
 def _gemini_with_backoff(fn, *, tries: int = 3, base: float = 1.5):
     """Run a Gemini call with exponential backoff on transient 429/503 errors
     so a real-world burst (many users at once) or a model-overload spike
@@ -210,7 +225,7 @@ def _legacy_safety_settings():
 def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
                         video_bytes, mime_type: str, file_ref=None,
                         fps: float = 4.0, tier: str = "standard",
-                        stream: bool = False):
+                        stream: bool = False, max_tries: int = 3):
     """Run a whole-video Gemini call through the NEW google-genai SDK.
 
     Why: the legacy google-generativeai SDK cannot attach VideoMetadata
@@ -273,7 +288,9 @@ def _new_sdk_video_call(model_name: str, sys_prompt: str, user_msg: str,
                 config=gt.GenerateContentConfig(**kwargs))
         # 429/503 backoff so a burst or model-overload spike retries instead
         # of failing the analysis (verified: Gemini returns transient 503s).
-        return _gemini_with_backoff(_do)
+        # max_tries=1 → fail FAST so the caller can switch to the next model in
+        # the chain instead of spending ~15s backing off an overloaded model.
+        return _gemini_with_backoff(_do, tries=max_tries)
 
     try:
         return _call(cfg_kwargs)
@@ -2264,7 +2281,7 @@ def analyze_video_universal(
     model_override = None
     if fast_mode:
         model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
-                          or "gemini-2.5-flash")  # 3.5-flash 503s in prod (see backends.py)
+                          or "gemini-3.5-flash")  # overload handled by _model_chain fast failover
     backend_obj = pick_backend(backend, model=model_override) if model_override else pick_backend(backend)
     _file_ref = None
     _owns_ref = False
@@ -2272,16 +2289,19 @@ def analyze_video_universal(
         # Large clips go through the Files API (full-res, no 20 MB inline cap);
         # small ones inline directly. _resolve_video_ref handles the choice.
         _file_ref, _owns_ref = _resolve_video_ref(video_bytes, mime_type or "video/mp4", file_name)
-        def _attempt(_mname):
+        def _attempt(_mname, _max_tries):
             """One full analysis attempt with a specific model: NEW SDK first
             (fps control on Files API refs; legacy silently fell back to 1 fps
             there → large-clip undercounting), legacy SDK as the same-model
-            fallback. Raises on failure so the caller can switch models."""
+            fallback. _max_tries controls how hard the new-SDK path backs off
+            on a transient error before giving up (1 = fail fast → switch model;
+            the LAST model in the chain uses the full backoff). Raises on
+            failure so the caller can switch models."""
             try:
                 _resp = _new_sdk_video_call(
                     _mname, sys_prompt, user_msg, video_bytes,
                     mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
-                    tier=tier, stream=False,
+                    tier=tier, stream=False, max_tries=_max_tries,
                 )
                 _log.info("[universal] new-SDK call ok (model=%s)", _mname)
                 return _resp.text
@@ -2308,26 +2328,23 @@ def analyze_video_universal(
             )
             return _resp.text
 
-        # MODEL FALLBACK: if the primary model (e.g. gemini-3.5-flash) is
-        # reported overloaded by Google (503 'high demand'), retry ONCE on a
-        # stable model instead of failing. Google 3.5-flash overload spikes
-        # were timing analyses out (>200s), after which the pipeline deleted
-        # the uploaded file → the client's retry then hit 403 'file may not
-        # exist'. Falling back to 2.5-flash (which the coach features use with
-        # zero 503s) turns that hard failure into a graceful degrade.
-        _primary_model = backend_obj.model_name
-        _fallback_model = (os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash") or "").strip()
-        _try_models = [_primary_model]
-        if _fallback_model and _fallback_model != _primary_model:
-            _try_models.append(_fallback_model)
+        # MODEL FALLBACK CHAIN with FAST FAILOVER: try the accurate primary
+        # (e.g. gemini-3.5-flash) first; if Google reports it overloaded (503
+        # 'high demand'), switch to the next model in the chain almost
+        # instantly (max_tries=1, no long backoff) rather than timing the whole
+        # analysis out. The last model in the chain gets the full backoff since
+        # there's nowhere left to fall. This preserves the primary's accuracy
+        # when Google has capacity while never getting stuck on an overload.
+        _try_models = _model_chain(backend_obj.model_name)
         raw = None
+        _last_i = len(_try_models) - 1
         for _mi, _mname in enumerate(_try_models):
             try:
-                raw = _attempt(_mname)
+                raw = _attempt(_mname, 3 if _mi == _last_i else 1)
                 break
             except Exception as _mexc:
-                if _is_transient_gemini_error(_mexc) and _mi < len(_try_models) - 1:
-                    _log.warning("[universal] model %s overloaded — retrying on %s",
+                if _is_transient_gemini_error(_mexc) and _mi < _last_i:
+                    _log.warning("[universal] model %s overloaded — fast-failover to %s",
                                  _mname, _try_models[_mi + 1])
                     continue
                 raise
@@ -2614,7 +2631,7 @@ def stream_analyze_video_universal(
     if fast_mode:
         # Short-clip fast path — see analyze_video_universal for rationale.
         model_override = (os.getenv("GEMINI_FAST_MODEL", "").strip()
-                          or "gemini-2.5-flash")  # 3.5-flash 503s in prod
+                          or "gemini-3.5-flash")  # overload handled by _model_chain fast failover
     backend_obj = (
         pick_backend(backend, model=model_override) if model_override
         else pick_backend(backend)
@@ -2629,17 +2646,18 @@ def stream_analyze_video_universal(
         except Exception as exc:
             yield {"kind": "error", "msg": f"files_api_failed: {str(exc)[:200]}"}
             return
-        def _open_stream(_mname):
+        def _open_stream(_mname, _max_tries):
             """Open a streaming generate_content with a specific model: NEW SDK
-            first, legacy SDK as the same-model fallback. Raises on failure so
-            the caller can switch models when the primary is overloaded."""
+            first, legacy SDK as the same-model fallback. _max_tries controls
+            fast-fail behaviour (1 = switch models instantly on overload).
+            Raises on failure so the caller can switch models."""
             try:
                 # NEW SDK path — see analyze_video_universal for the rationale
                 # (fps on Files API refs + thinking-budget latency cut).
                 return _new_sdk_video_call(
                     _mname, sys_prompt, user_msg, video_bytes,
                     mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
-                    tier=tier, stream=True,
+                    tier=tier, stream=True, max_tries=_max_tries,
                 )
             except ImportError:
                 pass
@@ -2667,24 +2685,19 @@ def stream_analyze_video_universal(
                 safety_settings=_legacy_safety_settings(),
             )
 
-        # MODEL FALLBACK (mirrors analyze_video_universal): on an overloaded
-        # primary (gemini-3.5-flash 503 'high demand'), retry stream creation
-        # once on the stable fallback instead of failing.
-        _primary_model = backend_obj.model_name
-        _fallback_model = (os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash") or "").strip()
-        _try_models = [_primary_model]
-        if _fallback_model and _fallback_model != _primary_model:
-            _try_models.append(_fallback_model)
+        # MODEL FALLBACK CHAIN + fast failover (mirrors analyze_video_universal).
+        _try_models = _model_chain(backend_obj.model_name)
+        _last_i = len(_try_models) - 1
         stream_iter = None
         for _mi, _mname in enumerate(_try_models):
             try:
-                stream_iter = _open_stream(_mname)
+                stream_iter = _open_stream(_mname, 3 if _mi == _last_i else 1)
                 break
             except Exception as exc:
-                if _is_transient_gemini_error(exc) and _mi < len(_try_models) - 1:
+                if _is_transient_gemini_error(exc) and _mi < _last_i:
                     import logging as _lg
                     _lg.getLogger("athlytic.vlm").warning(
-                        "[universal-stream] model %s overloaded — retrying on %s",
+                        "[universal-stream] model %s overloaded — fast-failover to %s",
                         _mname, _try_models[_mi + 1])
                     continue
                 if _owns_ref and _file_ref is not None:
