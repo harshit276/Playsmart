@@ -27,6 +27,13 @@ if (typeof window !== 'undefined' && window.location && window.location.origin) 
 }
 const API_URL = `${backendUrl}/api`;
 
+// Resolved backend origin ("" = same-origin/relative). Exported so raw fetch()
+// / EventSource callers (which don't go through the axios `api` client) use the
+// SAME same-origin-corrected base — otherwise they'd rebuild the URL from the
+// stale REACT_APP_BACKEND_URL and hit a cross-origin CORS wall (e.g. formanti
+// → atheonics on /analyze-jobs/{id}/run and /analyze-video-stream).
+export const API_ORIGIN = backendUrl; // e.g. "" (relative) or "https://host"
+
 const api = axios.create({ baseURL: API_URL });
 
 api.interceptors.request.use((config) => {

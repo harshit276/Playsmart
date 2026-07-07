@@ -17,7 +17,7 @@ import {
   Users, Cpu, Cloud, Lock, Footprints, Wind, Activity, Flame, Crosshair,
   Eye, BarChart2, Volume2, AlertCircle, MessageCircle, GitCompare, Bell
 } from "lucide-react";
-import api from "@/lib/api";
+import api, { API_ORIGIN } from "@/lib/api";
 import InsufficientTokensModal from "@/components/InsufficientTokensModal";
 import ShareModal from "@/components/ShareModal";
 import PlayerSelectionModal from "@/components/PlayerSelectionModal";
@@ -956,7 +956,10 @@ export default function AnalyzePage() {
   // Idempotent server-side — duplicate kicks no-op via an atomic claim.
   const kickAnalysisJob = useCallback((jobId) => {
     try {
-      const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+      // Same-origin base (see api.js API_ORIGIN) — NOT the raw
+      // REACT_APP_BACKEND_URL, which is baked to atheonics.com and would make
+      // this cross-origin from formanti.com → CORS-blocked preflight.
+      const baseUrl = API_ORIGIN;
       const token = localStorage.getItem("playsmart_token");
       fetch(`${baseUrl}/api/analyze-jobs/${jobId}/run`, {
         method: "POST",
@@ -2349,7 +2352,9 @@ export default function AnalyzePage() {
             if (timeScale && timeScale !== 1) fd.append("time_scale", String(timeScale));
             if (timeOffset > 0) fd.append("time_offset", String(timeOffset));
             const token = localStorage.getItem("playsmart_token");
-            const baseUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+            // Same-origin base (see api.js API_ORIGIN) — not the stale
+            // REACT_APP_BACKEND_URL, which would be cross-origin on formanti.com.
+            const baseUrl = API_ORIGIN;
             // NOTE: do NOT set Content-Type — fetch sets it (with the
             // multipart boundary) automatically when body is FormData.
             const resp = await fetch(`${baseUrl}/api/analyze-video-stream`, {
@@ -3708,8 +3713,13 @@ export default function AnalyzePage() {
           actual video frames and confirm in the Player Selection modal where
           the user can override if the detection is wrong. */}
 
-      {/* Player Selection for Doubles */}
-      {renderPlayerSelector()}
+      {/* NOTE: the manual "Focus on one player" quadrant selector was removed
+          (2026-07). It only fed the legacy on-device /analyze-video pipeline
+          (target_player quadrant), NOT the production Gemini analysis — which
+          scopes to a single player via the auto-detected player PICKER
+          (target_player_description). Keeping it only confused users next to
+          the working Doubles toggle. renderPlayerSelector() is left defined
+          but no longer rendered. */}
 
       {/* Upload area — moved to top per user feedback so the primary
           action is the first thing visible after the loading panel. */}

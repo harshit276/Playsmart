@@ -1,4 +1,5 @@
 // voiceCoach.js
+import { API_ORIGIN } from "./api";
 // ──────────────────────────────────────────────────────────────────────
 // Browser-native speech helpers used by the Live Voice Coach experience.
 // Zero dependencies, zero server cost — we lean on the Web Speech API
@@ -56,7 +57,7 @@ let _premiumVoiceState = null;
 export async function checkPremiumVoiceAvailable() {
   if (_premiumVoiceState !== null) return _premiumVoiceState;
   try {
-    const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+    const backendUrl = API_ORIGIN; // same-origin (see api.js) — avoids formanti→atheonics CORS
     const res = await fetch(`${backendUrl}/api/coach/voice-tts/voices`, {
       method: "GET",
       headers: { Accept: "application/json" },
@@ -350,7 +351,7 @@ function _speakRemote(text, opts = {}) {
   };
 
   const promise = (async () => {
-    const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+    const backendUrl = API_ORIGIN; // same-origin (see api.js) — avoids formanti→atheonics CORS
     const token = (() => {
       try {
         return localStorage.getItem("playsmart_token");

@@ -2,7 +2,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import api from "@/lib/api";
+import api, { API_ORIGIN } from "@/lib/api";
 import {
   Mic, MicOff, X, ChevronDown, Sparkles, StopCircle,
   Download, RefreshCw, Trash2, Radio, Volume2, History, Headphones,
@@ -560,7 +560,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      const backendUrl = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/+$/, "");
+      const backendUrl = API_ORIGIN; // same-origin (see api.js) — avoids formanti→atheonics CORS
       const url = `${backendUrl}/api/coach/voice-chat`;
       const token = (() => {
         try {
