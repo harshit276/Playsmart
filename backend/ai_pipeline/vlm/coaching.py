@@ -2621,45 +2621,64 @@ def stream_analyze_video_universal(
         except Exception as exc:
             yield {"kind": "error", "msg": f"files_api_failed: {str(exc)[:200]}"}
             return
-        stream_iter = None
-        try:
-            # NEW SDK path — see analyze_video_universal for the rationale
-            # (fps on Files API refs + thinking-budget latency cut).
-            stream_iter = _new_sdk_video_call(
-                backend_obj.model_name, sys_prompt, user_msg, video_bytes,
-                mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
-                tier=tier, stream=True,
-            )
-        except ImportError:
-            stream_iter = None
-        except Exception as _new_exc:
-            import logging as _lg
-            _lg.getLogger("athlytic.vlm").warning(
-                "[universal-stream] new-SDK call failed, falling back to legacy: %s",
-                str(_new_exc)[:200])
-            stream_iter = None
-        if stream_iter is None:
+        def _open_stream(_mname):
+            """Open a streaming generate_content with a specific model: NEW SDK
+            first, legacy SDK as the same-model fallback. Raises on failure so
+            the caller can switch models when the primary is overloaded."""
+            try:
+                # NEW SDK path — see analyze_video_universal for the rationale
+                # (fps on Files API refs + thinking-budget latency cut).
+                return _new_sdk_video_call(
+                    _mname, sys_prompt, user_msg, video_bytes,
+                    mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
+                    tier=tier, stream=True,
+                )
+            except ImportError:
+                pass
+            except Exception as _new_exc:
+                if _is_transient_gemini_error(_new_exc):
+                    raise  # overloaded → let caller switch models
+                import logging as _lg
+                _lg.getLogger("athlytic.vlm").warning(
+                    "[universal-stream] new-SDK call failed, falling back to legacy: %s",
+                    str(_new_exc)[:200])
             import google.generativeai as genai  # type: ignore
-            model = backend_obj._get() if hasattr(backend_obj, "_get") else None
-            if model is None:
-                import os as _os
-                genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
-                model = genai.GenerativeModel(backend_obj.model_name)
-            parts = _build_video_parts(
+            import os as _os
+            genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
+            _model = genai.GenerativeModel(_mname)
+            _parts = _build_video_parts(
                 sys_prompt, user_msg, video_bytes,
                 mime_type or "video/mp4", fps=4.0, file_ref=_file_ref,
             )
+            return _model.generate_content(
+                _parts, stream=True,
+                generation_config={
+                    "temperature": 0.0,
+                    "response_mime_type": "application/json",
+                },
+                safety_settings=_legacy_safety_settings(),
+            )
+
+        # MODEL FALLBACK (mirrors analyze_video_universal): on an overloaded
+        # primary (gemini-3.5-flash 503 'high demand'), retry stream creation
+        # once on the stable fallback instead of failing.
+        _primary_model = backend_obj.model_name
+        _fallback_model = (os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash") or "").strip()
+        _try_models = [_primary_model]
+        if _fallback_model and _fallback_model != _primary_model:
+            _try_models.append(_fallback_model)
+        stream_iter = None
+        for _mi, _mname in enumerate(_try_models):
             try:
-                stream_iter = model.generate_content(
-                    parts,
-                    stream=True,
-                    generation_config={
-                        "temperature": 0.0,
-                        "response_mime_type": "application/json",
-                    },
-                    safety_settings=_legacy_safety_settings(),
-                )
+                stream_iter = _open_stream(_mname)
+                break
             except Exception as exc:
+                if _is_transient_gemini_error(exc) and _mi < len(_try_models) - 1:
+                    import logging as _lg
+                    _lg.getLogger("athlytic.vlm").warning(
+                        "[universal-stream] model %s overloaded — retrying on %s",
+                        _mname, _try_models[_mi + 1])
+                    continue
                 if _owns_ref and _file_ref is not None:
                     files_api_delete(_file_ref.name)
                 yield {"kind": "error", "msg": f"gemini_call_failed: {str(exc)[:200]}"}
