@@ -138,6 +138,16 @@ export default function AuthPage() {
     setLoading(false);
   };
 
+  // Internal test access: no public button. Visiting /auth?demo=<code> with the
+  // right code auto-logs in as the demo account. Regular users never see this.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("demo");
+    if (code && code === (process.env.REACT_APP_DEMO_CODE || "formanti-test-2026")) {
+      handleDemoLogin();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
@@ -281,15 +291,9 @@ export default function AuthPage() {
               <div id="recaptcha-container" />
             </div>
 
-            {/* Demo account — instant 5000-token test login */}
-            <Button
-              onClick={handleDemoLogin}
-              disabled={loading}
-              className="w-full h-12 bg-purple-500/15 hover:bg-purple-500/25 text-purple-200 border border-purple-400/30 font-medium text-sm rounded-xl flex items-center justify-center gap-2 transition-colors"
-            >
-              <span className="text-base">🪙</span>
-              Try Demo Account (5000 tokens, no signup)
-            </Button>
+            {/* Demo login button removed for production. The demo account is
+                still reachable for internal testing via the secret URL
+                /auth?demo=<DEMO_LOGIN_CODE> (see the auto-trigger effect). */}
 
             {/* Divider */}
             <div className="flex items-center gap-3">

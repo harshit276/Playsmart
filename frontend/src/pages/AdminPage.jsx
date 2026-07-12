@@ -7,7 +7,7 @@
  *   • Users — last N users
  *   • Enquiries — local-shop callback requests, with status update
  *   • Transactions — token credits/debits
- *   • Payments — Cashfree orders
+ *   • Payments — Razorpay orders
  */
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
@@ -131,8 +131,6 @@ export default function AdminPage() {
 function StatsTab({ headers }) {
   const { data, loading, refresh } = useFetch("/admin/stats", headers);
   const [testing, setTesting] = useState(false);
-  const [pingingCF, setPingingCF] = useState(false);
-  const [cfResult, setCfResult] = useState(null);
   const sendTestNotification = async () => {
     setTesting(true);
     try {
@@ -146,19 +144,6 @@ function StatsTab({ headers }) {
     }
     setTesting(false);
   };
-  const pingCashfree = async () => {
-    setPingingCF(true);
-    setCfResult(null);
-    try {
-      const r = await api.get("/admin/cashfree-ping", { headers, timeout: 12000 });
-      setCfResult(r.data);
-      if (r.data?.ok) toast.success(`Cashfree ${r.data.env}: keys OK`);
-      else toast.error(`Cashfree: ${r.data?.error || "auth failed"}`);
-    } catch (e) {
-      toast.error(e?.response?.data?.detail || "Cashfree ping failed");
-    }
-    setPingingCF(false);
-  };
   const [fixing, setFixing] = useState(false);
   const fixPhoneIndex = async () => {
     if (!confirm("Drop + recreate the users.phone index as partial-unique?\n(One-shot fix. Safe.)")) return;
@@ -168,7 +153,6 @@ function StatsTab({ headers }) {
       const ok = r.data?.write_probe_after_fix === "ok";
       if (ok) toast.success("Phone index fixed! Writes work now.");
       else toast.error("Fix ran but writes still failing — check details");
-      setCfResult({ ok, env: "INDEX FIX", configured: true, response: r.data });
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Fix failed");
     }
@@ -204,10 +188,6 @@ function StatsTab({ headers }) {
             className="border-amber-400/30 text-amber-300 hover:bg-amber-400/10 text-xs h-7">
             {testing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔔"} Test notify
           </Button>
-          <Button onClick={pingCashfree} disabled={pingingCF} size="sm" variant="outline"
-            className="border-lime-400/30 text-lime-300 hover:bg-lime-400/10 text-xs h-7">
-            {pingingCF ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "💳"} Ping Cashfree
-          </Button>
           <Button onClick={fixPhoneIndex} disabled={fixing} size="sm" variant="outline"
             className="border-rose-400/30 text-rose-300 hover:bg-rose-400/10 text-xs h-7">
             {fixing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔧"} Fix phone index
@@ -217,19 +197,6 @@ function StatsTab({ headers }) {
           </Button>
         </div>
       </div>
-      {cfResult && (
-        <div className={`rounded-xl border p-3 text-xs ${
-          cfResult.ok ? "bg-lime-400/5 border-lime-400/30 text-lime-200" : "bg-rose-400/5 border-rose-400/30 text-rose-200"
-        }`}>
-          <p className="font-semibold mb-1">
-            {cfResult.ok ? "✅" : "❌"} Cashfree {cfResult.env} {cfResult.configured ? `· ${cfResult.app_id_prefix || ""}` : "(not configured)"}
-            {cfResult.demo_mode ? " · demo mode ON" : ""}
-          </p>
-          <pre className="text-[10px] text-zinc-400 overflow-x-auto whitespace-pre-wrap break-all">
-            {JSON.stringify(cfResult.response || cfResult.error || {}, null, 2).slice(0, 400)}
-          </pre>
-        </div>
-      )}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {tiles.map(t => (
           <div key={t.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
@@ -408,8 +375,8 @@ function PaymentsTab({ headers }) {
       <Header title={`${rows.length} payment orders`} onRefresh={refresh} />
       <Table cols={["Order ID", "Pack", "Amount", "Status", "User", "When"]}>
         {rows.map(p => (
-          <tr key={p.cashfree_order_id} className="border-b border-zinc-800">
-            <td className="py-2 px-3 text-zinc-400 text-[10px] font-mono">{p.cashfree_order_id?.slice(0, 24)}…</td>
+          <tr key={(p.razorpay_order_id || p.cashfree_order_id)} className="border-b border-zinc-800">
+            <td className="py-2 px-3 text-zinc-400 text-[10px] font-mono">{(p.razorpay_order_id || p.cashfree_order_id)?.slice(0, 24)}…</td>
             <td className="py-2 px-3 text-zinc-300 text-xs">{p.pack_key} · {p.tokens_amount} 🪙</td>
             <td className="py-2 px-3 text-purple-300 font-mono text-right">₹{p.amount_inr}</td>
             <td className="py-2 px-3">
