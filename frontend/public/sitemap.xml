@@ -1,267 +1,321 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://formanti.com/</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://formanti.com/analyze</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/analyze</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://formanti.com/training</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/training</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/badminton</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/badminton</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/tennis</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/tennis</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/table-tennis</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/table-tennis</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/pickleball</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/pickleball</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/cricket</loc>
-    <lastmod>2026-05-30</lastmod>
+    <loc>https://www.formanti.com/cricket</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/swimming</loc>
-    <lastmod>2026-05-30</lastmod>
+    <loc>https://www.formanti.com/swimming</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/football</loc>
-    <lastmod>2026-05-30</lastmod>
+    <loc>https://www.formanti.com/football</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/basketball</loc>
-    <lastmod>2026-05-30</lastmod>
+    <loc>https://www.formanti.com/basketball</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/how-to-choose-badminton-racket</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/how-to-choose-badminton-racket</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/common-badminton-mistakes-beginners</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/common-badminton-mistakes-beginners</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/ai-video-analysis-sports-performance</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/ai-video-analysis-sports-performance</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/table-tennis-grip-techniques-guide</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/table-tennis-grip-techniques-guide</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/analyze-tennis-serve-step-by-step</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/analyze-tennis-serve-step-by-step</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-badminton-shoes-guide</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/best-badminton-shoes-guide</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/how-to-use-athlyticai-training-progress</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/how-to-use-athlyticai-training-progress</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/table-tennis-spin-guide-beginners</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/table-tennis-spin-guide-beginners</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/why-athletes-need-training-plan</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/why-athletes-need-training-plan</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/create-match-highlights-sports-videos</loc>
-    <lastmod>2026-03-31</lastmod>
+    <loc>https://www.formanti.com/blog/create-match-highlights-sports-videos</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/increase-badminton-smash-speed</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/increase-badminton-smash-speed</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-badminton-rackets-under-3000</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/best-badminton-rackets-under-3000</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/tennis-serve-speed-tips</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/tennis-serve-speed-tips</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/table-tennis-forehand-vs-backhand</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/table-tennis-forehand-vs-backhand</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/badminton-footwork-guide</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/badminton-footwork-guide</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/ai-sports-training-2026</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/ai-sports-training-2026</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/7-day-badminton-training-plan-intermediate</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/7-day-badminton-training-plan-intermediate</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-tennis-racquets-beginners-2026</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/best-tennis-racquets-beginners-2026</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/pickleball-basics-getting-started</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/pickleball-basics-getting-started</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/tennis-injuries-prevention</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/tennis-injuries-prevention</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/choose-table-tennis-rubber-guide</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/choose-table-tennis-rubber-guide</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/badminton-mental-game-focus</loc>
-    <lastmod>2026-04-12</lastmod>
+    <loc>https://www.formanti.com/blog/badminton-mental-game-focus</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-badminton-racket-under-1000-india</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/best-badminton-racket-under-1000-india</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-badminton-racket-under-2000-india</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/best-badminton-racket-under-2000-india</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/yonex-vs-lining-vs-victor-india</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/yonex-vs-lining-vs-victor-india</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/pv-sindhu-smash-technique-breakdown</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/pv-sindhu-smash-technique-breakdown</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-badminton-shoes-india-under-5000</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/best-badminton-shoes-india-under-5000</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/badminton-string-tension-guide-india</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/badminton-string-tension-guide-india</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/badminton-footwork-drills-indian-pros</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/badminton-footwork-drills-indian-pros</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-tennis-racquet-under-5000-india</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/best-tennis-racquet-under-5000-india</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/best-table-tennis-paddle-under-3000-india</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/best-table-tennis-paddle-under-3000-india</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://formanti.com/blog/top-badminton-academies-india</loc>
-    <lastmod>2026-04-17</lastmod>
+    <loc>https://www.formanti.com/blog/top-badminton-academies-india</loc>
+    <lastmod>2026-07-08</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/marketplace</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/pricing</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/download</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/help</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/contact</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/terms</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/refund</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/cancellation</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.formanti.com/shipping</loc>
+    <lastmod>2026-07-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>

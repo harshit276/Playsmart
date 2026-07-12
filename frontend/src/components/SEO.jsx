@@ -9,7 +9,7 @@ export default function SEO({
   title,
   description,
   keywords,
-  image = "https://formanti.com/icons/icon-512.png",
+  image = "https://www.formanti.com/icons/icon-512.png",
   url,
   type = "website",
   structuredData,
@@ -17,7 +17,7 @@ export default function SEO({
 }) {
   const fullTitle = title ? `${title} | Formanti` : "Formanti - Your AI Sports Coach";
   const canonicalUrl =
-    url || (typeof window !== "undefined" ? window.location.href : "https://formanti.com");
+    url || (typeof window !== "undefined" ? window.location.href : "https://www.formanti.com");
 
   const structuredDataArray = Array.isArray(structuredData)
     ? structuredData

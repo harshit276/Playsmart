@@ -8,4 +8,11 @@ Disallow: /community
 Disallow: /card
 Disallow: /assessment
 
-Sitemap: https://formanti.com/sitemap.xml
+Disallow: /admin
+Disallow: /wallet
+Disallow: /profile
+Disallow: /referral
+Disallow: /label
+Disallow: /test-model
+Disallow: /test-ai-gen
+Sitemap: https://www.formanti.com/sitemap.xml

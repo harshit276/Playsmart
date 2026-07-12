@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Zap, ArrowLeft, RefreshCcw } from "lucide-react";
 
 const Section = ({ title, children }) => (
@@ -11,6 +12,7 @@ const Section = ({ title, children }) => (
 export default function RefundPage() {
   return (
     <div className="min-h-screen bg-zinc-950">
+      <SEO title="Refund Policy | Formanti" url="https://www.formanti.com/refund" />
       {/* Header */}
       <div className="border-b border-zinc-800/50">
         <div className="container mx-auto px-4 max-w-4xl py-6 flex items-center gap-4">

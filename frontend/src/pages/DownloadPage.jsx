@@ -173,7 +173,7 @@ export default function DownloadPage() {
       <SEO
         title="Get the Formanti App — Install on Android, iPhone & Desktop"
         description="Install Formanti on your phone in seconds. Works on Android, iPhone, and Desktop. No app store needed. AI sports coaching at your fingertips."
-        url="https://formanti.com/download"
+        url="https://www.formanti.com/download"
       />
 
       {/* Hero */}

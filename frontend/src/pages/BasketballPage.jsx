@@ -101,13 +101,13 @@ export default function BasketballPage() {
         title="AI Basketball Coach - Shooting Form & Skills Video Analysis"
         description="Free AI basketball coach: analyze your shooting form, dribbling, and vertical, get personalized training plans and shoe recommendations. Upload a video and improve your game fast."
         keywords="basketball video analysis, AI basketball coach, basketball shooting form, how to improve basketball shooting, dribbling drills, vertical jump, basketball training plan, best basketball shoes"
-        url="https://formanti.com/basketball"
+        url="https://www.formanti.com/basketball"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Basketball Coach - Shooting Form & Skills Video Analysis",
           description: "AI-powered basketball video analysis, shooting-form breakdown, ball-handling feedback, and personalized training plans.",
-          url: "https://formanti.com/basketball",
+          url: "https://www.formanti.com/basketball",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({

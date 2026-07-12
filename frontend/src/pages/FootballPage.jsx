@@ -101,13 +101,13 @@ export default function FootballPage() {
         title="AI Football Coach - Skills & Technique Video Analysis App"
         description="Free AI football coach: analyze your shooting, dribbling, and ball control, get personalized training plans and boot recommendations. Upload a training video and improve fast."
         keywords="football video analysis, AI football coach, soccer skills, how to improve football skills, dribbling drills, shooting technique, football training plan, best football boots"
-        url="https://formanti.com/football"
+        url="https://www.formanti.com/football"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Football Coach - Skills & Technique Video Analysis",
           description: "AI-powered football video analysis, shooting and dribbling breakdown, ball-control feedback, and personalized training plans.",
-          url: "https://formanti.com/football",
+          url: "https://www.formanti.com/football",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({

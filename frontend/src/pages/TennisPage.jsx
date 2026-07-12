@@ -101,13 +101,13 @@ export default function TennisPage() {
         title="AI Tennis Coach - Serve Analysis & Training App"
         description="Free AI tennis coach: measure serve speed, analyze forehand and backhand technique, get personalized training plans, and smart racquet recommendations."
         keywords="tennis video analyzer, tennis serve analysis, AI tennis coach, tennis training app, best tennis racquet, tennis shot analyzer, forehand analysis, backhand technique"
-        url="https://formanti.com/tennis"
+        url="https://www.formanti.com/tennis"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Tennis Coach - Video Analysis & Training",
           description: "AI-powered tennis video analysis, serve speed measurement, and personalized training plans.",
-          url: "https://formanti.com/tennis",
+          url: "https://www.formanti.com/tennis",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({

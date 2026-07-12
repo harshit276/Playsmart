@@ -49,7 +49,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO title="Profile · Formanti" description="Manage your Formanti profile and preferences." />
+      <SEO noindex title="Profile · Formanti" description="Manage your Formanti profile and preferences." />
       <div className="container mx-auto px-4 max-w-3xl">
         {/* Header card */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}

@@ -96,7 +96,7 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO title="Wallet · Formanti Tokens" description="Track your Formanti token balance and earnings." />
+      <SEO noindex title="Wallet · Formanti Tokens" description="Track your Formanti token balance and earnings." />
       <div className="container mx-auto px-4 max-w-3xl">
 
         {/* Hero balance */}

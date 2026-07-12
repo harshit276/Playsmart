@@ -245,7 +245,7 @@ export default function MarketplacePage() {
       <SEO
         title="Sports Equipment Marketplace · Compare Prices Across Amazon, Flipkart, Decathlon"
         description="Browse and compare prices for badminton, tennis, table tennis, and pickleball equipment across Amazon, Flipkart, and Decathlon. Curated for Indian players."
-        url="https://formanti.com/marketplace"
+        url="https://www.formanti.com/marketplace"
       />
       <div className="container mx-auto px-3 sm:px-4 max-w-7xl pt-4 sm:pt-6">
         {/* ── Hero: "Get my picks" recommendation flow ── */}

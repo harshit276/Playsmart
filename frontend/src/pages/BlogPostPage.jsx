@@ -102,7 +102,7 @@ export default function BlogPostPage() {
     publisher: {
       "@type": "Organization",
       name: "Formanti",
-      logo: { "@type": "ImageObject", url: "https://formanti.com/icons/icon-512.png" },
+      logo: { "@type": "ImageObject", url: "https://www.formanti.com/icons/icon-512.png" },
     },
   };
 
@@ -110,13 +110,13 @@ export default function BlogPostPage() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://formanti.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://formanti.com/blog" },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.formanti.com/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.formanti.com/blog" },
       {
         "@type": "ListItem",
         position: 3,
         name: post.title,
-        item: `https://formanti.com/blog/${post.slug || slug}`,
+        item: `https://www.formanti.com/blog/${post.slug || slug}`,
       },
     ],
   };
@@ -127,7 +127,7 @@ export default function BlogPostPage() {
         title={post.title}
         description={post.description}
         keywords={post.tags?.join(", ")}
-        url={`https://formanti.com/blog/${post.slug || slug}`}
+        url={`https://www.formanti.com/blog/${post.slug || slug}`}
         type="article"
         structuredData={[articleStructuredData, breadcrumbStructuredData]}
       />

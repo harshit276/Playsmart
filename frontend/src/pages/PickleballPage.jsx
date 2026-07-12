@@ -101,13 +101,13 @@ export default function PickleballPage() {
         title="AI Pickleball Coach - Shot Analyzer & Training App"
         description="Free AI pickleball coach: analyze your dinks, drops, and drives, get personalized training plans, and find the best pickleball paddles for your game."
         keywords="pickleball training app, pickleball shot analyzer, best pickleball paddle, AI pickleball coach, third shot drop, pickleball video analysis, pickleball drills"
-        url="https://formanti.com/pickleball"
+        url="https://www.formanti.com/pickleball"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Pickleball Coach - Shot Analysis & Training",
           description: "AI-powered pickleball shot analyzer, training plans, and paddle recommendations.",
-          url: "https://formanti.com/pickleball",
+          url: "https://www.formanti.com/pickleball",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({

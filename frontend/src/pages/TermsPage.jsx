@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Zap, ArrowLeft, FileText } from "lucide-react";
 
 const Section = ({ title, children }) => (
@@ -11,6 +12,7 @@ const Section = ({ title, children }) => (
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-zinc-950">
+      <SEO title="Terms & Conditions | Formanti" url="https://www.formanti.com/terms" />
       {/* Header */}
       <div className="border-b border-zinc-800/50">
         <div className="container mx-auto px-4 max-w-4xl py-6 flex items-center gap-4">
@@ -114,7 +116,8 @@ export default function TermsPage() {
           </p>
           <p className="text-zinc-500 text-sm">
             Operated by: <strong className="text-white">Harshit Mundra</strong> (individual / sole proprietor)<br />
-            Place of business: <strong className="text-white">Bengaluru, Karnataka, India</strong>
+            Address: <strong className="text-white">__FULL_ADDRESS__</strong><br />
+            Phone: <strong className="text-white">__PHONE__</strong>
           </p>
         </Section>
 

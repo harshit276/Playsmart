@@ -101,13 +101,13 @@ export default function SwimmingPage() {
         title="AI Swimming Coach - Stroke & Freestyle Technique Analysis"
         description="Free AI swimming coach: analyze your freestyle and stroke technique, fix common mistakes, get personalized training plans and gear recommendations. Upload a poolside video and swim faster."
         keywords="swimming video analysis, AI swimming coach, freestyle technique, swimming stroke analysis, swimming mistakes, swimming training plan, how to swim faster, best swimming goggles"
-        url="https://formanti.com/swimming"
+        url="https://www.formanti.com/swimming"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Swimming Coach - Stroke & Freestyle Technique Analysis",
           description: "AI-powered swimming video analysis, stroke technique breakdown, body-position feedback, and personalized training plans.",
-          url: "https://formanti.com/swimming",
+          url: "https://www.formanti.com/swimming",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({

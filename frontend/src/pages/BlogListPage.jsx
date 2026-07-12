@@ -73,7 +73,7 @@ export default function BlogListPage() {
         title="Sports Tips, Training Guides & Equipment Reviews"
         description="Expert articles on badminton, tennis, table tennis, and pickleball. Training tips, equipment reviews, technique guides, and video analysis insights from Formanti."
         keywords="badminton tips, tennis training, table tennis guide, pickleball strategy, sports equipment reviews"
-        url="https://formanti.com/blog"
+        url="https://www.formanti.com/blog"
       />
       {/* Hero */}
       <section className="relative py-20 sm:py-28 overflow-hidden">

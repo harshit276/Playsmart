@@ -66,7 +66,7 @@ const APP_STRUCTURED_DATA = {
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
   aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", ratingCount: "127" },
   description: "AI-powered sports video analysis, training plans, and highlight reel generation",
-  url: "https://formanti.com",
+  url: "https://www.formanti.com",
   featureList: [
     "AI Video Analysis",
     "Personalized Training Plans",
@@ -135,7 +135,7 @@ export default function LandingPage() {
         title="AI Sports Coach for Badminton, Tennis & More"
         description="Get instant AI video analysis, personalized training plans, smart equipment recommendations, and auto-generated highlight reels for badminton, tennis, table tennis, and more. Free to get started."
         keywords="AI sports coach, badminton video analysis, tennis coach app, table tennis training, sports highlights generator, badminton training plan, sports equipment recommendations India, AI shot analysis"
-        url="https://formanti.com/"
+        url="https://www.formanti.com/"
         structuredData={APP_STRUCTURED_DATA}
       />
 

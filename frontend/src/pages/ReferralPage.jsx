@@ -85,7 +85,7 @@ export default function ReferralPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO title="Refer & Earn · Formanti" description="Invite friends and earn Formanti tokens." />
+      <SEO noindex title="Refer & Earn · Formanti" description="Invite friends and earn Formanti tokens." />
       <div className="container mx-auto px-4 max-w-3xl">
 
         {/* Hero */}

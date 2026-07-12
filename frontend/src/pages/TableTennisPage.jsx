@@ -101,13 +101,13 @@ export default function TableTennisPage() {
         title="AI Table Tennis Coach - Stroke Analysis & Training App"
         description="Free AI table tennis coach: analyze every forehand, backhand, loop, and chop from video. Get personalized drills, spin breakdowns, and paddle recommendations."
         keywords="table tennis video analysis, table tennis stroke analyzer, ping pong coach app, best table tennis paddle, table tennis training app, ping pong video analyzer, forehand loop technique"
-        url="https://formanti.com/table-tennis"
+        url="https://www.formanti.com/table-tennis"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Table Tennis Coach - Stroke Analysis & Training",
           description: "AI-powered table tennis video analysis, stroke classification, spin breakdowns, and training plans.",
-          url: "https://formanti.com/table-tennis",
+          url: "https://www.formanti.com/table-tennis",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({

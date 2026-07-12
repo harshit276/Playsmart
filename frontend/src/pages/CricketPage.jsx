@@ -101,13 +101,13 @@ export default function CricketPage() {
         title="AI Cricket Coach - Batting & Bowling Video Analysis App"
         description="Free AI cricket coach: analyze your batting technique and bowling action, get shot recognition, personalized training plans, and bat recommendations. Upload a net video and improve fast."
         keywords="cricket video analysis, AI cricket coach, batting technique analysis, bowling action analysis, cricket training app, best cricket bat for beginners, cricket drills"
-        url="https://formanti.com/cricket"
+        url="https://www.formanti.com/cricket"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Cricket Coach - Batting & Bowling Video Analysis",
           description: "AI-powered cricket video analysis, batting technique breakdown, bowling action analysis, and personalized training plans.",
-          url: "https://formanti.com/cricket",
+          url: "https://www.formanti.com/cricket",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({

@@ -957,7 +957,7 @@ export default function EquipmentPage() {
         title="Best Sports Equipment Recommendations - Rackets, Shoes, Gear"
         description="AI-powered equipment recommendations based on your skill level, play style, and budget. Find the best badminton rackets, tennis racquets, table tennis paddles, and more from top brands like Yonex, Wilson, Butterfly, DHS."
         keywords="best badminton racket, tennis racquet recommendation, table tennis paddle, sports equipment India, badminton shoes, Yonex racket review, Wilson tennis"
-        url="https://formanti.com/equipment"
+        url="https://www.formanti.com/equipment"
       />
       <div className="container mx-auto px-4 max-w-5xl">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>

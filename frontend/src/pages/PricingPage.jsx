@@ -94,7 +94,7 @@ export default function PricingPage() {
         title="Pricing - AI Video Analysis for Badminton, Tennis, Cricket"
         description="Pay-as-you-go AI sports video analysis. ₹30 per analysis with bulk discount packs. No subscription required."
         keywords="sports video analysis pricing, badminton coaching app, AI cricket analysis cost India"
-        url="https://formanti.com/pricing"
+        url="https://www.formanti.com/pricing"
       />
       <div className="container mx-auto px-4 max-w-5xl">
         {/* Header */}

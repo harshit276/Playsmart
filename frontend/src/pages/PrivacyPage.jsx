@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import { Zap, ArrowLeft, Shield } from "lucide-react";
 
 const Section = ({ title, children }) => (
@@ -11,6 +12,7 @@ const Section = ({ title, children }) => (
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-zinc-950">
+      <SEO title="Privacy Policy | Formanti" url="https://www.formanti.com/privacy" />
       {/* Header */}
       <div className="border-b border-zinc-800/50">
         <div className="container mx-auto px-4 max-w-4xl py-6 flex items-center gap-4">
@@ -126,17 +128,18 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="12. Contact & Grievances">
+        <Section title="12. Contact & Grievance Officer">
           <p>
-            If you have questions, requests, or complaints about this privacy policy or your data, you can contact our grievance contact:
+            If you have questions, requests, or complaints about this privacy policy or your data, you can contact our Grievance Officer:
           </p>
           <p className="text-zinc-300">
-            <strong className="text-white">Harshit Mundra</strong><br />
-            Bengaluru, Karnataka, India<br />
-            <a href="mailto:support@formanti.com" className="text-lime-400 hover:text-lime-300 transition-colors font-medium">support@formanti.com</a>
+            <strong className="text-white">Harshit Mundra</strong> — Grievance Officer (Proprietor)<br />
+            __FULL_ADDRESS__<br />
+            Email: <a href="mailto:support@formanti.com" className="text-lime-400 hover:text-lime-300 transition-colors font-medium">support@formanti.com</a><br />
+            Phone: <a href="tel:__PHONE_TEL__" className="text-lime-400 hover:text-lime-300 transition-colors font-medium">__PHONE__</a>
           </p>
           <p>
-            We aim to acknowledge and address grievances within a reasonable timeframe in accordance with applicable law. See also our <a href="/terms" className="text-lime-400 hover:text-lime-300">Terms &amp; Conditions</a>, <a href="/refund" className="text-lime-400 hover:text-lime-300">Refund Policy</a>, and <a href="/cancellation" className="text-lime-400 hover:text-lime-300">Cancellation Policy</a>.
+            In accordance with applicable law, we will <strong className="text-white">acknowledge your grievance within 48 hours</strong> and endeavour to resolve it within <strong className="text-white">30 days</strong> of receipt. See also our <a href="/terms" className="text-lime-400 hover:text-lime-300">Terms &amp; Conditions</a>, <a href="/refund" className="text-lime-400 hover:text-lime-300">Refund Policy</a>, <a href="/cancellation" className="text-lime-400 hover:text-lime-300">Cancellation Policy</a>, <a href="/shipping" className="text-lime-400 hover:text-lime-300">Shipping &amp; Delivery Policy</a>, and <a href="/contact" className="text-lime-400 hover:text-lime-300">Contact Us</a> page.
           </p>
         </Section>
 

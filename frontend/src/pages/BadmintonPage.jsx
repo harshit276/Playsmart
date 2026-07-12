@@ -101,13 +101,13 @@ export default function BadmintonPage() {
         title="AI Badminton Coach - Video Analysis & Training App"
         description="Free AI badminton coach: analyze your smash speed, get shot classification, personalized training plans, and racket recommendations. Upload any video and improve fast."
         keywords="badminton video analysis, AI badminton coach, badminton training app, badminton shot analyzer, smash speed measurement, badminton drills, best badminton racket India"
-        url="https://formanti.com/badminton"
+        url="https://www.formanti.com/badminton"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "WebPage",
           name: "AI Badminton Coach - Video Analysis & Training",
           description: "AI-powered badminton video analysis, smash speed detection, shot classification, and personalized training plans.",
-          url: "https://formanti.com/badminton",
+          url: "https://www.formanti.com/badminton",
           mainEntity: {
             "@type": "FAQPage",
             mainEntity: FAQS.map((f) => ({
