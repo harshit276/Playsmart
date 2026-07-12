@@ -31,7 +31,6 @@ import VoiceCoachButton from "@/components/VoiceCoachButton";
 import AnalysisFeedback from "@/components/AnalysisFeedback";
 import LiveVoiceCoach from "@/components/LiveVoiceCoach";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
-import GeminiDebugPanel from "@/components/GeminiDebugPanel";
 import CoachNarrativeCard from "@/components/CoachNarrativeCard";
 import CourtMapCard from "@/components/CourtMapCard";
 import AnalysisScroller from "@/components/AnalysisScroller";
@@ -526,6 +525,10 @@ export default function AnalyzePage() {
   //     loses the run; ask for confirmation first.
   useEffect(() => {
     if (!analyzing) return undefined;
+    // Global flag read by the service-worker controllerchange handler in
+    // index.js: blocks the auto-reload-on-update while a run is in flight
+    // (a deploy landing mid-analysis used to reload the page and kill it).
+    window.__analysisInFlight = true;
     let lock = null;
     let done = false;
     const acquire = async () => {
@@ -542,6 +545,7 @@ export default function AnalyzePage() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => {
       done = true;
+      window.__analysisInFlight = false;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("beforeunload", onBeforeUnload);
       try { lock?.release?.(); } catch { /* noop */ }
@@ -1809,12 +1813,12 @@ export default function AnalyzePage() {
                   timeOffset = 0;
                   windowApplied = false;
                   // eslint-disable-next-line no-console
-                  console.info(`[upload] Direct → Gemini Files API: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
+                  console.info(`[upload] direct path: ${origMbRaw.toFixed(1)}MB → ${fileName}`);
                 }
               }
             } catch (directErr) {
               if (directErr?.code === "abort" || analysisAbortRef.current?.signal?.aborted) throw directErr;
-              console.warn("[upload] Direct→Gemini failed, falling back to Cloudinary:",
+              console.warn("[upload] direct path failed, falling back:",
                            directErr?.message || directErr);
             }
           }
@@ -2098,7 +2102,7 @@ export default function AnalyzePage() {
           const skipDescribe = nPeopleEarly === 1;
           if (skipDescribe) {
             // eslint-disable-next-line no-console
-            console.info("[universal] exactly 1 athlete detected locally — skipping the Gemini picker pre-pass");
+            console.info("[universal] exactly 1 athlete detected locally — skipping the picker pre-pass");
           }
 
           if (!skipDescribe) {
@@ -2511,13 +2515,9 @@ export default function AnalyzePage() {
             // eslint-disable-next-line no-console
             console.error("[universal] 0-event diagnostic:", {
               meta: data?._meta || null,
-              gemini_error: data?._meta?.error || data?._debug?.error || null,
+              ai_error: data?._meta?.error || null,
               via_files_api: data?._meta?.via_files_api ?? null,
-              model: data?._meta?.model || null,
-              raw_event_count: data?._debug?.raw_event_count ?? null,
-              raw_response_len: (data?._debug?.raw_gemini_response || "").length,
-              raw_response_head: (data?._debug?.raw_gemini_response || "").slice(0, 400),
-              used_file_name: !!fileName,
+                                                                      used_file_name: !!fileName,
             });
           } catch { /* diagnostic only */ }
           // Distinguish TWO very different 0-event cases:
@@ -2525,7 +2525,7 @@ export default function AnalyzePage() {
           //      (e.g. they're feeding/coaching) — a content issue, not a
           //      network one. Gemini returns a real summary and no error.
           //  (b) an actual failure (gemini error / interrupted upload).
-          const _gemErr = data?._meta?.error || data?._debug?.error || null;
+          const _gemErr = data?._meta?.error || null;
           const _summary = (data?.summary || "").trim();
           // (a) AI provider is overloaded (all fallback models 503'd) — a
           //     temporary capacity issue on Google's side, not the user's clip.
@@ -2715,7 +2715,7 @@ export default function AnalyzePage() {
               }
               setLoadingText("Sending video to AI Coach for full analysis...");
               const b64 = await fileToBase64(uploadFile);
-              console.info(`[video-direct] uploading ${(file.size / 1024).toFixed(0)} KB to Gemini...`);
+              console.info(`[video-direct] uploading ${(file.size / 1024).toFixed(0)} KB...`);
               const { data } = await api.post("/analyze-video-direct", {
                 sport: sportToAnalyze,
                 target_player: targetPlayer,
@@ -2749,15 +2749,13 @@ export default function AnalyzePage() {
             const ms = Date.now() - t0;
             const shots = data?.shots || [];
             const named = shots.filter((s) => s.shot_type && s.shot_type !== "unknown").length;
-            console.info(`[vlm] ${ms}ms — ${named}/${shots.length} shots classified by Gemini`,
+            console.info(`[shots] ${ms}ms — ${named}/${shots.length} shots classified`,
                          shots.map((s) => `${s.shot_type}@${s.confidence?.toFixed?.(2)}`).join(", "));
             if (named === 0 && shots.length > 0) {
-              console.warn("[vlm] every shot returned 'unknown' — Gemini responded but the parse mapped nothing.");
-              if (shots[0]?.reasoning) console.warn("[vlm] first reasoning:", shots[0].reasoning);
-              const rawPreview = shots[0]?._meta?.raw_preview || shots[0]?._meta?.error_friendly;
-              if (rawPreview) console.warn("[vlm] Gemini raw response preview:\n", rawPreview);
+              console.warn("[shots] every shot returned 'unknown' — parse mapped nothing.");
+              if (shots[0]?.reasoning) console.warn("[shots] first reasoning:", shots[0].reasoning);
               const errMeta = shots[0]?._meta?.error;
-              if (errMeta) console.warn("[vlm] _meta.error:", errMeta);
+              if (errMeta) console.warn("[shots] _meta.error:", errMeta);
             }
             return shots;
           } catch (e) {
@@ -4680,14 +4678,10 @@ export default function AnalyzePage() {
           />
         )}
 
-        {/* Debug panel — visible with ?debug=1 or localStorage.playsmart_debug=true.
-            Shows raw Gemini output + filtered/dropped event counts so
-            "missing shots" can be triaged in-app. */}
-        {result?.shots && (
-          <GeminiDebugPanel result={result} />
-        )}
+        {/* Debug panel removed (2026-07): it rendered raw provider output in
+            the production bundle — provider-concealment requirement. */}
 
-        {/* ── Coach's read of the session — lead with a Gemini-style
+        {/* ── Coach's read of the session — lead with a
             one-line summary + identified-shot chips so users can verify
             the AI got the basic shape right BEFORE scrolling through
             stats. Confidence-aware: opens "I watched ..." on high-conf

@@ -1,6 +1,6 @@
 // Bump CACHE_VERSION whenever cache strategy or shell assets change.
 // On version bump, old caches are deleted on activate.
-const CACHE_VERSION = 'v24';
+const CACHE_VERSION = 'v25';
 const SHELL_CACHE = `athlyticai-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `athlyticai-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `athlyticai-data-${CACHE_VERSION}`;
@@ -22,8 +22,11 @@ self.addEventListener('install', (event) => {
       })
     )
   );
-  // Apply update immediately when prompted by the page
-  self.skipWaiting();
+  // NOTE: no unconditional skipWaiting() here. It made every deploy activate
+  // the new SW immediately → clients.claim() → the page's controllerchange
+  // listener force-reloaded the tab, KILLING any in-flight upload/analysis.
+  // The new SW now waits until the page explicitly posts SKIP_WAITING (the
+  // "reload to update?" prompt) or all tabs close.
 });
 
 // Activate: nuke caches from older versions

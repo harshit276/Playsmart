@@ -81,7 +81,7 @@ export async function uploadDirectToGemini(videoFile, options = {}) {
         try {
           resolve(JSON.parse(xhr.responseText));
         } catch {
-          reject(new Error("Invalid upload response from Gemini"));
+          reject(new Error("Invalid upload response"));
         }
       } else {
         reject(new Error(`Direct upload failed: ${xhr.status}`));

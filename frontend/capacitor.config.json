@@ -4,8 +4,8 @@
   "webDir": "build",
   "server": {
     "androidScheme": "https",
-    "hostname": "atheonics.com",
-    "url": "https://atheonics.com",
+    "hostname": "www.formanti.com",
+    "url": "https://www.formanti.com",
     "iosScheme": "https",
     "allowNavigation": [
       "atheonics.com",
@@ -15,7 +15,9 @@
       "*.gstatic.com",
       "accounts.google.com",
       "*.cashfree.com",
-      "*.amazonaws.com"
+      "*.amazonaws.com",
+      "formanti.com",
+      "*.formanti.com"
     ]
   },
   "android": {

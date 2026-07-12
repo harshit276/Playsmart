@@ -63,10 +63,13 @@ if ('serviceWorker' in navigator) {
         // Best-effort — site still works without SW
       });
 
-    // When the active SW changes (after SKIP_WAITING + claim), reload once
+    // When the active SW changes (after SKIP_WAITING + claim), reload once.
+    // NEVER while an analysis/upload is in flight (window.__analysisInFlight
+    // is set by AnalyzePage) — a mid-analysis reload silently kills the run,
+    // which users saw as "analysis fails" right after every deploy.
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
+      if (refreshing || window.__analysisInFlight) return;
       refreshing = true;
       window.location.reload();
     });

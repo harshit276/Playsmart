@@ -97,11 +97,16 @@ else:
 JWT_SECRET = os.environ.get('JWT_SECRET', 'playsmart_default_secret')
 JWT_ALGORITHM = "HS256"
 if IS_PRODUCTION and JWT_SECRET == 'playsmart_default_secret':
-    # Warn loudly but don't crash — server boot must succeed so the user
-    # can hit /api/health and see what's misconfigured.
+    # SECURITY: a KNOWN default secret means anyone can forge admin/user JWTs.
+    # Rather than crash (previews may legitimately lack the env var) or keep
+    # the forgeable constant, generate a random per-boot secret: auth still
+    # works within a deployment, existing sessions just re-login after a
+    # redeploy, and tokens can never be forged offline.
+    import secrets as _secrets_mod
+    JWT_SECRET = _secrets_mod.token_hex(32)
     logging.getLogger(__name__).error(
-        "JWT_SECRET is using the insecure default in production. "
-        "Set a strong JWT_SECRET env var on Vercel."
+        "JWT_SECRET env var missing in production — using a RANDOM per-boot "
+        "secret (sessions won't persist across deploys). Set JWT_SECRET on Vercel."
     )
 
 app = FastAPI(
@@ -134,7 +139,10 @@ if IS_SERVERLESS:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
+    # SECURITY: wildcard origin + credentials is a classic misconfiguration
+    # (any site could ride the user's cookies). We use Bearer tokens, not
+    # cookies, so credentials are only enabled for the explicit-origin list.
+    allow_credentials="*" not in _cors_origins,
     allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -703,22 +711,32 @@ async def demo_login():
     upserted with tokens=5000 (best-effort; if Mongo is slow the response
     still returns 5000 so the test flow never breaks)."""
     token = create_token(DEMO_USER_ID, DEMO_USER_EMAIL)
-    # Best-effort: ensure the user doc exists with 5000 tokens. Never
-    # block more than 4s — the user gets logged in either way.
+    # Best-effort: ensure the user doc exists. SECURITY: the 5000-token grant
+    # is $setOnInsert ONLY — the old $set refilled the shared demo account to
+    # 5000 on EVERY call, i.e. unlimited free analyses by re-logging in.
+    # Existing demo balance is preserved (and drains) between logins.
     try:
         await asyncio.wait_for(db.users.update_one(
             {"id": DEMO_USER_ID},
             {"$set": {
                 "id": DEMO_USER_ID, "email": DEMO_USER_EMAIL,
                 "name": "Demo Player", "photo": "",
-                "tokens": DEMO_USER_TOKENS,
                 "demo_account": True,
                 "last_demo_login": datetime.now(timezone.utc).isoformat(),
-            }, "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}},
+            }, "$setOnInsert": {
+                "tokens": DEMO_USER_TOKENS,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }},
             upsert=True,
         ), timeout=4.0)
     except Exception as e:
-        logger.warning(f"demo-login: user upsert failed (returning 5000 anyway): {e}")
+        logger.warning(f"demo-login: user upsert failed: {e}")
+    # Report the REAL balance (fixes the "says 5000 but balance is 0" bug —
+    # the hardcoded constant masked the actual state).
+    try:
+        _bal = await _get_balance(DEMO_USER_ID)
+    except Exception:
+        _bal = 0
     return {
         "token": token,
         "user": {
@@ -726,7 +744,7 @@ async def demo_login():
             "name": "Demo Player", "photo": "",
         },
         "has_profile": False,
-        "tokens": DEMO_USER_TOKENS,
+        "tokens": _bal,
         "demo": True,
     }
 
@@ -1717,7 +1735,10 @@ async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(No
     # Demo orders self-describe via the encoded order_id, so we can credit
     # even if the create-order Mongo write timed out and there's no DB row.
     # Format: DEMO_<pack_key>_<ts>_<rnd>
-    if not order and req.order_id.startswith("DEMO_"):
+    # SECURITY: only when the server is actually in demo-payments mode — an
+    # unconditional check let anyone synthesize a DEMO_ order id and credit
+    # tokens for free in production.
+    if not order and DEMO_PAYMENTS and req.order_id.startswith("DEMO_"):
         parts = req.order_id.split("_")
         # Try every prefix length to recover the pack key (pack keys may
         # contain underscores e.g. "pack_500", "pack_1500").
@@ -1748,8 +1769,10 @@ async def verify_payment(req: VerifyOrderRequest, authorization: str = Header(No
         return {"ok": True, "tokens_credited": order.get("tokens_amount", 0),
                 "balance": await _get_balance(user["id"]), "already_credited": True}
 
-    # Demo mode — credit immediately, no Cashfree round-trip.
-    if DEMO_PAYMENTS or order.get("demo") or req.order_id.startswith("DEMO_"):
+    # Demo mode — credit immediately, no Cashfree round-trip. SECURITY: only
+    # honored when the SERVER is in demo mode or the order row was created as
+    # demo server-side; a client-supplied DEMO_ id alone no longer credits.
+    if DEMO_PAYMENTS or order.get("demo"):
         new_balance = await _credit_for_paid_order(user["id"], order, f"DEMO_{order['cashfree_order_id']}")
         # Distinguish "already credited" from "credit attempt failed":
         # - balance reflects the expected total + already exists in tx log → success
@@ -1842,9 +1865,12 @@ async def cashfree_webhook(request: Request):
             )
             raise HTTPException(status_code=400, detail="Invalid signature")
     elif signing_key and not signature:
-        # We have a key configured but Cashfree didn't send a header —
-        # could be a sandbox quirk or a manual test. Log + accept so dev
-        # tests don't get blocked, but warn loudly.
+        # SECURITY: in production an unsigned webhook is a forgery vector
+        # (fake PAYMENT_SUCCESS → free tokens) — reject. Sandbox/dev still
+        # accepts so local tests aren't blocked.
+        if IS_PRODUCTION and CASHFREE_ENV.upper() in ("PROD", "PRODUCTION"):
+            logger.warning("Cashfree webhook: missing signature in production — rejected")
+            raise HTTPException(status_code=401, detail="Missing signature")
         logger.warning("Cashfree webhook: no x-webhook-signature header, accepting (dev/sandbox)")
     try:
         body = json.loads(raw)
@@ -1999,8 +2025,25 @@ async def razorpay_verify(req: RazorpayVerifyRequest, authorization: str = Heade
     oid = req.razorpay_order_id or req.order_id
 
     if (oid or "").startswith("DEMO_"):
-        parts = oid.split("_")
-        pack = _get_pack("_".join(parts[1:3]) if len(parts) >= 3 else "")
+        # SECURITY: the DEMO_ self-crediting path is ONLY valid when the server
+        # itself is running without Razorpay keys (RAZORPAY_DEMO). Previously it
+        # was unconditional — any authenticated user could POST a fabricated
+        # DEMO_pack_5000_… order id to /verify and credit themselves 5000
+        # tokens for free IN PRODUCTION. Now: real keys configured → DEMO_
+        # orders are rejected outright. We additionally require the order row
+        # to exist, belong to this user, and be flagged demo server-side.
+        if not RAZORPAY_DEMO:
+            logger.warning("razorpay verify: DEMO_ order rejected in live mode (user %s)",
+                           user["id"][:8])
+            raise HTTPException(status_code=400, detail="Invalid order")
+        try:
+            demo_order = await asyncio.wait_for(
+                db.payment_orders.find_one({"razorpay_order_id": oid}, {"_id": 0}), timeout=3.0)
+        except Exception:
+            demo_order = None
+        if not demo_order or demo_order.get("user_id") != user["id"] or not demo_order.get("demo"):
+            raise HTTPException(status_code=404, detail="Order not found")
+        pack = _get_pack(demo_order.get("pack_key", ""))
         if not pack:
             raise HTTPException(status_code=400, detail="Unknown demo pack")
         bal = await _credit_tokens(user["id"], "purchase", pack["tokens"], {
@@ -3590,7 +3633,7 @@ async def classify_shots_vlm(req: ClassifyShotsRequest, authorization: str = Hea
     try:
         from ai_pipeline.vlm import VLMShotClassifier, estimate_speed_from_power
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
 
     def _run() -> list[dict]:
         clf = VLMShotClassifier(backend=req.backend, sport=req.sport, use_cache=False)
@@ -3661,7 +3704,7 @@ async def analyze_video_direct_endpoint(
     try:
         from ai_pipeline.vlm import analyze_video_full
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
 
     loop = asyncio.get_event_loop()
     try:
@@ -3676,14 +3719,52 @@ async def analyze_video_direct_endpoint(
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Video analysis timed out (>110s)")
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Video analysis failed: {exc}")
+        raise HTTPException(status_code=502, detail=_scrub_provider_text(f"Video analysis failed: {exc}"))
 
-    return {
+    return _scrub_client_payload({
         "success": True,
         "shots": result.get("shots") or [],
         "_meta": result.get("_meta") or {},
         "input_size_bytes": len(video_bytes),
-    }
+    })
+
+
+# ─── PROVIDER CONCEALMENT ────────────────────────────────────────────
+# Business requirement: clients must not be able to learn which AI vendor
+# powers the analysis. Everything that leaves the API goes through this
+# scrubber: `_debug` payloads (raw provider JSON) are dropped, `_meta`
+# identifiers (model/backend names) are dropped, and provider names inside
+# error strings are replaced with a neutral token. Server-side logs keep
+# full detail — only the client view is sanitized.
+import re as _prov_re_mod
+_PROVIDER_RE = _prov_re_mod.compile(
+    r"(gemini[-\w.]*|generativelanguage[\w./:%-]*|googleapis\.com|google\s+ai"
+    r"|files?_api\w*|files api|GEMINI_\w+|GROQ_\w+|groq[-\w.]*|llama[-\w.]*|vlm)",
+    _prov_re_mod.IGNORECASE,
+)
+_META_PRIVATE_KEYS = {"model", "backend", "via_files_api", "raw_gemini_response",
+                      "backend_name", "provider"}
+
+
+def _scrub_provider_text(s: str) -> str:
+    return _PROVIDER_RE.sub("AI", s) if isinstance(s, str) else s
+
+
+def _scrub_client_payload(obj, _in_meta: bool = False):
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k in ("_debug", "raw_gemini_response"):
+                continue
+            if _in_meta and k in _META_PRIVATE_KEYS:
+                continue
+            out[k] = _scrub_client_payload(v, _in_meta or k == "_meta")
+        return out
+    if isinstance(obj, list):
+        return [_scrub_client_payload(x, _in_meta) for x in obj]
+    if isinstance(obj, str):
+        return _scrub_provider_text(obj)
+    return obj
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -3856,7 +3937,7 @@ async def analyze_video_universal_endpoint(
     try:
         from ai_pipeline.vlm import analyze_video_universal
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
 
     loop = asyncio.get_event_loop()
     try:
@@ -3900,9 +3981,9 @@ async def analyze_video_universal_endpoint(
         "movement": result.get("movement") or None,
         "player_legend": result.get("player_legend") or None,
         "events": result.get("events") or [],
-        "_debug": result.get("_debug") or {},
         "_meta": result.get("_meta") or {},
     }
+    payload = _scrub_client_payload(payload)
 
     # Map Gemini's (possibly sped-up) timestamps back to the original clip's
     # timeline before caching — same compressed bytes always yield the same
@@ -4143,7 +4224,10 @@ async def analyze_video_stream_endpoint(
                 elif kind == "complete":
                     final_payload = item.get("result") or {}
                 elif kind == "error":
-                    yield _sse_event({"phase": "error", "msg": str(item.get("msg", "unknown"))})
+                    # Provider concealment: error strings from the AI layer can
+                    # name the vendor (e.g. 'gemini_call_failed') — scrub.
+                    yield _sse_event({"phase": "error",
+                                      "msg": _scrub_provider_text(str(item.get("msg", "unknown")))})
 
             # Deliver the complete event INSIDE the try, so if the client
             # disconnected mid-stream the yield raises GeneratorExit and
@@ -4152,7 +4236,7 @@ async def analyze_video_stream_endpoint(
                 events = final_payload.get("events") or []
                 # Map all final timestamps into the original clip's timeline.
                 events = _apply_time_scale(events, _ts, _toff)
-                yield _sse_event({
+                yield _sse_event(_scrub_client_payload({
                     "phase": "complete",
                     # Alias events → shots so the frontend's existing
                     # universal-result builder sees the field it expects.
@@ -4167,7 +4251,7 @@ async def analyze_video_stream_endpoint(
                     "movement": final_payload.get("movement") or None,
                     "player_legend": final_payload.get("player_legend") or None,
                     "_meta": final_payload.get("_meta", {}),
-                })
+                }))
                 complete_delivered = True
         finally:
             # Charge ONLY if the user actually received the complete
@@ -4450,9 +4534,9 @@ async def _process_job(job: dict, claimed: bool = False):
         "movement": result.get("movement") or None,
         "player_legend": result.get("player_legend") or None,
         "events": result.get("events") or [],
-        "_debug": result.get("_debug") or {},
         "_meta": {**(result.get("_meta") or {}), "async_job": True},
     }
+    payload = _scrub_client_payload(payload)
     payload["events"] = _apply_time_scale(payload["events"], job.get("time_scale", 1.0),
                                           job.get("time_offset", 0.0))
     await _update_job(job_id, status="complete", result=payload,
@@ -4623,7 +4707,7 @@ async def upload_video_to_files_api(
     try:
         from ai_pipeline.vlm import files_api_upload
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
     loop = asyncio.get_event_loop()
     try:
         handle = await asyncio.wait_for(
@@ -4633,7 +4717,7 @@ async def upload_video_to_files_api(
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Upload processing timed out — please retry")
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Files API upload failed: {str(exc)[:200]}")
+        raise HTTPException(status_code=502, detail="video registration failed — please retry")
     return {
         "file_name": handle.name,
         "file_uri": getattr(handle, "uri", None),
@@ -4774,6 +4858,23 @@ async def register_video_url_to_files_api(
     url = (req.video_url or "").strip()
     if not url.startswith("http"):
         raise HTTPException(status_code=400, detail="video_url required")
+    # SECURITY (SSRF): this endpoint fetches the URL server-side. Without a
+    # host allowlist it could be pointed at cloud metadata (169.254.169.254),
+    # localhost, or internal services. Only our own Cloudinary cloud is a
+    # legitimate source (the browser uploads there first).
+    try:
+        from urllib.parse import urlparse as _urlparse
+        _host = (_urlparse(url).hostname or "").lower()
+    except Exception:
+        _host = ""
+    _allowed_hosts = {"res.cloudinary.com", "api.cloudinary.com"}
+    _extra = os.environ.get("VIDEO_URL_ALLOWED_HOSTS", "")
+    for _h in _extra.split(","):
+        if _h.strip():
+            _allowed_hosts.add(_h.strip().lower())
+    if _host not in _allowed_hosts:
+        logger.warning("[upload-video-url] rejected non-allowlisted host: %s", _host[:80])
+        raise HTTPException(status_code=400, detail="Unsupported video source")
     # Rotated (portrait) clip → ask Cloudinary for a transformed derivative so
     # it bakes the rotation into the pixels. q_auto also compresses, which
     # shrinks the Gemini upload + speeds analysis. Only Cloudinary URLs that
@@ -4816,7 +4917,7 @@ async def register_video_url_to_files_api(
             resp.raise_for_status()
             video_bytes = resp.content
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"could not fetch video: {str(exc)[:200]}")
+        raise HTTPException(status_code=502, detail="could not fetch the uploaded video — please retry")
     size_bytes = len(video_bytes)
     if size_bytes < 1000:
         raise HTTPException(status_code=400, detail="Video too small")
@@ -4826,7 +4927,7 @@ async def register_video_url_to_files_api(
     try:
         from ai_pipeline.vlm import files_api_upload
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
     loop = asyncio.get_event_loop()
     try:
         handle = await asyncio.wait_for(
@@ -4836,7 +4937,7 @@ async def register_video_url_to_files_api(
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Upload processing timed out — please retry")
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Files API upload failed: {str(exc)[:200]}")
+        raise HTTPException(status_code=502, detail="video registration failed — please retry")
     # The clip now lives in the Files API (valid 48 h, reused for picker +
     # analysis) — drop the Cloudinary copy so we don't accumulate storage.
     if req.cloudinary_public_id:
@@ -4923,7 +5024,7 @@ async def files_finalize_upload(
     try:
         from ai_pipeline.vlm import files_api_wait_active
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
     loop = asyncio.get_event_loop()
     try:
         handle = await asyncio.wait_for(
@@ -6363,7 +6464,7 @@ async def describe_players_endpoint(
     try:
         from ai_pipeline.vlm import describe_players_in_video
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
 
     loop = asyncio.get_event_loop()
     try:
@@ -6380,13 +6481,14 @@ async def describe_players_endpoint(
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Player description timed out")
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Player description failed: {exc}")
+        raise HTTPException(status_code=502,
+                            detail=_scrub_provider_text(f"Player description failed: {exc}"))
 
-    return {
+    return _scrub_client_payload({
         "success": True,
         "players": result.get("players") or [],
         "_meta": result.get("_meta") or {},
-    }
+    })
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -6419,7 +6521,7 @@ async def detect_sport_endpoint(req: DetectSportRequest, authorization: str = He
     try:
         from ai_pipeline.vlm import detect_sport
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
 
     loop = asyncio.get_event_loop()
     try:
@@ -6499,7 +6601,7 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
     try:
         from ai_pipeline.vlm import compare_analyses as _compare_analyses
     except ImportError as exc:
-        raise HTTPException(status_code=500, detail=f"VLM module unavailable: {exc}")
+        raise HTTPException(status_code=500, detail="analysis engine unavailable")
 
     # ─── Phase B: quantitative deltas + drill attribution ───
     old_score = ((old.get("shot_analysis") or {}).get("score") or
@@ -14060,7 +14162,7 @@ async def coach_ask(req: CoachAskRequest):
                          "url": d["meta"].get("url"), "sport": d["meta"].get("sport")}
                         for d in docs[:4]
                     ],
-                    "mode": "vlm_fallback",
+                    "mode": "assist",
                 }
         except Exception as exc:
             logger.warning(f"VLM coach fallback failed: {exc}")
@@ -14069,7 +14171,7 @@ async def coach_ask(req: CoachAskRequest):
         return {
             "answer": fallback,
             "sources": [d["meta"] for d in docs[:3]],
-            "mode": "retrieval_only_no_key",
+            "mode": "kb",
         }
 
     try:
@@ -15971,31 +16073,16 @@ async def health():
         except Exception as e:
             mongo_write_ok = False
             mongo_write_err = f"{type(e).__name__}: {str(e)[:200]}"
-    return {
-        "status": "healthy" if mongo_ok else "degraded",
-        "env": {
-            "MONGO_URL": "set" if mongo_url else "MISSING",
-            "JWT_SECRET": "set" if (JWT_SECRET and JWT_SECRET != "playsmart_default_secret") else "DEFAULT (insecure)",
-            "GROQ_API_KEY": "set" if os.environ.get("GROQ_API_KEY") else "missing",
-            "GEMINI_API_KEY": "set" if os.environ.get("GEMINI_API_KEY") else "missing",
-            "CASHFREE_APP_ID": "set" if CASHFREE_APP_ID else "missing",
-            "CASHFREE_SECRET_KEY": "set" if CASHFREE_SECRET_KEY else "missing",
-            "CASHFREE_WEBHOOK_SECRET": (
-                "set (override)" if CASHFREE_WEBHOOK_SECRET
-                else "using CASHFREE_SECRET_KEY (default for 2023-08-01 API)"
-            ),
-            "CASHFREE_ENV": CASHFREE_ENV,
-            "DEMO_PAYMENTS": str(DEMO_PAYMENTS),
-            "ADMIN_WIPE_KEY": "set" if ADMIN_WIPE_KEY else "missing",
-        },
-        "mongo": {
-            "configured": bool(mongo_url),
-            "reachable": mongo_ok,
-            "error": mongo_err,
-            "writeable": mongo_write_ok,
-            "write_error": mongo_write_err,
-        },
-    }
+    # SECURITY: the env/config inventory (which secrets are set, demo flags,
+    # provider names) is an attacker roadmap. Public callers get a bare
+    # status; the detail goes to server logs (visible in Vercel) instead.
+    logger.info(
+        "[health] mongo_ok=%s write_ok=%s err=%s write_err=%s env{mongo=%s jwt=%s groq=%s vlm=%s}",
+        mongo_ok, mongo_write_ok, mongo_err, mongo_write_err,
+        bool(mongo_url), JWT_SECRET != "playsmart_default_secret",
+        bool(os.environ.get("GROQ_API_KEY")), bool(os.environ.get("GEMINI_API_KEY")),
+    )
+    return {"status": "healthy" if (mongo_ok and mongo_write_ok) else "degraded"}
 
 
 # ─── Explicit OPTIONS preflight handler (fixes CORS 405 on preflight) ───
