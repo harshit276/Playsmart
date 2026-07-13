@@ -1564,6 +1564,58 @@ class CreateOrderRequest(BaseModel):
     pack_key: str = Field(..., max_length=40)
 
 
+# ──────────────────────────────────────────────────────────────────────
+# Razorpay payment provider. Flow: create-order -> Razorpay Checkout.js ->
+# verify HMAC signature -> idempotent credit; webhook is the backstop.
+# (These were accidentally removed with the Cashfree cleanup — restored.)
+# ──────────────────────────────────────────────────────────────────────
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "").strip()
+RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "").strip()
+RAZORPAY_DEMO = not (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET)
+
+
+class RazorpayVerifyRequest(BaseModel):
+    razorpay_order_id: str = ""
+    razorpay_payment_id: str = ""
+    razorpay_signature: str = ""
+    order_id: str = ""  # demo path uses this
+
+
+async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> Optional[int]:
+    """Idempotent credit keyed on razorpay_payment_id (so verify + webhook
+    can't double-credit)."""
+    pack = _get_pack(order.get("pack_key", ""))
+    if not pack:
+        return None
+    try:
+        already = await asyncio.wait_for(db.token_transactions.find_one(
+            {"user_id": user_id, "kind": "purchase",
+             "metadata.razorpay_payment_id": payment_id}, {"_id": 0, "id": 1}), timeout=2.0)
+        if already:
+            return None
+    except Exception:
+        pass
+    new_balance = await _credit_tokens(user_id, "purchase", pack["tokens"], {
+        "pack_key": pack["key"], "amount_inr": pack["price_inr"],
+        "razorpay_order_id": order.get("razorpay_order_id"),
+        "razorpay_payment_id": payment_id, "provider": "razorpay"})
+    try:
+        await asyncio.wait_for(db.payment_orders.update_one(
+            {"razorpay_order_id": order.get("razorpay_order_id")},
+            {"$set": {"status": "paid", "razorpay_payment_id": payment_id,
+                      "paid_at": datetime.now(timezone.utc).isoformat()}}), timeout=2.0)
+    except Exception:
+        pass
+    try:
+        asyncio.create_task(_notify_admin(
+            f"\U0001f4b0 Purchase · ₹{pack['price_inr']} (Razorpay)",
+            f"User: {user_id[:12]}…\nPack: {pack['key']} (+{pack['tokens']} tokens)\nNew balance: {new_balance}"))
+    except Exception:
+        pass
+    return new_balance
+
+
 @api_router.post("/payments/razorpay/create-order")
 async def razorpay_create_order(req: CreateOrderRequest, authorization: str = Header(None)):
     """Create a Razorpay order; returns what Checkout.js needs (order_id +
