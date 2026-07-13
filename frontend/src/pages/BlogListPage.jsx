@@ -19,6 +19,9 @@ const SPORTS = [
   { key: "badminton", label: "Badminton" },
   { key: "tennis", label: "Tennis" },
   { key: "table-tennis", label: "Table Tennis" },
+  { key: "gym", label: "Gym" },
+  { key: "weight-lifting", label: "Weightlifting" },
+  { key: "physiotherapy", label: "Physiotherapy" },
   { key: "general", label: "General" },
 ];
 
@@ -26,6 +29,9 @@ const SPORT_GRADIENT = {
   badminton: "from-lime-500/30 to-emerald-600/20",
   tennis: "from-amber-500/30 to-orange-600/20",
   "table-tennis": "from-sky-500/30 to-blue-600/20",
+  gym: "from-orange-500/30 to-red-600/20",
+  "weight-lifting": "from-red-500/30 to-rose-600/20",
+  physiotherapy: "from-teal-500/30 to-cyan-600/20",
   general: "from-purple-500/30 to-indigo-600/20",
 };
 
@@ -41,6 +47,9 @@ const SPORT_COLOR = {
   badminton: "bg-lime-500/20 text-lime-400",
   tennis: "bg-amber-500/20 text-amber-400",
   "table-tennis": "bg-sky-500/20 text-sky-400",
+  gym: "bg-orange-500/20 text-orange-400",
+  "weight-lifting": "bg-red-500/20 text-red-400",
+  physiotherapy: "bg-teal-500/20 text-teal-400",
   general: "bg-purple-500/20 text-purple-400",
 };
 

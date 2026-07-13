@@ -17,6 +17,9 @@ const SPORT_COLOR = {
   badminton: "bg-lime-500/20 text-lime-400",
   tennis: "bg-amber-500/20 text-amber-400",
   "table-tennis": "bg-sky-500/20 text-sky-400",
+  gym: "bg-orange-500/20 text-orange-400",
+  "weight-lifting": "bg-red-500/20 text-red-400",
+  physiotherapy: "bg-teal-500/20 text-teal-400",
   general: "bg-purple-500/20 text-purple-400",
 };
 
@@ -24,6 +27,9 @@ const SPORT_GRADIENT = {
   badminton: "from-lime-500/20 to-emerald-600/10",
   tennis: "from-amber-500/20 to-orange-600/10",
   "table-tennis": "from-sky-500/20 to-blue-600/10",
+  gym: "from-orange-500/20 to-red-600/10",
+  "weight-lifting": "from-red-500/20 to-rose-600/10",
+  physiotherapy: "from-teal-500/20 to-cyan-600/10",
   general: "from-purple-500/20 to-indigo-600/10",
 };
 

@@ -25,6 +25,8 @@ const PrivacyPage = lazy(() => import("@/pages/PrivacyPage"));
 const TermsPage = lazy(() => import("@/pages/TermsPage"));
 const RefundPage = lazy(() => import("@/pages/RefundPage"));
 const CancellationPage = lazy(() => import("@/pages/CancellationPage"));
+const ShippingPage = lazy(() => import("@/pages/ShippingPage"));
+const ContactPage = lazy(() => import("@/pages/ContactPage"));
 const BadmintonPage = lazy(() => import("@/pages/BadmintonPage"));
 const TennisPage = lazy(() => import("@/pages/TennisPage"));
 const TableTennisPage = lazy(() => import("@/pages/TableTennisPage"));
@@ -33,6 +35,9 @@ const CricketPage = lazy(() => import("@/pages/CricketPage"));
 const SwimmingPage = lazy(() => import("@/pages/SwimmingPage"));
 const FootballPage = lazy(() => import("@/pages/FootballPage"));
 const BasketballPage = lazy(() => import("@/pages/BasketballPage"));
+const GymPage = lazy(() => import("@/pages/GymPage"));
+const WeightLiftingPage = lazy(() => import("@/pages/WeightLiftingPage"));
+const PhysiotherapyPage = lazy(() => import("@/pages/PhysiotherapyPage"));
 const LabelPage = lazy(() => import("@/pages/LabelPage"));
 const TestModelPage = lazy(() => import("@/pages/TestModelPage"));
 const TestAiGenPage = lazy(() => import("@/pages/TestAiGenPage"));
@@ -208,6 +213,8 @@ function AppRoutes() {
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/refund" element={<RefundPage />} />
       <Route path="/cancellation" element={<CancellationPage />} />
+      <Route path="/shipping" element={<ShippingPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route path="/badminton" element={<BadmintonPage />} />
       <Route path="/tennis" element={<TennisPage />} />
       <Route path="/table-tennis" element={<TableTennisPage />} />
@@ -216,6 +223,9 @@ function AppRoutes() {
       <Route path="/swimming" element={<SwimmingPage />} />
       <Route path="/football" element={<FootballPage />} />
       <Route path="/basketball" element={<BasketballPage />} />
+      <Route path="/gym" element={<GymPage />} />
+      <Route path="/weight-lifting" element={<WeightLiftingPage />} />
+      <Route path="/physiotherapy" element={<PhysiotherapyPage />} />
       <Route path="/assessment" element={<AssessmentPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/wallet" element={<WalletPage />} />

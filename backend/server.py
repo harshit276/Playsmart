@@ -13439,6 +13439,118 @@ BLOG_POSTS = [
 <p>Whether you train at one of these top academies or play at your local club, tracking progress matters. Use Formanti's <a href="/analyze?sport=badminton">free swing analyzer</a> to compare your technique to elite players. Use our <a href="/training">training plans</a> built by Indian academy coaches to structure your weekly practice.</p>
 <p>Want a personalised academy or training programme recommendation based on your level, location and goals? Try our <a href="/equipment">equipment and training recommender</a>.</p>"""
     },
+    {
+        "id": "ai-gym-workout-form-checker",
+        "title": "Fix Your Squat, Deadlift and Bench Form with an AI Gym Form Checker",
+        "description": "How to use an AI video analysis tool to catch the gym form breakdowns that cause plateaus and injuries — squat depth, bar path, and bracing, explained.",
+        "category": "guides",
+        "sport": "gym",
+        "tags": ["gym", "form check", "squat", "deadlift", "bench press", "AI trainer"],
+        "published_date": "2026-07-14",
+        "read_time": "8 min read",
+        "thumbnail_emoji": "\U0001f4aa",
+        "content": """<h2>Why Gym Form Breaks Down Without You Noticing</h2>
+<p>Most lifters don't lose form on purpose. It happens gradually — a knee that drifts inward as the weight gets heavier, a lower back that rounds a few degrees more each set, a bar path that drifts an inch forward on every rep. None of it feels wrong in the moment. That's exactly why video review matters: your body's sense of "correct" drifts along with your form, but a camera doesn't.</p>
+<p>This is where an AI gym form checker earns its place in your routine. Instead of guessing whether your last set looked clean, you get an objective, frame-by-frame breakdown of what actually happened.</p>
+
+<h3>1. Squat: The Three Checkpoints That Matter Most</h3>
+<ul>
+<li><strong>Depth consistency:</strong> Are you hitting the same depth on rep 1 and rep 8? Fatigue often shortens range of motion without you realizing it.</li>
+<li><strong>Knee tracking:</strong> Do your knees cave inward as the weight goes up? This is one of the most common and most injury-relevant breakdowns in lifters of all levels.</li>
+<li><strong>Chest position:</strong> Does your torso pitch forward more on later reps? That shift moves stress from your legs to your lower back.</li>
+</ul>
+
+<h3>2. Deadlift: Bar Path Tells the Real Story</h3>
+<p>A deadlift bar should travel in a straight vertical line, close to your body, from floor to lockout. Video review consistently reveals two patterns lifters can't feel in the moment: the bar drifting away from the shins at the start, and the hips shooting up faster than the chest (turning the pull into a stiff-legged deadlift with a rounded back).</p>
+
+<h3>3. Bench Press: Bar Path and Elbow Angle</h3>
+<p>Watch for the bar drifting toward your face instead of touching around the lower chest/upper abdomen, and elbows flaring to a full 90 degrees rather than tucking to roughly 45-75 degrees — both increase shoulder strain over time.</p>
+
+<h2>How to Film a Set for AI Analysis</h2>
+<ul>
+<li><strong>Squat and deadlift:</strong> film directly from the side, full body in frame, camera at hip height.</li>
+<li><strong>Bench and overhead press:</strong> film from a 3/4 front angle so bar path and elbow position are both visible.</li>
+<li><strong>Lighting:</strong> a well-lit gym is enough — you don't need special equipment, just a stable phone and a clear view.</li>
+</ul>
+
+<h2>What AI Form Checking Can and Can't Do</h2>
+<p>An AI gym form checker like Formanti is excellent at spotting visible technique patterns — depth, joint tracking, bar path, tempo — consistently, every set, without fatigue-related blind spots. It is <strong>not</strong> a certified personal trainer or a medical professional, and it can't assess pain, underlying injuries, or whether a specific exercise is appropriate for your body. Use it to catch what your eyes miss between sessions, and always progress weight gradually.</p>
+
+<h2>Turn Feedback Into a Plan</h2>
+<p>Spotting the issue is only half the job. Use Formanti's <a href="/analyze">free gym form checker</a> to upload your next set, then generate a <a href="/training">personalized training plan</a> that targets whatever the analysis flags — whether that's ankle mobility limiting your squat depth or grip strength limiting your deadlift lockout.</p>"""
+    },
+    {
+        "id": "ai-weightlifting-technique-analysis",
+        "title": "Improve Your Snatch, Clean & Jerk and Powerlifting Technique with AI",
+        "description": "A breakdown of what bar path, depth, and lockout analysis reveals about your Olympic and powerlifting technique — and how to use AI video review to fix it.",
+        "category": "training",
+        "sport": "weight-lifting",
+        "tags": ["weightlifting", "powerlifting", "snatch", "clean and jerk", "bar path", "technique"],
+        "published_date": "2026-07-14",
+        "read_time": "8 min read",
+        "thumbnail_emoji": "\U0001f3cb️",
+        "content": """<h2>Why Bar Path Is the Single Best Diagnostic in Weightlifting</h2>
+<p>Coaches watch bar path above almost everything else, and for good reason: it's the one variable that summarizes everything happening underneath it — hip timing, balance, pull direction, and bracing. A bar that travels in a clean vertical line usually means the technique underneath it is sound. A bar that loops forward or stalls tells you exactly where to look.</p>
+
+<h2>Snatch and Clean & Jerk: What to Check</h2>
+<ul>
+<li><strong>First pull:</strong> Does the bar stay close to your shins as it leaves the floor, or does it swing forward early?</li>
+<li><strong>Second pull (extension):</strong> Are your hips, knees, and ankles reaching full extension before you pull under the bar?</li>
+<li><strong>Receiving position:</strong> Are you catching the bar in a stable, balanced squat, or is your weight shifting onto your toes or heels?</li>
+<li><strong>Timing:</strong> Is the transition from extension to the turnover/catch quick and aggressive, or slow and disconnected?</li>
+</ul>
+<p>Each of these is far easier to diagnose from frame-by-frame video than from how the lift felt — Olympic lifts happen in under a second, faster than most lifters can accurately self-assess in real time.</p>
+
+<h2>Powerlifting: Depth, Lockout, and Bar Path</h2>
+<p>For squat, bench, and deadlift, the technique standards are stricter and more consistent set to set — which makes them ideal for video tracking over weeks. Depth that creeps shallower under heavier loads, a bench bar path that drifts, or a deadlift lockout that finishes with a lean-back instead of hip extension are all patterns that show up clearly on video long before they show up as a missed lift or a nagging ache.</p>
+
+<h2>Filming Tips for Accurate Analysis</h2>
+<ul>
+<li>Film squats and deadlifts from directly to the side, camera at platform height.</li>
+<li>Film snatch and clean & jerk from the side as well, far enough back to capture the full bar path from floor to overhead/rack.</li>
+<li>Keep the barplates and floor markers in frame — they help visually confirm bar path consistency across reps.</li>
+</ul>
+
+<h2>Use It Alongside a Coach, Not Instead of One</h2>
+<p>AI technique analysis is excellent for catching consistent patterns across your training log — something even attentive coaches can miss between sessions. For competition prep or correcting deeper technical faults, pair it with a certified weightlifting or powerlifting coach who can assess you live.</p>
+
+<h2>Next Step</h2>
+<p>Upload your next training session to Formanti's <a href="/analyze">AI weightlifting analyzer</a> to get bar path and lockout feedback, then build a <a href="/training">training plan</a> around whatever pattern shows up most often in your lifts.</p>"""
+    },
+    {
+        "id": "ai-physiotherapy-exercise-tracking",
+        "title": "How to Track Rehab Exercises Safely at Home Between Physiotherapy Sessions",
+        "description": "What to look for when following a home exercise program — and how AI-assisted video tracking can help you stay consistent between physiotherapy visits.",
+        "category": "guides",
+        "sport": "physiotherapy",
+        "tags": ["physiotherapy", "rehab", "home exercise program", "recovery", "physio"],
+        "published_date": "2026-07-14",
+        "read_time": "7 min read",
+        "thumbnail_emoji": "\U0001fa7a",
+        "content": """<h2>Why Home Exercise Programs Fail — and It's Rarely Motivation</h2>
+<p>Physiotherapists routinely report the same problem: patients who are motivated to do their home exercises still see slow progress, because the exercises drift out of the prescribed form within a week or two of their last in-clinic session. Without a professional watching, range of motion creeps outside the safe zone, tempo speeds up, and compensations (favoring the uninjured side, for example) creep in unnoticed.</p>
+<p>This is a tracking problem, not a discipline problem — and it's exactly what video-based tracking tools are good at solving.</p>
+
+<h2>What to Watch For in Your Own Rehab Exercises</h2>
+<ul>
+<li><strong>Range of motion drift:</strong> Are you moving through the same range your physiotherapist cleared, or has it quietly expanded (or contracted) over the week?</li>
+<li><strong>Compensation patterns:</strong> Are you unconsciously shifting weight, twisting, or using a different muscle group to "help" a weaker or recovering one?</li>
+<li><strong>Tempo:</strong> Rehab exercises are almost always meant to be slow and controlled. Speeding up under fatigue is one of the most common ways good form quietly breaks down.</li>
+<li><strong>Consistency across sessions:</strong> Does today's set look like last week's, or has your form changed as pain or confidence levels shifted?</li>
+</ul>
+
+<h2>How AI-Assisted Tracking Helps</h2>
+<p>Recording your prescribed exercises and reviewing them — either yourself or with an AI tracking tool like Formanti — gives you an objective record instead of a memory of how the movement felt. Formanti can track range of motion, count reps and sets automatically, and flag common compensation patterns, so your next physiotherapy session can start from real data instead of "I think I did the exercises."</p>
+
+<h3>A Simple Weekly Structure</h3>
+<p>Most home exercise programs follow a rhythm of prescribed mobility or strength work several days a week, with rest or light activity between. Your physiotherapist's specific prescription always takes priority over any general structure — this is about staying consistent with <em>their</em> plan, not replacing it.</p>
+
+<h2>Important: This Is a Tracking Tool, Not Medical Advice</h2>
+<p>Formanti is not a licensed physiotherapist, doctor, or medical device, and it cannot diagnose injuries or assess pain. If an exercise causes sharp or worsening pain, stop and contact your physiotherapist or doctor immediately. Use AI tracking to stay consistent and accurate with a program your physiotherapist has already prescribed — never to design your own rehab program from scratch.</p>
+
+<h2>Bring Data to Your Next Session</h2>
+<p>Track your prescribed exercises with Formanti's <a href="/analyze">free exercise tracker</a>, and bring your progress summary to your next physiotherapy appointment so your physiotherapist can adjust your program based on what actually happened during the week, not just how you remember it.</p>"""
+    },
 ]
 
 
