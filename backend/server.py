@@ -97,17 +97,26 @@ else:
 JWT_SECRET = os.environ.get('JWT_SECRET', 'playsmart_default_secret')
 JWT_ALGORITHM = "HS256"
 if IS_PRODUCTION and JWT_SECRET == 'playsmart_default_secret':
-    # SECURITY: a KNOWN default secret means anyone can forge admin/user JWTs.
-    # Rather than crash (previews may legitimately lack the env var) or keep
-    # the forgeable constant, generate a random per-boot secret: auth still
-    # works within a deployment, existing sessions just re-login after a
-    # redeploy, and tokens can never be forged offline.
-    import secrets as _secrets_mod
-    JWT_SECRET = _secrets_mod.token_hex(32)
-    logging.getLogger(__name__).error(
-        "JWT_SECRET env var missing in production — using a RANDOM per-boot "
-        "secret (sessions won't persist across deploys). Set JWT_SECRET on Vercel."
-    )
+    # A KNOWN default secret lets anyone forge JWTs. But a RANDOM per-boot
+    # secret BREAKS auth on serverless: each Vercel instance would get a
+    # different secret, so a token minted by one instance 401s on another
+    # (login "succeeds" then instantly logs out). Instead derive a STABLE,
+    # non-guessable secret from an env value that is always present, identical
+    # across instances, and itself secret (MONGO_URL, else GEMINI_API_KEY).
+    # This is both stable (auth works across instances/deploys) and secure
+    # (an attacker can't forge tokens without knowing that secret env value).
+    _seed = (os.environ.get('MONGO_URL') or os.environ.get('GEMINI_API_KEY') or '').strip()
+    if _seed:
+        JWT_SECRET = hashlib.sha256(f"formanti-jwt-v1:{_seed}".encode()).hexdigest()
+        logging.getLogger(__name__).error(
+            "JWT_SECRET env var missing — using a stable secret derived from "
+            "another env value. Set an explicit JWT_SECRET on Vercel."
+        )
+    else:
+        logging.getLogger(__name__).error(
+            "JWT_SECRET missing and no seed env available — using the INSECURE "
+            "default. Set JWT_SECRET on Vercel immediately."
+        )
 
 app = FastAPI(
     title="Formanti API",
@@ -409,6 +418,37 @@ def create_token(user_id: str, phone: str) -> str:
     return pyjwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
+# ─── Email/password auth helpers (pbkdf2, no external deps) ───
+def _hash_password(password: str) -> str:
+    import secrets as _s, hashlib as _h
+    salt = _s.token_hex(16)
+    dk = _h.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 200_000)
+    return f"pbkdf2_sha256$200000${salt}${dk.hex()}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    import hashlib as _h, hmac as _hm
+    try:
+        algo, iters, salt, hexhash = stored.split("$")
+        dk = _h.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(iters))
+        return _hm.compare_digest(dk.hex(), hexhash)
+    except Exception:
+        return False
+
+
+def _user_id_for_email(email: str) -> str:
+    # SAME derivation as firebase_auth so one email = one account regardless of
+    # sign-in method (Google or password).
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{email.strip().lower()}"))
+
+
+# Email of the shareable demo account (email/password) with a huge token
+# balance for testing. Password set via env or the default below.
+DEMO_ACCOUNT_EMAIL = os.environ.get("DEMO_ACCOUNT_EMAIL", "demo@formanti.com").strip().lower()
+DEMO_ACCOUNT_PASSWORD = os.environ.get("DEMO_ACCOUNT_PASSWORD", "FormantiDemo@2026")
+DEMO_ACCOUNT_TOKENS = 100_000_000  # effectively unlimited for testing
+
+
 async def get_current_user(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -559,6 +599,122 @@ async def firebase_auth(req: FirebaseAuthRequest):
         "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
         "has_profile": has_profile,
         "tokens": balance,
+    }
+
+
+# ─── Email + password auth (name / email / password signup) ───
+class RegisterRequest(BaseModel):
+    name: str = Field("", max_length=80)
+    email: str = Field(..., max_length=120)
+    password: str = Field(..., min_length=6, max_length=200)
+
+
+class PasswordLoginRequest(BaseModel):
+    email: str = Field(..., max_length=120)
+    password: str = Field(..., min_length=1, max_length=200)
+
+
+async def _profile_exists(user_id: str) -> bool:
+    try:
+        p = await asyncio.wait_for(
+            db.player_profiles.find_one({"user_id": user_id}, {"_id": 0, "user_id": 1}), timeout=3.0)
+        return p is not None
+    except Exception:
+        return False
+
+
+@api_router.post("/auth/register")
+async def register_email(req: RegisterRequest):
+    """Create an account with name + email + password. If a Google-only
+    account already exists for this email, this ADDS a password to it (same
+    account). Grants signup tokens once (idempotent)."""
+    email = req.email.strip().lower()
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address")
+    user_id = _user_id_for_email(email)
+    try:
+        existing = await asyncio.wait_for(
+            db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 1}), timeout=4.0)
+    except Exception:
+        existing = None
+    if existing and existing.get("password_hash"):
+        raise HTTPException(status_code=409,
+                            detail="An account with this email already exists. Please log in instead.")
+    pw_hash = _hash_password(req.password)
+    try:
+        await asyncio.wait_for(db.users.update_one(
+            {"id": user_id},
+            {"$setOnInsert": {"id": user_id, "tokens": 0,
+                              "created_at": datetime.now(timezone.utc).isoformat()},
+             "$set": {"name": req.name, "email": email, "password_hash": pw_hash}},
+            upsert=True,
+        ), timeout=5.0)
+    except Exception as e:
+        logger.error(f"register: upsert failed for {email}: {e}")
+        raise HTTPException(status_code=503, detail="Could not create account — please retry")
+    # Signup grant (idempotent on signup_grant transaction).
+    try:
+        grant = await asyncio.wait_for(db.token_transactions.find_one(
+            {"user_id": user_id, "kind": "signup_grant"}, {"_id": 0, "id": 1}), timeout=3.0)
+    except Exception:
+        grant = "unknown"
+    if grant is None:
+        try:
+            bal = await _credit_tokens(user_id, "signup_grant", TOKEN_RULES["signup_grant"],
+                                       {"email": email, "source": "register"})
+        except Exception:
+            bal = None
+        if bal is None:
+            bal = await _get_balance(user_id)
+    else:
+        bal = await _get_balance(user_id)
+    asyncio.create_task(_notify_admin("🎉 New signup (email)", f"Name: {req.name or '—'}\nEmail: {email}"))
+    return {
+        "token": create_token(user_id, email),
+        "user": {"id": user_id, "email": email, "name": req.name, "photo": ""},
+        "has_profile": await _profile_exists(user_id),
+        "tokens": bal,
+    }
+
+
+@api_router.post("/auth/login-password")
+async def login_password(req: PasswordLoginRequest):
+    """Log in with email + password. Auto-provisions the shareable demo
+    account on first use (email/password from env, huge token balance)."""
+    email = req.email.strip().lower()
+    user_id = _user_id_for_email(email)
+
+    # Auto-seed the demo account so it always works when its creds are used.
+    if email == DEMO_ACCOUNT_EMAIL and req.password == DEMO_ACCOUNT_PASSWORD:
+        try:
+            await asyncio.wait_for(db.users.update_one(
+                {"id": user_id},
+                {"$setOnInsert": {"id": user_id, "created_at": datetime.now(timezone.utc).isoformat()},
+                 "$set": {"email": email, "name": "Formanti Demo",
+                          "password_hash": _hash_password(DEMO_ACCOUNT_PASSWORD),
+                          "tokens": DEMO_ACCOUNT_TOKENS, "demo_account": True}},
+                upsert=True,
+            ), timeout=5.0)
+        except Exception as e:
+            logger.warning(f"demo account seed failed: {e}")
+        return {
+            "token": create_token(user_id, email),
+            "user": {"id": user_id, "email": email, "name": "Formanti Demo", "photo": ""},
+            "has_profile": await _profile_exists(user_id),
+            "tokens": DEMO_ACCOUNT_TOKENS,
+        }
+
+    try:
+        user = await asyncio.wait_for(db.users.find_one({"id": user_id}, {"_id": 0}), timeout=5.0)
+    except Exception:
+        user = None
+    if not user or not user.get("password_hash") or not _verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return {
+        "token": create_token(user_id, email),
+        "user": {"id": user_id, "email": email, "name": user.get("name", ""), "photo": user.get("photo", "")},
+        "has_profile": await _profile_exists(user_id),
+        "tokens": await _get_balance(user_id),
     }
 
 

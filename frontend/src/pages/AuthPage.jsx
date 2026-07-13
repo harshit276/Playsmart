@@ -4,7 +4,7 @@ import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Zap, ArrowLeft, LogIn, Phone } from "lucide-react";
+import { Zap, ArrowLeft, LogIn, Phone, Mail } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, getRedirectResult, signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 import api from "@/lib/api";
@@ -20,6 +20,35 @@ export default function AuthPage() {
   const [otp, setOtp] = useState("");
   const confirmationRef = useRef(null);
   const recaptchaRef = useRef(null);
+
+  // Email + password flow state
+  const [emailMode, setEmailMode] = useState("login"); // "login" | "signup"
+  const [emailName, setEmailName] = useState("");
+  const [emailAddr, setEmailAddr] = useState("");
+  const [emailPass, setEmailPass] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+
+  const handleEmailAuth = async () => {
+    const addr = emailAddr.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { toast.error("Enter a valid email address"); return; }
+    if (emailPass.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    setEmailBusy(true);
+    try {
+      const path = emailMode === "signup" ? "/auth/register" : "/auth/login-password";
+      const body = emailMode === "signup"
+        ? { name: emailName.trim(), email: addr, password: emailPass }
+        : { email: addr, password: emailPass };
+      const { data } = await api.post(path, body);
+      login(data.token, data.user, data.has_profile, data.tokens);
+      toast.success(emailMode === "signup"
+        ? `Welcome${emailName ? ", " + emailName.trim() : ""}! 🪙 ${data.tokens} tokens`
+        : "Welcome back!");
+      navigate(data.has_profile ? "/dashboard" : "/analyze");
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Something went wrong. Please try again.");
+    }
+    setEmailBusy(false);
+  };
 
   // If already logged in, redirect
   useEffect(() => {
@@ -240,6 +269,58 @@ export default function AuthPage() {
               )}
               {loading ? "Signing in..." : "Continue with Google"}
             </Button>
+
+            {/* Email + password sign up / log in */}
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
+                  <Mail className="w-3 h-3" /> {emailMode === "signup" ? "Create an account" : "Log in with email"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setEmailMode(emailMode === "signup" ? "login" : "signup")}
+                  className="text-[11px] text-lime-400 hover:text-lime-300 font-medium"
+                >
+                  {emailMode === "signup" ? "Have an account? Log in" : "New here? Sign up"}
+                </button>
+              </div>
+              {emailMode === "signup" && (
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={emailName}
+                  onChange={(e) => setEmailName(e.target.value)}
+                  disabled={emailBusy}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                />
+              )}
+              <input
+                type="email"
+                autoComplete="email"
+                placeholder="Email address"
+                value={emailAddr}
+                onChange={(e) => setEmailAddr(e.target.value)}
+                disabled={emailBusy}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+              />
+              <input
+                type="password"
+                autoComplete={emailMode === "signup" ? "new-password" : "current-password"}
+                placeholder="Password"
+                value={emailPass}
+                onChange={(e) => setEmailPass(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !emailBusy && handleEmailAuth()}
+                disabled={emailBusy}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+              />
+              <Button
+                onClick={handleEmailAuth}
+                disabled={emailBusy}
+                className="w-full h-11 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-lg text-sm"
+              >
+                {emailBusy ? "Please wait…" : emailMode === "signup" ? "Create account" : "Log in"}
+              </Button>
+            </div>
 
             {/* Phone OTP — Firebase Phone Auth (free, 10K/month). India-friendly. */}
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-2">
