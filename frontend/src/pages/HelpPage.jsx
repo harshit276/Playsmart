@@ -28,7 +28,7 @@ const CATEGORIES = [
 const FAQS = [
   {
     q: "How do tokens work?",
-    a: "Each video analysis costs 100 tokens. You get 300 free on signup (3 free analyses). Earn more by referring friends (200 each side), hosting community games (50/game), or completing training days (20/day). Tokens never expire.",
+    a: "Each video analysis costs 100 tokens. You get 100 free on signup (1 free analysis). Earn more by referring friends (100 each side), a daily login bonus (25/day up to 100 total), hosting community games (50/game), or completing training days (20/day). Tokens never expire.",
   },
   {
     q: "Will I be charged tokens if my analysis fails?",

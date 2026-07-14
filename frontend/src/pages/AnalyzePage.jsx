@@ -1468,7 +1468,7 @@ export default function AnalyzePage() {
     requestAnalysisNotifyPermission();
 
     // Guests get ONE free analysis. After that, force sign-up — they can
-    // claim 300 tokens for free which unlocks ~3 more analyses.
+    // claim 100 tokens for free which unlocks 1 more analysis.
     if (!user) {
       const used = localStorage.getItem("guest_analysis_used") === "true";
       if (used) {
@@ -2953,7 +2953,7 @@ export default function AnalyzePage() {
             if (data.guest_mode || !user) {
               try { localStorage.setItem("guest_analysis_used", "true"); } catch {}
               setTimeout(() => setShowGuestUpgrade(true), 2500);
-              toast.success("Free analysis complete! Sign up for 300 free tokens to analyze more.");
+              toast.success("Free analysis complete! Sign up for 100 free tokens to analyze more.");
             } else {
               refreshProfile();
               loadHistory();
@@ -3439,10 +3439,10 @@ export default function AnalyzePage() {
           {!user ? (
             <>
               <p className="text-sm font-semibold text-white">
-                This analysis costs 100 tokens — sign up to get 300 free.
+                This analysis costs 100 tokens — sign up to get 100 free.
               </p>
               <p className="text-[11px] text-zinc-400">
-                That's 3 free analyses on us. Tokens never expire.
+                That's 1 free analysis on us. Tokens never expire.
               </p>
             </>
           ) : tokens != null && tokens < 100 ? (
@@ -3943,9 +3943,9 @@ export default function AnalyzePage() {
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="bg-zinc-900/95 border border-lime-400/30 rounded-2xl p-5 max-w-sm text-center shadow-2xl">
           <div className="text-3xl mb-2">🪙</div>
-          <h3 className="font-bold text-white mb-1">Unlock Full Coaching · 300 free tokens</h3>
+          <h3 className="font-bold text-white mb-1">Unlock Full Coaching · 100 free tokens</h3>
           <p className="text-xs text-zinc-400 mb-4">
-            Sign in to keep this analysis, get personalized training, equipment picks, and 300 free tokens for more analyses.
+            Sign in to keep this analysis, get personalized training, equipment picks, and 100 free tokens for another analysis.
           </p>
           <Button
             onClick={handleInlineGoogleSignIn}
@@ -6130,7 +6130,7 @@ export default function AnalyzePage() {
             </h2>
             <p className="text-zinc-300 text-sm mb-5 leading-relaxed">
               {isGuest
-                ? "A printable PDF with your session verdict, priority fixes in order, and a shot-by-shot table. Sign in free to download it (300 tokens to start)."
+                ? "A printable PDF with your session verdict, priority fixes in order, and a shot-by-shot table. Sign in free to download it (100 tokens to start)."
                 : "A printable PDF you can take to the court or share with your coach — session verdict, priority fixes in order, and a shot-by-shot table."}
             </p>
             <div className="flex flex-col gap-2">
@@ -6153,11 +6153,11 @@ export default function AnalyzePage() {
             className="bg-gradient-to-br from-lime-500/10 via-zinc-900 to-zinc-950 border border-lime-400/30 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center relative">
             <div className="text-5xl mb-3">🪙</div>
             <h2 className="font-heading font-black text-2xl sm:text-3xl text-white uppercase tracking-tight mb-2">
-              Sign up — get 300 tokens free
+              Sign up — get 100 tokens free
             </h2>
             <p className="text-zinc-300 text-sm mb-5 leading-relaxed">
-              You've used your one free analysis. Sign up to unlock 3 more analyses on us
-              (300 tokens), plus history, training plan, and equipment recs.
+              You've used your one free analysis. Sign up to unlock another free analysis
+              (100 tokens), plus history, training plan, and equipment recs. Refer friends to earn more.
             </p>
             <div className="flex flex-col gap-2">
               <Button onClick={() => navigate("/auth")}

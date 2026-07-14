@@ -51,7 +51,7 @@ export default function InsufficientTokensModal({ open, onOpenChange, balance = 
             <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold pt-2 pb-1">Or earn free tokens</p>
 
             <EarnRow
-              icon={UserPlus} title="Refer a friend" detail="+200 each side · unlimited"
+              icon={UserPlus} title="Refer a friend" detail="+100 each side · unlimited"
               onClick={() => { close(); navigate("/referral"); }}
             />
             <EarnRow

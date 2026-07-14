@@ -145,7 +145,7 @@ export default function ProfilePage() {
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 transition-colors">
             <Sparkles className="w-5 h-5 text-lime-400 mb-2" />
             <p className="text-sm font-bold text-white">Refer & earn</p>
-            <p className="text-[10px] text-zinc-500">+200 tokens each side</p>
+            <p className="text-[10px] text-zinc-500">+100 tokens each side</p>
           </Link>
         </motion.div>
 

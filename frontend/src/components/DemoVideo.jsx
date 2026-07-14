@@ -49,7 +49,7 @@ export default function DemoVideo() {
                 </div>
                 <p className="text-white font-bold text-lg mb-1">Demo video coming soon</p>
                 <p className="text-zinc-400 text-sm max-w-md">
-                  In the meantime — try the app yourself with a 30-second clip. Free signup gets you 3 analyses on us.
+                  In the meantime — try the app yourself with a 30-second clip. Free signup gets you 1 analysis on us.
                 </p>
               </div>
             )}

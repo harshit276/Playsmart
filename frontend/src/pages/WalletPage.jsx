@@ -181,7 +181,7 @@ export default function WalletPage() {
             />
             <EarnAction
               icon={Sparkles} label="Daily login bonus"
-              detail={`+${rules.daily_login || 25} per day for the first 7 days`}
+              detail={`+${rules.daily_login || 25} per day · up to 100 total`}
             />
           </div>
         </motion.div>

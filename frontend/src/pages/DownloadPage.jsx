@@ -361,7 +361,7 @@ export default function DownloadPage() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-3">Ready to play smarter?</h2>
           <p className="text-zinc-400 mb-6 text-sm sm:text-base">
-            Install the app and get 300 free tokens — enough for 3 video analyses.
+            Install the app and get 100 free tokens — enough for 1 video analysis.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
             <Link

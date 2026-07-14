@@ -35,7 +35,10 @@ export default function ReferralPage() {
   }, [user?.id]);
 
   const code = data?.referral_code || referralCode;
-  const link = code ? `${window.location.origin}/?ref=${encodeURIComponent(code)}` : "";
+  // Point straight at the sign-up page (was "/", the homepage) so the link
+  // actually lands the friend on signup. The ?ref code is captured on load
+  // (see App.js) and redeemed right after they sign in.
+  const link = code ? `${window.location.origin}/auth?ref=${encodeURIComponent(code)}` : "";
 
   // Referrals where this user is the referrer (you sent the invite)
   const myReferrals = useMemo(() => {
@@ -69,7 +72,7 @@ export default function ReferralPage() {
   const shareWhatsApp = () => {
     const text =
       `🏸 Try Formanti — AI coach for your game.\n\n` +
-      `Get 500 free tokens (300 signup + 200 referral bonus) when you sign up via my link:\n${link}`;
+      `Get 200 free tokens (100 signup + 100 referral bonus) when you sign up via my link:\n${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
@@ -77,7 +80,7 @@ export default function ReferralPage() {
     if (navigator.share) {
       navigator.share({
         title: "Formanti",
-        text: "AI coach for your game. Get 500 free tokens with my link:",
+        text: "AI coach for your game. Get 200 free tokens with my link:",
         url: link,
       }).catch(() => {});
     } else copyLink();
@@ -97,12 +100,12 @@ export default function ReferralPage() {
             <p className="text-[11px] uppercase tracking-wider text-lime-300/80 font-bold">Refer & Earn</p>
           </div>
           <h1 className="font-heading font-black text-3xl sm:text-4xl text-white uppercase tracking-tight mb-2">
-            Both of you get 200 tokens
+            Both of you get 100 tokens
           </h1>
           <p className="text-zinc-300 text-sm max-w-md">
             Share your link. When a friend signs up and runs their first analysis,
-            <span className="text-lime-300 font-medium"> they get 200 bonus tokens</span> on top of the 300 signup grant —
-            and <span className="text-lime-300 font-medium">you get 200 too</span>.
+            <span className="text-lime-300 font-medium"> they get 100 bonus tokens</span> on top of the 100 signup grant —
+            and <span className="text-lime-300 font-medium">you get 100 too</span>.
           </p>
         </motion.div>
 

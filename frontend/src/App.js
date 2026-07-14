@@ -139,11 +139,43 @@ function AuthProvider({ children }) {
   // Hydrate auth in the background — never block initial render
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
+  // Capture a referral code from ?ref=CODE on ANY landing (the referral link
+  // now points at /auth?ref=CODE, but this also catches /?ref= etc.) and
+  // stash it so it survives the navigation to sign-in. It's redeemed right
+  // after login() — the old flow only read the URL deep inside the Assessment
+  // page, by which point the query param was long gone, so referrals never
+  // credited.
+  useEffect(() => {
+    try {
+      const ref = new URLSearchParams(window.location.search).get("ref");
+      if (ref && !localStorage.getItem("pending_referral")) {
+        localStorage.setItem("pending_referral", ref.trim());
+      }
+    } catch {}
+  }, []);
+
+  const redeemPendingReferral = useCallback(() => {
+    let code;
+    try { code = localStorage.getItem("pending_referral"); } catch {}
+    if (!code) return;
+    // Records the pending referral server-side; both sides are credited when
+    // the new user completes their first analysis. Idempotent + safe.
+    api.post("/tokens/redeem-referral", { code }, { timeout: 6000 })
+      .then(() => { try { localStorage.removeItem("pending_referral"); } catch {} })
+      .catch((err) => {
+        // Clear on a definitive server rejection (own code / not found /
+        // already redeemed); keep it only on a network error so a flaky
+        // cold-start can retry on the next login.
+        if (err?.response) { try { localStorage.removeItem("pending_referral"); } catch {} }
+      });
+  }, []);
+
   const login = (token, userData, hasProfile, initialTokens) => {
     localStorage.setItem("playsmart_token", token);
     localStorage.removeItem("guest_mode");
     setUserCached(userData);
     if (typeof initialTokens === "number") setTokensCached(initialTokens);
+    redeemPendingReferral();
     if (hasProfile) fetchMe();
     else fetchTokens();
   };

@@ -18,7 +18,7 @@ const FEATURES = [
   { icon: Dumbbell, title: "Smart Training Plans", desc: "Personalized weekly training programs that adapt to your skill level, goals, and available time.", color: "text-sky-400", bg: "bg-sky-400/10" },
   { icon: Target, title: "Equipment Recommendations", desc: "AI-powered gear suggestions based on your playing style, level, and budget — with price comparisons.", color: "text-purple-400", bg: "bg-purple-400/10" },
   { icon: Users, title: "Host & Find Local Games", desc: "Post a match, find players nearby, build your local community. WhatsApp share built in.", color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  { icon: Coins, title: "Tokens & Rewards", desc: "Get 300 free tokens on signup. Earn more by referring friends, hosting games, and completing training.", color: "text-amber-400", bg: "bg-amber-400/10" },
+  { icon: Coins, title: "Tokens & Rewards", desc: "Get 100 free tokens on signup. Earn more by referring friends, a daily login bonus, hosting games, and completing training.", color: "text-amber-400", bg: "bg-amber-400/10" },
   { icon: TrendingUp, title: "Progress Tracking", desc: "Track improvement over time with detailed stats, streak tracking, and skill development charts.", color: "text-rose-400", bg: "bg-rose-400/10" },
 ];
 
@@ -172,7 +172,7 @@ export default function LandingPage() {
             className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="hero-subtitle">
             Upload a video. Get instant technique analysis, personalized training plans, and smart gear recommendations — like having a pro coach in your pocket.
             <span className="block text-lime-400/90 text-sm sm:text-base mt-3 font-medium">
-              🪙 Sign up free — 300 tokens (3 analyses) on us.
+              🪙 Sign up free — 100 tokens (1 analysis) on us.
             </span>
           </motion.p>
 

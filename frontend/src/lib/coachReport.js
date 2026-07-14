@@ -36,6 +36,22 @@ function grabImage(selector) {
   return null;
 }
 
+// Collect every tracked-posture skeleton frame the posture tracker rendered
+// (hero + gallery cards), each tagged with its shot name via the
+// data-posture-frame attribute. These are canvas-derived data URLs so they
+// inline cleanly into the print window.
+function grabPostureFrames() {
+  const out = [];
+  try {
+    document.querySelectorAll("img[data-posture-frame]").forEach((el) => {
+      if (el.src?.startsWith("data:")) {
+        out.push({ src: el.src, label: el.dataset.postureFrame || "Shot" });
+      }
+    });
+  } catch { /* posture visuals are optional */ }
+  return out;
+}
+
 export function openCoachReport(result, opts = {}) {
   if (!result) return false;
   const playerName = opts.playerName || "Player";
@@ -54,7 +70,7 @@ export function openCoachReport(result, opts = {}) {
   const topFixes = [...tipCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t);
 
   const courtImg = grabImage("canvas[title*='Tap a dot']");
-  const postureImg = grabImage("img[alt*='posture at contact' i]");
+  const postureFrames = grabPostureFrames();
 
   const shotRows = shots.slice(0, 30).map((s, i) => `
     <tr>
@@ -90,13 +106,17 @@ export function openCoachReport(result, opts = {}) {
   .box { border: 1.5px solid #84cc16; background: #f7fee7; border-radius: 8px; padding: 10px 12px; margin-top: 6px; }
   .fix { background: #fffbeb; border-color: #f59e0b; }
   .note { color: #52525b; font-size: 10.5px; font-style: italic; }
-  .imgs { display: flex; gap: 14px; align-items: flex-start; }
+  .imgs { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
   .imgs img { max-height: 180px; border: 1px solid #d4d4d8; border-radius: 6px; }
+  .posture-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .posture-grid figure { border: 1px solid #d4d4d8; border-radius: 8px; overflow: hidden; width: 172px; background: #0a0a0a; }
+  .posture-grid img { display: block; width: 100%; height: 116px; object-fit: contain; background: #000; }
+  .posture-grid figcaption { font-size: 9.5px; color: #3f3f46; padding: 4px 6px; text-transform: capitalize; background: #fafafa; }
   .footer { margin-top: 22px; border-top: 1px solid #d4d4d8; padding-top: 8px; display: flex; justify-content: space-between; color: #71717a; font-size: 10px; }
   @media print { body { padding: 10mm 12mm; } .noprint { display: none; } }
 </style></head><body>
   <div class="head">
-    <div class="brand">⚡ ATHE<span>ONICS</span> <span style="font-weight:500;color:#52525b;font-size:13px">· Coach Report</span></div>
+    <div class="brand">⚡ FORM<span>ANTI</span> <span style="font-weight:500;color:#52525b;font-size:13px">· Coach Report</span></div>
     <div class="meta"><b>${esc(playerName)}</b> · ${esc(cap(result.sport || "Sport"))} · ${esc(date)}<br>
       Skill level: <b>${esc(result.skill_level || "—")}</b>${result.shot_analysis?.score != null ? ` · Session score: <b>${esc(result.shot_analysis.score)}/100</b>` : ""}</div>
   </div>
@@ -126,10 +146,13 @@ export function openCoachReport(result, opts = {}) {
   }</ol></div>
   ${cn.improvements_points?.length ? `<ul>${bullets(cn.improvements_points)}</ul>` : ""}
 
-  ${(courtImg || postureImg) ? `<h2>Positioning & Posture</h2><div class="imgs">
-    ${courtImg ? `<img src="${courtImg}" alt="Court positioning map">` : ""}
-    ${postureImg ? `<img src="${postureImg}" alt="Posture at contact">` : ""}
-  </div>${mv.note ? `<p class="note" style="margin-top:4px">${esc(mv.note)}</p>` : ""}` : ""}
+  ${(courtImg || postureFrames.length) ? `<h2>Positioning & Posture</h2>
+    ${courtImg ? `<div class="imgs"><img src="${courtImg}" alt="Court positioning map"></div>` : ""}
+    ${postureFrames.length ? `<p class="note" style="margin:6px 0 2px">Tracked posture at contact — joints color-graded against the ideal range for each shot.</p>
+    <div class="posture-grid">${postureFrames.map((p) => `
+      <figure><img src="${p.src}" alt="Posture at contact — ${esc(p.label)}"><figcaption>${esc(cap(p.label))}</figcaption></figure>
+    `).join("")}</div>` : ""}
+    ${mv.note ? `<p class="note" style="margin-top:4px">${esc(mv.note)}</p>` : ""}` : ""}
 
   <h2>Shot-by-Shot Breakdown</h2>
   <table><thead><tr><th>#</th><th>Time</th><th>Shot</th><th>Intent</th><th>Outcome</th><th>Score</th><th>Coach note</th></tr></thead>

@@ -104,7 +104,7 @@ export default function PricingPage() {
           </h1>
           <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto">
             ₹30 per analysis. Buy tokens, use them whenever — they don't expire.
-            Start with 3 free on signup.
+            Start with 1 free analysis on signup.
           </p>
         </motion.div>
 
@@ -253,14 +253,14 @@ export default function PricingPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
           className="bg-gradient-to-br from-lime-400/10 to-zinc-900 border border-lime-400/20 rounded-2xl p-6 text-center mb-10">
           <h2 className="font-heading font-black text-2xl text-white mb-2 uppercase tracking-tight">
-            3 free analyses on signup
+            1 free analysis on signup
           </h2>
           <p className="text-zinc-400 text-sm mb-4">
-            300 tokens credited automatically — try the AI Coach on your videos before paying a rupee.
+            100 tokens credited automatically — try the AI Coach on your video before paying a rupee. Refer friends to earn more.
           </p>
           <Link to={user ? "/analyze" : "/auth"}>
             <Button className="bg-lime-400 hover:bg-lime-500 text-black font-bold px-6">
-              {user ? "Open analyzer" : "Sign up — 3 free analyses"} <ArrowRight className="w-4 h-4 ml-2" />
+              {user ? "Open analyzer" : "Sign up — 1 free analysis"} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
         </motion.div>

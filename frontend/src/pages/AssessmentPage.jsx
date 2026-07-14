@@ -342,18 +342,22 @@ export default function AssessmentPage() {
       // Drop their caches so the dashboard / training / equipment fetch
       // fresh data with the new skill_level + play_style + budget.
       invalidateMatching((k) => k.includes("/recommendations/") || k.includes("/badges/") || k.includes("/progress/") || k.startsWith("/tokens/"));
-      // If they arrived via ?ref=CODE, redeem it. Server credits both
-      // sides on the new user's first analysis (background settle).
-      const refCode = new URLSearchParams(window.location.search).get("ref");
+      // If they arrived via ?ref=CODE (captured to localStorage on load in
+      // App.js, or still in the URL), redeem it. Server credits both sides on
+      // the new user's first analysis (background settle). login() already
+      // attempts this; kept here as a belt-and-suspenders fallback.
+      const refCode = new URLSearchParams(window.location.search).get("ref")
+        || (() => { try { return localStorage.getItem("pending_referral"); } catch { return null; } })();
       if (refCode) {
         try {
           await api.post("/tokens/redeem-referral", { code: refCode }, { timeout: 5000 });
+          try { localStorage.removeItem("pending_referral"); } catch {}
         } catch (e) { /* invalid code or already redeemed — silent */ }
       }
       // Refresh balance + celebrate the signup grant on the way to dash
       try { await refreshTokens(); } catch {}
-      if (typeof tokens === "number" && tokens >= 300) {
-        toast.success("🪙 +300 tokens credited! That's 3 free video analyses.", { duration: 4000 });
+      if (typeof tokens === "number" && tokens >= 100) {
+        toast.success("🪙 +100 tokens credited! That's 1 free video analysis.", { duration: 4000 });
       }
       toast.success("Profile created! Let's see your recommendations.");
     } catch (err) {

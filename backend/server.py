@@ -830,23 +830,22 @@ async def get_me(authorization: str = Header(None)):
     except (Exception, asyncio.TimeoutError) as e:
         logger.warning(f"/auth/me: profile fetch failed for {user['id'][:8]}: {e}")
 
-    # Daily-login token (first 7 days, once/day). Background — never blocks.
+    # Daily-login token: 25/day, once/day, until the account has earned
+    # DAILY_LOGIN_LIFETIME_CAP (100) total from logins — then it stops for
+    # good. No signup-age window. Background — never blocks the response.
     async def _maybe_daily_login_credit():
         try:
-            # Only credit during first 7 days after signup
-            user_doc = await asyncio.wait_for(
-                db.users.find_one({"id": user["id"]}, {"_id": 0, "created_at": 1}),
+            # Lifetime cap: stop once total daily-login credits reach 100.
+            lifetime_count = await asyncio.wait_for(
+                db.token_transactions.count_documents(
+                    {"user_id": user["id"], "kind": "daily_login"}),
                 timeout=2.0,
             )
-            created = (user_doc or {}).get("created_at")
-            if created:
-                created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                age_days = (datetime.now(timezone.utc) - created_dt).days
-                if age_days > 7:
-                    return
+            if lifetime_count * TOKEN_RULES["daily_login"] >= DAILY_LOGIN_LIFETIME_CAP:
+                return
             if await _today_credit_count(user["id"], "daily_login") < DAILY_CAPS["daily_login"]:
                 await _credit_tokens(user["id"], "daily_login", TOKEN_RULES["daily_login"],
-                                     {"day_index": age_days if created else None})
+                                     {"lifetime_index": lifetime_count})
         except Exception as e:
             logger.warning(f"daily_login credit failed for {user['id'][:8]}: {e}")
     asyncio.create_task(_maybe_daily_login_credit())
@@ -1348,16 +1347,19 @@ TOKEN_PACKS = [
 # Earn / spend amounts — change here, log everywhere (kind matches the
 # transaction "kind" field).
 TOKEN_RULES = {
-    "signup_grant":   300,   # once per user
-    "referral_credit": 200,  # to both referrer and referred user, once per pair
+    "signup_grant":   100,   # once per user — exactly 1 free analysis
+    "referral_credit": 100,  # to both referrer and referred user, once per pair
     "host_game":       50,   # cap 5/day
     "training_day":    20,   # cap 1/day
-    "daily_login":     25,   # cap 1/day, only first 7 days
+    "daily_login":     25,   # cap 1/day, up to DAILY_LOGIN_LIFETIME_CAP total
     "analysis_spend": -100,  # negative = debit
     "coach_voice_spend": -5, # negative = debit; per Live Voice Coach reply
 }
 
 DAILY_CAPS = {"host_game": 5, "training_day": 1, "daily_login": 1}
+# Daily-login bonus stops once the account has earned this many tokens from
+# logins in total (25/day × 4 days = 100), with no signup-age window.
+DAILY_LOGIN_LIFETIME_CAP = 100
 
 
 class SpendRequest(BaseModel):

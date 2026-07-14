@@ -21,7 +21,7 @@ export default function TokenEconomyStrip() {
             Earn free, or top up.
           </h2>
           <p className="text-zinc-400 text-sm mt-2 max-w-xl mx-auto">
-            Tokens unlock AI video analysis. Get 300 free on signup, earn more for inviting friends and using the app.
+            Tokens unlock AI video analysis. Get 100 free on signup, earn more for inviting friends and using the app.
           </p>
         </div>
 
