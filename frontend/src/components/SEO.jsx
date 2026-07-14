@@ -9,15 +9,21 @@ export default function SEO({
   title,
   description,
   keywords,
-  image = "https://www.formanti.com/icons/icon-512.png",
+  image = "https://www.formanti.com/icons/og-card.svg",
   url,
   type = "website",
   structuredData,
   noindex = false,
 }) {
   const fullTitle = title ? `${title} | Formanti` : "Formanti - Your AI Sports Coach";
+  // Canonical must be clean: no query string or hash (those create duplicate
+  // canonicals for the same page, e.g. /analyze?sport=badminton). Fall back to
+  // origin + pathname only, never window.location.href.
   const canonicalUrl =
-    url || (typeof window !== "undefined" ? window.location.href : "https://www.formanti.com");
+    url ||
+    (typeof window !== "undefined"
+      ? window.location.origin + window.location.pathname
+      : "https://www.formanti.com");
 
   const structuredDataArray = Array.isArray(structuredData)
     ? structuredData
