@@ -24,6 +24,7 @@ import PlayerSelectionModal from "@/components/PlayerSelectionModal";
 import { NewBadgeOverlay } from "@/components/BadgeDisplay";
 import MatchInsights from "@/components/MatchInsights";
 import ProReferencePanel from "@/components/ProReferencePanel";
+import ScoreRevealSheet, { ScoreGauge } from "@/components/ScoreRevealSheet";
 import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
@@ -4953,12 +4954,12 @@ export default function AnalyzePage() {
         {perfScores.dimension_list?.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5">
-            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-4 flex items-center gap-1">
+            <p className="text-xs text-zinc-500 uppercase tracking-wide font-medium mb-2 flex items-center gap-1">
               <BarChart3 className="w-3 h-3 text-sky-400" /> Performance Scores
             </p>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-zinc-400 text-sm">Overall</span>
-              <span className="font-heading font-bold text-2xl text-white">{perfScores.overall_score}/10</span>
+            {/* Animated overall gauge — mirrors the reveal sheet. */}
+            <div className="flex justify-center mb-2">
+              <ScoreGauge value={Number(perfScores.overall_score) || 0} size={200} label="Overall" />
             </div>
             <div className="space-y-3">
               {perfScores.dimension_list.map((dim, i) => {
@@ -6115,37 +6116,17 @@ export default function AnalyzePage() {
         );
       })()}
 
-      {/* Guest upgrade prompt — shown after the free analysis completes
-          and on the second guest analyze attempt. */}
-      {/* Coach Report ready — auto-popup after a fresh analysis. The
-          take-home artifact; for guests it's the sign-in hook. */}
-      {reportPromptOpen && result && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-          onClick={() => setReportPromptOpen(false)}>
-          <div onClick={(e) => e.stopPropagation()}
-            className="bg-gradient-to-br from-amber-400/10 via-zinc-900 to-zinc-950 border border-amber-400/30 rounded-3xl p-6 sm:p-7 max-w-md w-full text-center relative">
-            <div className="text-5xl mb-3">📄</div>
-            <h2 className="font-heading font-black text-2xl text-white uppercase tracking-tight mb-2">
-              Your Coach Report is ready
-            </h2>
-            <p className="text-zinc-300 text-sm mb-5 leading-relaxed">
-              {isGuest
-                ? "A printable PDF with your session verdict, priority fixes in order, and a shot-by-shot table. Sign in free to download it (100 tokens to start)."
-                : "A printable PDF you can take to the court or share with your coach — session verdict, priority fixes in order, and a shot-by-shot table."}
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button onClick={handleDownloadReport}
-                className="w-full bg-amber-400 text-black hover:bg-amber-500 font-bold rounded-full h-11">
-                {isGuest ? "Sign in to download →" : "Download PDF →"}
-              </Button>
-              <button onClick={() => setReportPromptOpen(false)}
-                className="text-xs text-zinc-500 hover:text-zinc-300">
-                Maybe later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Score reveal — a bottom sheet springs up after a fresh analysis
+          with an animated half-circle gauge (level counts up over ~2.2s),
+          the headline metrics, and the full-report download. Replaces the
+          old flat "report is ready" modal. */}
+      <ScoreRevealSheet
+        open={reportPromptOpen}
+        result={result}
+        isGuest={isGuest}
+        onClose={() => setReportPromptOpen(false)}
+        onDownload={handleDownloadReport}
+      />
       {showGuestUpgrade && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           onClick={() => setShowGuestUpgrade(false)}>
