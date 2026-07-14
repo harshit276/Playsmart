@@ -30,6 +30,7 @@ export function ScoreGauge({
   size = 220,
   label = "Level",
   suffix = `/${max}`,
+  decimals = 1,
   duration = 2.2,
   runKey = 0,
 }) {
@@ -77,7 +78,7 @@ export function ScoreGauge({
       <div className="absolute inset-x-0 top-[38%] flex flex-col items-center">
         <div className="flex items-baseline">
           <span className={`font-heading font-black tabular-nums ${text}`} style={{ fontSize: size * 0.2 }}>
-            {display.toFixed(1)}
+            {display.toFixed(decimals)}
           </span>
           <span className="text-zinc-500 font-heading font-bold ml-0.5" style={{ fontSize: size * 0.075 }}>
             {suffix}

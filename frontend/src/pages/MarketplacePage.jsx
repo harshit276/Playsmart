@@ -25,6 +25,7 @@ import SEO from "@/components/SEO";
 import { withAffiliate } from "@/lib/affiliateLinks";
 import { productImageFor } from "@/lib/productImage";
 import EquipmentRecommendModal from "@/components/EquipmentRecommendModal";
+import { AnimatedNumber } from "@/components/AnimatedStat";
 import { useAuth } from "@/App";
 import api from "@/lib/api";
 
@@ -869,15 +870,34 @@ function FitBar({ label, value, color = "bg-lime-400" }) {
 }
 
 function FitScore({ score }) {
-  // Colour ring based on score
-  const color = score >= 80 ? "text-lime-400 border-lime-400/50 bg-lime-400/10"
-    : score >= 60 ? "text-sky-400 border-sky-400/50 bg-sky-400/10"
-    : score >= 40 ? "text-amber-400 border-amber-400/50 bg-amber-400/10"
-    : "text-rose-400 border-rose-400/50 bg-rose-400/10";
+  // Animated circular fit ring — fills to the score with a count-up number
+  // when it scrolls into view. Colour-graded by strength of the match.
+  const clamped = Math.max(0, Math.min(100, Number(score) || 0));
+  const pct = clamped / 100;
+  const R = 22;
+  const C = 2 * Math.PI * R;
+  const stroke = clamped >= 80 ? "#a3e635" : clamped >= 60 ? "#38bdf8" : clamped >= 40 ? "#fbbf24" : "#fb7185";
+  const textColor = clamped >= 80 ? "text-lime-400" : clamped >= 60 ? "text-sky-400" : clamped >= 40 ? "text-amber-400" : "text-rose-400";
   return (
-    <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-full border-2 ${color}`}>
-      <span className="font-heading font-bold text-base leading-none">{score}</span>
-      <span className="text-[8px] uppercase tracking-wider opacity-70 mt-0.5">fit</span>
+    <div className="relative w-14 h-14 shrink-0">
+      <svg viewBox="0 0 56 56" className="w-14 h-14 -rotate-90">
+        <circle cx="28" cy="28" r={R} fill="none" stroke="#27272a" strokeWidth="4" />
+        <motion.circle
+          cx="28" cy="28" r={R} fill="none" stroke={stroke} strokeWidth="4" strokeLinecap="round"
+          strokeDasharray={C}
+          initial={{ strokeDashoffset: C }}
+          whileInView={{ strokeDashoffset: C * (1 - pct) }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          style={{ filter: `drop-shadow(0 0 4px ${stroke}66)` }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className={`font-heading font-bold text-base leading-none ${textColor}`}>
+          <AnimatedNumber value={clamped} duration={1.1} />
+        </span>
+        <span className="text-[8px] uppercase tracking-wider text-zinc-500 mt-0.5">fit</span>
+      </div>
     </div>
   );
 }

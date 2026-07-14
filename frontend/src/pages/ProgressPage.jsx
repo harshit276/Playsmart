@@ -14,6 +14,7 @@ import {
 import api from "@/lib/api";
 import { BadgeGrid } from "@/components/BadgeDisplay";
 import ShareModal from "@/components/ShareModal";
+import { AnimatedNumber, ScoreGauge } from "@/components/AnimatedStat";
 
 // Stash a baseline analysis and jump to /analyze in "Progress Review" mode —
 // the AnalyzePage reads this on mount to run the before/after comparison.
@@ -239,7 +240,9 @@ export default function ProgressPage() {
             <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
               className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 text-center">
               <s.icon className={`w-5 h-5 ${s.color} mx-auto mb-1.5`} strokeWidth={1.5} />
-              <p className="font-heading font-bold text-2xl text-white leading-none">{s.value}</p>
+              <p className="font-heading font-bold text-2xl text-white leading-none">
+                <AnimatedNumber value={s.value} />
+              </p>
               <p className="text-zinc-500 text-[10px] uppercase tracking-wide mt-1">{s.label}</p>
             </motion.div>
           ))}
@@ -263,24 +266,36 @@ export default function ProgressPage() {
         {stats && (
           <motion.div key={activeSport} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
             {/* Sport summary */}
-            <div className="bg-gradient-to-br from-lime-400/10 via-zinc-900 to-zinc-900 border border-lime-400/25 rounded-2xl p-5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{emojiFor(activeSport)}</span>
-                  <div>
-                    <p className="font-heading font-bold text-xl text-white leading-none">{labelFor(activeSport)}</p>
-                    <p className="text-[11px] text-zinc-400 mt-1">{stats.count} {stats.count === 1 ? "analysis" : "analyses"} · last {shortDate(stats.lastDate)}</p>
+            {(() => {
+              const latestScore = stats.scoreSeries.length ? stats.scoreSeries[stats.scoreSeries.length - 1].score : null;
+              return (
+                <div className="bg-gradient-to-br from-lime-400/10 via-zinc-900 to-zinc-900 border border-lime-400/25 rounded-2xl p-5">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{emojiFor(activeSport)}</span>
+                      <div>
+                        <p className="font-heading font-bold text-xl text-white leading-none">{labelFor(activeSport)}</p>
+                        <p className="text-[11px] text-zinc-400 mt-1">{stats.count} {stats.count === 1 ? "analysis" : "analyses"} · last {shortDate(stats.lastDate)}</p>
+                        <p className="text-[11px] text-zinc-400 mt-2">
+                          <span className="uppercase tracking-wider text-zinc-500">Level </span>
+                          <span className="font-heading font-bold text-lime-300">{stats.latestLevel || "—"}</span>
+                          {stats.firstLevel && stats.latestLevel && stats.firstLevel !== stats.latestLevel && (
+                            <span className="text-lime-400"> · ↑ from {stats.firstLevel}</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Animated latest-score gauge — the same reveal visual as
+                        the analyze page, keyed to the sport so it replays on switch. */}
+                    {latestScore != null && latestScore > 0 && (
+                      <div className="mx-auto sm:mx-0">
+                        <ScoreGauge value={latestScore / 10} size={132} label="Latest" runKey={activeSport} duration={1.6} />
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-wider text-zinc-500">Level</p>
-                  <p className="font-heading font-bold text-lime-300 text-lg leading-none">{stats.latestLevel || "—"}</p>
-                  {stats.firstLevel && stats.latestLevel && stats.firstLevel !== stats.latestLevel && (
-                    <p className="text-[10px] text-lime-400 mt-0.5">↑ from {stats.firstLevel}</p>
-                  )}
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Per-shot trend cards */}
             {stats.shots.length > 0 && (

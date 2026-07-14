@@ -4,6 +4,7 @@ import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { AnimatedNumber, ScoreGauge } from "@/components/AnimatedStat";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -638,17 +639,34 @@ export default function TrainingPage() {
             </div>
           </div>
 
-          {/* Overall Progress Bar */}
-          <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-3 flex items-center gap-4">
-            <div className="flex-1">
-              <Progress value={overallProgress} className="h-2 bg-zinc-800" />
+          {/* Overall progress — animated completion gauge + day checklist bar */}
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 flex items-center gap-4 sm:gap-6">
+            <div className="shrink-0">
+              <ScoreGauge
+                value={overallProgress}
+                max={100}
+                suffix="%"
+                decimals={0}
+                label="Complete"
+                size={116}
+                duration={1.6}
+                runKey={`${plan?.id || plan?.name || "plan"}-${overallProgress}`}
+              />
             </div>
-            <span className="text-sm font-bold text-lime-400 shrink-0">{overallProgress}%</span>
-            {overallProgress >= 100 && (
-              <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px] shrink-0">
-                <Trophy className="w-3 h-3 mr-1" /> Complete!
-              </Badge>
-            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs uppercase tracking-wider text-zinc-500 font-bold">Days done</span>
+                <span className="text-sm font-bold text-white">
+                  <AnimatedNumber value={completedCount} /> <span className="text-zinc-500">/ {totalTrainingDays}</span>
+                </span>
+              </div>
+              <Progress value={overallProgress} className="h-2 bg-zinc-800" />
+              {overallProgress >= 100 && (
+                <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px] mt-2">
+                  <Trophy className="w-3 h-3 mr-1" /> Plan complete!
+                </Badge>
+              )}
+            </div>
           </div>
         </motion.div>
 
