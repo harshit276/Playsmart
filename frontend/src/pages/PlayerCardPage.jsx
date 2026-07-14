@@ -9,6 +9,7 @@ import { Share2, Copy, Zap, Star, Target, Dumbbell, Flame, Award, Trophy } from 
 import api from "@/lib/api";
 import ShareModal from "@/components/ShareModal";
 import { BadgeStrip } from "@/components/BadgeDisplay";
+import { AnimatedNumber } from "@/components/AnimatedStat";
 
 export default function PlayerCardPage() {
   const { user } = useAuth();
@@ -139,7 +140,9 @@ export default function PlayerCardPage() {
             <div className="bg-zinc-800/50 rounded-lg p-3">
               <Flame className="w-4 h-4 text-amber-400 mb-1" strokeWidth={1.5} />
               <p className="text-xs text-zinc-500">Training Days</p>
-              <p className="font-semibold text-white text-sm" data-testid="card-training-days">{card.training_days_completed}</p>
+              <p className="font-semibold text-white text-sm" data-testid="card-training-days">
+                <AnimatedNumber value={card.training_days_completed || 0} />
+              </p>
             </div>
             <div className="bg-zinc-800/50 rounded-lg p-3">
               <Star className="w-4 h-4 text-lime-400 mb-1" strokeWidth={1.5} />

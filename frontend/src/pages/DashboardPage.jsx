@@ -10,6 +10,7 @@ import {
   Sparkles, Swords, Users
 } from "lucide-react";
 import api from "@/lib/api";
+import { AnimatedNumber } from "@/components/AnimatedStat";
 import { hasVideoAnalysis } from "@/lib/sportConfig";
 import { BadgeStrip } from "@/components/BadgeDisplay";
 import { swrGet } from "@/lib/cachedFetch";
@@ -55,18 +56,24 @@ const SKILL_COLORS = {
 function ProgressRing({ value, max, size = 56, strokeWidth = 4, color = "#bef264" }) {
   const r = (size - strokeWidth * 2) / 2;
   const circ = 2 * Math.PI * r;
-  const pct = max > 0 ? value / max : 0;
-  const offset = circ - pct * circ;
+  const pct = max > 0 ? Math.max(0, Math.min(1, value / max)) : 0;
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#27272a" strokeWidth={strokeWidth} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={strokeWidth}
-          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-          className="transition-all duration-1000" />
+        {/* Animate the fill in on scroll-into-view instead of rendering at
+            the final value (the old CSS transition never fired on mount). */}
+        <motion.circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circ} strokeLinecap="round"
+          initial={{ strokeDashoffset: circ }}
+          whileInView={{ strokeDashoffset: circ - pct * circ }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="font-heading font-bold text-sm text-white">{Math.round(pct * 100)}%</span>
+        <span className="font-heading font-bold text-sm text-white">
+          <AnimatedNumber value={Math.round(pct * 100)} suffix="%" duration={1.2} />
+        </span>
       </div>
     </div>
   );
@@ -383,13 +390,13 @@ export default function DashboardPage() {
                   <div className="relative flex items-center gap-4 mb-4">
                     <div className="flex items-center gap-1.5">
                       <Video className={`w-3.5 h-3.5 ${acc.text}`} />
-                      <span className="text-sm font-semibold text-white">{analysisCount}</span>
+                      <span className="text-sm font-semibold text-white"><AnimatedNumber value={analysisCount} /></span>
                       <span className="text-xs text-zinc-500">analyses</span>
                     </div>
                     {latestA?.shot_analysis?.score != null && (
                       <div className="flex items-center gap-1.5">
                         <BarChart3 className={`w-3.5 h-3.5 ${acc.text}`} />
-                        <span className="text-sm font-semibold text-white">{latestA.shot_analysis.score}</span>
+                        <span className="text-sm font-semibold text-white"><AnimatedNumber value={latestA.shot_analysis.score} /></span>
                         <span className="text-xs text-zinc-500">last score</span>
                       </div>
                     )}
@@ -446,9 +453,13 @@ export default function DashboardPage() {
             >
               <Flame className="w-10 h-10 text-amber-400 mb-3" strokeWidth={1.5} />
             </motion.div>
-            <p className="font-heading font-black text-5xl text-white" data-testid="streak-count">{streak}</p>
+            <p className="font-heading font-black text-5xl text-white" data-testid="streak-count">
+              <AnimatedNumber value={streak} />
+            </p>
             <p className="text-zinc-500 text-sm font-medium uppercase tracking-wide">Day Streak</p>
-            <p className="text-zinc-600 text-xs mt-1">{completedDays} / {totalDays} days done</p>
+            <p className="text-zinc-600 text-xs mt-1">
+              <AnimatedNumber value={completedDays} /> / {totalDays} days done
+            </p>
 
             {/* Weekly dots */}
             <div className="flex gap-2 mt-4">

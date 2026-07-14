@@ -14,6 +14,7 @@ export function AnimatedNumber({
   duration = 1.4,
   prefix = "",
   suffix = "",
+  format,
   className = "",
 }) {
   const ref = useRef(null);
@@ -33,7 +34,7 @@ export function AnimatedNumber({
 
   return (
     <span ref={ref} className={className}>
-      {prefix}{display.toFixed(decimals)}{suffix}
+      {format ? format(display) : `${prefix}${display.toFixed(decimals)}${suffix}`}
     </span>
   );
 }

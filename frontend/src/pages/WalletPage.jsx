@@ -20,6 +20,7 @@ import api from "@/lib/api";
 import { swrGet } from "@/lib/cachedFetch";
 import SEO from "@/components/SEO";
 import BuyTokensDialog from "@/components/BuyTokensDialog";
+import { AnimatedNumber } from "@/components/AnimatedStat";
 
 const KIND_LABEL = {
   signup_grant: "Signup grant",
@@ -105,7 +106,7 @@ export default function WalletPage() {
           <div className="absolute -right-6 -bottom-6 text-[140px] opacity-10 select-none">🪙</div>
           <p className="text-[11px] uppercase tracking-wider text-purple-300/70 font-bold">Formanti Tokens</p>
           <p className="font-heading font-black text-5xl sm:text-6xl text-white mt-1">
-            {balance.toLocaleString("en-IN")}
+            <AnimatedNumber value={balance} duration={1.5} format={(n) => Math.round(n).toLocaleString("en-IN")} />
           </p>
           <p className="text-zinc-400 text-sm mt-2">
             Spend <span className="text-white font-medium">100 tokens</span> per video analysis. Tokens never expire.
