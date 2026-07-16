@@ -90,18 +90,42 @@ export function ScoreGauge({
   );
 }
 
-// Derive the headline numbers from the analysis result.
+// Universal-mode analyses carry no numeric overall score — only the AI's
+// skill verdict. Map that verdict onto the 0–10 gauge so "Your level" still
+// means something. We deliberately do NOT average shots[].score here: the
+// model returns a near-constant (~90) per shot, so averaging it would show an
+// Intermediate player 9.0/10.
+const SKILL_LEVEL_SCORE = {
+  beginner: 3,
+  novice: 3,
+  "upper beginner": 4,
+  intermediate: 5.5,
+  "upper intermediate": 6.5,
+  advanced: 7.5,
+  expert: 8.5,
+  pro: 9,
+  professional: 9,
+  elite: 9.5,
+};
+
+// Derive the headline numbers from the analysis result. `level` is null when
+// nothing trustworthy is available — callers hide the gauge rather than
+// render a misleading 0.0.
 function deriveMetrics(result) {
-  if (!result) return { level: 0, skill: null, topSpeed: null, shots: 0, shotName: null };
+  if (!result) return { level: null, skill: null, topSpeed: null, shots: 0, shotName: null };
   const ps = result.performance_scores || {};
   const rawScore = result.shot_analysis?.score ?? result.pro_comparison?.overall_score ?? null;
-  let level = typeof ps.overall_score === "number" ? ps.overall_score : null;
-  if (level == null && rawScore != null) level = rawScore > 10 ? rawScore / 10 : rawScore;
+  let level = typeof ps.overall_score === "number" && ps.overall_score > 0 ? ps.overall_score : null;
+  if (level == null && rawScore != null && rawScore > 0) level = rawScore > 10 ? rawScore / 10 : rawScore;
   if (level == null && Array.isArray(ps.dimension_list) && ps.dimension_list.length) {
     const avg = ps.dimension_list.reduce((a, d) => a + (d.score || 0), 0) / ps.dimension_list.length;
-    level = avg;
+    if (avg > 0) level = avg;
   }
-  level = Math.max(0, Math.min(10, Number(level) || 0));
+  if (level == null) {
+    const skillKey = String(result.skill_level || result.overall_skill_level || "").trim().toLowerCase();
+    if (SKILL_LEVEL_SCORE[skillKey] != null) level = SKILL_LEVEL_SCORE[skillKey];
+  }
+  level = level == null ? null : Math.max(0, Math.min(10, Number(level)));
 
   // Top speed across shots (km/h) — the "smash speed" moment when present.
   let topSpeed = null;
@@ -134,7 +158,7 @@ function MetricChip({ icon: Icon, label, value, accent = "text-white" }) {
 
 export default function ScoreRevealSheet({ open, onClose, onDownload, result, isGuest }) {
   const m = deriveMetrics(result);
-  const { text } = levelColor(m.level);
+  const { text } = levelColor(m.level == null ? 7.5 : m.level);
 
   return (
     <AnimatePresence>
@@ -172,14 +196,22 @@ export default function ScoreRevealSheet({ open, onClose, onDownload, result, is
               Analysis complete
             </p>
 
-            {/* Gauge */}
-            <div className="flex justify-center">
-              <ScoreGauge value={m.level} runKey={open ? 1 : 0} size={210} label="Your level" />
-            </div>
+            {/* Gauge — only when we have a real level. Otherwise the skill
+                verdict stands on its own (a 0.0 gauge would be a lie). */}
+            {m.level != null ? (
+              <div className="flex justify-center">
+                <ScoreGauge value={m.level} runKey={open ? 1 : 0} size={210} label="Your level" />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-4">
+                <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-1">Your level</p>
+                <p className={`font-heading font-black text-4xl capitalize ${text}`}>{m.skill || "Analyzed"}</p>
+              </div>
+            )}
 
             {/* Verdict line */}
             <p className="text-center text-white font-heading font-bold text-lg -mt-1 capitalize">
-              {m.skill || "Analyzed"}
+              {m.level != null ? (m.skill || "Analyzed") : ""}
               {m.shotName ? <span className="text-zinc-500 font-normal text-sm"> · {m.shotName}</span> : null}
             </p>
 
@@ -188,10 +220,10 @@ export default function ScoreRevealSheet({ open, onClose, onDownload, result, is
               {m.topSpeed ? (
                 <MetricChip icon={Zap} label="Top speed" value={`${m.topSpeed}`} accent={text} />
               ) : (
-                <MetricChip icon={Gauge} label="Level" value={m.level.toFixed(1)} accent={text} />
+                <MetricChip icon={Gauge} label="Level" value={m.level != null ? m.level.toFixed(1) : "—"} accent={text} />
               )}
               <MetricChip icon={Target} label="Shots" value={m.shots || "—"} />
-              <MetricChip icon={TrendingUp} label="Out of" value="10" />
+              {m.level != null && <MetricChip icon={TrendingUp} label="Out of" value="10" />}
             </div>
             {m.topSpeed ? (
               <p className="text-center text-[10px] text-zinc-500 mt-1.5">Top speed in km/h · estimated from your clip</p>

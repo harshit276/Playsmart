@@ -77,6 +77,37 @@ let _multiLoadingPromise = null;
 // ------------- public API -------------
 
 /**
+ * Bring a TF.js backend up, with a real fallback chain.
+ *
+ * The old code did `try { await tf.setBackend("webgl"); } catch {}` then
+ * `await tf.ready()`. When webgl is unavailable the setBackend error was
+ * swallowed and tf.ready() fell through to the highest-priority REGISTERED
+ * backend (webgpu). If that then failed to initialise, every later op threw
+ * "The highest priority backend 'webgpu' has not yet been initialized" —
+ * which silently killed pose extraction (no posture tracker, no skeleton
+ * frames in the Coach Report). Try each backend and confirm it actually
+ * took, so we degrade to cpu instead of dying.
+ *
+ * @returns {Promise<string|null>} the backend that came up, or null.
+ */
+async function _ensureBackend() {
+  if (tf.getBackend()) {
+    try { await tf.ready(); return tf.getBackend(); } catch { /* fall through */ }
+  }
+  for (const backend of ["webgl", "webgpu", "cpu"]) {
+    try {
+      const ok = await tf.setBackend(backend);
+      if (ok === false) continue;
+      await tf.ready();
+      if (tf.getBackend() === backend) return backend;
+    } catch {
+      // Backend unavailable in this browser — try the next one.
+    }
+  }
+  return null;
+}
+
+/**
  * Return the current model loading state.
  * @returns {{ state: ModelState, error: string|null }}
  */
@@ -111,8 +142,7 @@ export async function initModel() {
       const MAX_RETRIES = 2;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          try { await tf.setBackend("webgl"); } catch {}
-          await tf.ready();
+          await _ensureBackend();
 
           const model = poseDetection.SupportedModels.MoveNet;
           const detectorConfig = {
@@ -162,8 +192,7 @@ export async function initMultiPoseModel() {
     let lastErr;
     for (const modelUrl of SOURCES) {
       try {
-        try { await tf.setBackend("webgl"); } catch {}
-        await tf.ready();
+        await _ensureBackend();
 
         const model = poseDetection.SupportedModels.MoveNet;
         const detectorConfig = {
