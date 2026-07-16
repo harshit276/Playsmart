@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/sonner";
 import api from "@/lib/api";
+import { invalidateMatching } from "@/lib/cachedFetch";
 import Navbar from "@/components/Navbar";
 import LandingPage from "@/pages/LandingPage"; // Eager — first paint
 import InstallPrompt from "@/components/InstallPrompt";
@@ -75,6 +76,37 @@ function writeCache(key, value) {
     if (value === null || value === undefined) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(value));
   } catch {}
+}
+
+// Everything on this device that belongs to whoever is signed in. Cleared on
+// logout and on an account switch so one user's data can never surface under
+// another's account. `pending_referral` is deliberately NOT cleared — it
+// describes an incoming invite, not the outgoing user.
+const USER_SCOPED_LOCAL_KEYS = [
+  "playsmart_last_analysis",
+  "last_analysis_score",
+  "next_analysis_reminder",
+  "guest_analysis_used",
+  "playsmart_active_analysis_job",
+  "playsmart_picker_session",
+];
+const USER_SCOPED_SESSION_KEYS = [
+  "playsmart_progress_baseline",
+  "pending_analysis",
+];
+
+export function clearUserScopedData() {
+  for (const k of USER_SCOPED_LOCAL_KEYS) {
+    try { localStorage.removeItem(k); } catch {}
+  }
+  for (const k of USER_SCOPED_SESSION_KEYS) {
+    try { sessionStorage.removeItem(k); } catch {}
+  }
+  // The SWR cache is keyed by URL only (/analyses, /progress, /tokens/balance,
+  // /badges…), so it is NOT user-safe on its own — drop all of it.
+  try { invalidateMatching(() => true); } catch {}
+  // The analyzed video itself lives in IndexedDB; drop it too.
+  import("@/lib/videoStore").then((vs) => { try { vs.purgeVideo?.(); } catch {} }).catch(() => {});
 }
 
 function AuthProvider({ children }) {
@@ -171,6 +203,10 @@ function AuthProvider({ children }) {
   }, []);
 
   const login = (token, userData, hasProfile, initialTokens) => {
+    // Account switch on a shared device: if a DIFFERENT user was cached,
+    // wipe their data before we hand the app to this one.
+    const prev = readCache(AUTH_USER_CACHE);
+    if (prev?.id && userData?.id && prev.id !== userData.id) clearUserScopedData();
     localStorage.setItem("playsmart_token", token);
     localStorage.removeItem("guest_mode");
     setUserCached(userData);
@@ -186,6 +222,11 @@ function AuthProvider({ children }) {
     writeCache(AUTH_USER_CACHE, null);
     writeCache(AUTH_PROFILE_CACHE, null);
     writeCache(AUTH_TOKENS_CACHE, null);
+    // Everything below is the signed-in user's data. Without this the next
+    // account to sign in on this device inherits it — the previous user's
+    // saved analysis reappeared under a brand-new account's Results, and the
+    // URL-keyed SWR cache served their history/progress/balance too.
+    clearUserScopedData();
     setUser(null);
     setProfile(null);
     setTokens(null);

@@ -2055,9 +2055,15 @@ async def create_or_update_profile(data: PlayerProfileCreate, authorization: str
 
 
 @api_router.get("/profile/{user_id}")
-async def get_profile(user_id: str):
+async def get_profile(user_id: str, authorization: str = Header(None)):
     if user_id == "guest":
         return {"profile": _guest_default_profile()}
+    # SECURITY: this had no auth at all — anyone holding a user_id could read
+    # that player's profile. Serve only the caller's own profile.
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return {"profile": _guest_default_profile()}
+    user_id = user["id"]
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -3128,9 +3134,15 @@ async def get_training_plan(level: str):
 # ─── Progress Routes ───
 
 @api_router.get("/progress/{user_id}")
-async def get_progress(user_id: str):
+async def get_progress(user_id: str, authorization: str = Header(None)):
+    _GUEST_PROGRESS = {"completed_days": 0, "total_days": 30, "progress_percentage": 0, "current_streak": 0, "entries": []}
     if user_id == "guest":
-        return {"completed_days": 0, "total_days": 30, "progress_percentage": 0, "current_streak": 0, "entries": []}
+        return _GUEST_PROGRESS
+    # SECURITY: was unauthenticated — only serve the caller's own progress.
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return _GUEST_PROGRESS
+    user_id = user["id"]
     try:
         entries = await asyncio.wait_for(
             db.training_progress.find({"user_id": user_id}, {"_id": 0}).to_list(100),
@@ -3210,9 +3222,15 @@ async def update_progress(data: ProgressUpdate, authorization: str = Header(None
 # ─── Player Card Route ───
 
 @api_router.get("/player-card/{user_id}")
-async def get_player_card(user_id: str):
+async def get_player_card(user_id: str, authorization: str = Header(None)):
     if user_id == "guest":
         return {"card": None}
+    # SECURITY: was unauthenticated. The PUBLIC sharing surface is
+    # /share/player-card/{user_id} — this one is the owner's own card.
+    user = await get_current_user_or_none(authorization)
+    if not user:
+        return {"card": None}
+    user_id = user["id"]
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
@@ -8283,12 +8301,20 @@ async def get_standalone_highlight_reel(
 
 @api_router.get("/analysis-history/{user_id}")
 async def get_analysis_history(user_id: str, authorization: str = Header(None)):
-    """Get past video analysis results for tracking improvement."""
+    """Get past video analysis results for tracking improvement.
+
+    SECURITY: the {user_id} path param is IGNORED for the query — we always
+    read the caller's OWN analyses. It used to be passed straight into the
+    Mongo filter, so any signed-in user could read anyone else's analysis
+    history just by changing the id in the URL (IDOR). The param is kept only
+    for URL/cache-key compatibility with existing clients.
+    """
     if user_id == "guest":
         return {"analyses": [], "total": 0}
     user = await get_current_user_or_none(authorization)
     if not user:
         return {"analyses": [], "total": 0}
+    user_id = user["id"]
 
     # LIST view only needs summary fields (sport, date, skill_level,
     # shot_analysis, quick_summary). Exclude the heavy per-analysis payloads
@@ -8888,6 +8914,9 @@ async def get_analysis_history_progression(user_id: str, authorization: str = He
     user = await get_current_user_or_none(authorization)
     if not user:
         return {"analyses": [], "total": 0, "trends": {}, "improvement_summary": None}
+    # SECURITY: always read the caller's OWN analyses — see the note on
+    # /analysis-history/{user_id}. The path param is advisory only.
+    user_id = user["id"]
 
     analyses = await db.video_analyses.find(
         {"user_id": user_id},
@@ -10047,6 +10076,8 @@ async def get_badges(user_id: str, authorization: str = Header(None)):
     user = await get_current_user_or_none(authorization)
     if not user:
         return {"earned_badges": [], "all_badges": [], "total_earned": 0, "total_available": 0, "current_upload_streak": 0, "longest_upload_streak": 0}
+    # SECURITY: badges are the caller's own — never trust the path id.
+    user_id = user["id"]
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
         # No profile yet (common for users who only analyze videos without
