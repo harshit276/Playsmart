@@ -26,7 +26,7 @@ function isStandalone() {
 
 const PERKS = [
   { icon: Zap, title: "Instant launch", desc: "Opens like a real app — no browser bar, no waiting." },
-  { icon: Wifi, title: "Works offline", desc: "Browse training plans + saved analyses with no connection." },
+  { icon: Wifi, title: "Tiny footprint", desc: "Around 5 MB installed — barely any phone storage, no Play Store needed." },
   { icon: Bell, title: "Push notifications", desc: "Match invites, friend requests, and training reminders." },
   { icon: Shield, title: "100% safe", desc: "Same secure web app you already trust. No new permissions." },
 ];
@@ -187,7 +187,9 @@ export default function DownloadPage() {
             Get the Formanti app on <span className="text-lime-400">{platformLabel}</span>
           </h1>
           <p className="text-zinc-400 text-base sm:text-lg max-w-xl mx-auto mb-8">
-            Install in 10 seconds. Works offline. Same app as the website — faster, with a home-screen icon.
+            Install in 10 seconds. Takes almost no storage, works like a native app — no app store needed.
+            Same app as the website, just faster to open, with a home-screen icon.
+            <span className="block text-zinc-500 text-sm mt-2">Video analysis still needs an internet connection.</span>
           </p>
 
           {installed ? (

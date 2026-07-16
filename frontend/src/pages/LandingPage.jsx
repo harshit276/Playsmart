@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import SEO from "@/components/SEO";
 import DemoVideo from "@/components/DemoVideo";
-import TokenEconomyStrip from "@/components/TokenEconomyStrip";
+import EarnTokensSection from "@/components/EarnTokensSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import {
   Zap, Target, Dumbbell, BarChart3, Play, ChevronRight,
   Video, Sparkles, TrendingUp, Coins, Upload, UserPlus,
-  ArrowRight, BookOpen, Star, Users, Clock
+  ArrowRight, BookOpen, Users, Clock
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
@@ -23,13 +24,25 @@ const FEATURES = [
 ];
 
 const SPORTS = [
-  { key: "badminton", emoji: "🏸", label: "Badminton", color: "text-lime-400", border: "border-lime-400/30", bg: "bg-lime-400/5" },
-  { key: "tennis", emoji: "🎾", label: "Tennis", color: "text-amber-400", border: "border-amber-400/30", bg: "bg-amber-400/5" },
-  { key: "table_tennis", emoji: "🏓", label: "Table Tennis", color: "text-sky-400", border: "border-sky-400/30", bg: "bg-sky-400/5" },
-  { key: "cricket", emoji: "🏏", label: "Cricket", color: "text-blue-400", border: "border-blue-400/30", bg: "bg-blue-400/5" },
-  { key: "football", emoji: "⚽", label: "Football", color: "text-green-400", border: "border-green-400/30", bg: "bg-green-400/5" },
-  { key: "swimming", emoji: "🏊", label: "Swimming", color: "text-cyan-400", border: "border-cyan-400/30", bg: "bg-cyan-400/5" },
-  { key: "pickleball", emoji: "⚡", label: "Pickleball", color: "text-emerald-400", border: "border-emerald-400/30", bg: "bg-emerald-400/5" },
+  { key: "badminton", emoji: "🏸", label: "Badminton", path: "/badminton", color: "text-lime-400", border: "border-lime-400/30", bg: "bg-lime-400/5" },
+  { key: "tennis", emoji: "🎾", label: "Tennis", path: "/tennis", color: "text-amber-400", border: "border-amber-400/30", bg: "bg-amber-400/5" },
+  { key: "table_tennis", emoji: "🏓", label: "Table Tennis", path: "/table-tennis", color: "text-sky-400", border: "border-sky-400/30", bg: "bg-sky-400/5" },
+  { key: "cricket", emoji: "🏏", label: "Cricket", path: "/cricket", color: "text-blue-400", border: "border-blue-400/30", bg: "bg-blue-400/5" },
+  { key: "football", emoji: "⚽", label: "Football", path: "/football", color: "text-green-400", border: "border-green-400/30", bg: "bg-green-400/5" },
+  { key: "swimming", emoji: "🏊", label: "Swimming", path: "/swimming", color: "text-cyan-400", border: "border-cyan-400/30", bg: "bg-cyan-400/5" },
+  { key: "pickleball", emoji: "⚡", label: "Pickleball", path: "/pickleball", color: "text-emerald-400", border: "border-emerald-400/30", bg: "bg-emerald-400/5" },
+  { key: "basketball", emoji: "🏀", label: "Basketball", path: "/basketball", color: "text-orange-400", border: "border-orange-400/30", bg: "bg-orange-400/5" },
+];
+
+// Landing pages that exist but are NOT sport-specific AI analysis models like
+// the ones above — the video analysis engine is purpose-built for the
+// racket/ball sports in SPORTS. These get training guides, technique tips,
+// and equipment picks, presented honestly as a separate, lighter-weight
+// grouping (do not imply identical purpose-built analysis).
+const MORE_ACTIVITIES = [
+  { key: "gym", emoji: "🏋️", label: "Gym", path: "/gym" },
+  { key: "weight_lifting", emoji: "🔩", label: "Weight Lifting", path: "/weight-lifting" },
+  { key: "physiotherapy", emoji: "🩹", label: "Physiotherapy", path: "/physiotherapy" },
 ];
 
 const HOW_IT_WORKS = [
@@ -45,7 +58,7 @@ const FAQS = [
   },
   {
     q: "Which sports does Formanti support?",
-    a: "We currently support badminton, tennis, table tennis, pickleball, cricket, football, and swimming. Video analysis is best for racket sports.",
+    a: "We currently support badminton, tennis, table tennis, pickleball, cricket, football, swimming, and basketball with sport-specific AI video analysis — analysis works best for racket and ball sports. We also have gym, weight lifting, and physiotherapy pages with training guides and equipment picks, though video analysis for those is more general and not yet as purpose-built as it is for the sports above.",
   },
   {
     q: "Is Formanti free?",
@@ -64,7 +77,9 @@ const APP_STRUCTURED_DATA = {
   operatingSystem: "Web, Android, iOS",
   applicationCategory: "SportsApplication",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-  aggregateRating: { "@type": "AggregateRating", ratingValue: "4.8", ratingCount: "127" },
+  // No aggregateRating here on purpose — we don't have a real, verifiable
+  // rating to publish yet. Don't add one without real data backing it (see
+  // PLACEHOLDER_TESTIMONIALS below for the same rule on the testimonials UI).
   description: "AI-powered sports video analysis, training plans, and highlight reel generation",
   url: "https://www.formanti.com",
   featureList: [
@@ -86,8 +101,20 @@ const FAQ_STRUCTURED_DATA = {
   })),
 };
 
+// PLACEHOLDER — replace with REAL user quotes before launch. Do not ship
+// invented testimonials, names, photos, or ratings. There is currently no
+// public endpoint that returns real approved user feedback (the backend's
+// /analysis-feedback endpoint is write-only; the only reader of that data,
+// GET /admin/stats, is admin-key gated). Once real quotes are collected and
+// approved (either via a new public read endpoint, or manually curated with
+// user permission), populate this array — TestimonialsSection renders
+// nothing while it stays empty. Shape: { name, quote, rating (1-5), sport }.
+const PLACEHOLDER_TESTIMONIALS = [
+  // { name: "<name>", quote: "<real user quote here>", rating: 5, sport: "<sport>" },
+];
+
 const STATS = [
-  { value: "7", label: "Sports Supported" },
+  { value: "8", label: "Sports Supported" },
   { value: "10K+", label: "Analyses Performed" },
   { value: "500+", label: "Training Drills" },
   { value: "98%", label: "User Satisfaction" },
@@ -207,10 +234,12 @@ export default function LandingPage() {
               data-testid="hero-get-app"
             >
               <Sparkles className="w-4 h-4 text-lime-400" />
-              <span>Get the app — works on iPhone, Android & Desktop</span>
+              <span>Install as an app — works like a native app, ~5MB</span>
               <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
             </Link>
-            <p className="text-[11px] text-zinc-600 mt-2">Free • No app store needed • Installs in 10 seconds</p>
+            <p className="text-[11px] text-zinc-600 mt-2 text-center max-w-xs px-2">
+              Free • No Play Store or App Store needed • Installs in 10 seconds • Barely any phone storage
+            </p>
           </motion.div>
         </div>
 
@@ -243,7 +272,7 @@ export default function LandingPage() {
       <DemoVideo />
 
       {/* ============ TOKEN ECONOMY ============ */}
-      <TokenEconomyStrip />
+      <EarnTokensSection />
 
       {/* ============ FEATURES ============ */}
       <section id="features" className="py-24 bg-zinc-950" data-testid="features-section">
@@ -283,7 +312,7 @@ export default function LandingPage() {
             className="text-center mb-16">
             <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Multi-Sport</span>
             <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
-              One Platform. Seven Sports.
+              One Platform. Eight Sports.
             </h2>
             <p className="text-zinc-400 text-lg max-w-xl mx-auto">
               Specialized AI models, drills, and coaching for every sport you play.
@@ -293,20 +322,41 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {SPORTS.map((s, i) => (
               <motion.div key={s.key} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={fadeUp}
-                className={`group bg-zinc-900 border ${s.border} rounded-xl p-6 text-center hover:scale-105 transition-all duration-300 cursor-pointer`}>
-                <div className="text-4xl mb-3">{s.emoji}</div>
-                <h3 className={`font-heading font-semibold text-lg ${s.color}`}>{s.label}</h3>
+                viewport={{ once: true }} variants={fadeUp}>
+                <Link to={s.path}
+                  className={`group block bg-zinc-900 border ${s.border} rounded-xl p-6 text-center hover:scale-105 transition-all duration-300`}>
+                  <div className="text-4xl mb-3">{s.emoji}</div>
+                  <h3 className={`font-heading font-semibold text-lg ${s.color}`}>{s.label}</h3>
+                </Link>
               </motion.div>
             ))}
             {/* "More coming" card */}
-            <motion.div initial="hidden" whileInView="visible" custom={7}
+            <motion.div initial="hidden" whileInView="visible" custom={SPORTS.length}
               viewport={{ once: true }} variants={fadeUp}
               className="group bg-zinc-900 border border-dashed border-zinc-700 rounded-xl p-6 text-center hover:border-lime-400/30 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center">
               <div className="text-4xl mb-3">🎯</div>
               <h3 className="font-heading font-semibold text-lg text-zinc-500">More Coming</h3>
             </motion.div>
           </div>
+
+          {/* Also on Formanti — honestly separated from the purpose-built
+              sport models above: these are training/equipment landing pages
+              with more general-purpose AI feedback, not sport-tuned analysis. */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+            className="mt-14 pt-10 border-t border-zinc-800/60">
+            <p className="text-center text-zinc-500 text-sm mb-6 max-w-xl mx-auto">
+              Also covered on Formanti — training guides, form tips, and equipment picks
+              (video analysis here is more general-purpose, not tuned sport-by-sport like above):
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {MORE_ACTIVITIES.map((a) => (
+                <Link key={a.key} to={a.path}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-zinc-300 hover:text-white text-sm transition-all">
+                  <span>{a.emoji}</span> {a.label}
+                </Link>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -344,30 +394,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ SOCIAL PROOF ============ */}
-      <section className="py-24 bg-zinc-900/50 border-y border-zinc-800/50">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
-            <div className="flex justify-center gap-1 mb-6">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-6 h-6 text-amber-400 fill-amber-400" />
-              ))}
-            </div>
-            <blockquote className="text-xl md:text-2xl text-white font-medium leading-relaxed mb-6 italic">
-              "Formanti completely changed how I train. The video analysis caught technique flaws I never noticed, and the training plans keep me consistent."
-            </blockquote>
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-lime-400/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-lime-400" />
-              </div>
-              <div className="text-left">
-                <div className="text-white font-semibold text-sm">Thousands of Athletes</div>
-                <div className="text-zinc-500 text-xs">Trust Formanti for their training</div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {/* ============ TESTIMONIALS ============ */}
+      {/* Renders nothing until PLACEHOLDER_TESTIMONIALS has real, approved
+          user quotes — see the constant definition above for why. */}
+      <TestimonialsSection testimonials={PLACEHOLDER_TESTIMONIALS} />
 
       {/* ============ BLOG PREVIEW ============ */}
       {blogPosts.length > 0 && (
@@ -463,7 +493,7 @@ export default function LandingPage() {
               Start Your Journey Today
             </h2>
             <p className="text-zinc-400 text-lg mb-8 max-w-xl mx-auto">
-              Join athletes across 7 sports who are training smarter with AI-powered coaching. No credit card required.
+              Join athletes across 8 sports who are training smarter with AI-powered coaching. No credit card required.
             </p>
             <Button onClick={handleCTA} size="lg" data-testid="cta-bottom-btn"
               className="bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide px-10 py-6 text-lg rounded-full shadow-[0_0_20px_rgba(190,242,100,0.3)] hover:shadow-[0_0_30px_rgba(190,242,100,0.5)] hover:scale-105 transition-all active:scale-95">
@@ -508,7 +538,16 @@ export default function LandingPage() {
                 <li><Link to="/tennis" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🎾 Tennis Coach</Link></li>
                 <li><Link to="/table-tennis" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🏓 Table Tennis Coach</Link></li>
                 <li><Link to="/pickleball" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">⚡ Pickleball Coach</Link></li>
+                <li><Link to="/basketball" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🏀 Basketball Coach</Link></li>
                 <li><span className="text-zinc-500 text-sm">+ Cricket, Football, Swimming</span></li>
+                <li>
+                  <span className="text-zinc-600 text-xs">Also: </span>
+                  <Link to="/gym" className="text-zinc-500 hover:text-lime-400 text-xs transition-colors">Gym</Link>
+                  <span className="text-zinc-600 text-xs">, </span>
+                  <Link to="/weight-lifting" className="text-zinc-500 hover:text-lime-400 text-xs transition-colors">Weight Lifting</Link>
+                  <span className="text-zinc-600 text-xs">, </span>
+                  <Link to="/physiotherapy" className="text-zinc-500 hover:text-lime-400 text-xs transition-colors">Physiotherapy</Link>
+                </li>
               </ul>
             </div>
 
