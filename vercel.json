@@ -44,6 +44,17 @@
     { "src": "/data/(.*)", "dest": "/frontend/data/$1" },
     { "src": "/audio/(.*)", "dest": "/frontend/audio/$1" },
     { "src": "/(.*\\.(json|png|jpg|jpeg|svg|webp|ico|mp3|mp4))", "dest": "/frontend/$1" },
+    { "src": "/badminton", "dest": "/frontend/badminton/index.html" },
+    { "src": "/tennis", "dest": "/frontend/tennis/index.html" },
+    { "src": "/table-tennis", "dest": "/frontend/table-tennis/index.html" },
+    { "src": "/pickleball", "dest": "/frontend/pickleball/index.html" },
+    { "src": "/cricket", "dest": "/frontend/cricket/index.html" },
+    { "src": "/swimming", "dest": "/frontend/swimming/index.html" },
+    { "src": "/football", "dest": "/frontend/football/index.html" },
+    { "src": "/basketball", "dest": "/frontend/basketball/index.html" },
+    { "src": "/gym", "dest": "/frontend/gym/index.html" },
+    { "src": "/weight-lifting", "dest": "/frontend/weight-lifting/index.html" },
+    { "src": "/physiotherapy", "dest": "/frontend/physiotherapy/index.html" },
     { "src": "/(.*)", "dest": "/frontend/index.html" }
   ]
 }
