@@ -177,7 +177,7 @@ export default function WalletPage() {
             />
             <EarnAction
               icon={Dumbbell} label="Complete a training day"
-              detail={`+${rules.training_day || 20} per day · once daily`}
+              detail={`+${rules.training_day || 20} per day · up to 100 total`}
               onClick={() => navigate("/training")}
             />
             <EarnAction

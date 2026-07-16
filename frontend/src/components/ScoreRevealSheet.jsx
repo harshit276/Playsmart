@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, animate } from "framer-motion";
 import { Download, Zap, Gauge, Target, TrendingUp, X } from "lucide-react";
+import { setModalOpen } from "@/lib/modalPresence";
 
 // Level → colour ramp (shared with the on-page performance card).
 function levelColor(v) {
@@ -160,14 +161,21 @@ export default function ScoreRevealSheet({ open, onClose, onDownload, result, is
   const m = deriveMetrics(result);
   const { text } = levelColor(m.level == null ? 7.5 : m.level);
 
+  // Tell the floating coach pill to stand down while the sheet is up.
+  useEffect(() => {
+    setModalOpen("score-reveal", !!open);
+    return () => setModalOpen("score-reveal", false);
+  }, [open]);
+
   return (
     <AnimatePresence>
       {open && result && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end justify-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
           onClick={onClose}
         >
           {/* Backdrop */}
@@ -176,10 +184,12 @@ export default function ScoreRevealSheet({ open, onClose, onDownload, result, is
           {/* Sheet */}
           <motion.div
             onClick={(e) => e.stopPropagation()}
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 320 }}
+            initial={{ y: "100%", opacity: 0.6 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0.6 }}
+            // Softer, less bouncy glide than the old spring — it read as a
+            // snap on mobile. Matches the gauge's easing curve.
+            transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1], opacity: { duration: 0.2 } }}
             className="relative w-full sm:max-w-md bg-gradient-to-b from-zinc-900 to-zinc-950 border-t border-x border-lime-400/25 rounded-t-3xl px-5 pt-3 pb-6 sm:mb-3 sm:rounded-3xl sm:border shadow-2xl"
           >
             {/* Grab handle */}

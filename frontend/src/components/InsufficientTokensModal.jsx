@@ -59,7 +59,7 @@ export default function InsufficientTokensModal({ open, onOpenChange, balance = 
               onClick={() => { close(); navigate("/community?host=1"); }}
             />
             <EarnRow
-              icon={Dumbbell} title="Complete a training day" detail="+20 per day"
+              icon={Dumbbell} title="Complete a training day" detail="+20 per day · up to 100 total"
               onClick={() => { close(); navigate("/training"); }}
             />
           </div>

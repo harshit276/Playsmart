@@ -848,7 +848,14 @@ async def get_me(authorization: str = Header(None)):
                                      {"lifetime_index": lifetime_count})
         except Exception as e:
             logger.warning(f"daily_login credit failed for {user['id'][:8]}: {e}")
-    asyncio.create_task(_maybe_daily_login_credit())
+    # Awaited, not create_task: on serverless the lambda freezes once this
+    # response is returned, which killed the credit before it landed (the
+    # bonus then appeared to arrive only sometimes). Bounded so a slow DB
+    # can't stall /auth/me, and non-fatal.
+    try:
+        await asyncio.wait_for(_maybe_daily_login_credit(), timeout=4.0)
+    except (Exception, asyncio.TimeoutError):
+        pass
 
     return {"user": user, "profile": profile}
 
@@ -1360,6 +1367,8 @@ DAILY_CAPS = {"host_game": 5, "training_day": 1, "daily_login": 1}
 # Daily-login bonus stops once the account has earned this many tokens from
 # logins in total (25/day × 4 days = 100), with no signup-age window.
 DAILY_LOGIN_LIFETIME_CAP = 100
+# Same shape for the training-day reward: 20/day until 100 total (5 days).
+TRAINING_DAY_LIFETIME_CAP = 100
 
 
 class SpendRequest(BaseModel):
@@ -3202,13 +3211,28 @@ async def update_progress(data: ProgressUpdate, authorization: str = Header(None
     # Check training badges
     new_badges = await check_and_award_badges(user["id"])
 
-    # Token reward — once per day per user (DAILY_CAPS["training_day"]=1).
-    # Best-effort, errors don't fail the user-facing complete action.
+    # Token reward — 20/day, once per day, until the account has earned
+    # TRAINING_DAY_LIFETIME_CAP (100) from training days in total. Same shape
+    # as the daily-login bonus: a small nudge to build the habit, not an
+    # unbounded token faucet. Best-effort — errors don't fail the user-facing
+    # complete action.
     tokens_earned = 0
     try:
-        if await _today_credit_count(user["id"], "training_day") < DAILY_CAPS["training_day"]:
+        lifetime_count = await asyncio.wait_for(
+            db.token_transactions.count_documents(
+                {"user_id": user["id"], "kind": "training_day"}),
+            timeout=2.0,
+        )
+        under_lifetime_cap = (
+            lifetime_count * TOKEN_RULES["training_day"] < TRAINING_DAY_LIFETIME_CAP
+        )
+        under_daily_cap = (
+            await _today_credit_count(user["id"], "training_day") < DAILY_CAPS["training_day"]
+        )
+        if under_lifetime_cap and under_daily_cap:
             await _credit_tokens(user["id"], "training_day", TOKEN_RULES["training_day"],
-                                 {"plan_id": data.plan_id, "day": data.day})
+                                 {"plan_id": data.plan_id, "day": data.day,
+                                  "lifetime_index": lifetime_count})
             tokens_earned = TOKEN_RULES["training_day"]
     except Exception as e:
         logger.warning(f"training_day credit failed for {user['id'][:8]}: {e}")
@@ -7629,8 +7653,15 @@ async def _analyze_client_results_impl(request: Request, authorization: str = He
             logger.warning("Gamification update failed (timeout or error)")
 
         # ─── Referral payoff: credit both sides on first analysis ─────
-        # Run in background so the analysis response stays fast.
-        asyncio.create_task(_settle_pending_referrals(user["id"]))
+        # MUST be awaited. This used to be asyncio.create_task(...), but on
+        # serverless the lambda is frozen the moment the response is returned,
+        # so the task was usually killed before it credited anyone — referral
+        # tokens silently never arrived for either side. Same reasoning as the
+        # history-save above. Bounded + non-fatal so it can't break analysis.
+        try:
+            await asyncio.wait_for(_settle_pending_referrals(user["id"]), timeout=6.0)
+        except (Exception, asyncio.TimeoutError) as e:
+            logger.warning(f"referral settle failed for {user['id'][:8]}: {e}")
 
     # Charge tokens NOW — only after the analysis fully succeeded. If any
     # of the work above raised, we never reach this point and the user

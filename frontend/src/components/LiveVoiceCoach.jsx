@@ -3,6 +3,7 @@ import {
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import api, { API_ORIGIN } from "@/lib/api";
+import { subscribeModalPresence } from "@/lib/modalPresence";
 import {
   Mic, MicOff, X, ChevronDown, Sparkles, StopCircle,
   Download, RefreshCw, Trash2, Radio, Volume2, History, Headphones,
@@ -238,6 +239,10 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
   useEffect(() => { reanalyzeFiredRef.current = false; }, [result]);
 
   const [open, setOpen] = useState(false);
+  // True while a full-screen sheet/modal is showing — the pill hides so it
+  // can't paint over the sheet's own buttons.
+  const [modalUp, setModalUp] = useState(false);
+  useEffect(() => subscribeModalPresence(setModalUp), []);
   const [listening, setListening] = useState(false);
   const [continuousMode, setContinuousMode] = useState(false);
   const [interimText, setInterimText] = useState("");
@@ -914,6 +919,11 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
   // We also add a subtle continuous lime ring pulse so the button is
   // genuinely impossible to miss — the previous version blended into
   // the page on dark backgrounds.
+  // A full-screen sheet (e.g. the score reveal) is up — stay out of its way.
+  // The pill is fixed-position at z-50 in its own subtree, so it painted over
+  // the sheet's buttons no matter the sheet's z-index.
+  if (!open && modalUp) return null;
+
   if (!open) {
     return (
       <>
