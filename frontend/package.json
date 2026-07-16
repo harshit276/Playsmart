@@ -75,6 +75,7 @@
   "scripts": {
     "start": "craco start",
     "build": "CI=false craco build",
+    "vercel-build": "CI=false craco build && node scripts/seoFallbacks.mjs",
     "build:snap": "CI=false craco build && react-snap",
     "prerender": "node scripts/seoFallbacks.mjs",
     "build:prerender": "CI=false craco build && node scripts/seoFallbacks.mjs",
