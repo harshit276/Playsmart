@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { swrGet } from "@/lib/cachedFetch";
+import { swrGet, invalidate } from "@/lib/cachedFetch";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -296,9 +296,18 @@ export default function TrainingPage() {
 
   /* ─── Toggle day completion ─── */
   const toggleDay = async (planId, day) => {
+    if (toggling !== null) return;   // one write in flight at a time
     setToggling(day);
+    const progressUrl = `/progress/${user?.id || "guest"}`;
     try {
       const { data } = await api.post("/progress", { plan_id: planId, day });
+      // The write changed /progress server-side, so the SWR entry for it is
+      // now wrong. Without this purge the (24h TTL, sessionStorage-backed)
+      // cache kept re-hydrating the PRE-toggle entries on the next visit —
+      // the day looked un-ticked again, and if the revalidate then failed or
+      // was slow the stale value just stayed. This was the main "training
+      // failing to update sometimes" symptom.
+      invalidate(progressUrl);
       setProgress(p => {
         const copy = { ...p };
         if (data.completed) copy[day] = true;
@@ -306,7 +315,22 @@ export default function TrainingPage() {
         return copy;
       });
       toast.success(data.message);
-    } catch { toast.error("Failed to update"); }
+    } catch (err) {
+      // Do NOT leave the UI guessing. The server may have committed the write
+      // even though we failed to read the response, so re-read the truth
+      // rather than assuming the toggle did or didn't land.
+      invalidate(progressUrl);
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === "string" ? detail : "Couldn't save that day — check your connection.");
+      try {
+        const { data: fresh } = await api.get(progressUrl, { timeout: 15000 });
+        const map = {};
+        (fresh.entries || []).forEach(e => { map[e.day] = true; });
+        setProgress(map);
+      } catch {
+        // Still offline — leave state as-is; the toast already told the user.
+      }
+    }
     setToggling(null);
   };
 
@@ -703,7 +727,7 @@ export default function TrainingPage() {
               <Button
                 size="sm"
                 onClick={() => toggleDay(plan.id, todayDrill.day)}
-                disabled={toggling === todayDrill.day}
+                disabled={toggling !== null}
                 className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-5"
               >
                 <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
@@ -950,8 +974,8 @@ export default function TrainingPage() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => toggleDay(plan.id, day.day)}
-                          disabled={toggling === day.day}
-                          className="shrink-0"
+                          disabled={toggling !== null}
+                          className="shrink-0 disabled:opacity-50"
                           data-testid={`complete-day-${day.day}`}
                         >
                           {isCompleted ? (

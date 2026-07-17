@@ -111,17 +111,17 @@ export default function BlogListPage() {
 
       {/* Filters */}
       <section className="container mx-auto px-4 max-w-6xl -mt-4 mb-8">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4">
           {/* Category pills */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className="text-xs uppercase tracking-wider text-zinc-500 mb-2 font-medium">Category</p>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map(({ key, label }) => (
                 <button key={key} onClick={() => setActiveCategory(key)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
                     activeCategory === key
-                      ? "bg-lime-400 text-black"
-                      : "bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/60 hover:text-white"
+                      ? "bg-lime-400 text-black border-lime-400"
+                      : "bg-zinc-800/60 text-zinc-400 border-transparent hover:bg-zinc-700/60 hover:text-white"
                   }`}>
                   {label}
                 </button>
@@ -129,15 +129,15 @@ export default function BlogListPage() {
             </div>
           </div>
           {/* Sport pills */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0 sm:border-l sm:border-zinc-800 sm:pl-4">
             <p className="text-xs uppercase tracking-wider text-zinc-500 mb-2 font-medium">Sport</p>
             <div className="flex flex-wrap gap-2">
               {SPORTS.map(({ key, label }) => (
                 <button key={key} onClick={() => setActiveSport(key)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
                     activeSport === key
-                      ? "bg-lime-400 text-black"
-                      : "bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/60 hover:text-white"
+                      ? "bg-lime-400 text-black border-lime-400"
+                      : "bg-zinc-800/60 text-zinc-400 border-transparent hover:bg-zinc-700/60 hover:text-white"
                   }`}>
                   {label}
                 </button>
@@ -150,12 +150,24 @@ export default function BlogListPage() {
       {/* Blog Grid */}
       <section className="container mx-auto px-4 max-w-6xl pb-20">
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl overflow-hidden">
+                <div className="h-40 bg-zinc-800/60 animate-pulse" />
+                <div className="p-5 space-y-3">
+                  <div className="h-4 w-24 bg-zinc-800/60 rounded-full animate-pulse" />
+                  <div className="h-5 w-full bg-zinc-800/60 rounded animate-pulse" />
+                  <div className="h-5 w-2/3 bg-zinc-800/60 rounded animate-pulse" />
+                  <div className="h-3 w-1/2 bg-zinc-800/40 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-zinc-500 text-lg">No posts found. Try a different filter.</p>
+          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl text-center py-16 px-4">
+            <BookOpen className="w-10 h-10 text-zinc-600 mx-auto mb-3" strokeWidth={1.5} />
+            <p className="text-zinc-300 text-base font-semibold mb-1">No posts found</p>
+            <p className="text-zinc-500 text-sm">Try a different category or sport filter.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -164,18 +176,19 @@ export default function BlogListPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.05 }}
+                className="h-full"
               >
                 <Link to={`/blog/${post.id}`}
-                  className="group block bg-zinc-900/50 border border-zinc-800/50 rounded-2xl overflow-hidden hover:border-zinc-700/60 transition-all hover:shadow-lg hover:shadow-lime-400/5">
+                  className="group flex flex-col h-full bg-zinc-900/50 border border-zinc-800/50 rounded-2xl overflow-hidden hover:border-zinc-700/60 transition-all hover:shadow-lg hover:shadow-lime-400/5">
                   {/* Thumbnail */}
-                  <div className={`relative h-40 bg-gradient-to-br ${SPORT_GRADIENT[post.sport] || SPORT_GRADIENT.general} flex items-center justify-center`}>
+                  <div className={`relative h-36 sm:h-40 bg-gradient-to-br ${SPORT_GRADIENT[post.sport] || SPORT_GRADIENT.general} flex items-center justify-center shrink-0`}>
                     <span className="text-6xl opacity-80 group-hover:scale-110 transition-transform duration-300">
                       {post.thumbnail_emoji}
                     </span>
                   </div>
                   {/* Content */}
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 mb-3">
+                  <div className="p-5 flex flex-col flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <span className={`text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${CATEGORY_COLOR[post.category] || "bg-zinc-700 text-zinc-300"}`}>
                         {post.category}
                       </span>
@@ -189,8 +202,8 @@ export default function BlogListPage() {
                     <p className="text-zinc-400 text-sm leading-relaxed mb-4 line-clamp-2">
                       {post.description}
                     </p>
-                    <div className="flex items-center justify-between text-zinc-500 text-xs">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between text-zinc-500 text-xs mt-auto pt-1">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
                           {new Date(post.published_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -200,7 +213,7 @@ export default function BlogListPage() {
                           {post.read_time}
                         </span>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-lime-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight className="w-4 h-4 text-lime-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </div>
                   </div>
                 </Link>

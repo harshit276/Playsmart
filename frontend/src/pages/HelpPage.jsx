@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import {
   HelpCircle, MessageCircle, Mail, Send, CheckCircle2, Loader2,
-  Coins, Camera, Users, ShoppingCart,
+  Coins, Camera, Users, ShoppingCart, Clock3,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -185,21 +185,20 @@ export default function HelpPage() {
           <a href="mailto:hello@formanti.com"
             className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-lime-400/30 transition-colors flex items-start gap-3">
             <Mail className="w-5 h-5 text-lime-400 mt-0.5 shrink-0" />
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-bold text-white">Email us</p>
-              <p className="text-[11px] text-zinc-400">hello@formanti.com</p>
+              <p className="text-[11px] text-zinc-400 truncate">hello@formanti.com</p>
               <p className="text-[10px] text-zinc-500 mt-1">Reply within 24 hours</p>
             </div>
           </a>
-          <a href="https://wa.me/919999999999" target="_blank" rel="noopener noreferrer"
-            className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 hover:border-emerald-400/30 transition-colors flex items-start gap-3">
-            <MessageCircle className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-bold text-white">WhatsApp</p>
-              <p className="text-[11px] text-zinc-400">Chat with us directly</p>
-              <p className="text-[10px] text-zinc-500 mt-1">Mon–Sat, 10am–8pm IST</p>
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 flex items-start gap-3">
+            <Clock3 className="w-5 h-5 text-zinc-500 mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white">Response time</p>
+              <p className="text-[11px] text-zinc-400">Within 24 hours, every day</p>
+              <p className="text-[10px] text-zinc-500 mt-1">Use the form above for the fastest response</p>
             </div>
-          </a>
+          </div>
         </motion.div>
 
         {/* FAQ */}

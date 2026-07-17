@@ -402,17 +402,17 @@ export default function CommunityPage() {
                   </p>
                   {requests.map((req, i) => (
                     <motion.div key={req.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                      className="bg-zinc-900 border border-lime-400/20 rounded-xl p-4 mb-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-lime-400/10 flex items-center justify-center font-bold text-lime-400 uppercase">
+                      className="bg-zinc-900 border border-lime-400/20 rounded-xl p-4 mb-3 flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-10 h-10 rounded-full bg-lime-400/10 flex items-center justify-center font-bold text-lime-400 uppercase shrink-0">
                           {(req.from_name || "?").charAt(0)}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{req.from_name}</p>
-                          <p className="text-xs text-zinc-500">{req.from_skill} &middot; {req.from_sports?.map(s => SPORT_LABELS[s] || s).join(", ")}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{req.from_name}</p>
+                          <p className="text-xs text-zinc-500 truncate">{req.from_skill} &middot; {req.from_sports?.map(s => SPORT_LABELS[s] || s).join(", ")}</p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 shrink-0">
                         <Button size="sm" onClick={() => respondRequest(req.id, "accept")}
                           className="bg-lime-400 text-black hover:bg-lime-500 rounded-full text-xs h-8 px-3">
                           <Check className="w-3 h-3 mr-1" /> Accept
@@ -447,11 +447,11 @@ export default function CommunityPage() {
                   friends.map((f, i) => (
                     <motion.div key={f.user_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                       className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-3 flex items-center gap-3 hover:border-lime-400/30 transition-all">
-                      <div className="w-10 h-10 rounded-full bg-lime-400/10 flex items-center justify-center font-bold text-lime-400 uppercase">
+                      <div className="w-10 h-10 rounded-full bg-lime-400/10 flex items-center justify-center font-bold text-lime-400 uppercase shrink-0">
                         {(f.name || "?").charAt(0)}
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white">{f.name}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{f.name}</p>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           <Badge variant="outline" className="border-zinc-700 text-zinc-500 text-[10px]">{f.skill_level}</Badge>
                           {f.selected_sports?.map(s => (
@@ -479,7 +479,7 @@ export default function CommunityPage() {
                 players.map((p, i) => (
                   <motion.div key={p.user_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
                     className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex items-center gap-3 hover:border-zinc-700 transition-all">
-                    <div className="w-10 h-10 rounded-full bg-lime-400/10 flex items-center justify-center font-bold text-lime-400 uppercase">
+                    <div className="w-10 h-10 rounded-full bg-lime-400/10 flex items-center justify-center font-bold text-lime-400 uppercase shrink-0">
                       {(p.name || "?").charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -493,11 +493,11 @@ export default function CommunityPage() {
                       </div>
                     </div>
                     {friendIds.has(p.user_id) ? (
-                      <Badge className="bg-zinc-800 text-zinc-400 text-xs"><UserCheck className="w-3 h-3 mr-1" /> Friends</Badge>
+                      <Badge className="bg-zinc-800 text-zinc-400 text-xs shrink-0"><UserCheck className="w-3 h-3 mr-1" /> Friends</Badge>
                     ) : (
                       <Button size="sm" onClick={() => sendFriendRequest(p.user_id)}
                         disabled={sending[p.user_id]}
-                        className="bg-lime-400/10 text-lime-400 hover:bg-lime-400/20 border border-lime-400/20 rounded-full text-xs h-8 px-3">
+                        className="bg-lime-400/10 text-lime-400 hover:bg-lime-400/20 border border-lime-400/20 rounded-full text-xs h-8 px-3 shrink-0">
                         <UserPlus className="w-3 h-3 mr-1" /> Add
                       </Button>
                     )}
@@ -576,9 +576,11 @@ function GameCard({ game, userId, onJoin, onLeave, delay = 0 }) {
 
         {/* Meta row */}
         <div className="flex flex-wrap gap-3 text-xs text-zinc-400 mb-3">
-          <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {game.venue}, {game.city}</span>
-          <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {playersIn}/{game.max_players}</span>
-          <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px] py-0">{game.skill_level}</Badge>
+          <span className="flex items-center gap-1 min-w-0 max-w-full">
+            <MapPin className="w-3 h-3 shrink-0" /> <span className="break-words">{game.venue}, {game.city}</span>
+          </span>
+          <span className="flex items-center gap-1 shrink-0"><Users className="w-3 h-3" /> {playersIn}/{game.max_players}</span>
+          <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-[10px] py-0 shrink-0">{game.skill_level}</Badge>
         </div>
 
         {/* Player slots */}

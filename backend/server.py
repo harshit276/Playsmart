@@ -589,10 +589,10 @@ async def firebase_auth(req: FirebaseAuthRequest):
 
     # Fire admin notification only for genuinely new signups
     if is_new_user:
-        asyncio.create_task(_notify_admin(
+        await _notify_admin_now(
             "🎉 New user signup",
             f"Name: {req.name or '—'}\nEmail: {email}\nTokens credited: {balance}",
-        ))
+        )
 
     return {
         "token": token,
@@ -668,7 +668,7 @@ async def register_email(req: RegisterRequest):
             bal = await _get_balance(user_id)
     else:
         bal = await _get_balance(user_id)
-    asyncio.create_task(_notify_admin("🎉 New signup (email)", f"Name: {req.name or '—'}\nEmail: {email}"))
+    await _notify_admin_now("🎉 New signup (email)", f"Name: {req.name or '—'}\nEmail: {email}")
     return {
         "token": create_token(user_id, email),
         "user": {"id": user_id, "email": email, "name": req.name, "photo": ""},
@@ -1185,6 +1185,12 @@ TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "whatsapp:+1415523
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "").strip()
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 
+# Canonical public URL used in shared messages. www is canonical — vercel.json
+# 308s the apex to www. There is deliberately no per-user/per-analysis deep
+# link here: the frontend has no public route that renders someone else's
+# card, so a /card/{id} or /share/{id} link would just bounce to the homepage.
+SHARE_SITE_URL = os.environ.get("SHARE_SITE_URL", "https://www.formanti.com").strip()
+
 
 async def _notify_admin(subject: str, body: str) -> None:
     """Best-effort multi-channel admin notification. Each channel is
@@ -1234,6 +1240,24 @@ async def _notify_admin(subject: str, body: str) -> None:
             logger.warning(f"Email notify failed: {e}")
 
 
+async def _notify_admin_now(subject: str, body: str, timeout: float = 8.0) -> None:
+    """Await an admin notification, bounded and non-fatal.
+
+    Use this from request handlers instead of `asyncio.create_task(_notify_admin(...))`.
+    On Vercel the lambda is frozen/killed the moment the HTTP response is
+    returned, so a fire-and-forget notify task was usually destroyed before
+    the Telegram POST left the machine — which is why admin alerts only
+    arrived "sometimes" (whenever the event loop happened to schedule the
+    task before the response flushed). Awaiting makes delivery real; the
+    timeout keeps a slow Telegram/Twilio/Resend call from stalling the
+    user's request, and every failure is swallowed and logged.
+    """
+    try:
+        await asyncio.wait_for(_notify_admin(subject, body), timeout=timeout)
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"admin notify dropped ({subject[:40]}): {e}")
+
+
 # ─── Support / contact form ──────────────────────────────────────
 class SupportTicketRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
@@ -1262,10 +1286,12 @@ async def support_contact(req: SupportTicketRequest):
         await asyncio.wait_for(db.support_tickets.insert_one({**record}), timeout=3.0)
     except Exception as e:
         logger.warning(f"support ticket DB write failed: {e}")
-    asyncio.create_task(_notify_admin(
+    # Awaited (see _notify_admin_now): a contact-form submission the admin
+    # never hears about is the whole point of the form failing.
+    await _notify_admin_now(
         f"📩 Support · {record['category']} · {record['subject']}",
         f"From: {record['name']} <{record['email']}>\n\n{record['message']}",
-    ))
+    )
     return {"ok": True, "id": record["id"]}
 
 
@@ -1536,8 +1562,13 @@ async def _spend_tokens(user_id: str, kind: str, amount: int, metadata: dict = N
             ), timeout=2.0)
         except Exception:
             pass
-        # Log the transaction best-effort for audit
-        asyncio.create_task(_log_demo_spend(kind, amount, metadata))
+        # Log the transaction best-effort for audit. Awaited, not create_task:
+        # the serverless lambda freezes on response, which killed most of
+        # these audit rows before they were written.
+        try:
+            await asyncio.wait_for(_log_demo_spend(kind, amount, metadata), timeout=2.0)
+        except (Exception, asyncio.TimeoutError):
+            pass
         return {"ok": True, "balance": max(0, await _get_balance(user_id) - 0)}
 
     balance = await _get_balance(user_id)
@@ -1619,9 +1650,9 @@ async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> 
     except Exception:
         pass
     try:
-        asyncio.create_task(_notify_admin(
+        await _notify_admin_now(
             f"\U0001f4b0 Purchase · ₹{pack['price_inr']} (Razorpay)",
-            f"User: {user_id[:12]}…\nPack: {pack['key']} (+{pack['tokens']} tokens)\nNew balance: {new_balance}"))
+            f"User: {user_id[:12]}…\nPack: {pack['key']} (+{pack['tokens']} tokens)\nNew balance: {new_balance}")
     except Exception:
         pass
     return new_balance
@@ -2147,7 +2178,7 @@ async def equipment_enquiry(req: EnquiryRequest):
         f"Sport: {record['sport'] or '—'}\n"
         + (f"Notes: {record['notes']}\n" if record.get('notes') else "")
     )
-    asyncio.create_task(_notify_admin("New local-shop enquiry", body))
+    await _notify_admin_now("New local-shop enquiry", body)
     return {"ok": True, "id": record["id"], "callback_eta_hours": "1-2"}
 
 
@@ -3187,29 +3218,45 @@ async def get_progress(user_id: str, authorization: str = Header(None)):
 @api_router.post("/progress")
 async def update_progress(data: ProgressUpdate, authorization: str = Header(None)):
     user = await get_current_user(authorization)
+    key = {"user_id": user["id"], "plan_id": data.plan_id, "day": data.day}
 
-    existing = await db.training_progress.find_one(
-        {"user_id": user["id"], "plan_id": data.plan_id, "day": data.day},
-        {"_id": 0},
-    )
-    if existing:
-        await db.training_progress.delete_one(
-            {"user_id": user["id"], "plan_id": data.plan_id, "day": data.day}
-        )
+    # Toggle via a single atomic op instead of read-then-write. Two rapid
+    # taps used to interleave (both read "not present", both insert / both
+    # delete), leaving the day in the opposite state to what the UI showed.
+    try:
+        deleted = await asyncio.wait_for(
+            db.training_progress.delete_one(key), timeout=5.0)
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"progress: unmark failed for {user['id'][:8]}: {e}")
+        raise HTTPException(status_code=503, detail="Could not save — please try again")
+    if deleted.deleted_count:
         return {"message": "Day unmarked", "completed": False}
 
     entry = {
         "id": str(uuid.uuid4()),
-        "user_id": user["id"],
-        "plan_id": data.plan_id,
-        "day": data.day,
+        **key,
         "completed_at": datetime.now(timezone.utc).isoformat(),
     }
-    await db.training_progress.insert_one(entry)
+    try:
+        await asyncio.wait_for(db.training_progress.insert_one(entry), timeout=5.0)
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"progress: mark failed for {user['id'][:8]}: {e}")
+        raise HTTPException(status_code=503, detail="Could not save — please try again")
     entry.pop("_id", None)
 
-    # Check training badges
-    new_badges = await check_and_award_badges(user["id"])
+    # Check training badges. Bounded + non-fatal: this fans out into several
+    # unindexed count/distinct queries, and it used to run bare right after
+    # the insert above. When it was slow or threw, the whole request 500'd
+    # *even though the day had already been saved* — the user saw "Failed to
+    # update", tapped again, and the retry toggled the day back OFF. That is
+    # the "training sometimes doesn't stick" bug. The write is what matters;
+    # badges are a bonus and must never fail the completion.
+    new_badges = []
+    try:
+        new_badges = await asyncio.wait_for(
+            check_and_award_badges(user["id"]), timeout=5.0) or []
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"progress: badge check failed for {user['id'][:8]}: {e}")
 
     # Token reward — 20/day, once per day, until the account has earned
     # TRAINING_DAY_LIFETIME_CAP (100) from training days in total. Same shape
@@ -3255,24 +3302,75 @@ async def get_player_card(user_id: str, authorization: str = Header(None)):
     if not user:
         return {"card": None}
     user_id = user["id"]
-    profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
+    # Most users analyze clips and never take the assessment quiz. This used
+    # to `raise HTTPException(404, "Profile not found")` for exactly those
+    # users, so the card simply never generated for them.
+    #
+    # Chain explicitly (rather than via _effective_profile) because we must
+    # tell "derived from real analyses" apart from "generic guest defaults":
+    # _effective_profile collapses both into a profile dict, and showing guest
+    # defaults as the user's own card would be inventing data about them.
+    try:
+        profile = await asyncio.wait_for(
+            db.player_profiles.find_one({"user_id": user_id}, {"_id": 0}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError) as e:
+        logger.warning(f"player-card: profile fetch failed for {user_id[:8]}: {e}")
+        profile = None
+
+    has_analyses = False
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        try:
+            analyses = await asyncio.wait_for(
+                db.video_analyses.find(
+                    {"user_id": user_id},
+                    {"_id": 0, "sport": 1, "skill_level": 1, "shot_analysis": 1,
+                     "shots": 1, "date": 1},
+                ).sort("date", -1).limit(10).to_list(length=10),
+                timeout=5.0,
+            )
+        except (Exception, asyncio.TimeoutError) as e:
+            logger.warning(f"player-card: analyses fetch failed for {user_id[:8]}: {e}")
+            analyses = []
+        if analyses:
+            profile = _derive_profile_from_analyses(analyses)
+            has_analyses = bool(profile)
+
+    # Nothing known at all — no quiz AND no analyses. Honest empty state that
+    # names the next step, instead of a 404 the UI has to guess the meaning of.
+    if not profile:
+        return {
+            "card": None,
+            "empty_reason": "no_data",
+            "next_step": "Analyze a video or take the assessment to generate your player card.",
+        }
 
     from rule_engine import get_top_recommendations
-    rackets = await db.equipment.find({"category": "racket"}, {"_id": 0}).to_list(100)
-    top_recs = get_top_recommendations(profile, rackets, top_n=1)
-
     recommended_racket = None
-    if top_recs:
-        eq = top_recs[0]["equipment"]
-        recommended_racket = f"{eq['brand']} {eq['model']}"
+    try:
+        rackets = await asyncio.wait_for(
+            db.equipment.find({"category": "racket"}, {"_id": 0}).to_list(100),
+            timeout=5.0,
+        )
+        top_recs = get_top_recommendations(profile, rackets, top_n=1)
+        if top_recs:
+            eq = top_recs[0]["equipment"]
+            recommended_racket = f"{eq['brand']} {eq['model']}"
+    except (Exception, asyncio.TimeoutError) as e:
+        # An equipment lookup must not take the whole card down with it.
+        logger.warning(f"player-card: racket rec failed for {user_id[:8]}: {e}")
 
-    progress = await db.training_progress.find({"user_id": user_id}, {"_id": 0}).to_list(100)
-    completed_days = len(progress)
+    try:
+        completed_days = await asyncio.wait_for(
+            db.training_progress.count_documents({"user_id": user_id}), timeout=5.0)
+    except (Exception, asyncio.TimeoutError):
+        completed_days = 0
 
     return {
         "card": {
+            # active_sport was missing from this payload even though
+            # PlayerCardPage renders a sport emoji from it (it always fell
+            # back to the generic 🎯) and builds its share text from it.
+            "active_sport": profile.get("active_sport"),
             "skill_level": profile.get("skill_level"),
             "play_style": profile.get("play_style"),
             "primary_goal": profile.get("primary_goal"),
@@ -3281,6 +3379,9 @@ async def get_player_card(user_id: str, authorization: str = Header(None)):
             "recommended_racket": recommended_racket,
             "training_days_completed": completed_days,
             "playing_frequency": profile.get("playing_frequency"),
+            # Lets the UI say "based on your analyses — take the quiz to
+            # sharpen it" rather than implying the user filled this in.
+            "derived_from_analyses": has_analyses,
         }
     }
 
@@ -4185,9 +4286,9 @@ async def _process_job(job: dict, claimed: bool = False):
     except asyncio.TimeoutError:
         await _update_job(job_id, status="error", error="analysis_timeout")
         try:
-            asyncio.create_task(_notify_admin(
+            await _notify_admin_now(
                 "❌ Analysis FAILED (timeout, not charged)",
-                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nReason: timed out >200s"))
+                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nReason: timed out >200s")
             await _notify_job_done(job, {
                 "title": "Analysis didn't complete",
                 "body": "It took too long — usually a network issue. You weren't charged. Tap to retry.",
@@ -4199,9 +4300,9 @@ async def _process_job(job: dict, claimed: bool = False):
         await _update_job(job_id, status="error",
                           error=f"analysis_failed: {str(exc)[:200]}")
         try:
-            asyncio.create_task(_notify_admin(
+            await _notify_admin_now(
                 "❌ Analysis FAILED (not charged)",
-                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nError: {str(exc)[:200]}"))
+                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nError: {str(exc)[:200]}")
             await _notify_job_done(job, {
                 "title": "Analysis failed",
                 "body": "Something went wrong — usually a network issue. You weren't charged. Tap to retry.",
@@ -4288,14 +4389,14 @@ async def _process_job(job: dict, claimed: bool = False):
     try:
         who = job.get("user_id") or "guest"
         if n_events > 0:
-            asyncio.create_task(_notify_admin(
+            await _notify_admin_now(
                 "✅ Analysis completed",
                 f"User: {who}\nSport: {sport_d}\nEvents: {n_events}\n"
-                f"Tier: {job.get('tier')}\nCharged: {'yes' if charged else 'no'}"))
+                f"Tier: {job.get('tier')}\nCharged: {'yes' if charged else 'no'}")
         else:
-            asyncio.create_task(_notify_admin(
+            await _notify_admin_now(
                 "⚠️ Analysis produced NO result (not charged)",
-                f"User: {who}\nSport: {sport_d}\nTier: {job.get('tier')}"))
+                f"User: {who}\nSport: {sport_d}\nTier: {job.get('tier')}")
     except Exception:
         pass
 
@@ -5311,10 +5412,10 @@ async def analysis_feedback(req: AnalysisFeedbackRequest, authorization: str = H
     try:
         stars = "⭐" * rating
         flag = "🔴 " if rating <= 2 else ""
-        asyncio.create_task(_notify_admin(
+        await _notify_admin_now(
             f"{flag}📝 Analysis feedback: {stars} ({rating}/5)",
             f"User: {record['user_id'] or 'guest'}\nSport: {req.sport or '—'}\n"
-            f"Comment: {record['comment'] or '—'}"))
+            f"Comment: {record['comment'] or '—'}")
     except Exception:
         pass
     return {"success": True}
@@ -5352,10 +5453,10 @@ async def support_request(req: SupportRequestPayload, authorization: str = Heade
     except (Exception, asyncio.TimeoutError):
         pass
     try:
-        asyncio.create_task(_notify_admin(
+        await _notify_admin_now(
             "🆘 Support / help request",
             f"From: {email} ({record['user_id'] or 'guest'})\n\n{msg}\n\n"
-            f"Context: {record['context'] or '—'}"))
+            f"Context: {record['context'] or '—'}")
     except Exception:
         pass
     return {"success": True, "support_email": "support@formanti.com"}
@@ -10202,7 +10303,13 @@ async def generate_share_card(analysis_id: str, authorization: str = Header(None
     return {
         "card": card,
         "share_text": share_text,
-        "share_url": f"https://formanti.com/share/{analysis_id}",
+        # NOTE: this used to be f"https://formanti.com/share/{analysis_id}",
+        # but no such route exists (frontend has no /share/:id; React Router's
+        # catch-all redirects it to "/"). It was a dead deep link that also
+        # published the analysis id into WhatsApp messages. Until a real
+        # public viewer route exists, link to the site root — honest, and the
+        # share_text already carries the result.
+        "share_url": SHARE_SITE_URL,
     }
 
 
@@ -10217,7 +10324,18 @@ async def generate_player_share_card(user_id: str, authorization: str = Header(N
 
     profile = await db.player_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        # Same fix as GET /player-card: analyze-only users (no assessment
+        # quiz) used to 404 here, so "Share Card" silently fell back to the
+        # client-side placeholder. Derive from their analyses instead.
+        analyses = await db.video_analyses.find(
+            {"user_id": user_id},
+            {"_id": 0, "sport": 1, "skill_level": 1, "shot_analysis": 1,
+             "shots": 1, "date": 1},
+        ).sort("date", -1).limit(10).to_list(length=10)
+        profile = _derive_profile_from_analyses(analyses) if analyses else None
+    if not profile:
+        return {"card": None, "share_text": "Check out Formanti!",
+                "empty_reason": "no_data"}
 
     user_data = await db.users.find_one({"id": user_id}, {"_id": 0})
     analysis_count = await db.video_analyses.count_documents({"user_id": user_id})
@@ -10253,7 +10371,10 @@ async def generate_player_share_card(user_id: str, authorization: str = Header(N
     return {
         "card": card,
         "share_text": share_text,
-        "share_url": f"https://formanti.com/card/{user_id}",
+        # Was f"https://formanti.com/card/{user_id}" — a route that does not
+        # exist (redirects to "/") and which leaked the user's id into every
+        # shared message. See SHARE_SITE_URL.
+        "share_url": SHARE_SITE_URL,
     }
 
 

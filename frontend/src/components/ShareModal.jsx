@@ -11,17 +11,42 @@ import { Share2, Copy, Download, X, MessageCircle, Link2, Check, Zap, Star, Targ
  * Props:
  * - open: boolean
  * - onClose: () => void
- * - shareData: { title, text, url, card } â€” card is the visual card data
+ * - shareData: { title, text, url, card } â€” card is the visual card data.
+ *     Also accepts the backend's raw payload shape ({ share_text, share_url }),
+ *     which is what PlayerCardPage/AnalyzePage hand over on the success path.
  * - cardType: "analysis" | "player" | "progress"
  */
+
+/**
+ * The share endpoints return `share_text` / `share_url`, but this component
+ * only ever read `text` / `url`. PlayerCardPage and AnalyzePage pass the
+ * backend response straight through on their SUCCESS paths, so both fields
+ * came back undefined and every share silently degraded to
+ * `"" + window.location.href` â€” an empty message plus whatever page the
+ * SHARER happened to be on. Normalise both shapes here so all three callers
+ * (analysis / player / progress) are fixed at once.
+ */
+function normalizeShare(d) {
+  if (!d) return { title: "Formanti", text: "", url: "" };
+  return {
+    title: d.title || "Formanti",
+    text: d.text || d.share_text || "",
+    url: d.url || d.share_url || "",
+    card: d.card || {},
+  };
+}
+
 export default function ShareModal({ open, onClose, shareData, cardType = "analysis" }) {
   const [copied, setCopied] = useState(false);
   const cardRef = useRef(null);
 
   const handleCopyLink = useCallback(async () => {
-    const text = shareData?.text || shareData?.url || window.location.href;
+    const { text, url } = normalizeShare(shareData);
+    // Copy the message AND the link â€” previously `text || url || href` meant
+    // that as soon as there was any text the link was dropped entirely.
+    const payload = [text, url].filter(Boolean).join("\n") || window.location.origin;
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(payload);
       setCopied(true);
       toast.success("Copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
@@ -31,12 +56,16 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
   }, [shareData]);
 
   const handleWebShare = useCallback(async () => {
+    const { title, text, url } = normalizeShare(shareData);
     if (navigator.share) {
       try {
         await navigator.share({
-          title: shareData?.title || "Formanti",
-          text: shareData?.text || "",
-          url: shareData?.url || window.location.href,
+          title,
+          text,
+          // Fall back to the site root, never to the sharer's current page:
+          // /card and /player-card are the OWNER's authenticated views, so
+          // sending a friend there just showed them an empty state.
+          url: url || window.location.origin,
         });
       } catch (err) {
         if (err.name !== "AbortError") toast.error("Share failed");
@@ -47,10 +76,9 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
   }, [shareData, handleCopyLink]);
 
   const handleWhatsApp = useCallback(() => {
-    const text = encodeURIComponent(
-      (shareData?.text || "") + "\n" + (shareData?.url || window.location.href)
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank");
+    const { text, url } = normalizeShare(shareData);
+    const body = [text, url || window.location.origin].filter(Boolean).join("\n");
+    window.open(`https://wa.me/?text=${encodeURIComponent(body)}`, "_blank");
   }, [shareData]);
 
   const handleDownloadImage = useCallback(async () => {

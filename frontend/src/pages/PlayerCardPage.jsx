@@ -18,6 +18,10 @@ export default function PlayerCardPage() {
   const [badgesData, setBadgesData] = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareData, setShareData] = useState(null);
+  // Set when the card genuinely can't be built yet (no quiz, no analyses),
+  // vs. when the request simply failed — the two need different copy.
+  const [nextStep, setNextStep] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
   // Set page title
   useEffect(() => {
@@ -30,7 +34,13 @@ export default function PlayerCardPage() {
         api.get(`/player-card/${user.id}`),
         api.get(`/badges/${user.id}`),
       ]).then(([cardRes, badgesRes]) => {
-        if (cardRes.status === "fulfilled") setCard(cardRes.value.data.card);
+        if (cardRes.status === "fulfilled") {
+          setCard(cardRes.value.data.card);
+          setNextStep(cardRes.value.data.next_step || null);
+        } else {
+          // Distinguish "we couldn't load it" from "there's nothing to show".
+          setLoadError(true);
+        }
         if (badgesRes.status === "fulfilled") setBadgesData(badgesRes.value.data);
       }).finally(() => setLoading(false));
     } else {
@@ -78,10 +88,32 @@ export default function PlayerCardPage() {
 
   if (!card) return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-zinc-400 text-lg font-medium mb-2">No player card yet</p>
-        <p className="text-zinc-600 text-sm mb-4">{user ? "Complete your assessment to generate your player card." : "Sign in and complete your assessment to get your player card."}</p>
-        {!user && <a href="/auth" className="text-sm font-medium text-lime-400 hover:text-lime-300">Sign In &rarr;</a>}
+      <div className="text-center max-w-sm px-4">
+        <p className="text-zinc-400 text-lg font-medium mb-2">
+          {loadError ? "Couldn't load your card" : "No player card yet"}
+        </p>
+        <p className="text-zinc-600 text-sm mb-4">
+          {loadError
+            ? "Something went wrong on our side. Check your connection and try again."
+            : !user
+              ? "Sign in to get your player card."
+              // The card now builds from analyses alone, so the honest ask is
+              // "analyze a clip OR take the quiz" — not "take the quiz".
+              : (nextStep || "Analyze a video or take the assessment to generate your player card.")}
+        </p>
+        {loadError ? (
+          <button onClick={() => window.location.reload()}
+            className="text-sm font-medium text-lime-400 hover:text-lime-300">
+            Retry
+          </button>
+        ) : !user ? (
+          <a href="/auth" className="text-sm font-medium text-lime-400 hover:text-lime-300">Sign In &rarr;</a>
+        ) : (
+          <div className="flex items-center justify-center gap-4">
+            <a href="/analyze" className="text-sm font-medium text-lime-400 hover:text-lime-300">Analyze a video &rarr;</a>
+            <a href="/assessment" className="text-sm font-medium text-zinc-500 hover:text-zinc-300">Take assessment</a>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -97,6 +129,13 @@ export default function PlayerCardPage() {
             Player Card
           </h1>
           <p className="text-zinc-400 text-sm">Your sports identity. Share it with the world.</p>
+          {card.derived_from_analyses && (
+            <p className="text-zinc-600 text-xs mt-2">
+              Built from your video analyses.{" "}
+              <a href="/assessment" className="text-lime-400/80 hover:text-lime-300">Take the assessment</a>{" "}
+              to sharpen it.
+            </p>
+          )}
         </motion.div>
 
         {/* Card */}

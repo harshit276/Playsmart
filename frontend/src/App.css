@@ -100,18 +100,36 @@ html, body {
   }
 }
 
-/* Blog article content styles */
+/* Blog article content styles (raw HTML rendered via dangerouslySetInnerHTML) */
+.blog-content {
+  color: #a1a1aa;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.blog-content > *:first-child {
+  margin-top: 0;
+}
+.blog-content h1 {
+  font-size: 1.875rem;
+  font-weight: 800;
+  color: #fff;
+  margin-top: 2.5rem;
+  margin-bottom: 1.25rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
 .blog-content h2 {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #fff;
   margin-top: 2.5rem;
   margin-bottom: 1rem;
   line-height: 1.3;
   letter-spacing: -0.01em;
+  scroll-margin-top: 5rem;
 }
 .blog-content h3 {
-  font-size: 1.375rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #fff;
   margin-top: 2rem;
@@ -119,7 +137,7 @@ html, body {
   line-height: 1.35;
 }
 .blog-content h4 {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: #e4e4e7;
   margin-top: 1.5rem;
@@ -127,13 +145,13 @@ html, body {
 }
 .blog-content p {
   color: #a1a1aa;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1.8;
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 .blog-content ul, .blog-content ol {
-  margin: 1rem 0;
-  padding-left: 1.5rem;
+  margin: 1rem 0 1.25rem;
+  padding-left: 1.375rem;
 }
 .blog-content ul {
   list-style-type: disc;
@@ -141,28 +159,108 @@ html, body {
 .blog-content ol {
   list-style-type: decimal;
 }
+.blog-content ul ul, .blog-content ol ol, .blog-content ul ol, .blog-content ol ul {
+  margin: 0.4rem 0;
+}
 .blog-content li {
   color: #a1a1aa;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1.8;
   margin-bottom: 0.5rem;
 }
-.blog-content strong {
+.blog-content li::marker {
+  color: #71717a;
+}
+.blog-content li > p {
+  margin-bottom: 0.5rem;
+}
+.blog-content strong, .blog-content b {
   color: #fff;
   font-weight: 600;
 }
-.blog-content em {
+.blog-content em, .blog-content i {
   color: #d4d4d8;
 }
 .blog-content a {
   color: #bef264;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: rgba(190, 242, 100, 0.35);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s ease;
 }
 .blog-content a:hover {
-  text-decoration: underline;
+  text-decoration-color: #bef264;
+}
+.blog-content blockquote {
+  border-left: 3px solid #bef264;
+  background: rgba(190, 242, 100, 0.05);
+  padding: 0.9rem 1.25rem;
+  margin: 1.5rem 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: #d4d4d8;
+  font-style: italic;
+}
+.blog-content blockquote p {
+  margin-bottom: 0;
+  color: inherit;
+}
+.blog-content code {
+  background: #27272a;
+  color: #bef264;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  font-size: 0.875em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.blog-content pre {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+.blog-content pre code {
+  background: transparent;
+  padding: 0;
+  color: #e4e4e7;
+}
+.blog-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 1.5rem 0;
+  display: block;
+}
+.blog-content hr {
+  border: none;
+  border-top: 1px solid #27272a;
+  margin: 2.5rem 0;
+}
+.blog-content table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.blog-content th, .blog-content td {
+  border: 1px solid #27272a;
+  padding: 0.6rem 0.9rem;
+  text-align: left;
+}
+.blog-content th {
+  background: #18181b;
+  color: #fff;
+  font-weight: 600;
+}
+.blog-content td {
+  color: #a1a1aa;
 }
 @media (min-width: 640px) {
-  .blog-content h2 { font-size: 2rem; }
-  .blog-content h3 { font-size: 1.5rem; }
-  .blog-content p, .blog-content li { font-size: 1.15rem; }
+  .blog-content h1 { font-size: 2.25rem; }
+  .blog-content h2 { font-size: 1.875rem; }
+  .blog-content h3 { font-size: 1.4rem; }
+  .blog-content p, .blog-content li { font-size: 1.1rem; }
 }

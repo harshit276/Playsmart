@@ -44,7 +44,9 @@ export default function InsufficientTokensModal({ open, onOpenChange, balance = 
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white">Buy tokens</p>
-                <p className="text-[11px] text-zinc-400">From ₹99 · UPI / cards / netbanking</p>
+                {/* ₹30 is the real floor — TOKEN_PACKS.pack_100 in server.py.
+                    This said "From ₹99", which no pack has ever matched. */}
+                <p className="text-[11px] text-zinc-400">From ₹30 · UPI / cards / netbanking</p>
               </div>
             </button>
 
