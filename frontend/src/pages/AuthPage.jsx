@@ -4,7 +4,7 @@ import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Zap, ArrowLeft, LogIn, Phone, Mail } from "lucide-react";
+import { Zap, ArrowLeft, LogIn, Phone } from "lucide-react";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, getRedirectResult, signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
 import api from "@/lib/api";
@@ -17,30 +17,10 @@ export default function AuthPage() {
   // Phone OTP flow state
   const [phoneStep, setPhoneStep] = useState("idle"); // idle | sending | sent | verifying
   const [phone, setPhone] = useState("");
+  const [sentTo, setSentTo] = useState(""); // normalized number the OTP went to
   const [otp, setOtp] = useState("");
   const confirmationRef = useRef(null);
   const recaptchaRef = useRef(null);
-
-  // Email + password — LOGIN ONLY (self-signup removed; see the form below).
-  const [emailAddr, setEmailAddr] = useState("");
-  const [emailPass, setEmailPass] = useState("");
-  const [emailBusy, setEmailBusy] = useState(false);
-
-  const handleEmailAuth = async () => {
-    const addr = emailAddr.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { toast.error("Enter a valid email address"); return; }
-    if (!emailPass) { toast.error("Enter your password"); return; }
-    setEmailBusy(true);
-    try {
-      const { data } = await api.post("/auth/login-password", { email: addr, password: emailPass });
-      login(data.token, data.user, data.has_profile, data.tokens);
-      toast.success("Welcome back!");
-      navigate(data.has_profile ? "/dashboard" : "/analyze");
-    } catch (err) {
-      toast.error(err?.response?.data?.detail || "Something went wrong. Please try again.");
-    }
-    setEmailBusy(false);
-  };
 
   // If already logged in, redirect
   useEffect(() => {
@@ -105,9 +85,16 @@ export default function AuthPage() {
   };
 
   const sendOtp = async () => {
-    const cleaned = phone.replace(/\s+/g, "");
+    // India-first: users type just their 10 digits and we prepend +91. A full
+    // international number (typed with a leading +) is used as-is.
+    const raw = phone.replace(/[^\d+]/g, "");
+    let cleaned;
+    if (raw.startsWith("+")) cleaned = raw;                 // full international
+    else if (/^91\d{10}$/.test(raw)) cleaned = "+" + raw;   // 91XXXXXXXXXX
+    else if (/^0?\d{10}$/.test(raw)) cleaned = "+91" + raw.replace(/^0/, ""); // 10-digit (opt leading 0)
+    else cleaned = "+91" + raw;                             // best-effort default
     if (!/^\+\d{10,15}$/.test(cleaned)) {
-      toast.error("Enter phone with country code, e.g. +919876543210");
+      toast.error("Enter a valid mobile number — 10 digits for India.");
       return;
     }
     setPhoneStep("sending");
@@ -115,6 +102,7 @@ export default function AuthPage() {
       const verifier = ensureRecaptcha();
       const confirmation = await signInWithPhoneNumber(auth, cleaned, verifier);
       confirmationRef.current = confirmation;
+      setSentTo(cleaned);
       setPhoneStep("sent");
       toast.success("OTP sent — check your SMS");
     } catch (err) {
@@ -262,71 +250,41 @@ export default function AuthPage() {
               {loading ? "Signing in..." : "Continue with Google"}
             </Button>
 
-            {/* Email + password — LOGIN ONLY. Self-signup with email/password
-                was removed: it granted the free-token bonus with no
-                verification, so throwaway emails could farm it. New accounts
-                use Google or phone (both verified); this form stays for
-                existing accounts and the demo login. */}
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-3">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
-                <Mail className="w-3 h-3" /> Log in with email
-              </p>
-              <input
-                type="email"
-                autoComplete="email"
-                placeholder="Email address"
-                value={emailAddr}
-                onChange={(e) => setEmailAddr(e.target.value)}
-                disabled={emailBusy}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
-              />
-              <input
-                type="password"
-                autoComplete="current-password"
-                placeholder="Password"
-                value={emailPass}
-                onChange={(e) => setEmailPass(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !emailBusy && handleEmailAuth()}
-                disabled={emailBusy}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
-              />
-              <Button
-                onClick={handleEmailAuth}
-                disabled={emailBusy}
-                className="w-full h-11 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-lg text-sm"
-              >
-                {emailBusy ? "Please wait…" : "Log in"}
-              </Button>
-              <p className="text-[11px] text-zinc-500 text-center">
-                New here? Sign up with Google or phone above.
-              </p>
-            </div>
-
-            {/* Phone OTP — Firebase Phone Auth (free, 10K/month). India-friendly. */}
+            {/* Phone OTP — Firebase Phone Auth (free, 10K/month). India-friendly:
+                defaults to +91, users just type their 10-digit number. */}
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-2">
               <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
                 <Phone className="w-3 h-3" /> Or sign in with phone
               </p>
               {phoneStep !== "sent" && phoneStep !== "verifying" ? (
-                <div className="flex gap-2">
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    placeholder="+91 9876543210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    disabled={loading || phoneStep === "sending"}
-                    className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
-                  />
-                  <Button onClick={sendOtp} disabled={loading || phoneStep === "sending"}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg text-xs px-4">
-                    {phoneStep === "sending" ? "Sending…" : "Send OTP"}
-                  </Button>
-                </div>
+                <>
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center bg-zinc-800 border border-zinc-700 rounded-lg px-3 focus-within:border-lime-400">
+                      <span className="text-sm text-zinc-400 font-medium select-none pr-1">+91</span>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        maxLength={14}
+                        placeholder="98765 43210"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        disabled={loading || phoneStep === "sending"}
+                        className="flex-1 bg-transparent py-2 text-sm text-white placeholder-zinc-500 focus:outline-none"
+                      />
+                    </div>
+                    <Button onClick={sendOtp} disabled={loading || phoneStep === "sending"}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg text-xs px-4">
+                      {phoneStep === "sending" ? "Sending…" : "Send OTP"}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-zinc-600">
+                    Indian number? Just type 10 digits. Outside India? Start with +&lt;country code&gt;.
+                  </p>
+                </>
               ) : (
                 <div className="space-y-2">
                   <p className="text-[11px] text-zinc-400">
-                    Code sent to <span className="text-white font-mono">{phone}</span>
+                    Code sent to <span className="text-white font-mono">{sentTo || phone}</span>
                     <button onClick={() => { setPhoneStep("idle"); setOtp(""); }}
                       className="ml-2 text-lime-400 hover:text-lime-300 underline">change</button>
                   </p>
