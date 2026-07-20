@@ -107,9 +107,13 @@ export default function AuthPage() {
       toast.success("OTP sent — check your SMS");
     } catch (err) {
       console.error("sendOtp failed:", err);
-      const msg = err?.code === "auth/invalid-phone-number" ? "Invalid phone number"
+      const msg = err?.code === "auth/invalid-phone-number" ? "Invalid phone number — check the digits and try again"
         : err?.code === "auth/too-many-requests" ? "Too many attempts — try later"
-        : err?.code === "auth/invalid-app-credential" ? "Phone auth not enabled in Firebase Console yet"
+        // Provider disabled OR domain not authorized in Firebase Console.
+        // Both surface as an SMS that never arrives; steer the user to Google
+        // instead of leaving them stuck on a broken phone flow.
+        : (err?.code === "auth/operation-not-allowed" || err?.code === "auth/invalid-app-credential")
+          ? "Phone sign-in is temporarily unavailable — please continue with Google."
         : err?.message || "Couldn't send OTP";
       toast.error(msg);
       setPhoneStep("idle");
