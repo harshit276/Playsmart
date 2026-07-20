@@ -291,14 +291,16 @@ export default function CommunityPage() {
           <div className="absolute -right-10 -bottom-10 text-[180px] opacity-10 select-none">🏸</div>
         </motion.div>
 
-        {/* Quick-host presets */}
-        <div className="mb-6 -mx-1 overflow-x-auto">
-          <div className="flex gap-2 px-1 min-w-max">
-            <span className="text-[10px] uppercase tracking-wider text-zinc-500 self-center mr-1">Quick host</span>
+        {/* Quick-host presets — wrap so every preset stays on-screen on
+            mobile (was a horizontal scroller that pushed buttons off the
+            right edge with no scroll cue). */}
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500 mr-1">Quick host</span>
             {QUICK_HOST_PRESETS.map((p) => (
               <button key={p.label} onClick={() => applyQuickHost(p)}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 hover:border-lime-400/30 transition-colors">
-                <Zap className="w-3 h-3 text-lime-400" /> {p.label}
+                <Zap className="w-3 h-3 text-lime-400 shrink-0" /> {p.label}
               </button>
             ))}
           </div>

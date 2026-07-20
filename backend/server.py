@@ -2982,6 +2982,7 @@ async def get_training_recommendation(
         }
 
         # Add research videos for each skill
+        from research_loader import get_all_videos  # was used here without import → NameError
         all_videos = get_all_videos(active_sport, level=level_key)
         for v in all_videos[:10]:
             for sa in v.get("skill_areas", []):
@@ -3887,8 +3888,13 @@ async def analyze_video_stream_endpoint(
     try:
         video_bytes = await video.read()
     except Exception as exc:
+        # Capture the message NOW: `exc` is unbound once this except block
+        # exits, but _err_read() is a generator that runs later (when the
+        # StreamingResponse is iterated), so referencing `exc` inside it
+        # raised NameError. Bind it to a plain local instead.
+        _err_msg = f"upload_read_failed: {str(exc)[:200]}"
         async def _err_read():
-            yield _sse_event({"phase": "error", "msg": f"upload_read_failed: {str(exc)[:200]}"})
+            yield _sse_event({"phase": "error", "msg": _err_msg})
         return StreamingResponse(_err_read(), media_type="text/event-stream", headers=_sse_headers())
 
     size_bytes = len(video_bytes)
@@ -13763,7 +13769,24 @@ from research_loader import (
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+# Vision-capable model for per-shot identification (/analysis/identify-shots).
+# GROQ_MODEL above is text-only, so vision needs its own. Override via env if
+# Groq renames/retires the model.
+GROQ_VISION_MODEL = os.environ.get(
+    "GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct").strip()
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+
+def pick_groq_model(api_key: str) -> str:
+    """Return the Groq vision model to use, or "" when no key is set.
+
+    This was referenced in /analysis/identify-shots but never defined, so the
+    endpoint raised NameError whenever GROQ_API_KEY was present. Kept as a
+    function (not just a constant) so the caller's `if not model:` guard stays
+    meaningful and model selection can grow later without touching callers."""
+    if not api_key:
+        return ""
+    return GROQ_VISION_MODEL
 
 _COACH_CORPUS_CACHE: list = []
 _COACH_BLOG_SNIPPETS_CACHE: list = []

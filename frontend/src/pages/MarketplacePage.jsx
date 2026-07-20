@@ -309,7 +309,11 @@ export default function MarketplacePage() {
         )}
 
         <p className="text-xs text-zinc-500 mb-3">
-          {loading ? "Loading…" : `${filtered.length} product${filtered.length === 1 ? "" : "s"}`}
+          {loading
+            ? "Loading…"
+            : recommendActive && picksLoading
+              ? "Ranking your best matches…"
+              : `${filtered.length} product${filtered.length === 1 ? "" : "s"}`}
         </p>
 
         {/* Grid */}
@@ -318,6 +322,14 @@ export default function MarketplacePage() {
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="bg-zinc-900/80 border border-zinc-800 rounded-2xl h-64 animate-pulse" />
             ))}
+          </div>
+        ) : recommendActive && picksLoading ? (
+          /* AI is reordering the whole list against the user's inputs — show a
+             clear loading state instead of the soon-to-be-reshuffled grid. */
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-9 h-9 border-2 border-lime-400 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-zinc-300 text-sm font-medium">Finding your best matches…</p>
+            <p className="text-zinc-500 text-xs mt-1">Ranking gear by your skill, budget and goal.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-12 text-center">
