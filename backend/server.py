@@ -476,6 +476,7 @@ class FirebaseAuthRequest(BaseModel):
     firebase_token: str
     name: str = ""
     email: str = ""
+    phone: str = ""
     photo: str = ""
 
 @api_router.post("/auth/firebase")
@@ -492,12 +493,21 @@ async def firebase_auth(req: FirebaseAuthRequest):
       - $inc retries that might double-credit
     """
     email = req.email.strip().lower()
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required")
+    phone = req.phone.strip()
+    if not email and not phone:
+        # Phone-auth users have no email; email-auth users have no phone.
+        # Require at least one identity. (This used to be "Email is required",
+        # which broke phone sign-in outright — the SMS would verify and then
+        # this endpoint 400'd because Firebase phone users carry no email.)
+        raise HTTPException(status_code=400, detail="Email or phone number is required")
 
-    # Deterministic user_id from email (same across logins, no DB needed)
-    user_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{email}"))
-    token = create_token(user_id, email)
+    # Deterministic user_id from the identity key (same across logins, no DB
+    # needed). Email is the primary key when present so Google and any future
+    # email-linked method map to one account; phone-only sign-ins key on the
+    # phone number.
+    identity = email or phone
+    user_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"athlyticai:{identity}"))
+    token = create_token(user_id, email or phone)
 
     # Parallel hot-path fetches with generous timeouts. The grant-check is
     # the source of truth, so we always look at the transactions log too.
@@ -544,12 +554,20 @@ async def firebase_auth(req: FirebaseAuthRequest):
     # Ensure the user doc exists with current name/photo (idempotent upsert).
     # Done inline (not background) so subsequent reads see consistent state.
     try:
+        # Store whichever identity fields we have. Phone is captured here so
+        # it's available for follow-ups / admin. Only set non-empty values so
+        # a phone-only user doesn't get an empty email field (and vice versa).
+        _set_fields = {"name": req.name, "photo": req.photo}
+        if email:
+            _set_fields["email"] = email
+        if phone:
+            _set_fields["phone"] = phone
         await asyncio.wait_for(db.users.update_one(
             {"id": user_id},
             {"$setOnInsert": {"id": user_id,
                               "created_at": datetime.now(timezone.utc).isoformat(),
                               "tokens": 0},
-             "$set": {"name": req.name, "photo": req.photo, "email": email}},
+             "$set": _set_fields},
             upsert=True,
         ), timeout=5.0)
     except Exception as e:
@@ -591,12 +609,12 @@ async def firebase_auth(req: FirebaseAuthRequest):
     if is_new_user:
         await _notify_admin_now(
             "🎉 New user signup",
-            f"Name: {req.name or '—'}\nEmail: {email}\nTokens credited: {balance}",
+            f"Name: {req.name or '—'}\nEmail: {email or '—'}\nPhone: {phone or '—'}\nTokens credited: {balance}",
         )
 
     return {
         "token": token,
-        "user": {"id": user_id, "email": email, "name": req.name, "photo": req.photo},
+        "user": {"id": user_id, "email": email, "phone": phone, "name": req.name, "photo": req.photo},
         "has_profile": has_profile,
         "tokens": balance,
     }

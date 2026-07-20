@@ -49,6 +49,10 @@ export default function AuthPage() {
 
   const processFirebaseUser = async (firebaseUser) => {
     const email = firebaseUser.email || "";
+    // Phone-auth users have no email but carry a verified phoneNumber — send
+    // it so the backend can key/store the account on the phone (and we can
+    // reach them for follow-ups). Google users have no phoneNumber.
+    const phone = firebaseUser.phoneNumber || "";
     const name = firebaseUser.displayName || "";
     const photo = firebaseUser.photoURL || "";
 
@@ -59,6 +63,7 @@ export default function AuthPage() {
       firebase_token: idToken,
       name,
       email,
+      phone,
       photo,
     });
 
