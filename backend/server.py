@@ -627,7 +627,19 @@ async def _profile_exists(user_id: str) -> bool:
 async def register_email(req: RegisterRequest):
     """Create an account with name + email + password. If a Google-only
     account already exists for this email, this ADDS a password to it (same
-    account). Grants signup tokens once (idempotent)."""
+    account). Grants signup tokens once (idempotent).
+
+    DISABLED by default (ALLOW_EMAIL_SIGNUP): this granted the 100-token
+    signup bonus with NO email verification, so anyone could farm unlimited
+    free analyses with throwaway addresses. New accounts must go through
+    Google (email verified by Google) or phone OTP (phone verified) — both
+    far harder to mass-create. Email/password LOGIN still works for existing
+    accounts and the demo account. Only re-enable this flag once a real
+    verify-email / OTP step gates the token grant."""
+    if os.environ.get("ALLOW_EMAIL_SIGNUP", "").strip().lower() not in ("1", "true", "yes"):
+        raise HTTPException(
+            status_code=403,
+            detail="Please sign up with Google or your phone number.")
     email = req.email.strip().lower()
     if "@" not in email or "." not in email.split("@")[-1]:
         raise HTTPException(status_code=400, detail="Please enter a valid email address")

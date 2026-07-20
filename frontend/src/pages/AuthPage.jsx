@@ -21,9 +21,7 @@ export default function AuthPage() {
   const confirmationRef = useRef(null);
   const recaptchaRef = useRef(null);
 
-  // Email + password flow state
-  const [emailMode, setEmailMode] = useState("login"); // "login" | "signup"
-  const [emailName, setEmailName] = useState("");
+  // Email + password — LOGIN ONLY (self-signup removed; see the form below).
   const [emailAddr, setEmailAddr] = useState("");
   const [emailPass, setEmailPass] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
@@ -31,18 +29,12 @@ export default function AuthPage() {
   const handleEmailAuth = async () => {
     const addr = emailAddr.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { toast.error("Enter a valid email address"); return; }
-    if (emailPass.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    if (!emailPass) { toast.error("Enter your password"); return; }
     setEmailBusy(true);
     try {
-      const path = emailMode === "signup" ? "/auth/register" : "/auth/login-password";
-      const body = emailMode === "signup"
-        ? { name: emailName.trim(), email: addr, password: emailPass }
-        : { email: addr, password: emailPass };
-      const { data } = await api.post(path, body);
+      const { data } = await api.post("/auth/login-password", { email: addr, password: emailPass });
       login(data.token, data.user, data.has_profile, data.tokens);
-      toast.success(emailMode === "signup"
-        ? `Welcome${emailName ? ", " + emailName.trim() : ""}! 🪙 ${data.tokens} tokens`
-        : "Welcome back!");
+      toast.success("Welcome back!");
       navigate(data.has_profile ? "/dashboard" : "/analyze");
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Something went wrong. Please try again.");
@@ -270,30 +262,15 @@ export default function AuthPage() {
               {loading ? "Signing in..." : "Continue with Google"}
             </Button>
 
-            {/* Email + password sign up / log in */}
+            {/* Email + password — LOGIN ONLY. Self-signup with email/password
+                was removed: it granted the free-token bonus with no
+                verification, so throwaway emails could farm it. New accounts
+                use Google or phone (both verified); this form stays for
+                existing accounts and the demo login. */}
             <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
-                  <Mail className="w-3 h-3" /> {emailMode === "signup" ? "Create an account" : "Log in with email"}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setEmailMode(emailMode === "signup" ? "login" : "signup")}
-                  className="text-[11px] text-lime-400 hover:text-lime-300 font-medium"
-                >
-                  {emailMode === "signup" ? "Have an account? Log in" : "New here? Sign up"}
-                </button>
-              </div>
-              {emailMode === "signup" && (
-                <input
-                  type="text"
-                  placeholder="Your name"
-                  value={emailName}
-                  onChange={(e) => setEmailName(e.target.value)}
-                  disabled={emailBusy}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
-                />
-              )}
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
+                <Mail className="w-3 h-3" /> Log in with email
+              </p>
               <input
                 type="email"
                 autoComplete="email"
@@ -305,7 +282,7 @@ export default function AuthPage() {
               />
               <input
                 type="password"
-                autoComplete={emailMode === "signup" ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 placeholder="Password"
                 value={emailPass}
                 onChange={(e) => setEmailPass(e.target.value)}
@@ -318,8 +295,11 @@ export default function AuthPage() {
                 disabled={emailBusy}
                 className="w-full h-11 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-lg text-sm"
               >
-                {emailBusy ? "Please wait…" : emailMode === "signup" ? "Create account" : "Log in"}
+                {emailBusy ? "Please wait…" : "Log in"}
               </Button>
+              <p className="text-[11px] text-zinc-500 text-center">
+                New here? Sign up with Google or phone above.
+              </p>
             </div>
 
             {/* Phone OTP — Firebase Phone Auth (free, 10K/month). India-friendly. */}
