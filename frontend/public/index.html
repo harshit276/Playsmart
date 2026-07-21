@@ -10,9 +10,13 @@
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Formanti" />
-        <link rel="apple-touch-icon" href="%PUBLIC_URL%/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="%PUBLIC_URL%/icons/icon-192.png?v=2" />
         <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-        <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/icons/icon-96.png" />
+        <!-- favicon.ico is requested by browsers (and Google's crawler) at the
+             site root whether or not it's declared, so it must exist — it used
+             to 404. ?v=2 busts the previously cached Athlyticai "A". -->
+        <link rel="icon" href="%PUBLIC_URL%/favicon.ico?v=2" sizes="any" />
+        <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/icons/icon-96.png?v=2" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />

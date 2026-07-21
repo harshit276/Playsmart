@@ -1,6 +1,9 @@
 // Bump CACHE_VERSION whenever cache strategy or shell assets change.
 // On version bump, old caches are deleted on activate.
-const CACHE_VERSION = 'v25';
+// v26: new Formanti F logo — the shell cache pins icon-192/512, so without a
+// bump returning visitors keep being served the old Athlyticai "A" mark (and
+// the PWA installs with it) no matter what the server has.
+const CACHE_VERSION = 'v26';
 const SHELL_CACHE = `athlyticai-shell-${CACHE_VERSION}`;
 const ASSET_CACHE = `athlyticai-assets-${CACHE_VERSION}`;
 const DATA_CACHE = `athlyticai-data-${CACHE_VERSION}`;
