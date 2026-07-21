@@ -1293,6 +1293,87 @@ async def admin_users(x_admin_key: str = Header(None, alias="X-Admin-Key"), limi
     return {"users": rows, "count": len(rows)}
 
 
+class AdminGrantTokensRequest(BaseModel):
+    identifier: str = Field(..., max_length=160)   # email, phone, or user id
+    amount: int = Field(..., ge=-1_000_000, le=1_000_000)
+    reason: str = Field("", max_length=200)
+
+
+@api_router.post("/admin/grant-tokens")
+async def admin_grant_tokens(
+    req: AdminGrantTokensRequest, x_admin_key: str = Header(None, alias="X-Admin-Key"),
+):
+    """Manually credit (or debit) tokens on any account.
+
+    For goodwill top-ups when an analysis disappoints, comps, and fixing a
+    grant that failed. Unlike the automatic grants this is deliberately NOT
+    idempotent — calling it twice credits twice, because "give them another
+    100" is a legitimate thing to want. Every call writes an `admin_grant`
+    transaction carrying the reason, so the ledger explains itself later.
+
+    Looks the account up by email, phone or user id. Email lookup queries the
+    stored field rather than only deriving uuid5 from the address, so accounts
+    created via phone (whose id is derived from the number) are still findable
+    by the email they later added.
+    """
+    _require_admin(x_admin_key)
+    ident = (req.identifier or "").strip()
+    if not ident:
+        raise HTTPException(status_code=400, detail="Enter an email, phone or user id")
+    if req.amount == 0:
+        raise HTTPException(status_code=400, detail="Amount cannot be zero")
+
+    lower = ident.lower()
+    try:
+        user = await asyncio.wait_for(db.users.find_one(
+            {"$or": [{"email": lower}, {"phone": ident}, {"id": ident}]},
+            {"_id": 0, "id": 1, "email": 1, "phone": 1, "name": 1},
+        ), timeout=6.0)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+
+    # Fall back to the deterministic email→id derivation, which covers an
+    # account that was credited before its user doc was written.
+    if not user and "@" in lower:
+        derived = _user_id_for_email(lower)
+        try:
+            user = await asyncio.wait_for(
+                db.users.find_one({"id": derived}, {"_id": 0, "id": 1, "email": 1, "name": 1}), timeout=4.0)
+        except Exception:
+            user = None
+
+    if not user:
+        raise HTTPException(status_code=404, detail=f"No account found for '{ident}'")
+
+    before = await _get_balance(user["id"])
+    if req.amount < 0 and before + req.amount < 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"That would take the balance below zero (currently {before}).")
+
+    new_balance = await _credit_tokens(
+        user["id"], "admin_grant", req.amount,
+        {"reason": req.reason.strip() or "manual admin adjustment",
+         "identifier": ident, "balance_before": before},
+    )
+    if new_balance is None:
+        raise HTTPException(status_code=503, detail="Credit failed — please retry")
+
+    logger.info(
+        f"admin_grant: {req.amount:+d} to {user['id'][:8]} "
+        f"({user.get('email') or user.get('phone') or '—'}) "
+        f"[{before} → {new_balance}] reason={req.reason.strip()!r}"
+    )
+    return {
+        "ok": True,
+        "user": {"id": user["id"], "email": user.get("email", ""),
+                 "phone": user.get("phone", ""), "name": user.get("name", "")},
+        "amount": req.amount,
+        "balance_before": before,
+        "balance": new_balance,
+    }
+
+
 @api_router.get("/admin/enquiries")
 async def admin_enquiries(x_admin_key: str = Header(None, alias="X-Admin-Key"), limit: int = 100):
     _require_admin(x_admin_key)

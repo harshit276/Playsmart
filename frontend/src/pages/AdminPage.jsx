@@ -343,12 +343,106 @@ function EnquiriesTab({ headers }) {
 }
 
 // ── Transactions tab ───────────────────────────────────────
+// Manual token adjustment — goodwill top-ups when an analysis disappoints,
+// comps, and repairing a grant that failed. Deliberately not idempotent on the
+// backend: "give them another 100" is a legitimate thing to want twice.
+function GrantTokensPanel({ headers, onDone }) {
+  const [identifier, setIdentifier] = useState("");
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const submit = async () => {
+    const amt = parseInt(amount, 10);
+    if (!identifier.trim()) { toast.error("Enter an email, phone or user id"); return; }
+    if (!Number.isFinite(amt) || amt === 0) { toast.error("Enter a non-zero amount"); return; }
+    if (amt < 0 && !window.confirm(`Deduct ${Math.abs(amt)} tokens from ${identifier.trim()}?`)) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post("/admin/grant-tokens",
+        { identifier: identifier.trim(), amount: amt, reason: reason.trim() },
+        { headers, timeout: 15000 });
+      setResult(data);
+      toast.success(`${data.amount > 0 ? "+" : ""}${data.amount} → ${data.user.email || data.user.phone || "account"} (now ${data.balance})`);
+      setAmount(""); setReason("");
+      onDone?.();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Grant failed");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl p-4 mb-6">
+      <p className="text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-3 flex items-center gap-1.5">
+        <Coins className="w-3.5 h-3.5" /> Adjust tokens manually
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-2 mb-2">
+        <input
+          value={identifier}
+          onChange={e => setIdentifier(e.target.value)}
+          placeholder="Email, phone or user id"
+          disabled={busy}
+          className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none"
+        />
+        <input
+          value={amount}
+          onChange={e => setAmount(e.target.value.replace(/[^\d-]/g, ""))}
+          onKeyDown={e => { if (e.key === "Enter") submit(); }}
+          placeholder="Amount (−ve deducts)"
+          inputMode="numeric"
+          disabled={busy}
+          className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none font-mono"
+        />
+      </div>
+      <input
+        value={reason}
+        onChange={e => setReason(e.target.value)}
+        placeholder="Reason (stored on the transaction, e.g. 'bad analysis — goodwill')"
+        disabled={busy}
+        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none mb-2"
+      />
+      <div className="flex items-center gap-2 flex-wrap">
+        {[100, 500, 1000].map(n => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setAmount(String(n))}
+            disabled={busy}
+            className="text-[11px] px-2.5 py-1 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-amber-400 hover:text-amber-300"
+          >
+            +{n}
+          </button>
+        ))}
+        <Button
+          onClick={submit}
+          disabled={busy}
+          size="sm"
+          className="bg-amber-400 text-black hover:bg-amber-500 font-bold ml-auto"
+        >
+          {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+          {busy ? "Applying…" : "Apply"}
+        </Button>
+      </div>
+      {result && (
+        <p className="text-[11px] text-zinc-400 mt-3 pt-3 border-t border-zinc-800">
+          <span className="text-white font-medium">{result.user.name || result.user.email || result.user.phone || result.user.id}</span>
+          {" · "}{result.balance_before} → <span className="text-lime-400 font-mono font-bold">{result.balance}</span>
+          {" "}({result.amount > 0 ? "+" : ""}{result.amount})
+        </p>
+      )}
+    </div>
+  );
+}
+
 function TransactionsTab({ headers }) {
   const { data, loading, refresh } = useFetch("/admin/transactions?limit=200", headers);
   if (loading) return <Spinner />;
   const rows = data?.transactions || [];
   return (
     <div>
+      <GrantTokensPanel headers={headers} onDone={refresh} />
       <Header title={`${rows.length} transactions`} onRefresh={refresh} />
       <Table cols={["Kind", "Δ", "Balance after", "User", "When"]}>
         {rows.map(t => (
