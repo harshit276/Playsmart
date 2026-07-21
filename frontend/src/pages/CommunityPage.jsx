@@ -93,6 +93,9 @@ export default function CommunityPage() {
   const [myGames, setMyGames] = useState({ hosted: [], joined: [] });
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  // Which step the host dialog opens on. A quick-host preset jumps straight to
+  // the form; the plain "Host a Game" button asks about Playo first.
+  const [startStep, setStartStep] = useState("choose");
   const [sending, setSending] = useState({});
 
   // Filters for the games list
@@ -221,6 +224,9 @@ export default function CommunityPage() {
       max_players: preset.max_players,
       title: preset.title,
     }));
+    // A preset already IS the answer to "how do you want to start", and the
+    // form is prefilled — skip straight past the Playo/manual chooser.
+    setStartStep("form");
     setShowCreate(true);
   };
 
@@ -289,8 +295,12 @@ export default function CommunityPage() {
                 gameForm={gameForm}
                 setGameForm={setGameForm}
                 onCreate={createGame}
+                startStep={startStep}
               >
-                <Button className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full h-11 px-5 shadow-lg shadow-lime-400/20">
+                <Button
+                  onClick={() => setStartStep("choose")}
+                  className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full h-11 px-5 shadow-lg shadow-lime-400/20"
+                >
                   <Plus className="w-4 h-4 mr-1.5" /> Host a Game
                 </Button>
               </HostGameDialog>
@@ -665,7 +675,7 @@ const SKILL_OPTIONS = [
   { value: "Advanced", label: "Advanced", desc: "Club-level play" },
 ];
 
-function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, children }) {
+function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, startStep = "choose", children }) {
   const sport = gameForm.sport;
   const accent = SPORT_COLORS[sport] || SPORT_COLORS.badminton;
   const dateChips = quickDates();
@@ -678,11 +688,18 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
   const [importNote, setImportNote] = useState("");   // scrubbed host message
   const [confirmHost, setConfirmHost] = useState(false);
 
-  // The dialog stays mounted, so clear import state on close — otherwise a
-  // stale link, note, or ticked host-confirmation carries into the next game.
+  const [step, setStep] = useState(startStep);  // choose | form
+
+  // The dialog stays mounted, so reset on open/close — otherwise a stale link,
+  // note, or ticked host-confirmation carries into the next game, and the step
+  // wouldn't follow how this open was triggered (preset vs plain Host a Game).
   useEffect(() => {
-    if (!open) { setPlayoUrl(""); setImportNote(""); setConfirmHost(false); }
-  }, [open]);
+    if (open) {
+      setStep(startStep);
+    } else {
+      setPlayoUrl(""); setImportNote(""); setConfirmHost(false);
+    }
+  }, [open, startStep]);
 
   const importFromPlayo = async () => {
     const url = playoUrl.trim();
@@ -700,6 +717,7 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
       if (data.sport && SPORT_LABELS[data.sport]) patch.sport = data.sport;
       update(patch);
       setImportNote(data.notes_suggestion || "");
+      setStep("form");   // straight into the prefilled form to review
       if (data.unsupported_sport) {
         toast.warning(`Imported — but ${data.unsupported_sport} isn't hostable here yet, so pick a sport below.`);
       } else if (data.partial) {
@@ -733,36 +751,59 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
           </DialogHeader>
         </div>
 
-        <div className="px-6 py-5 space-y-5">
-          {/* Import from Playo — most Bangalore players already host there, so
-              pasting the share link fills this whole form in one step. */}
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-2">
-            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
-              <LinkIcon className="w-3 h-3" /> Already hosting on Playo?
-            </label>
-            <div className="flex gap-2">
+        {/* STEP 1 — offer the Playo shortcut before the form. Buried at the top
+            of a long form it went unnoticed; as the opening question it's the
+            first thing a host sees, and most Bangalore players already have a
+            link to paste. "Enter details manually" is always one tap away. */}
+        {step === "choose" ? (
+          <div className="px-6 py-5 space-y-4">
+            <div className="bg-lime-400/5 border border-lime-400/30 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <LinkIcon className="w-4 h-4 text-lime-400 shrink-0" />
+                <p className="text-sm font-semibold text-white">Already hosting on Playo?</p>
+              </div>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Paste the link and we'll fill in the sport, venue, date and time for you.
+              </p>
               <input
                 value={playoUrl}
                 onChange={e => setPlayoUrl(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); importFromPlayo(); } }}
-                placeholder="Paste your Playo game link"
+                placeholder="https://playo.co/match/..."
                 disabled={importing}
-                className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                autoFocus
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-lime-400 focus:outline-none"
               />
               <Button
                 type="button"
                 onClick={importFromPlayo}
                 disabled={importing || !playoUrl.trim()}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg text-xs px-4 shrink-0"
+                className="w-full h-11 bg-lime-400 text-black hover:bg-lime-500 disabled:bg-zinc-800 disabled:text-zinc-600 font-bold rounded-lg text-sm"
               >
-                {importing ? "Reading…" : "Import"}
+                {importing ? "Reading your game…" : "Import from Playo"}
               </Button>
+              <p className="text-[10px] text-zinc-600 leading-relaxed">
+                Contact and payment details are left out — you'll review everything before posting.
+              </p>
             </div>
-            <p className="text-[10px] text-zinc-600">
-              We'll fill in the sport, venue, date and time. Contact and payment details are left out — add your own below.
-            </p>
-          </div>
 
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px bg-zinc-800" />
+              <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">or</span>
+              <div className="flex-1 h-px bg-zinc-800" />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep("form")}
+              className="w-full h-11 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-xl"
+            >
+              Enter details manually
+            </Button>
+          </div>
+        ) : (
+        <div className="px-6 py-5 space-y-5">
           {/* Sport pills */}
           <div>
             <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">Sport</label>
@@ -1004,8 +1045,11 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
             </label>
           )}
         </div>
+        )}
 
-        {/* Sticky footer with primary CTA */}
+        {/* Sticky footer with primary CTA — only on the form step; the chooser
+            carries its own actions. */}
+        {step === "form" && (
         <div className="sticky bottom-0 bg-zinc-950/95 backdrop-blur-sm border-t border-zinc-800 px-6 py-4 flex gap-2">
           <Button
             onClick={onCreate}
@@ -1022,6 +1066,7 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
             Cancel
           </Button>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );
