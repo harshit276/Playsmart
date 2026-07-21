@@ -5,7 +5,48 @@
  * that shot type. Pedagogical alternative to AI video regeneration â€”
  * users see exactly which joints are off and by how much.
  */
-import { initModel, detectPose, getKeypointByName, calculateAngle, KEYPOINT_NAMES, SKELETON_EDGES } from "./poseDetector.js";
+import { initModel, detectPose, detectMultiplePeople, getKeypointByName, calculateAngle, KEYPOINT_NAMES, SKELETON_EDGES } from "./poseDetector.js";
+
+// Angles are only reported when EVERY contributing joint clears this. MoveNet
+// happily emits low-confidence guesses for occluded limbs, and those produced
+// the confidently-wrong readouts users saw ("Elbow 52° · Off" on a clean
+// shot). Better to show three angles we trust than six we don't.
+const MIN_ANGLE_KP_SCORE = 0.5;
+
+// A detected person is only a candidate subject above this pose score.
+const MIN_SUBJECT_SCORE = 0.3;
+
+/**
+ * Choose WHICH detected person is the player.
+ *
+ * MoveNet SinglePose returns exactly one pose and gives no say in whose it is,
+ * so on a court with an opponent, umpire or spectators it regularly locked
+ * onto the wrong body — the "skeleton drawn on the other player" bug. MultiPose
+ * returns everyone, so we can pick deliberately: in a contact frame the player
+ * is the largest, most confident, most central figure.
+ *
+ * `box` is normalized 0-1 (see detectMultiplePeople); keypoints stay in pixels.
+ */
+function _pickSubject(people) {
+  if (!people || people.length === 0) return null;
+  let best = null;
+  for (const p of people) {
+    if ((p.score || 0) < MIN_SUBJECT_SCORE) continue;
+    const box = p.box || {};
+    const area = Math.max(0, (box.width || 0) * (box.height || 0));   // 0-1
+    const cx = (box.x || 0) + (box.width || 0) / 2;
+    const cy = (box.y || 0) + (box.height || 0) / 2;
+    // 1.0 dead centre, falling to 0 at the corners.
+    const centrality = 1 - Math.min(1, Math.hypot(cx - 0.5, cy - 0.5) / 0.7071);
+    // Size dominates (the player is nearest the camera), confidence gates it,
+    // centrality only breaks ties between similarly-sized people.
+    const rank = (p.score || 0)
+      * (0.45 + 0.55 * Math.sqrt(Math.min(1, area * 4)))
+      * (0.75 + 0.25 * centrality);
+    if (!best || rank > best.rank) best = { pose: p, rank };
+  }
+  return best ? best.pose : null;
+}
 
 
 /**
@@ -562,7 +603,7 @@ function angleAt(kps, sideName, joint) {
     const b = get(`${sideName}_elbow`);
     const c = get(`${sideName}_wrist`);
     if (!a || !b || !c) return null;
-    if ((a.score || 0) < 0.3 || (b.score || 0) < 0.3 || (c.score || 0) < 0.3) return null;
+    if ((a.score || 0) < MIN_ANGLE_KP_SCORE || (b.score || 0) < MIN_ANGLE_KP_SCORE || (c.score || 0) < MIN_ANGLE_KP_SCORE) return null;
     return calculateAngle(a, b, c);
   }
   if (joint === "shoulder") {
@@ -571,7 +612,7 @@ function angleAt(kps, sideName, joint) {
     const el = get(`${sideName}_elbow`);
     const hp = get(`${sideName}_hip`);
     if (!sh || !el || !hp) return null;
-    if ((sh.score || 0) < 0.3 || (el.score || 0) < 0.3 || (hp.score || 0) < 0.3) return null;
+    if ((sh.score || 0) < MIN_ANGLE_KP_SCORE || (el.score || 0) < MIN_ANGLE_KP_SCORE || (hp.score || 0) < MIN_ANGLE_KP_SCORE) return null;
     return calculateAngle(hp, sh, el);
   }
   if (joint === "knee") {
@@ -579,7 +620,7 @@ function angleAt(kps, sideName, joint) {
     const k = get(`${sideName}_knee`);
     const a = get(`${sideName}_ankle`);
     if (!h || !k || !a) return null;
-    if ((h.score || 0) < 0.3 || (k.score || 0) < 0.3 || (a.score || 0) < 0.3) return null;
+    if ((h.score || 0) < MIN_ANGLE_KP_SCORE || (k.score || 0) < MIN_ANGLE_KP_SCORE || (a.score || 0) < MIN_ANGLE_KP_SCORE) return null;
     return calculateAngle(h, k, a);
   }
   return null;
@@ -615,11 +656,25 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
   detectCanvas.width = img.width; detectCanvas.height = img.height;
   detectCanvas.getContext("2d").drawImage(img, 0, 0);
 
+  // Detect EVERYONE, then choose the player (see _pickSubject). Falls back to
+  // single-pose only if multi-pose is unavailable, so a model-load failure
+  // degrades to the old behaviour rather than losing the feature.
   let keypoints = null;
+  let peopleCount = 0;
   try {
-    keypoints = await detectPose(detectCanvas);
+    const people = await detectMultiplePeople(detectCanvas);
+    peopleCount = people.length;
+    const subject = _pickSubject(people);
+    if (subject) keypoints = subject.keypoints;
   } catch {
-    return { error: "pose-detection-failed" };
+    // fall through to single-pose
+  }
+  if (!keypoints) {
+    try {
+      keypoints = await detectPose(detectCanvas);
+    } catch {
+      return { error: "pose-detection-failed" };
+    }
   }
   if (!keypoints || keypoints.length === 0) {
     return { error: "no-pose-detected" };
@@ -731,5 +786,8 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
     racketSide,
     shotLabel: ideal?.label || null,
     hasIdealRange: !!ideal,
+    // How many people were in frame — lets the UI say "we tracked the closest
+    // player" instead of leaving the user wondering who the skeleton is on.
+    peopleCount,
   };
 }

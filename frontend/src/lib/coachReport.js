@@ -148,7 +148,7 @@ export function openCoachReport(result, opts = {}) {
 
   ${(courtImg || postureFrames.length) ? `<h2>Positioning & Posture</h2>
     ${courtImg ? `<div class="imgs"><img src="${courtImg}" alt="Court positioning map"></div>` : ""}
-    ${postureFrames.length ? `<p class="note" style="margin:6px 0 2px">Tracked posture at contact — joints color-graded against the ideal range for each shot.</p>
+    ${postureFrames.length ? `<p class="note" style="margin:6px 0 2px">Tracked posture at contact on your most-played shot — joints color-graded against the ideal range.</p>
     <div class="posture-grid">${postureFrames.map((p) => `
       <figure><img src="${p.src}" alt="Posture at contact — ${esc(p.label)}"><figcaption>${esc(cap(p.label))}</figcaption></figure>
     `).join("")}</div>` : ""}

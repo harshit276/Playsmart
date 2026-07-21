@@ -3041,78 +3041,43 @@ function PostureImage({ state, shotName }) {
   );
 }
 
-// The measured joint angles as a spacious, readable row of stat chips.
-// `compact` tightens them for the gallery cards.
-function PostureMetricsRow({ state, racketSideLabel = true, compact = false }) {
+// The measured joint angles on ONE line.
+//
+// Was a grid of large stat cards repeated per shot type, which dominated the
+// page. Everything reaching here has already cleared the keypoint-confidence
+// gate in poseOverlay, so this just presents the angles we actually trust,
+// compactly: joint · value · ideal range · status dot. Scrolls sideways on
+// narrow screens rather than wrapping into a block.
+function PostureMetricsRow({ state, racketSideLabel = true }) {
   if (state.status !== "ready") return null;
   const { measurements, racketSide } = state.result;
   const graded = (measurements || []).filter((m) => m.ideal);
-  const rows = (graded.length ? graded : (measurements || [])).slice(0, 3);
-  if (rows.length === 0) {
-    return (
-      <p className="text-[11px] text-zinc-500">
-        Skeleton tracked — no curated ideal ranges for this shot type yet.
-      </p>
-    );
-  }
+  const rows = (graded.length ? graded : (measurements || [])).slice(0, 4);
+  if (rows.length === 0) return null;
   return (
-    <div>
+    <div className="flex items-center gap-3 overflow-x-auto">
       {racketSideLabel && racketSide && (
-        <p className="text-[9px] uppercase tracking-wider text-lime-400 font-bold mb-2">
-          At contact · {racketSide} arm
-        </p>
+        <span className="text-[9px] uppercase tracking-wider text-lime-400 font-bold whitespace-nowrap shrink-0">
+          At contact · {racketSide}
+        </span>
       )}
-      <div className="flex flex-wrap gap-2">
-        {rows.map((m) => {
-          const st = _POSTURE_STATUS[m.status] || _POSTURE_STATUS.neutral;
-          return (
-            <div
-              key={m.joint}
-              title={m.ideal?.why || ""}
-              className={`flex-1 min-w-[130px] bg-zinc-900/80 border border-zinc-800 rounded-lg ${compact ? "px-2.5 py-1.5" : "px-3 py-2"}`}
-            >
-              <div className="flex items-center justify-between gap-1.5">
-                <span className={`${compact ? "text-[10px]" : "text-[11px]"} text-zinc-400 truncate`}>
-                  {_JOINT_LABELS[m.joint] || m.joint}
-                </span>
-                <span className={`flex items-center gap-1 ${compact ? "text-[9px]" : "text-[10px]"} font-bold ${st.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} /> {st.label}
-                </span>
-              </div>
-              <p className={`${compact ? "text-[12px]" : "text-sm"} text-white font-mono mt-0.5`}>
-                {m.value}°{m.ideal ? <span className="text-zinc-500 font-sans"> · ideal {m.ideal.min}–{m.ideal.max}°</span> : null}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// A compact, self-contained posture card for the "more shots" gallery: a
-// full-width skeleton frame with the shot label, and the measured angles in
-// a chip row below. Each card runs its own pose analysis.
-function PostureGalleryCard({ shot, sport, videoFile }) {
-  const state = usePostureAnalysis({
-    videoFile,
-    timestamp: typeof shot.timestamp === "number" ? shot.timestamp : null,
-    thumbnail: shot.thumbnail || null,
-    sport,
-    shotType: shot.category || shot.type || shot.label,
-    contactBox: shot.contactBox || null,
-  });
-  return (
-    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl overflow-hidden">
-      <div className="bg-black aspect-video relative">
-        <PostureImage state={state} shotName={shot._name} />
-        <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
-          <p className="text-[10px] uppercase tracking-wider text-white font-bold capitalize">{shot._name}</p>
-        </div>
-      </div>
-      <div className="p-3 border-t border-zinc-800">
-        <PostureMetricsRow state={state} compact />
-      </div>
+      {rows.map((m) => {
+        const st = _POSTURE_STATUS[m.status] || _POSTURE_STATUS.neutral;
+        return (
+          <span
+            key={m.joint}
+            title={m.ideal?.why || ""}
+            className="flex items-baseline gap-1.5 whitespace-nowrap shrink-0"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${st.dot} self-center`} />
+            <span className="text-[11px] text-zinc-400">{_JOINT_LABELS[m.joint] || m.joint}</span>
+            <span className="text-sm text-white font-mono font-semibold">{m.value}°</span>
+            {m.ideal && (
+              <span className="text-[10px] text-zinc-600">/ {m.ideal.min}–{m.ideal.max}°</span>
+            )}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -3125,9 +3090,6 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   // automatically after analysis.
   const [proRef, setProRef] = useState(null);
   const [headlineShot, setHeadlineShot] = useState(null);
-  // The next few most-played shot types (after the headline) get their own
-  // static posture cards in the gallery below the hero — "one per shot".
-  const [galleryShots, setGalleryShots] = useState([]);
   const userVideoRef = useRef(null);
   // useState (not useRef) for the URL so canShowVideo actually re-evaluates
   // after we build the URL — the previous useRef version meant the
@@ -3191,7 +3153,6 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     }
     if (!reps.length) return;
     setHeadlineShot(reps[0]);
-    setGalleryShots(reps.slice(1));
     fetchProReference(sport, reps[0]._type).then((ref) => {
       if (!cancelled) setProRef(ref);
     });
@@ -3275,6 +3236,9 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   if (!headlineShot) return null;
 
   const canShowVideo = !!userVideoUrl && typeof headlineShot.timestamp === "number";
+  // Keep the skeleton panel while it's still working, drop it once we know it
+  // failed — so a clip we can't measure doesn't leave a permanent empty box.
+  const showPosture = heroPosture.status === "loading" || heroPosture.status === "ready";
 
   // Click YOU panel → seek the page's main video to this shot AND
   // scroll it into view, so users have one path to "study this in
@@ -3302,11 +3266,12 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           Your {headlineShot._name} — measured at contact
         </p>
         <p className="text-[10px] text-zinc-500 mt-0.5">
-          Your looping clip on the left, your tracked posture at contact on the
-          right, and your measured joint angles vs the ideal range below.
+          {showPosture
+            ? "Your looping clip, your tracked posture at contact, and the joint angles we could measure with confidence."
+            : "Your looping clip for this shot."}
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+      <div className={`grid grid-cols-1 gap-0 ${showPosture ? "md:grid-cols-2" : ""}`}>
         {/* USER side — raw user clip looping the shot window.
             Click anywhere on the panel to jump the main page video to
             this shot (so the panel doubles as a fast nav surface). */}
@@ -3357,18 +3322,31 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           )}
         </div>
         {/* POSTURE TRACKER — skeleton overlay on the contact frame, joints
-            color-graded against curated ideal ranges. Now gets a full panel
-            (was crammed into a sliver) so the tracked body reads clearly. */}
-        <div className="bg-black aspect-video relative">
-          <PostureImage state={heroPosture} shotName={headlineShot._name} />
-          <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
-            <p className="text-[9px] uppercase tracking-wider text-lime-300 font-bold">Tracked posture</p>
+            color-graded against curated ideal ranges. Rendered only when a
+            pose actually resolved: a permanent "couldn't measure" box was
+            dead weight on exactly the clips that already gave least value,
+            so the clip panel now takes the full width instead. */}
+        {showPosture && (
+          <div className="bg-black aspect-video relative">
+            <PostureImage state={heroPosture} shotName={headlineShot._name} />
+            <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5">
+              <p className="text-[9px] uppercase tracking-wider text-lime-300 font-bold">
+                Tracked posture
+              </p>
+            </div>
+            {heroPosture.status === "ready" && heroPosture.result.peopleCount > 1 && (
+              <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-1">
+                <p className="text-[9px] text-zinc-300 leading-snug">
+                  {heroPosture.result.peopleCount} people in frame — tracking the closest player
+                </p>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
-      {/* Measured joint angles — full-width, spacious, readable row. */}
+      {/* Measured joint angles — a single compact line. */}
       {heroPosture.status === "ready" && (
-        <div className="px-4 py-3 border-t border-zinc-800">
+        <div className="px-4 py-2.5 border-t border-zinc-800">
           <PostureMetricsRow state={heroPosture} />
         </div>
       )}
@@ -3423,21 +3401,11 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       )}
     </div>
 
-    {/* GALLERY — one posture card per additional top shot type. Static
-        skeleton frames (no extra looping videos) so the page stays light
-        while still giving the user 4–5 postures to review at a glance. */}
-    {galleryShots.length > 0 && (
-      <div>
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-2 px-1">
-          More shots — posture at contact
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {galleryShots.map((s) => (
-            <PostureGalleryCard key={s._type} shot={s} sport={sport} videoFile={videoFile} />
-          ))}
-        </div>
-      </div>
-    )}
+    {/* The per-shot posture gallery was removed deliberately: one card per
+        shot type ate most of the page, each ran its own MoveNet pass, and the
+        cards that failed to resolve a pose left conspicuous empty panels. A
+        single tracked posture on the top shot says the same thing in a
+        fraction of the space. */}
     </div>
   );
 }
