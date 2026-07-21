@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, UserPlus, UserCheck, Calendar, MapPin, Clock, Trophy,
   Search, Plus, ChevronRight, Swords, X, Check, Bell, Share2, Zap,
-  Sparkles, Target,
+  Sparkles, Target, Link as LinkIcon,
 } from "lucide-react";
 import api from "@/lib/api";
 import { swrGet, invalidateMatching } from "@/lib/cachedFetch";
@@ -110,6 +110,12 @@ export default function CommunityPage() {
     skill_level: "All Levels",
     max_players: 4,
     notes: "",
+    venue_place_id: "",
+    venue_address: "",
+    venue_lat: null,
+    venue_lng: null,
+    source: "",
+    source_url: "",
   });
 
   // SWR-cached load — instant on revisits, refreshes in background.
@@ -188,7 +194,13 @@ export default function CommunityPage() {
       const { data } = await api.post("/games", gameForm);
       toast.success(data.message || "Game posted");
       setShowCreate(false);
-      setGameForm(f => ({ ...f, title: "", venue: "", notes: "" }));
+      // Clear venue + Playo provenance too, so the next game posted in this
+      // session isn't tagged as imported or pinned to the previous venue.
+      setGameForm(f => ({
+        ...f, title: "", venue: "", notes: "",
+        venue_place_id: "", venue_address: "", venue_lat: null, venue_lng: null,
+        source: "", source_url: "",
+      }));
       refresh();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Failed to create game");
@@ -660,7 +672,50 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
 
   const update = (patch) => setGameForm(f => ({ ...f, ...patch }));
 
-  const valid = gameForm.title && gameForm.venue && gameForm.city && gameForm.date && gameForm.time;
+  // ─── Import from a Playo share link ───
+  const [playoUrl, setPlayoUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importNote, setImportNote] = useState("");   // scrubbed host message
+  const [confirmHost, setConfirmHost] = useState(false);
+
+  // The dialog stays mounted, so clear import state on close — otherwise a
+  // stale link, note, or ticked host-confirmation carries into the next game.
+  useEffect(() => {
+    if (!open) { setPlayoUrl(""); setImportNote(""); setConfirmHost(false); }
+  }, [open]);
+
+  const importFromPlayo = async () => {
+    const url = playoUrl.trim();
+    if (!url) return;
+    setImporting(true);
+    try {
+      const { data } = await api.post("/community/import/playo", { url });
+      const patch = {};
+      for (const k of ["title", "venue", "city", "date", "time", "duration_minutes",
+                       "skill_level", "max_players", "venue_place_id", "venue_address",
+                       "venue_lat", "venue_lng", "source", "source_url"]) {
+        if (data[k] !== undefined && data[k] !== null && data[k] !== "") patch[k] = data[k];
+      }
+      // Only accept a sport this form can actually represent.
+      if (data.sport && SPORT_LABELS[data.sport]) patch.sport = data.sport;
+      update(patch);
+      setImportNote(data.notes_suggestion || "");
+      if (data.unsupported_sport) {
+        toast.warning(`Imported — but ${data.unsupported_sport} isn't hostable here yet, so pick a sport below.`);
+      } else if (data.partial) {
+        toast.warning("Imported partially — please double-check the details.");
+      } else {
+        toast.success("Details imported from Playo");
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Couldn't read that link — please fill the form manually");
+    }
+    setImporting(false);
+  };
+
+  const fromPlayo = gameForm.source === "playo";
+  const valid = gameForm.title && gameForm.venue && gameForm.city && gameForm.date
+    && gameForm.time && (!fromPlayo || confirmHost);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -679,6 +734,35 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
         </div>
 
         <div className="px-6 py-5 space-y-5">
+          {/* Import from Playo — most Bangalore players already host there, so
+              pasting the share link fills this whole form in one step. */}
+          <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-2">
+            <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold flex items-center gap-1.5">
+              <LinkIcon className="w-3 h-3" /> Already hosting on Playo?
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={playoUrl}
+                onChange={e => setPlayoUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); importFromPlayo(); } }}
+                placeholder="Paste your Playo game link"
+                disabled={importing}
+                className="flex-1 min-w-0 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+              />
+              <Button
+                type="button"
+                onClick={importFromPlayo}
+                disabled={importing || !playoUrl.trim()}
+                className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg text-xs px-4 shrink-0"
+              >
+                {importing ? "Reading…" : "Import"}
+              </Button>
+            </div>
+            <p className="text-[10px] text-zinc-600">
+              We'll fill in the sport, venue, date and time. Contact and payment details are left out — add your own below.
+            </p>
+          </div>
+
           {/* Sport pills */}
           <div>
             <label className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold block mb-2">Sport</label>
@@ -728,6 +812,8 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
               onSelect={(place) => update({
                 venue: place.name,
                 city: place.city || gameForm.city,
+                venue_place_id: place.place_id || "",
+                venue_address: place.address || "",
                 venue_lat: place.lat,
                 venue_lng: place.lng,
               })}
@@ -875,7 +961,48 @@ function HostGameDialog({ open, onOpenChange, gameForm, setGameForm, onCreate, c
               onChange={e => update({ notes: e.target.value })}
               className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-lime-400 focus:outline-none resize-none"
             />
+            {/* Imported note is offered, never auto-applied: it comes from
+                someone else's listing and can contain their contact details. */}
+            {importNote && (
+              <div className="mt-2 bg-zinc-900/60 border border-zinc-800 rounded-lg p-2.5">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold mb-1">
+                  Note from the Playo listing
+                </p>
+                <p className="text-[11px] text-zinc-400 whitespace-pre-line leading-relaxed">{importNote}</p>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => { update({ notes: importNote }); setImportNote(""); }}
+                    className="text-[11px] text-lime-400 hover:text-lime-300 font-semibold"
+                  >
+                    Use this
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImportNote("")}
+                    className="text-[11px] text-zinc-500 hover:text-zinc-300"
+                  >
+                    Discard
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Anyone can paste anyone's link, so ask before mirroring a listing. */}
+          {fromPlayo && (
+            <label className="flex items-start gap-2.5 bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={confirmHost}
+                onChange={e => setConfirmHost(e.target.checked)}
+                className="mt-0.5 accent-lime-400 w-4 h-4 shrink-0"
+              />
+              <span className="text-[11px] text-zinc-400 leading-relaxed">
+                I'm the host of this game (or have the host's permission to post it here).
+              </span>
+            </label>
+          )}
         </div>
 
         {/* Sticky footer with primary CTA */}

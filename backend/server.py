@@ -8810,6 +8810,15 @@ class GameCreate(BaseModel):
     skill_level: str = "All Levels"
     max_players: int = 4
     notes: str = ""
+    # Optional structured venue data from the places autocomplete. All optional
+    # so a hand-typed venue (the old path) still works unchanged.
+    venue_place_id: str = ""
+    venue_address: str = ""
+    venue_lat: Optional[float] = None
+    venue_lng: Optional[float] = None
+    # Provenance when the game was prefilled from an external listing.
+    source: str = ""       # "" | "playo"
+    source_url: str = ""
 
 class GameJoinRequest(BaseModel):
     game_id: str
@@ -9005,6 +9014,12 @@ async def create_game(data: GameCreate, authorization: str = Header(None)):
         "players": [user["id"]],  # Host auto-joins
         "player_names": {user["id"]: user.get("name") or f"Player {user['id'][:6]}"},
         "notes": data.notes,
+        "venue_place_id": data.venue_place_id,
+        "venue_address": data.venue_address,
+        "venue_lat": data.venue_lat,
+        "venue_lng": data.venue_lng,
+        "source": data.source,
+        "source_url": data.source_url,
         "status": "open",  # open, full, completed, cancelled
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -9022,6 +9037,291 @@ async def create_game(data: GameCreate, authorization: str = Header(None)):
         logger.warning(f"host_game credit failed for {user['id'][:8]}: {e}")
 
     return {"message": "Game created!", "game": game, "tokens_earned": tokens_earned}
+
+
+# ─── Venue autocomplete (provider-agnostic) ───
+# Deliberately proxied through the backend rather than called from the browser:
+#   1. It keeps any paid API key server-side. A key shipped in the React bundle
+#      is public and can only be protected by an HTTP-referrer restriction —
+#      which the Capacitor Android build cannot satisfy (native WebViews send
+#      no Referer), so a browser-side key would work on web and silently fail
+#      in the APK.
+#   2. It lets the provider be swapped by changing one env var.
+# Default provider is OSM/Photon: no key, no billing, works today. Set
+# PLACES_PROVIDER=google|ola plus PLACES_API_KEY to upgrade POI quality later.
+PLACES_PROVIDER = os.environ.get("PLACES_PROVIDER", "osm").strip().lower()
+PLACES_API_KEY = os.environ.get("PLACES_API_KEY", "").strip()
+
+
+def _osm_place(feat: dict) -> Optional[dict]:
+    """Normalize one Photon GeoJSON feature to our place shape."""
+    import re
+    props = feat.get("properties") or {}
+    coords = ((feat.get("geometry") or {}).get("coordinates")) or []
+    name = props.get("name") or props.get("street") or ""
+    if not name:
+        return None
+    # Many Indian POIs carry no `city` at all — the city-ish value sits in
+    # `county` as an administrative unit ("Bangalore East", "Bengaluru Urban"),
+    # while `district` is a neighbourhood ("Jagadish Nagar"). Prefer county
+    # with the qualifier stripped, so we get "Bangalore" not the locality.
+    county = re.sub(r"\s+(North|South|East|West|Central|Urban|Rural)$", "",
+                    props.get("county") or "").strip()
+    city = props.get("city") or county or props.get("district") or props.get("state") or ""
+    bits = [b for b in (props.get("street"), props.get("district"), city,
+                        props.get("state"), props.get("country")) if b]
+    return {
+        "place_id": f"osm:{props.get('osm_type', '')}{props.get('osm_id', '')}",
+        "name": name,
+        "city": city,
+        "address": ", ".join(dict.fromkeys(bits)),
+        "lat": coords[1] if len(coords) == 2 else None,
+        "lng": coords[0] if len(coords) == 2 else None,
+    }
+
+
+async def _places_search(q: str, lat: Optional[float] = None,
+                         lng: Optional[float] = None, limit: int = 8) -> List[dict]:
+    """Look up venues by free-text name. Returns [] on any failure — venue is a
+    free-text field, so autocomplete is an enhancement and must never block
+    hosting a game."""
+    q = (q or "").strip()
+    if len(q) < 3:
+        return []
+    try:
+        if PLACES_PROVIDER == "google" and PLACES_API_KEY:
+            body = {"textQuery": q, "maxResultCount": limit, "regionCode": "IN"}
+            if lat is not None and lng is not None:
+                body["locationBias"] = {"circle": {"center": {"latitude": lat, "longitude": lng},
+                                                   "radius": 30000.0}}
+            async with httpx.AsyncClient(timeout=6.0) as c:
+                r = await c.post(
+                    "https://places.googleapis.com/v1/places:searchText",
+                    headers={"X-Goog-Api-Key": PLACES_API_KEY,
+                             "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location"},
+                    json=body)
+                r.raise_for_status()
+                out = []
+                for p in (r.json().get("places") or [])[:limit]:
+                    loc = p.get("location") or {}
+                    out.append({
+                        "place_id": p.get("id", ""),
+                        "name": (p.get("displayName") or {}).get("text", ""),
+                        "address": p.get("formattedAddress", ""),
+                        "city": "",
+                        "lat": loc.get("latitude"), "lng": loc.get("longitude"),
+                    })
+                return [p for p in out if p["name"]]
+
+        if PLACES_PROVIDER == "ola" and PLACES_API_KEY:
+            params = {"input": q, "api_key": PLACES_API_KEY}
+            if lat is not None and lng is not None:
+                params["location"] = f"{lat},{lng}"
+            async with httpx.AsyncClient(timeout=6.0) as c:
+                r = await c.get("https://api.olamaps.io/places/v1/autocomplete", params=params)
+                r.raise_for_status()
+                out = []
+                for p in (r.json().get("predictions") or [])[:limit]:
+                    loc = ((p.get("geometry") or {}).get("location")) or {}
+                    out.append({
+                        "place_id": p.get("place_id", ""),
+                        "name": (p.get("structured_formatting") or {}).get("main_text") or p.get("description", ""),
+                        "address": p.get("description", ""),
+                        "city": "",
+                        "lat": loc.get("lat"), "lng": loc.get("lng"),
+                    })
+                return [p for p in out if p["name"]]
+
+        # Default: Photon (OpenStreetMap). Free, keyless, decent for named venues.
+        params = {"q": q, "limit": limit, "lang": "en"}
+        if lat is not None and lng is not None:
+            params["lat"], params["lon"] = lat, lng
+        async with httpx.AsyncClient(timeout=6.0) as c:
+            r = await c.get("https://photon.komoot.io/api/", params=params,
+                            headers={"User-Agent": "Formanti/1.0 (+https://www.formanti.com)"})
+            r.raise_for_status()
+            places = [_osm_place(f) for f in (r.json().get("features") or [])]
+            return [p for p in places if p][:limit]
+    except Exception as e:
+        logger.warning(f"places search failed ({PLACES_PROVIDER}) for {q[:40]!r}: {e}")
+        return []
+
+
+@api_router.get("/community/places/search")
+async def places_search(q: str, lat: Optional[float] = None, lng: Optional[float] = None,
+                        authorization: str = Header(None)):
+    """Venue autocomplete for the host-a-game form."""
+    await get_current_user(authorization)
+    return {"places": await _places_search(q, lat, lng), "provider": PLACES_PROVIDER}
+
+
+# ─── Import a game from a Playo share link ───
+# Most Bangalore players already host on Playo, so pasting the share link and
+# having the details fill themselves removes nearly all the friction of
+# mirroring a game here.
+PLAYO_ALLOWED_HOSTS = {"playo.co", "www.playo.co", "go.playo.app", "playo.app", "www.playo.app"}
+
+# Playo sport names → the sport keys the host-a-game form accepts. Only these
+# four exist in that UI, and the key is `table_tennis` with an underscore, so
+# anything else is left unset rather than written as an unselectable value.
+_PLAYO_SPORT_MAP = {
+    "badminton": "badminton",
+    "tennis": "tennis",
+    "table tennis": "table_tennis",
+    "pickleball": "pickleball",
+}
+
+
+def _scrub_contact_info(text: str) -> str:
+    """Strip payment handles, emails and phone numbers out of an imported note.
+
+    Playo's `messageFromHost` routinely contains the host's UPI ID and phone
+    ("UPI ID:- name@okhdfcbank"). Anyone can paste anyone's share link, so
+    importing that verbatim would republish a stranger's payment details onto
+    Formanti. Logistics are worth importing; contact details are not.
+    """
+    import re
+    if not text:
+        return ""
+    # UPI handles (name@bank — no TLD dot) before generic emails.
+    text = re.sub(r"\b[\w.\-]{2,}@[A-Za-z]{2,}\b(?!\.[A-Za-z])", "[removed]", text)
+    text = re.sub(r"\b[\w.\-]+@[\w\-]+\.[A-Za-z]{2,}\b", "[removed]", text)
+    text = re.sub(r"(?:\+?91[\-\s]?)?\b[6-9]\d{9}\b", "[removed]", text)
+    return text.strip()
+
+
+class PlayoImportRequest(BaseModel):
+    url: str = Field(..., max_length=500)
+
+
+@api_router.post("/community/import/playo")
+async def import_playo_game(req: PlayoImportRequest, authorization: str = Header(None)):
+    """Fetch a Playo share link and return a prefill for the host-a-game form.
+
+    Returns a suggestion only — it never creates a game. The user reviews and
+    submits through the normal /games path, so a Playo outage or markup change
+    can only degrade this to manual entry.
+    """
+    import re
+    import html as html_module  # `html` is used below for the response body
+    from urllib.parse import urlparse
+
+    await get_current_user(authorization)
+    raw = (req.url or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Paste a Playo game link")
+    if not raw.startswith(("http://", "https://")):
+        raw = "https://" + raw
+
+    # SSRF guard: this endpoint fetches a user-supplied URL from inside our
+    # network, so the host is allowlisted BEFORE the request and re-checked
+    # AFTER redirects (go.playo.app 302s to playo.co).
+    try:
+        host = (urlparse(raw).hostname or "").lower()
+    except Exception:
+        raise HTTPException(status_code=400, detail="That doesn't look like a valid link")
+    if host not in PLAYO_ALLOWED_HOSTS:
+        raise HTTPException(status_code=400, detail="Only Playo game links are supported right now")
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as c:
+            resp = await c.get(raw, headers={
+                "User-Agent": "Mozilla/5.0 (compatible; Formanti/1.0; +https://www.formanti.com)"})
+        final_host = (urlparse(str(resp.url)).hostname or "").lower()
+        if final_host not in PLAYO_ALLOWED_HOSTS:
+            raise HTTPException(status_code=400, detail="That link redirects off Playo")
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="Couldn't open that Playo link")
+        html = resp.text
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"playo import fetch failed: {e}")
+        raise HTTPException(status_code=502, detail="Couldn't reach Playo — please fill the form manually")
+
+    out = {"source": "playo", "source_url": str(resp.url)}
+
+    # Preferred path: the Next.js SSR payload, which carries everything.
+    info = details = sport_obj = None
+    m = re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', html, re.S)
+    if m:
+        try:
+            pp = (json.loads(m.group(1)).get("props") or {}).get("pageProps") or {}
+            adi = pp.get("activityDetailInfo") or {}
+            info = adi.get("activityInfo") or {}
+            details = adi.get("activityDetails") or {}
+            sport_obj = adi.get("sport") or {}
+        except Exception as e:
+            logger.warning(f"playo import: __NEXT_DATA__ parse failed: {e}")
+
+    if info:
+        sport_name = (sport_obj or {}).get("name") or ""
+        mapped = _PLAYO_SPORT_MAP.get(sport_name.strip().lower())
+        if mapped:
+            out["sport"] = mapped
+        else:
+            out["unsupported_sport"] = sport_name  # host form keeps its current pick
+        out["title"] = (details or {}).get("title") or f"{sport_name} game"
+        out["venue"] = info.get("location") or ""
+        out["date"] = (info.get("date") or "")[:10]
+
+        # startMinLocal/endMinLocal are already minutes-from-midnight in the
+        # venue's local time. Using them avoids converting the UTC startTime
+        # and getting the IST offset wrong.
+        start_min, end_min = info.get("startMinLocal"), info.get("endMinLocal")
+        if isinstance(start_min, int):
+            out["time"] = f"{(start_min // 60) % 24:02d}:{start_min % 60:02d}"
+            if isinstance(end_min, int) and end_min > start_min:
+                out["duration_minutes"] = end_min - start_min
+
+        lo, hi = info.get("minSkill"), info.get("maxSkill")
+        if isinstance(lo, int) and isinstance(hi, int):
+            if lo <= 1 and hi >= 5:
+                out["skill_level"] = "All Levels"
+            else:
+                avg = (lo + hi) / 2
+                out["skill_level"] = "Beginner" if avg <= 2 else ("Advanced" if avg >= 4 else "Intermediate")
+
+        mx = info.get("maxPlayers")
+        out["max_players"] = mx if isinstance(mx, int) and mx > 0 else 4  # -1 = unlimited on Playo
+
+        # Contact details stripped — see _scrub_contact_info.
+        out["notes_suggestion"] = _scrub_contact_info(
+            (details or {}).get("messageFromHost") or info.get("gameInstructions") or "")
+    else:
+        # Fallback: OG tags. Playo renders these for WhatsApp sharing, so they
+        # survive even if the internal payload shape changes.
+        def og(prop):
+            mm = re.search(rf'<meta[^>]+property="{prop}"[^>]+content="([^"]*)"', html)
+            return html_module.unescape(mm.group(1)) if mm else ""
+        title = og("og:title")
+        if not title:
+            raise HTTPException(
+                status_code=422,
+                detail="Couldn't read that Playo game — please fill the form manually")
+        out["title"] = title
+        out["notes_suggestion"] = ""
+        desc = og("og:description")
+        for key, val in _PLAYO_SPORT_MAP.items():
+            if key in (title + " " + desc).lower():
+                out["sport"] = val
+                break
+        mv = re.search(r"\bat\s+(.+?)\.?$", desc.strip())
+        if mv:
+            out["venue"] = mv.group(1).strip()
+        out["partial"] = True
+
+    # Resolve the venue name to a city + coordinates so imported games get a
+    # map pin like autocompleted ones. Best-effort: never fails the import.
+    if out.get("venue"):
+        hits = await _places_search(out["venue"], limit=1)
+        if hits:
+            out["venue_place_id"] = hits[0]["place_id"]
+            out["venue_address"] = hits[0]["address"]
+            out["venue_lat"], out["venue_lng"] = hits[0]["lat"], hits[0]["lng"]
+            out["city"] = hits[0]["city"] or ""
+
+    return out
 
 
 @api_router.get("/games")

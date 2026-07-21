@@ -1,22 +1,28 @@
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Loader2, Search } from "lucide-react";
+import api from "@/lib/api";
 
 /**
- * Venue autocomplete using OpenStreetMap Nominatim (free, no API key).
+ * Venue autocomplete, served by our own /community/places/search proxy.
  *
  * Returns picked-place objects via `onSelect`:
- *   { name, city, country, lat, lng, display_name }
+ *   { place_id, name, city, address, lat, lng }
  *
- * Debounces queries (350ms) and caps to 1 in-flight request to stay within
- * Nominatim's "max 1 req/sec" policy. Falls back gracefully if the API is
- * unreachable — the user can still type a freeform venue name.
+ * This used to call OpenStreetMap Nominatim straight from the browser, which
+ * had two problems: Nominatim's usage policy explicitly forbids autocomplete /
+ * type-ahead traffic (and caps at 1 req/sec), and browsers can't set the
+ * User-Agent it requires for identification. The backend proxy uses Photon,
+ * which IS built for type-ahead, identifies itself properly, and lets the
+ * provider be swapped for Google/Ola later without touching this component.
+ *
+ * Debounced 350ms, one in-flight request at a time. Fails soft — if lookup is
+ * unavailable the user can still type a freeform venue name.
  */
 export default function VenueAutocomplete({
   value,
   onChange,
   onSelect,
   placeholder = "Search sports venue, arena, court...",
-  countryCode = "in",
   className = "",
 }) {
   const [results, setResults] = useState([]);
@@ -51,23 +57,15 @@ export default function VenueAutocomplete({
       const ctrl = new AbortController();
       abortRef.current = ctrl;
       try {
-        const url = new URL("https://nominatim.openstreetmap.org/search");
-        url.searchParams.set("q", q);
-        url.searchParams.set("format", "json");
-        url.searchParams.set("addressdetails", "1");
-        url.searchParams.set("limit", "7");
-        if (countryCode) url.searchParams.set("countrycodes", countryCode);
-        const res = await fetch(url.toString(), {
-          headers: { "Accept": "application/json" },
+        const { data } = await api.get("/community/places/search", {
+          params: { q },
           signal: ctrl.signal,
         });
-        if (!res.ok) throw new Error("Nominatim error");
-        const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
+        setResults(Array.isArray(data?.places) ? data.places : []);
         setOpen(true);
       } catch (err) {
-        if (err.name !== "AbortError") {
-          // Fail-soft — let the user type freeform venue
+        if (err.name !== "AbortError" && err.code !== "ERR_CANCELED") {
+          // Fail-soft — let the user type a freeform venue name.
           setResults([]);
         }
       } finally {
@@ -75,22 +73,11 @@ export default function VenueAutocomplete({
       }
     }, 350);
     return () => clearTimeout(debounceRef.current);
-  }, [value, countryCode]);
+  }, [value]);
 
   const pick = (place) => {
-    const addr = place.address || {};
-    const venueName = addr.amenity || addr.leisure || addr.shop || addr.tourism
-      || addr.building || place.name || (place.display_name || "").split(",")[0];
-    const city = addr.city || addr.town || addr.village || addr.county || addr.state_district || addr.state || "";
-    onChange(venueName);
-    onSelect?.({
-      name: venueName,
-      city,
-      country: addr.country || "",
-      lat: parseFloat(place.lat),
-      lng: parseFloat(place.lon),
-      display_name: place.display_name,
-    });
+    onChange(place.name);
+    onSelect?.(place);
     setOpen(false);
     setResults([]);
   };
@@ -132,11 +119,8 @@ export default function VenueAutocomplete({
       {open && results.length > 0 && (
         <div className="absolute z-50 mt-1 w-full bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl max-h-72 overflow-y-auto">
           {results.map((r, i) => {
-            const addr = r.address || {};
-            const name = addr.amenity || addr.leisure || addr.shop || addr.tourism
-              || addr.building || r.name || (r.display_name || "").split(",")[0];
-            const sub = (r.display_name || "")
-              .split(",").slice(1, 4).join(",").trim();
+            const name = r.name;
+            const sub = r.address || r.city || "";
             const isHl = i === highlight;
             return (
               <button
