@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Share2, Copy, Zap, Star, Target, Dumbbell, Flame, Award, Trophy } from "lucide-react";
+import { Share2, Copy, Star, Target, Dumbbell, Flame, Award, Trophy } from "lucide-react";
+import { FormantiIcon } from "@/components/FormantiLogo";
 import api from "@/lib/api";
 import ShareModal from "@/components/ShareModal";
 import { BadgeStrip } from "@/components/BadgeDisplay";
@@ -147,7 +148,7 @@ export default function PlayerCardPage() {
           <div className="relative p-6 pb-4">
             <div className="absolute top-0 right-0 w-32 h-32 bg-lime-400/5 rounded-full -translate-y-1/2 translate-x-1/2" />
             <div className="flex items-center gap-3 mb-4">
-              <Zap className="w-6 h-6 text-lime-400" />
+              <FormantiIcon className="h-6" />
               <span className="font-heading font-bold text-sm uppercase tracking-wider text-lime-400">Formanti</span>
             </div>
 

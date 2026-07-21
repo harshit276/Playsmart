@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, Copy, Download, X, MessageCircle, Link2, Check, Zap, Star, Target } from "lucide-react";
+import { Share2, Copy, Download, X, MessageCircle, Link2, Check, Star, Target } from "lucide-react";
+import { FormantiIcon } from "@/components/FormantiLogo";
 
 /**
  * ShareModal â€” Reusable share modal for analysis results, player cards, and progress.
@@ -236,7 +237,7 @@ export default function ShareModal({ open, onClose, shareData, cardType = "analy
                 className="bg-zinc-950 border border-lime-400/30 rounded-2xl p-5 mb-5 shadow-[0_0_30px_rgba(190,242,100,0.1)]"
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-4 h-4 text-lime-400" />
+                  <FormantiIcon className="h-4" />
                   <span className="text-xs font-bold text-lime-400 uppercase tracking-wider">Formanti</span>
                 </div>
 

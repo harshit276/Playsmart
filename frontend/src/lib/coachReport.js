@@ -91,7 +91,7 @@ export function openCoachReport(result, opts = {}) {
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #18181b; padding: 28px 34px; font-size: 12px; line-height: 1.45; }
   .head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px solid #84cc16; padding-bottom: 10px; margin-bottom: 14px; }
-  .brand { font-size: 20px; font-weight: 800; letter-spacing: 1px; } .brand span { color: #65a30d; }
+  .brand { display: flex; align-items: center; gap: 6px; font-size: 20px; font-weight: 800; letter-spacing: 1px; } .brand span { color: #65a30d; }
   .meta { text-align: right; color: #52525b; font-size: 11px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.8px; color: #3f6212; margin: 16px 0 6px; border-left: 4px solid #84cc16; padding-left: 8px; }
   .grid { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
@@ -116,7 +116,7 @@ export function openCoachReport(result, opts = {}) {
   @media print { body { padding: 10mm 12mm; } .noprint { display: none; } }
 </style></head><body>
   <div class="head">
-    <div class="brand">⚡ FORM<span>ANTI</span> <span style="font-weight:500;color:#52525b;font-size:13px">· Coach Report</span></div>
+    <div class="brand"><svg width="21" height="24" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="pdfFmDark" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1a1a1a"/><stop offset="100%" stop-color="#333333"/></linearGradient><linearGradient id="pdfFmLime" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#DCFF66"/><stop offset="100%" stop-color="#8FCB00"/></linearGradient><linearGradient id="pdfFmTail" x1="0%" y1="0%" x2="30%" y2="100%"><stop offset="0%" stop-color="#9CDA00"/><stop offset="100%" stop-color="#0B0B0B"/></linearGradient></defs><path fill="url(#pdfFmDark)" d="M50,60 L170,60 L140,95 L20,95 Z"/><path fill="url(#pdfFmLime)" d="M50,105 L150,105 L120,140 L20,140 Z"/><path fill="url(#pdfFmTail)" d="M20,140 L60,140 L25,215 L5,175 Z"/></svg>FORM<span>ANTI</span> <span style="font-weight:500;color:#52525b;font-size:13px">· Coach Report</span></div>
     <div class="meta"><b>${esc(playerName)}</b> · ${esc(cap(result.sport || "Sport"))} · ${esc(date)}<br>
       Skill level: <b>${esc(result.skill_level || "—")}</b>${result.shot_analysis?.score != null ? ` · Session score: <b>${esc(result.shot_analysis.score)}/100</b>` : ""}</div>
   </div>

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { Zap, ArrowLeft, Mail, Phone, MapPin, Clock } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Clock } from "lucide-react";
+import { FormantiIcon } from "@/components/FormantiLogo";
 
 // ── Business / operator contact details (shown publicly per Razorpay's
 // "Contact Us" requirement: legal name, physical address, working email +
@@ -34,7 +35,7 @@ export default function ContactPage() {
         <div className="container mx-auto px-4 max-w-4xl py-6 flex items-center gap-4">
           <Link to="/" className="flex items-center gap-2 text-zinc-400 hover:text-lime-400 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <Zap className="w-5 h-5 text-lime-400" />
+            <FormantiIcon className="h-5" />
             <span className="font-heading font-bold text-lg uppercase tracking-tight text-white">Formanti</span>
           </Link>
         </div>

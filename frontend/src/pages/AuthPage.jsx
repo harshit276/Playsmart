@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Zap, ArrowLeft, LogIn, Phone } from "lucide-react";
+import { ArrowLeft, LogIn, Mail, MailCheck } from "lucide-react";
+import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup, getRedirectResult, signInWithPhoneNumber, RecaptchaVerifier } from "firebase/auth";
+import { signInWithPopup, getRedirectResult } from "firebase/auth";
 import api from "@/lib/api";
 
 export default function AuthPage() {
@@ -14,18 +15,26 @@ export default function AuthPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Phone OTP flow state
-  const [phoneStep, setPhoneStep] = useState("idle"); // idle | sending | sent | verifying
-  const [phone, setPhone] = useState("");
-  const [sentTo, setSentTo] = useState(""); // normalized number the OTP went to
-  const [otp, setOtp] = useState("");
-  const confirmationRef = useRef(null);
-  const recaptchaRef = useRef(null);
+  // Email + password flow. Signup does NOT log you in or grant tokens — it
+  // emails a magic verify link, and the 100 tokens land when that link is
+  // clicked (see /auth/verify-email). That's what stops throwaway addresses
+  // from farming free analyses.
+  const [mode, setMode] = useState("signup"); // signup | login
+  const [name, setName] = useState("");
+  const [emailAddr, setEmailAddr] = useState("");
+  const [emailPass, setEmailPass] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [sentTo, setSentTo] = useState("");   // set once the verify link is emailed
+  const [resending, setResending] = useState(false);
+  const [verifying, setVerifying] = useState(false); // consuming a ?verify= link
 
-  // If already logged in, redirect
+  // If already logged in, redirect — unless we're mid-way through consuming a
+  // magic verify link, which must run to completion so the tokens get granted.
   useEffect(() => {
-    if (isAuthenticated) navigate("/dashboard", { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated && !verifying && !window.location.search.includes("verify=")) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, verifying, navigate]);
 
   // Handle redirect result on page load
   useEffect(() => {
@@ -49,10 +58,6 @@ export default function AuthPage() {
 
   const processFirebaseUser = async (firebaseUser) => {
     const email = firebaseUser.email || "";
-    // Phone-auth users have no email but carry a verified phoneNumber — send
-    // it so the backend can key/store the account on the phone (and we can
-    // reach them for follow-ups). Google users have no phoneNumber.
-    const phone = firebaseUser.phoneNumber || "";
     const name = firebaseUser.displayName || "";
     const photo = firebaseUser.photoURL || "";
 
@@ -63,12 +68,11 @@ export default function AuthPage() {
       firebase_token: idToken,
       name,
       email,
-      phone,
       photo,
     });
 
     login(data.token, data.user, data.has_profile, data.tokens);
-    if (typeof data.tokens === "number" && data.tokens >= 300) {
+    if (typeof data.tokens === "number" && data.tokens >= 100) {
       toast.success(`Welcome${name ? ", " + name : ""}! 🪙 ${data.tokens} tokens credited.`);
     } else {
       toast.success(`Welcome${name ? ", " + name : ""}!`);
@@ -79,68 +83,80 @@ export default function AuthPage() {
     navigate(data.has_profile ? "/dashboard" : "/analyze");
   };
 
-  // ─── Phone OTP via Firebase (free up to 10K/month) ───
-  const ensureRecaptcha = () => {
-    if (recaptchaRef.current) return recaptchaRef.current;
-    // Invisible reCAPTCHA — Google's bot check; required by Firebase Phone.
-    recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "invisible",
-    });
-    return recaptchaRef.current;
+  // ─── Magic verify link: /auth?verify=<token> ───
+  // Clicking the emailed link lands here. We exchange the token for a session
+  // and the 100-token grant, then drop the user straight into the analyzer.
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("verify");
+    if (!token) return;
+    setVerifying(true);
+    (async () => {
+      try {
+        const { data } = await api.post("/auth/verify-email", { token });
+        login(data.token, data.user, data.has_profile, data.tokens);
+        toast.success(`Email verified! 🪙 ${data.tokens} tokens credited.`);
+        navigate(data.has_profile ? "/dashboard" : "/analyze", { replace: true });
+      } catch (err) {
+        toast.error(err?.response?.data?.detail || "That verification link didn't work. Please sign up again.");
+        setMode("signup");
+      }
+      setVerifying(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Email signup / login ───
+  const handleEmailAuth = async () => {
+    const email = emailAddr.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) { toast.error("Enter a valid email address"); return; }
+    if (emailPass.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    setEmailBusy(true);
+    try {
+      if (mode === "signup") {
+        const { data } = await api.post("/auth/register", {
+          name: name.trim(), email, password: emailPass,
+        });
+        // No session yet — the account stays unverified (and token-less)
+        // until the emailed link is clicked.
+        setSentTo(data.email || email);
+        if (data.email_sent === false) {
+          toast.error("Account created, but we couldn't send the email. Try 'Resend' in a moment.");
+        } else {
+          toast.success("Check your inbox to verify your email");
+        }
+      } else {
+        const { data } = await api.post("/auth/login-password", { email, password: emailPass });
+        login(data.token, data.user, data.has_profile, data.tokens);
+        toast.success(`Welcome back${data.user?.name ? ", " + data.user.name : ""}!`);
+        navigate(data.has_profile ? "/dashboard" : "/analyze");
+      }
+    } catch (err) {
+      const status = err?.response?.status;
+      const detail = err?.response?.data?.detail;
+      if (status === 403) {
+        // Right password, unverified email — the backend just re-sent the link.
+        setSentTo(email);
+        toast.error(detail || "Please verify your email first.");
+      } else if (status === 409) {
+        setMode("login");
+        toast.error(detail || "Account already exists — please log in.");
+      } else {
+        toast.error(detail || "Something went wrong. Please try again.");
+      }
+    }
+    setEmailBusy(false);
   };
 
-  const sendOtp = async () => {
-    // India-first: users type just their 10 digits and we prepend +91. A full
-    // international number (typed with a leading +) is used as-is.
-    const raw = phone.replace(/[^\d+]/g, "");
-    let cleaned;
-    if (raw.startsWith("+")) cleaned = raw;                 // full international
-    else if (/^91\d{10}$/.test(raw)) cleaned = "+" + raw;   // 91XXXXXXXXXX
-    else if (/^0?\d{10}$/.test(raw)) cleaned = "+91" + raw.replace(/^0/, ""); // 10-digit (opt leading 0)
-    else cleaned = "+91" + raw;                             // best-effort default
-    if (!/^\+\d{10,15}$/.test(cleaned)) {
-      toast.error("Enter a valid mobile number — 10 digits for India.");
-      return;
-    }
-    setPhoneStep("sending");
+  const handleResend = async () => {
+    if (!sentTo) return;
+    setResending(true);
     try {
-      const verifier = ensureRecaptcha();
-      const confirmation = await signInWithPhoneNumber(auth, cleaned, verifier);
-      confirmationRef.current = confirmation;
-      setSentTo(cleaned);
-      setPhoneStep("sent");
-      toast.success("OTP sent — check your SMS");
-    } catch (err) {
-      console.error("sendOtp failed:", err);
-      const msg = err?.code === "auth/invalid-phone-number" ? "Invalid phone number — check the digits and try again"
-        : err?.code === "auth/too-many-requests" ? "Too many attempts — try later"
-        // Provider disabled OR domain not authorized in Firebase Console.
-        // Both surface as an SMS that never arrives; steer the user to Google
-        // instead of leaving them stuck on a broken phone flow.
-        : (err?.code === "auth/operation-not-allowed" || err?.code === "auth/invalid-app-credential")
-          ? "Phone sign-in is temporarily unavailable — please continue with Google."
-        : err?.message || "Couldn't send OTP";
-      toast.error(msg);
-      setPhoneStep("idle");
-      // Reset recaptcha so user can retry
-      try { recaptchaRef.current?.clear(); recaptchaRef.current = null; } catch {}
+      await api.post("/auth/resend-verification", { email: sentTo });
+      toast.success("Verification link sent again");
+    } catch {
+      toast.error("Couldn't resend right now — try again shortly");
     }
-  };
-
-  const verifyOtp = async () => {
-    if (!confirmationRef.current) { toast.error("Please request OTP first"); return; }
-    if (!/^\d{4,8}$/.test(otp)) { toast.error("Enter the OTP code"); return; }
-    setPhoneStep("verifying");
-    try {
-      const result = await confirmationRef.current.confirm(otp);
-      // Same backend flow as Google login — Firebase issues a token
-      // regardless of provider, so /auth/firebase handles both.
-      await processFirebaseUser(result.user);
-    } catch (err) {
-      console.error("verifyOtp failed:", err);
-      toast.error(err?.code === "auth/invalid-verification-code" ? "Wrong OTP — try again" : (err?.message || "Verification failed"));
-      setPhoneStep("sent");
-    }
+    setResending(false);
   };
 
   const handleDemoLogin = async () => {
@@ -180,15 +196,11 @@ export default function AuthPage() {
 
       console.error("Login error:", err.code, err.message);
 
-      // Show specific error
       if (err.response?.status === 405) {
-        // 405 from our API — shouldn't happen but handle it
         toast.error("Server error (405). Please try again in a moment.");
       } else if (err.code?.startsWith("auth/")) {
-        // Firebase error
         toast.error(`Firebase: ${err.message}`);
       } else if (err.response) {
-        // API error
         toast.error(`Server error: ${err.response.status}`);
       } else {
         toast.error(err.message || "Login failed. Please try again.");
@@ -196,6 +208,17 @@ export default function AuthPage() {
     }
     setLoading(false);
   };
+
+  // Consuming a magic link — full-screen spinner so the user isn't shown a
+  // login form they're about to be redirected away from.
+  if (verifying) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-zinc-950 p-6" data-testid="auth-verifying">
+        <div className="w-10 h-10 border-2 border-lime-400 border-t-transparent rounded-full animate-spin mb-5" />
+        <p className="text-zinc-300 text-sm">Verifying your email…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[100dvh] flex" data-testid="auth-page">
@@ -207,7 +230,7 @@ export default function AuthPage() {
         }} />
         <div className="absolute inset-0 bg-zinc-950/60" />
         <div className="relative z-10 p-12 max-w-md">
-          <Zap className="w-10 h-10 text-lime-400 mb-6" />
+          <FormantiIcon className="h-10 mb-6" />
           <h2 className="font-heading font-black text-4xl uppercase tracking-tighter text-white leading-tight mb-4">
             Your AI<br />Sports Coach<span className="text-lime-400">.</span>
           </h2>
@@ -227,132 +250,171 @@ export default function AuthPage() {
           transition={{ duration: 0.4 }}
           className="w-full max-w-sm my-auto"
         >
-          <div className="lg:hidden flex items-center gap-2 mb-10">
-            <Zap className="w-6 h-6 text-lime-400" />
-            <span className="font-heading font-bold text-xl uppercase tracking-tight">Formanti</span>
+          <div className="lg:hidden mb-10">
+            <FormantiLogo textClassName="font-heading font-bold text-xl uppercase tracking-tight text-white" />
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <h1 className="font-heading font-bold text-3xl uppercase tracking-tight mb-2">Get Started</h1>
-              <p className="text-zinc-400 text-sm">
-                Sign in to save your progress, get personalized recommendations, and track your improvement.
-              </p>
+          {sentTo ? (
+            /* ── Post-signup: waiting on the magic link ── */
+            <div className="space-y-6" data-testid="verify-sent">
+              <div className="w-14 h-14 rounded-2xl bg-lime-400/10 border border-lime-400/30 flex items-center justify-center">
+                <MailCheck className="w-7 h-7 text-lime-400" />
+              </div>
+              <div>
+                <h1 className="font-heading font-bold text-3xl uppercase tracking-tight mb-2">Check your email</h1>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  We sent a verification link to{" "}
+                  <span className="text-white font-medium break-all">{sentTo}</span>.
+                  Click it to activate your account and get your{" "}
+                  <span className="text-lime-400 font-semibold">100 free tokens</span>.
+                </p>
+              </div>
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  Can't find it? Check your spam folder — the link expires in 24 hours.
+                </p>
+              </div>
+              <Button
+                onClick={handleResend}
+                disabled={resending}
+                variant="outline"
+                className="w-full h-12 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-xl"
+              >
+                {resending ? "Sending…" : "Resend verification link"}
+              </Button>
+              <Button variant="ghost" onClick={() => { setSentTo(""); setMode("login"); setEmailPass(""); }}
+                className="w-full text-zinc-500 hover:text-zinc-300">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back to sign in
+              </Button>
             </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <h1 className="font-heading font-bold text-3xl uppercase tracking-tight mb-2">
+                  {mode === "signup" ? "Get Started" : "Welcome Back"}
+                </h1>
+                <p className="text-zinc-400 text-sm">
+                  {mode === "signup"
+                    ? "Create an account to save your progress, get personalized recommendations, and track your improvement."
+                    : "Sign in to pick up where you left off."}
+                </p>
+              </div>
 
-            {/* Google Login */}
-            <Button
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full h-14 bg-white text-black hover:bg-zinc-100 font-medium text-base rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:shadow-xl"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-              )}
-              {loading ? "Signing in..." : "Continue with Google"}
-            </Button>
+              {/* Google Login */}
+              <Button
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full h-14 bg-white text-black hover:bg-zinc-100 font-medium text-base rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all hover:shadow-xl"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                )}
+                {loading ? "Signing in..." : "Continue with Google"}
+              </Button>
 
-            {/* Phone OTP — Firebase Phone Auth (free, 10K/month). India-friendly:
-                defaults to +91, users just type their 10-digit number. */}
-            <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 space-y-2">
-              <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
-                <Phone className="w-3 h-3" /> Or sign in with phone
-              </p>
-              {phoneStep !== "sent" && phoneStep !== "verifying" ? (
-                <>
-                  <div className="flex gap-2">
-                    <div className="flex-1 flex items-center bg-zinc-800 border border-zinc-700 rounded-lg px-3 focus-within:border-lime-400">
-                      <span className="text-sm text-zinc-400 font-medium select-none pr-1">+91</span>
-                      <input
-                        type="tel"
-                        inputMode="numeric"
-                        maxLength={14}
-                        placeholder="98765 43210"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        disabled={loading || phoneStep === "sending"}
-                        className="flex-1 bg-transparent py-2 text-sm text-white placeholder-zinc-500 focus:outline-none"
-                      />
-                    </div>
-                    <Button onClick={sendOtp} disabled={loading || phoneStep === "sending"}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg text-xs px-4">
-                      {phoneStep === "sending" ? "Sending…" : "Send OTP"}
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-zinc-600">
-                    Indian number? Just type 10 digits. Outside India? Start with +&lt;country code&gt;.
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-zinc-800" />
+                <span className="text-xs text-zinc-500">or</span>
+                <div className="flex-1 h-px bg-zinc-800" />
+              </div>
+
+              {/* Email + password */}
+              <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-3">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold flex items-center gap-1.5">
+                  <Mail className="w-3 h-3" /> {mode === "signup" ? "Sign up with email" : "Sign in with email"}
+                </p>
+
+                {mode === "signup" && (
+                  <input
+                    type="text"
+                    placeholder="Your name"
+                    value={name}
+                    maxLength={80}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={emailBusy}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                  />
+                )}
+                <input
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={emailAddr}
+                  maxLength={120}
+                  onChange={(e) => setEmailAddr(e.target.value)}
+                  disabled={emailBusy}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                />
+                <input
+                  type="password"
+                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                  placeholder="Password"
+                  value={emailPass}
+                  maxLength={200}
+                  onChange={(e) => setEmailPass(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleEmailAuth(); }}
+                  disabled={emailBusy}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                />
+                <Button
+                  onClick={handleEmailAuth}
+                  disabled={emailBusy}
+                  className="w-full h-11 bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-lg text-sm"
+                >
+                  {emailBusy
+                    ? (mode === "signup" ? "Creating account…" : "Signing in…")
+                    : (mode === "signup" ? "Create account" : "Sign in")}
+                </Button>
+
+                {mode === "signup" && (
+                  <p className="text-[10px] text-zinc-600 leading-relaxed">
+                    We'll email you a link to verify your address. Your 100 free tokens are credited once you click it.
                   </p>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-[11px] text-zinc-400">
-                    Code sent to <span className="text-white font-mono">{sentTo || phone}</span>
-                    <button onClick={() => { setPhoneStep("idle"); setOtp(""); }}
-                      className="ml-2 text-lime-400 hover:text-lime-300 underline">change</button>
-                  </p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={8}
-                      placeholder="6-digit OTP"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                      disabled={phoneStep === "verifying"}
-                      className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none font-mono tracking-widest"
-                    />
-                    <Button onClick={verifyOtp} disabled={phoneStep === "verifying"}
-                      className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-lg text-xs px-4">
-                      {phoneStep === "verifying" ? "Verifying…" : "Verify →"}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {/* Invisible reCAPTCHA target — Firebase Phone Auth requires this */}
-              <div id="recaptcha-container" />
+                )}
+
+                <button
+                  onClick={() => { setMode(mode === "signup" ? "login" : "signup"); setEmailPass(""); }}
+                  className="w-full text-[11px] text-zinc-500 hover:text-zinc-300 pt-1"
+                >
+                  {mode === "signup"
+                    ? "Already have an account? Sign in"
+                    : "New here? Create an account"}
+                </button>
+              </div>
+
+              {/* Guest Mode */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  localStorage.setItem("guest_mode", "true");
+                  navigate("/dashboard");
+                }}
+                className="w-full h-12 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-xl"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Explore as Guest
+              </Button>
+
+              <p className="text-[11px] text-zinc-600 text-center">
+                Guests can browse but can't save progress.{" "}
+                <a href="/privacy" className="text-zinc-500 hover:text-zinc-400 underline">Privacy Policy</a>
+              </p>
+
+              <Button variant="ghost" onClick={() => navigate("/")}
+                className="w-full text-zinc-500 hover:text-zinc-300">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
+              </Button>
             </div>
-
-            {/* Demo login button removed for production. The demo account is
-                still reachable for internal testing via the secret URL
-                /auth?demo=<DEMO_LOGIN_CODE> (see the auto-trigger effect). */}
-
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-zinc-800" />
-              <span className="text-xs text-zinc-500">or</span>
-              <div className="flex-1 h-px bg-zinc-800" />
-            </div>
-
-            {/* Guest Mode */}
-            <Button
-              variant="outline"
-              onClick={() => {
-                localStorage.setItem("guest_mode", "true");
-                navigate("/dashboard");
-              }}
-              className="w-full h-12 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-900 rounded-xl"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Explore as Guest
-            </Button>
-
-            <p className="text-[11px] text-zinc-600 text-center">
-              Guests can browse but can't save progress.{" "}
-              <a href="/privacy" className="text-zinc-500 hover:text-zinc-400 underline">Privacy Policy</a>
-            </p>
-
-            <Button variant="ghost" onClick={() => navigate("/")}
-              className="w-full text-zinc-500 hover:text-zinc-300">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
-            </Button>
-          </div>
+          )}
         </motion.div>
       </div>
     </div>

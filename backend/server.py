@@ -560,6 +560,9 @@ async def firebase_auth(req: FirebaseAuthRequest):
         _set_fields = {"name": req.name, "photo": req.photo}
         if email:
             _set_fields["email"] = email
+            # Google already verified this address — mark it so the same person
+            # can also use email/password login without a verify round-trip.
+            _set_fields["email_verified"] = True
         if phone:
             _set_fields["phone"] = phone
         await asyncio.wait_for(db.users.update_one(
@@ -641,40 +644,108 @@ async def _profile_exists(user_id: str) -> bool:
         return False
 
 
+# ─── Email verification (magic link) helpers ───
+def _make_email_token(email: str, purpose: str = "verify_email", hours: int = 24) -> str:
+    """Signed, self-contained magic-link token (HS256, JWT_SECRET). No DB row
+    needed — the signature + exp is the proof. Purpose-scoped so a token minted
+    for one flow can't be replayed against another."""
+    payload = {
+        "email": email.strip().lower(),
+        "purpose": purpose,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=hours),
+        "iat": datetime.now(timezone.utc),
+    }
+    return pyjwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _read_email_token(token: str, purpose: str = "verify_email") -> Optional[str]:
+    """Validate a magic-link token; return the email if valid+unexpired+right
+    purpose, else None."""
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except Exception:
+        return None
+    if payload.get("purpose") != purpose:
+        return None
+    email = (payload.get("email") or "").strip().lower()
+    return email or None
+
+
+def _verification_email_html(name: str, link: str) -> str:
+    """Branded HTML for the verify-your-email magic link."""
+    hi = f"Hi {name.split()[0]}," if (name or "").strip() else "Welcome to Formanti,"
+    return f"""\
+<div style="margin:0;padding:0;background:#0b0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:40px 24px;">
+    <div style="font-size:26px;font-weight:800;letter-spacing:-0.02em;color:#a3e635;margin-bottom:28px;">Formanti</div>
+    <div style="background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:32px;">
+      <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#f8fafc;font-weight:700;">Verify your email</h1>
+      <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#cbd5e1;">{hi}</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#cbd5e1;">Confirm this is your email to activate your account and get your <strong style="color:#a3e635;">100 free tokens</strong> — enough for your first full AI analysis.</p>
+      <a href="{link}" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Verify &amp; claim 100 tokens</a>
+      <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">This link expires in 24 hours. If the button doesn't work, paste this into your browser:</p>
+      <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:#475569;word-break:break-all;">{link}</p>
+    </div>
+    <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#475569;text-align:center;">If you didn't create a Formanti account, you can safely ignore this email.</p>
+  </div>
+</div>"""
+
+
+async def _send_user_email(to: str, subject: str, html: str, text: str = "") -> bool:
+    """Send a transactional email to a user via Resend. Returns True on a 2xx.
+    No-ops (returns False) when RESEND_API_KEY is unset so local/dev doesn't
+    crash — the caller decides how to surface that."""
+    if not RESEND_API_KEY:
+        logger.warning(f"user email skipped (no RESEND_API_KEY) → {to}: {subject}")
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as c:
+            r = await c.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+                json={"from": MAIL_FROM, "to": [to],
+                      "subject": subject, "html": html,
+                      "text": text or "Open this link to verify your email and claim your 100 free Formanti tokens."},
+            )
+            if r.status_code >= 400:
+                logger.warning(f"Resend send to {to} failed {r.status_code}: {r.text[:200]}")
+                return False
+            return True
+    except Exception as e:
+        logger.warning(f"Resend send to {to} errored: {e}")
+        return False
+
+
 @api_router.post("/auth/register")
 async def register_email(req: RegisterRequest):
-    """Create an account with name + email + password. If a Google-only
-    account already exists for this email, this ADDS a password to it (same
-    account). Grants signup tokens once (idempotent).
+    """Create an email/password account and email a magic verify link.
 
-    DISABLED by default (ALLOW_EMAIL_SIGNUP): this granted the 100-token
-    signup bonus with NO email verification, so anyone could farm unlimited
-    free analyses with throwaway addresses. New accounts must go through
-    Google (email verified by Google) or phone OTP (phone verified) — both
-    far harder to mass-create. Email/password LOGIN still works for existing
-    accounts and the demo account. Only re-enable this flag once a real
-    verify-email / OTP step gates the token grant."""
-    if os.environ.get("ALLOW_EMAIL_SIGNUP", "").strip().lower() not in ("1", "true", "yes"):
-        raise HTTPException(
-            status_code=403,
-            detail="Please sign up with Google or your phone number.")
+    The 100-token signup bonus is NOT granted here — it's gated behind
+    clicking the verify link (see /auth/verify-email). This closes the
+    throwaway-email token-farming hole (anyone could previously farm free
+    analyses with fake addresses) while still allowing plain email signup
+    alongside Google. Re-registering an *unverified* email just resends a
+    fresh link; an already-verified email is told to log in instead."""
     email = req.email.strip().lower()
     if "@" not in email or "." not in email.split("@")[-1]:
         raise HTTPException(status_code=400, detail="Please enter a valid email address")
     user_id = _user_id_for_email(email)
     try:
         existing = await asyncio.wait_for(
-            db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 1}), timeout=4.0)
+            db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 1, "email_verified": 1}), timeout=4.0)
     except Exception:
         existing = None
-    if existing and existing.get("password_hash"):
+    # Only block if the account is already verified (Google-verified accounts
+    # also carry email_verified=True). An unverified doc is re-used so the
+    # user can update their password / get a fresh link.
+    if existing and existing.get("email_verified"):
         raise HTTPException(status_code=409,
                             detail="An account with this email already exists. Please log in instead.")
     pw_hash = _hash_password(req.password)
     try:
         await asyncio.wait_for(db.users.update_one(
             {"id": user_id},
-            {"$setOnInsert": {"id": user_id, "tokens": 0,
+            {"$setOnInsert": {"id": user_id, "tokens": 0, "email_verified": False,
                               "created_at": datetime.now(timezone.utc).isoformat()},
              "$set": {"name": req.name, "email": email, "password_hash": pw_hash}},
             upsert=True,
@@ -682,29 +753,94 @@ async def register_email(req: RegisterRequest):
     except Exception as e:
         logger.error(f"register: upsert failed for {email}: {e}")
         raise HTTPException(status_code=503, detail="Could not create account — please retry")
-    # Signup grant (idempotent on signup_grant transaction).
+    # Send the magic verify link. The token grant happens on click, not here.
+    link = f"{SHARE_SITE_URL}/auth?verify={_make_email_token(email)}"
+    sent = await _send_user_email(
+        email,
+        "Verify your email to claim 100 free Formanti tokens",
+        _verification_email_html(req.name, link),
+    )
+    await _notify_admin_now("📝 Email signup (pending verify)", f"Name: {req.name or '—'}\nEmail: {email}")
+    return {"ok": True, "email": email, "needs_verification": True, "email_sent": sent}
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str = Field(..., max_length=4000)
+
+
+@api_router.post("/auth/verify-email")
+async def verify_email(req: VerifyEmailRequest):
+    """Consume a magic verify link: mark the email verified, grant the 100
+    signup tokens once (idempotent), and log the user in. Safe to call twice
+    (re-clicking the link) — the token grant is keyed on the signup_grant
+    transaction so it never double-credits."""
+    email = _read_email_token(req.token, "verify_email")
+    if not email:
+        raise HTTPException(
+            status_code=400,
+            detail="This verification link is invalid or has expired. Sign up again to get a fresh link.")
+    user_id = _user_id_for_email(email)
+    try:
+        user = await asyncio.wait_for(db.users.find_one({"id": user_id}, {"_id": 0}), timeout=5.0)
+    except Exception:
+        user = None
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not found. Please sign up again.")
+    # Mark verified (idempotent).
+    try:
+        await asyncio.wait_for(db.users.update_one(
+            {"id": user_id}, {"$set": {"email_verified": True}}), timeout=5.0)
+    except Exception as e:
+        logger.warning(f"verify-email: mark verified failed for {user_id[:8]}: {e}")
+    # Grant signup tokens once (idempotent on the signup_grant transaction).
     try:
         grant = await asyncio.wait_for(db.token_transactions.find_one(
             {"user_id": user_id, "kind": "signup_grant"}, {"_id": 0, "id": 1}), timeout=3.0)
     except Exception:
         grant = "unknown"
+    newly = False
     if grant is None:
         try:
             bal = await _credit_tokens(user_id, "signup_grant", TOKEN_RULES["signup_grant"],
-                                       {"email": email, "source": "register"})
+                                       {"email": email, "source": "verify_email"})
+            newly = True
         except Exception:
             bal = None
         if bal is None:
             bal = await _get_balance(user_id)
     else:
         bal = await _get_balance(user_id)
-    await _notify_admin_now("🎉 New signup (email)", f"Name: {req.name or '—'}\nEmail: {email}")
+    if newly:
+        await _notify_admin_now("✅ Email verified", f"Email: {email}\nTokens granted: {bal}")
     return {
         "token": create_token(user_id, email),
-        "user": {"id": user_id, "email": email, "name": req.name, "photo": ""},
+        "user": {"id": user_id, "email": email, "name": user.get("name", ""), "photo": user.get("photo", "")},
         "has_profile": await _profile_exists(user_id),
         "tokens": bal,
     }
+
+
+class ResendVerificationRequest(BaseModel):
+    email: str = Field(..., max_length=120)
+
+
+@api_router.post("/auth/resend-verification")
+async def resend_verification(req: ResendVerificationRequest):
+    """Resend the magic verify link. Always returns ok (never leaks which
+    emails have accounts); only actually emails an *unverified* account."""
+    email = req.email.strip().lower()
+    user_id = _user_id_for_email(email)
+    try:
+        user = await asyncio.wait_for(db.users.find_one(
+            {"id": user_id}, {"_id": 0, "email_verified": 1, "name": 1, "password_hash": 1}), timeout=4.0)
+    except Exception:
+        user = None
+    if user and user.get("password_hash") and not user.get("email_verified"):
+        link = f"{SHARE_SITE_URL}/auth?verify={_make_email_token(email)}"
+        await _send_user_email(
+            email, "Verify your email to claim 100 free Formanti tokens",
+            _verification_email_html(user.get("name", ""), link))
+    return {"ok": True}
 
 
 @api_router.post("/auth/login-password")
@@ -740,6 +876,20 @@ async def login_password(req: PasswordLoginRequest):
         user = None
     if not user or not user.get("password_hash") or not _verify_password(req.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user.get("email_verified"):
+        # Correct credentials but email never verified → don't let them in (and
+        # don't grant tokens). Auto-resend a fresh link so verifying is one tap
+        # away from the login screen.
+        try:
+            link = f"{SHARE_SITE_URL}/auth?verify={_make_email_token(email)}"
+            await _send_user_email(
+                email, "Verify your email to claim 100 free Formanti tokens",
+                _verification_email_html(user.get("name", ""), link))
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your email first — we just sent you a fresh verification link. Check your inbox.")
     return {
         "token": create_token(user_id, email),
         "user": {"id": user_id, "email": email, "name": user.get("name", ""), "photo": user.get("photo", "")},
@@ -1215,6 +1365,13 @@ TWILIO_WHATSAPP_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "whatsapp:+1415523
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "").strip()
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 
+# From-address for all outbound mail. Sending as noreply@formanti.com needs the
+# formanti.com DOMAIN verified in Resend (DKIM/SPF DNS records) — no actual
+# mailbox is required. Until that's done, set MAIL_FROM to Resend's sandbox
+# sender ("Formanti <onboarding@resend.dev>"), which works immediately but can
+# only deliver to your own Resend account address.
+MAIL_FROM = os.environ.get("MAIL_FROM", "Formanti <noreply@formanti.com>").strip()
+
 # Canonical public URL used in shared messages. www is canonical — vercel.json
 # 308s the apex to www. There is deliberately no per-user/per-analysis deep
 # link here: the frontend has no public route that renders someone else's
@@ -1264,7 +1421,7 @@ async def _notify_admin(subject: str, body: str) -> None:
             async with httpx.AsyncClient(timeout=10.0) as c:
                 await c.post("https://api.resend.com/emails",
                     headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-                    json={"from": "Formanti <noreply@formanti.com>", "to": [ADMIN_EMAIL],
+                    json={"from": MAIL_FROM, "to": [ADMIN_EMAIL],
                           "subject": f"[Formanti] {subject}", "text": body})
         except Exception as e:
             logger.warning(f"Email notify failed: {e}")

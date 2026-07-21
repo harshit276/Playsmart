@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 230" width="200" height="230">
+  <defs>
+    <linearGradient id="fmFullWhite" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFFFFF"></stop><stop offset="100%" stop-color="#C9C9C9"></stop></linearGradient>
+    <linearGradient id="fmFullLime" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#DCFF66"></stop><stop offset="100%" stop-color="#8FCB00"></stop></linearGradient>
+    <linearGradient id="fmFullTail" x1="0%" y1="0%" x2="30%" y2="100%"><stop offset="0%" stop-color="#9CDA00"></stop><stop offset="100%" stop-color="#0B0B0B"></stop></linearGradient>
+  </defs>
+  <path fill="url(#fmFullWhite)" d="M50,60 L170,60 L140,95 L20,95 Z"></path>
+  <path fill="url(#fmFullLime)" d="M50,105 L150,105 L120,140 L20,140 Z"></path>
+  <path fill="url(#fmFullTail)" d="M20,140 L60,140 L25,215 L5,175 Z"></path>
+</svg>

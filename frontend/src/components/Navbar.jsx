@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import {
-  Zap, LogOut, BarChart3, Dumbbell, Target, CreditCard,
+  LogOut, BarChart3, Dumbbell, Target, CreditCard,
   Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords, ShoppingCart,
   Download, TrendingUp
 } from "lucide-react";
+import { FormantiIcon } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import { getSportEmoji, getSportLabel } from "@/lib/sportConfig";
 import { motion, AnimatePresence } from "framer-motion";
@@ -128,7 +129,7 @@ export default function Navbar() {
         <div className="container mx-auto px-4 max-w-7xl flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-2 group" data-testid="nav-logo">
-            <Zap className={`w-5 h-5 sm:w-6 sm:h-6 ${accent.logo}`} strokeWidth={2.5} />
+            <FormantiIcon className="h-5 sm:h-6" />
             <span className="font-heading font-bold text-lg sm:text-xl tracking-tight uppercase text-white">Formanti</span>
           </Link>
 

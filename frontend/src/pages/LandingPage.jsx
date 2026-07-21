@@ -11,6 +11,7 @@ import {
   Video, Sparkles, TrendingUp, Coins, Upload, UserPlus,
   ArrowRight, BookOpen, Users, Clock
 } from "lucide-react";
+import { FormantiIcon } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 
@@ -510,7 +511,7 @@ export default function LandingPage() {
             {/* Brand */}
             <div className="md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <Zap className="w-5 h-5 text-lime-400" />
+                <FormantiIcon className="h-5" />
                 <span className="font-heading font-bold text-lg uppercase tracking-wide text-white">Formanti</span>
               </div>
               <p className="text-zinc-500 text-sm leading-relaxed">
