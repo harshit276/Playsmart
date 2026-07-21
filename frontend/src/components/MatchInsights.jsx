@@ -26,6 +26,9 @@ import FormComparisonModal from "@/components/FormComparisonModal";
 import SpeakTipButton from "@/components/SpeakTipButton";
 import ImprovementCards from "@/components/ImprovementCards";
 import CoachNoteOverlay from "@/components/CoachNoteOverlay";
+// TF-free on purpose — see posturePolicy. Importing the pose stack to answer
+// "is this supported?" would defeat the point of asking.
+import { isPostureSupported } from "@/ai/posturePolicy";
 
 
 // "Coach's read" text quality gate. The VLM sometimes emits a purely
@@ -2964,6 +2967,13 @@ function usePostureAnalysis({ videoFile, timestamp, thumbnail, sport, shotType, 
 
   useEffect(() => {
     let cancelled = false;
+    // Bail before touching the pose stack for sports it can't read (swimming,
+    // football, gym — see posturePolicy). The check lives in a TF-free module
+    // precisely so those users never download the multi-MB model bundle.
+    if (!isPostureSupported(sport)) {
+      setState({ status: "unsupported" });
+      return undefined;
+    }
     setState({ status: "loading" });
     (async () => {
       try {
@@ -3260,7 +3270,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl overflow-hidden">
       <div className="px-4 py-3 bg-amber-400/5 border-b border-amber-400/20">
         <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1">
-          <Trophy className="w-3 h-3" /> Posture tracker — your top shot
+          <Trophy className="w-3 h-3" /> {showPosture ? "Posture tracker — your top shot" : "Your top shot"}
         </p>
         <p className="text-sm font-semibold text-white mt-0.5 capitalize">
           Your {headlineShot._name} — measured at contact

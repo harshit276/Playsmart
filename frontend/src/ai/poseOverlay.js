@@ -6,6 +6,7 @@
  * users see exactly which joints are off and by how much.
  */
 import { initModel, detectPose, detectMultiplePeople, getKeypointByName, calculateAngle, KEYPOINT_NAMES, SKELETON_EDGES } from "./poseDetector.js";
+import { POSTURE_SUPPORTED_SPORTS } from "./posturePolicy.js";
 
 // Angles are only reported when EVERY contributing joint clears this. MoveNet
 // happily emits low-confidence guesses for occluded limbs, and those produced
@@ -535,6 +536,22 @@ const SPORT_ALIASES = {
 
 function _normalize(s) {
   return (s || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+}
+
+
+// The canonical support list lives in posturePolicy (TF-free, so callers can
+// check before pulling this module's multi-MB import chain). Warn loudly in
+// dev if a sport gains curated ranges here but never gets added there — the
+// symptom would be silent: the tracker simply never runs for it.
+if (process.env.NODE_ENV !== "production") {
+  const drift = Object.keys(IDEAL_ANGLES).filter((s) => !POSTURE_SUPPORTED_SPORTS.has(s));
+  if (drift.length) {
+    console.warn(
+      `[poseOverlay] IDEAL_ANGLES has curated ranges for ${drift.join(", ")} but ` +
+      `posturePolicy.POSTURE_SUPPORTED_SPORTS does not list them — the posture ` +
+      `tracker will never run for those sports.`
+    );
+  }
 }
 
 
