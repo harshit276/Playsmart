@@ -1787,9 +1787,23 @@ TOKEN_RULES = {
     "daily_login":     25,   # cap 1/day, up to DAILY_LOGIN_LIFETIME_CAP total
     "analysis_spend": -100,  # negative = debit
     "coach_voice_spend": -5, # negative = debit; per Live Voice Coach reply
+    "game_attended":   20,   # confirmed turn-up, see ATTENDANCE_WEEKLY_CAP
 }
 
 DAILY_CAPS = {"host_game": 5, "training_day": 1, "daily_login": 1}
+
+# Turning up to a real game earns tokens — the loop that should make people
+# host and join even when the court itself is booked elsewhere. Paying for
+# attendance also creates an obvious farm (two accounts confirming each other
+# forever), so the reward is fenced three ways:
+#   1. weekly cap, so the ceiling is bounded even if the other gates fail
+#   2. the game needs ATTENDANCE_MIN_PLAYERS distinct players — a two-person
+#      "game" earns nothing, which kills the cheapest attack
+#   3. you can't earn twice off the same host inside ATTENDANCE_HOST_COOLDOWN_DAYS,
+#      so a pair of accounts can't run a loop
+ATTENDANCE_WEEKLY_CAP = 3
+ATTENDANCE_MIN_PLAYERS = 3
+ATTENDANCE_HOST_COOLDOWN_DAYS = 7
 # Daily-login bonus stops once the account has earned this many tokens from
 # logins in total (25/day × 4 days = 100), with no signup-age window.
 DAILY_LOGIN_LIFETIME_CAP = 100
@@ -9629,6 +9643,186 @@ async def my_games(authorization: str = Header(None)):
         g["spots_left"] = g["max_players"] - len(g.get("players", []))
 
     return {"hosted": hosted, "joined": joined}
+
+
+# ─── Post-game attendance + peer ratings ──────────────────────────
+# Reputation here is earned in REAL games, never from uploads. Analysis-derived
+# skill stays private to the player: video provenance can't be verified (anyone
+# can upload a pro's clip), so the moment a public number depends on it, it gets
+# farmed. Attendance and peer ratings require other humans who were actually
+# there, which is the property that makes them worth showing.
+
+ATTENDANCE_STATUSES = ("attended", "no_show", "late_cancel")
+
+
+def _game_end_dt(game: dict) -> Optional[datetime]:
+    """Best-effort UTC end time for a game, from its date/time/duration."""
+    try:
+        d = (game.get("date") or "")[:10]
+        t = (game.get("time") or "00:00")[:5]
+        naive = datetime.strptime(f"{d} {t}", "%Y-%m-%d %H:%M")
+        # Games are posted in IST; store/compare in UTC.
+        start = naive.replace(tzinfo=timezone.utc) - timedelta(hours=5, minutes=30)
+        return start + timedelta(minutes=int(game.get("duration_minutes") or 60))
+    except Exception:
+        return None
+
+
+async def _recent_credit_count(user_id: str, kind: str, days: int) -> int:
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    try:
+        return await asyncio.wait_for(db.token_transactions.count_documents({
+            "user_id": user_id, "kind": kind, "created_at": {"$gte": since},
+        }), timeout=3.0)
+    except Exception:
+        # Fail CLOSED — an unknown count must not hand out a reward.
+        return ATTENDANCE_WEEKLY_CAP
+
+
+class AttendanceMark(BaseModel):
+    user_id: str = Field(..., max_length=64)
+    status: str = Field(..., max_length=20)
+
+
+class AttendanceRequest(BaseModel):
+    marks: List[AttendanceMark]
+
+
+@api_router.post("/games/{game_id}/attendance")
+async def mark_attendance(game_id: str, req: AttendanceRequest,
+                          authorization: str = Header(None)):
+    """Host records who actually turned up. Idempotent per (game, player)."""
+    user = await get_current_user(authorization)
+    game = await db.games.find_one({"id": game_id}, {"_id": 0})
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    if game.get("host_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Only the host can mark attendance")
+    end = _game_end_dt(game)
+    if end and datetime.now(timezone.utc) < end:
+        raise HTTPException(status_code=400, detail="You can do this once the game has finished")
+
+    players = set(game.get("players") or [])
+    distinct_players = len(players)
+    awarded = []
+    for m in req.marks:
+        if m.status not in ATTENDANCE_STATUSES or m.user_id not in players:
+            continue
+        if m.user_id == user["id"]:
+            continue  # a host marking their own attendance proves nothing
+        already = await db.game_attendance.find_one(
+            {"game_id": game_id, "user_id": m.user_id}, {"_id": 0, "id": 1})
+        await db.game_attendance.update_one(
+            {"game_id": game_id, "user_id": m.user_id},
+            {"$set": {"game_id": game_id, "user_id": m.user_id, "status": m.status,
+                      "host_id": user["id"], "sport": game.get("sport", ""),
+                      "marked_at": datetime.now(timezone.utc).isoformat()},
+             "$setOnInsert": {"id": str(uuid.uuid4())}},
+            upsert=True,
+        )
+        if already or m.status != "attended":
+            continue
+        # ── Reward gates (see ATTENDANCE_* constants) ──
+        if distinct_players < ATTENDANCE_MIN_PLAYERS:
+            continue
+        if await _recent_credit_count(m.user_id, "game_attended", 7) >= ATTENDANCE_WEEKLY_CAP:
+            continue
+        since = (datetime.now(timezone.utc) - timedelta(days=ATTENDANCE_HOST_COOLDOWN_DAYS)).isoformat()
+        try:
+            repeat = await db.token_transactions.find_one({
+                "user_id": m.user_id, "kind": "game_attended",
+                "created_at": {"$gte": since}, "metadata.host_id": user["id"],
+            }, {"_id": 0, "id": 1})
+        except Exception:
+            repeat = True  # fail closed
+        if repeat:
+            continue
+        try:
+            await _credit_tokens(m.user_id, "game_attended", TOKEN_RULES["game_attended"],
+                                 {"game_id": game_id, "host_id": user["id"],
+                                  "sport": game.get("sport", "")})
+            awarded.append(m.user_id)
+        except Exception as e:
+            logger.warning(f"game_attended credit failed for {m.user_id[:8]}: {e}")
+
+    return {"ok": True, "marked": len(req.marks), "rewarded": len(awarded)}
+
+
+class GameRatingRequest(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+    ratee_id: str = Field("", max_length=64)   # blank = rating the host
+    comment: str = Field("", max_length=300)
+
+
+@api_router.post("/games/{game_id}/rate")
+async def rate_game_participant(game_id: str, req: GameRatingRequest,
+                                authorization: str = Header(None)):
+    """Rate someone you actually played with. One rating per pair per game."""
+    user = await get_current_user(authorization)
+    game = await db.games.find_one({"id": game_id}, {"_id": 0})
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+    players = set(game.get("players") or [])
+    if user["id"] not in players:
+        raise HTTPException(status_code=403, detail="You didn't play in this game")
+    ratee = (req.ratee_id or "").strip() or game.get("host_id") or ""
+    if ratee == user["id"]:
+        raise HTTPException(status_code=400, detail="You can't rate yourself")
+    if ratee not in players:
+        raise HTTPException(status_code=400, detail="That player wasn't in this game")
+    end = _game_end_dt(game)
+    if end and datetime.now(timezone.utc) < end:
+        raise HTTPException(status_code=400, detail="You can rate once the game has finished")
+
+    await db.game_ratings.update_one(
+        {"game_id": game_id, "rater_id": user["id"], "ratee_id": ratee},
+        {"$set": {"game_id": game_id, "rater_id": user["id"], "ratee_id": ratee,
+                  "rating": req.rating, "comment": req.comment.strip(),
+                  "sport": game.get("sport", ""),
+                  "created_at": datetime.now(timezone.utc).isoformat()},
+         "$setOnInsert": {"id": str(uuid.uuid4())}},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+@api_router.get("/players/{user_id}/reputation")
+async def player_reputation(user_id: str, authorization: str = Header(None)):
+    """Public reputation: turn-up record + how people who played with them rated
+    them. Deliberately contains NO analysis-derived skill — that stays private
+    to the player precisely so nothing is riding on an unverifiable upload."""
+    await get_current_user(authorization)
+    try:
+        rows = await asyncio.wait_for(
+            db.game_attendance.find({"user_id": user_id}, {"_id": 0, "status": 1}).to_list(500),
+            timeout=6.0)
+    except Exception:
+        rows = []
+    attended = sum(1 for r in rows if r.get("status") == "attended")
+    no_shows = sum(1 for r in rows if r.get("status") == "no_show")
+    late = sum(1 for r in rows if r.get("status") == "late_cancel")
+    total = attended + no_shows + late
+
+    try:
+        ratings = await asyncio.wait_for(
+            db.game_ratings.find({"ratee_id": user_id}, {"_id": 0, "rating": 1}).to_list(500),
+            timeout=6.0)
+    except Exception:
+        ratings = []
+    avg = round(sum(r.get("rating", 0) for r in ratings) / len(ratings), 1) if ratings else None
+
+    return {
+        "user_id": user_id,
+        "games_recorded": total,
+        "attended": attended,
+        "no_shows": no_shows,
+        "late_cancels": late,
+        # Hidden below 3 games — a single no-show shouldn't read as "0% reliable"
+        # and brand someone permanently.
+        "reliability_pct": round(100 * attended / total) if total >= 3 else None,
+        "avg_rating": avg,
+        "ratings_count": len(ratings),
+    }
 
 
 # ─── Training Video Recommendations Route ───
