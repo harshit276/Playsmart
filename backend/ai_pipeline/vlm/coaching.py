@@ -1532,10 +1532,34 @@ def _build_universal_prompt(
         "   • 'Counter-attacking backhand'\n"
         "   • 'Long pot — top pocket'\n"
         "   • 'Freestyle stroke — high elbow catch'\n"
-        "   DO NOT use the canonical category name as the shot_label — be "
-        "specific. A label of just 'Drive' or just 'Forehand' is WRONG; "
-        "the shot_label must describe what actually happened, not the "
-        "category bucket.\n"
+        "   Prefer more than the bare category name when you can genuinely "
+        "see more — 'Drive' alone is weak if you actually observed a flat "
+        "cross-court winner.\n"
+        # A leg-spinner was labelled "Medium pace delivery" at 95% confidence
+        # while the coach layer admitted it had never assessed delivery type.
+        # The rule above used to end "a label of just 'Drive' is WRONG", which
+        # forbade the neutral answer outright — so when the model couldn't
+        # classify something it invented a qualifier to comply. Being specific
+        # has to be permitted to fail.
+        "   CRITICAL — SPECIFIC MEANS OBSERVED, NEVER GUESSED. Only add a "
+        "qualifier (pace vs spin, forehand vs backhand, which variation, "
+        "which grip) when you can point to the evidence in the video. If you "
+        "cannot tell, the neutral family name IS the correct answer and you "
+        "must lower `confidence` to match. 'Bowling delivery' is CORRECT "
+        "where 'Medium pace delivery' is WRONG if you never actually "
+        "determined the pace; 'Loop' is CORRECT where 'Forehand loop' is "
+        "WRONG if the side was never visible. NEVER invent a qualifier to "
+        "satisfy the be-specific instruction, and never report high "
+        "confidence for a detail you did not verify — a confidently wrong "
+        "label makes the user distrust everything else in the analysis.\n"
+        "   Cricket bowling specifically — do NOT default to pace. Read, in "
+        "this order: the WICKETKEEPER (standing UP at the stumps means a "
+        "SPINNER, standing back means PACE — the most reliable cue, and "
+        "usually visible even when the ball is not), RUN-UP length (spinner: "
+        "3-6 short steps; pace: long and accelerating), and WRIST action at "
+        "release (leg-spin snaps the wrist over; pace delivers with a fast "
+        "straight arm). If those are unclear, label it 'Bowling delivery' "
+        "with no pace/spin qualifier and set confidence below 0.6.\n"
         "   For cooperative drill clips where every shot is similar, "
         "distinguish them by sequence number, intent, or quality "
         "(e.g. 'Forehand drive 1 — clean contact', 'Forehand drive 2 — "
