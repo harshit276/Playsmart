@@ -1092,6 +1092,22 @@ def analyze_video_full(
         f"   • 'Forehand drive — neutral rally'\n"
         f"   • 'Flat backhand drive at body'\n"
         f"   Do NOT just use the canonical category as the label (don't write plain 'Clear' or 'Drive'). Describe what actually happened.\n\n"
+        # SPECIFIC ≠ INVENTED. The rule above ("make it specific") on its own
+        # pushed the model to reach for a qualifier when it couldn't classify
+        # something: a leg-spin delivery came back as "Right-arm medium pace
+        # delivery" and the bowler rated the analysis 1 star. Specificity has
+        # to be earned from what's visible, and the neutral family name must be
+        # an allowed answer or the model will keep inventing.
+        f"   CRITICAL — SPECIFIC MEANS OBSERVED, NOT GUESSED. Only include a "
+        f"qualifier (pace vs spin, forehand vs backhand, which variation, "
+        f"which grip) if you can actually SEE the evidence for it in the "
+        f"video. If you cannot tell, use the neutral family name and lower "
+        f"your confidence — 'Bowling delivery' is CORRECT and 'Right-arm "
+        f"medium pace delivery' is WRONG when the run-up, arm speed and "
+        f"wrist position aren't visible. Same for 'Loop' vs 'Forehand loop' "
+        f"when the side is unclear. A vaguer label costs the user nothing; a "
+        f"confidently wrong one makes them distrust the entire analysis. "
+        f"Never add a qualifier to sound precise.\n\n"
         f"2. shot_category — a single snake_case keyword for the technique. "
         f"PREFER one of these familiar terms (used internally for drill "
         f"matching and pro-reference lookup):\n{defs}\n"
@@ -1141,6 +1157,33 @@ def analyze_video_full(
               f"the shots are DRIVES — do not label them clears just because "
               f"they travel deep.\n\n"
             ) if sport == "badminton" else ""
+          )
+        + (
+            # A leg-spinner was labelled "Right-arm medium pace delivery".
+            # The visual cues that separate spin from pace are learnable and
+            # mostly NOT about the ball, which is often too small/fast to see
+            # on phone footage — the keeper's position is the single most
+            # reliable tell and costs nothing to check.
+            (
+              f"CRITICAL — SPIN vs PACE (cricket bowling):\n"
+              f"Do NOT default to pace. Judge from, in order of reliability:\n"
+              f"  • THE WICKETKEEPER: standing UP at the stumps means a SPINNER. "
+              f"Standing well BACK means PACE. This is the most reliable cue "
+              f"in the frame — check it first whenever the keeper is visible.\n"
+              f"  • RUN-UP: a spinner takes 3-6 short walking/skipping steps. "
+              f"A pace bowler runs in long and accelerating, often 10+ strides.\n"
+              f"  • ARM AND WRIST: a wrist-spinner (leg spin / googly) snaps the "
+              f"wrist and the palm turns over at release; a finger-spinner rolls "
+              f"across the seam; pace bowlers deliver with a fast, straight arm "
+              f"and an upright seam.\n"
+              f"  • FIELD: close catchers clustered around the bat (slip, silly "
+              f"point, short leg) suggest spin.\n"
+              f"If the keeper, run-up and wrist are all unclear, label it "
+              f"'Bowling delivery' with no pace/spin qualifier and set "
+              f"confidence below 0.6. Never guess between spin and pace — to a "
+              f"bowler that distinction IS their identity, and getting it wrong "
+              f"discredits everything else you say.\n\n"
+            ) if sport in ("cricket", "unknown", "") else ""
           )
         +
         f""
