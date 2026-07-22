@@ -11,7 +11,7 @@ import {
   Video, Sparkles, TrendingUp, Coins, Upload, UserPlus,
   ArrowRight, BookOpen, Users, Clock
 } from "lucide-react";
-import { FormantiIcon } from "@/components/FormantiLogo";
+import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 
@@ -183,7 +183,14 @@ export default function LandingPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-400/5 rounded-full blur-3xl" />
 
         <div className="relative z-10 container mx-auto px-4 max-w-5xl text-center">
+          {/* Brand mark above the fold — the hero previously opened straight
+              into a generic badge, so a first-time visitor met the product
+              before they met the name. */}
           <motion.div initial="hidden" animate="visible" variants={fadeUp}>
+            <FormantiLogo className="h-12 md:h-16 mx-auto mb-8" />
+          </motion.div>
+
+          <motion.div initial="hidden" animate="visible" custom={0.05} variants={fadeUp}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/20 mb-8" data-testid="hero-badge">
               <Zap className="w-4 h-4 text-lime-400" />
               <span className="text-sm font-medium text-lime-400 tracking-wide">AI-Powered Sports Coaching Platform</span>

@@ -19,22 +19,27 @@ const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/analyze", label: "Analyze", icon: Video },
   { path: "/progress", label: "Progress", icon: TrendingUp },
-  { path: "/marketplace", label: "Marketplace", icon: ShoppingCart },
+  { path: "/marketplace", label: "Gear", icon: ShoppingCart },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/community?host=1", label: "Host Game", icon: Swords },
 ];
 
-// Mobile bottom nav - 5 key items (like Instagram/YouTube)
+// Mobile bottom nav — 4 items + More (5 slots total, like Instagram/YouTube).
+// Host was buried in the More menu, which is why nobody found it: hosting is
+// how the community grows, so it earns a permanent slot and Training — a
+// return-visit feature people reach from the dashboard — moves into More.
+// "Gear" over "Shop": the page is AI-matched equipment recommendations, and
+// "Shop" promises a storefront we don't have.
 const MOBILE_NAV_PRIMARY = [
   { path: "/dashboard", label: "Home", icon: Home },
   { path: "/analyze", label: "Analyze", icon: Video },
-  { path: "/marketplace", label: "Shop", icon: ShoppingCart },
-  { path: "/training", label: "Training", icon: Dumbbell },
+  { path: "/community?host=1", label: "Host", icon: Swords },
+  { path: "/marketplace", label: "Gear", icon: ShoppingCart },
 ];
 
 // "More" menu items on mobile
 const MOBILE_NAV_MORE = [
-  { path: "/community?host=1", label: "Host Game", icon: Swords },
+  { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/progress", label: "Progress", icon: BarChart3 },
   { path: "/card", label: "My Card", icon: CreditCard },
   { path: "/blog", label: "Blog", icon: BookOpen },
