@@ -1293,6 +1293,138 @@ async def admin_users(x_admin_key: str = Header(None, alias="X-Admin-Key"), limi
     return {"users": rows, "count": len(rows)}
 
 
+def _labels_from_analysis(a: dict) -> List[str]:
+    """The shot/exercise names an analysis actually showed the user.
+
+    This is the headline of the whole result — if it's wrong the user stops
+    reading — so it's what we surface when triaging a complaint.
+    """
+    out, seen = [], set()
+    for s in (a.get("shots") or [])[:40]:
+        n = (s.get("name") or s.get("type") or s.get("label") or "").strip()
+        if n and n.lower() not in seen:
+            seen.add(n.lower())
+            out.append(n)
+    return out
+
+
+async def _enrich_with_user_and_analysis(rows: List[dict]) -> None:
+    """Attach user email + the analysis's sport/detected labels to feedback
+    rows, in two batched queries rather than per-row lookups."""
+    uids = list({r.get("user_id") for r in rows if r.get("user_id")})
+    aids = list({r.get("analysis_id") for r in rows if r.get("analysis_id")})
+    users, analyses = {}, {}
+    if uids:
+        try:
+            for u in await asyncio.wait_for(db.users.find(
+                {"id": {"$in": uids}}, {"_id": 0, "id": 1, "email": 1, "name": 1}
+            ).to_list(len(uids)), timeout=6.0):
+                users[u["id"]] = u
+        except Exception:
+            pass
+    if aids:
+        try:
+            for a in await asyncio.wait_for(db.video_analyses.find(
+                {"id": {"$in": aids}}, {"_id": 0, "id": 1, "sport": 1, "shots": 1}
+            ).to_list(len(aids)), timeout=8.0):
+                analyses[a["id"]] = a
+        except Exception:
+            pass
+    for r in rows:
+        u = users.get(r.get("user_id")) or {}
+        r["user_email"] = u.get("email", "")
+        r["user_name"] = u.get("name", "")
+        a = analyses.get(r.get("analysis_id")) or {}
+        r["analysis_sport"] = a.get("sport", "")
+        r["detected_labels"] = _labels_from_analysis(a)
+
+
+@api_router.get("/admin/feedback")
+async def admin_feedback(
+    x_admin_key: str = Header(None, alias="X-Admin-Key"),
+    limit: int = 100,
+    max_rating: Optional[int] = None,
+):
+    """Read the actual ratings and comments users left.
+
+    These were being stored and pinged to Telegram, but never shown anywhere —
+    so a complaint scrolled out of chat and was gone. Each row is joined to the
+    user's email and to the shot/exercise labels that analysis displayed, which
+    is usually the thing being complained about. `max_rating=2` filters to the
+    unhappy ones.
+    """
+    _require_admin(x_admin_key)
+    q: dict = {}
+    if max_rating is not None:
+        q["rating"] = {"$lte": int(max_rating)}
+    try:
+        rows = await asyncio.wait_for(
+            db.analysis_feedback.find(q, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 500)),
+            timeout=8.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    await _enrich_with_user_and_analysis(rows)
+    return {"feedback": rows, "count": len(rows)}
+
+
+@api_router.get("/admin/user-analyses")
+async def admin_user_analyses(
+    identifier: str,
+    x_admin_key: str = Header(None, alias="X-Admin-Key"),
+    limit: int = 20,
+):
+    """Recent analyses for one account, with the labels each one displayed.
+
+    Used to answer "what did we actually tell this person?" when they report a
+    bad result — feedback rows don't always carry an analysis_id.
+    """
+    _require_admin(x_admin_key)
+    ident = (identifier or "").strip()
+    if not ident:
+        raise HTTPException(status_code=400, detail="identifier required")
+    lower = ident.lower()
+    try:
+        user = await asyncio.wait_for(db.users.find_one(
+            {"$or": [{"email": lower}, {"phone": ident}, {"id": ident}]},
+            {"_id": 0, "id": 1, "email": 1, "name": 1},
+        ), timeout=6.0)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    if not user and "@" in lower:
+        derived = _user_id_for_email(lower)
+        try:
+            user = await asyncio.wait_for(
+                db.users.find_one({"id": derived}, {"_id": 0, "id": 1, "email": 1, "name": 1}), timeout=4.0)
+        except Exception:
+            user = None
+    if not user:
+        raise HTTPException(status_code=404, detail=f"No account found for '{ident}'")
+
+    try:
+        rows = await asyncio.wait_for(
+            db.video_analyses.find(
+                {"user_id": user["id"]},
+                {"_id": 0, "id": 1, "sport": 1, "shots": 1, "created_at": 1, "skill_level": 1},
+            ).sort("created_at", -1).to_list(min(limit, 100)),
+            timeout=10.0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+
+    out = []
+    for a in rows:
+        out.append({
+            "id": a.get("id"),
+            "sport": a.get("sport", ""),
+            "skill_level": a.get("skill_level", ""),
+            "created_at": a.get("created_at"),
+            "shot_count": len(a.get("shots") or []),
+            "detected_labels": _labels_from_analysis(a),
+        })
+    return {"user": user, "analyses": out, "count": len(out)}
+
+
 class AdminGrantTokensRequest(BaseModel):
     identifier: str = Field(..., max_length=160)   # email, phone, or user id
     amount: int = Field(..., ge=-1_000_000, le=1_000_000)

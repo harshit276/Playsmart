@@ -106,8 +106,9 @@ export default function AdminPage() {
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="bg-zinc-800 border-zinc-700 mb-6 w-full grid grid-cols-3 sm:grid-cols-6 max-w-2xl">
+          <TabsList className="bg-zinc-800 border-zinc-700 mb-6 w-full grid grid-cols-4 sm:grid-cols-7 max-w-3xl">
             <TabsTrigger value="stats" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Stats</TabsTrigger>
+            <TabsTrigger value="feedback" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Feedback</TabsTrigger>
             <TabsTrigger value="users" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Users</TabsTrigger>
             <TabsTrigger value="enquiries" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Enquiries</TabsTrigger>
             <TabsTrigger value="transactions" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Tokens</TabsTrigger>
@@ -116,6 +117,7 @@ export default function AdminPage() {
           </TabsList>
 
           <TabsContent value="stats"><StatsTab headers={headers} /></TabsContent>
+          <TabsContent value="feedback"><FeedbackTab headers={headers} /></TabsContent>
           <TabsContent value="users"><UsersTab headers={headers} /></TabsContent>
           <TabsContent value="enquiries"><EnquiriesTab headers={headers} /></TabsContent>
           <TabsContent value="transactions"><TransactionsTab headers={headers} /></TabsContent>
@@ -123,6 +125,134 @@ export default function AdminPage() {
           <TabsContent value="support"><SupportTab headers={headers} /></TabsContent>
         </Tabs>
       </div>
+    </div>
+  );
+}
+
+// ── Feedback tab ────────────────────────────────────────────
+// Ratings and comments were stored and pinged to Telegram but never shown
+// anywhere, so a complaint scrolled out of chat and was gone. Each row is
+// joined to the labels that analysis displayed — usually the thing being
+// complained about.
+function FeedbackTab({ headers }) {
+  const [onlyBad, setOnlyBad] = useState(false);
+  const url = `/admin/feedback?limit=200${onlyBad ? "&max_rating=2" : ""}`;
+  const { data, loading, refresh } = useFetch(url, headers);
+
+  const [lookup, setLookup] = useState("");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupData, setLookupData] = useState(null);
+
+  const runLookup = async () => {
+    if (!lookup.trim()) return;
+    setLookupBusy(true);
+    setLookupData(null);
+    try {
+      const { data: d } = await api.get(
+        `/admin/user-analyses?identifier=${encodeURIComponent(lookup.trim())}&limit=20`,
+        { headers, timeout: 20000 });
+      setLookupData(d);
+      if (!d.analyses?.length) toast.info("Account found, but it has no stored analyses");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Lookup failed");
+    }
+    setLookupBusy(false);
+  };
+
+  const rows = data?.feedback || [];
+  return (
+    <div>
+      {/* Look up exactly what one account was shown */}
+      <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl p-4 mb-6">
+        <p className="text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-3">
+          What did we tell this user?
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <input
+            value={lookup}
+            onChange={e => setLookup(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") runLookup(); }}
+            placeholder="Email, phone or user id"
+            disabled={lookupBusy}
+            className="flex-1 min-w-[220px] bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none"
+          />
+          <Button onClick={runLookup} disabled={lookupBusy} size="sm"
+            className="bg-amber-400 text-black hover:bg-amber-500 font-bold">
+            {lookupBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+            {lookupBusy ? "Looking up…" : "Look up"}
+          </Button>
+        </div>
+        {lookupData && (
+          <div className="mt-3 pt-3 border-t border-zinc-800">
+            <p className="text-xs text-zinc-400 mb-2">
+              <span className="text-white font-medium">{lookupData.user.name || lookupData.user.email}</span>
+              {" · "}{lookupData.count} analyses
+            </p>
+            <div className="space-y-2">
+              {(lookupData.analyses || []).map(a => (
+                <div key={a.id} className="bg-zinc-950 border border-zinc-800 rounded-lg p-2.5">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <Badge className="bg-sky-400/10 text-sky-300 border-sky-400/20 text-[10px] capitalize">{a.sport || "—"}</Badge>
+                    <span className="text-[10px] text-zinc-500">{fmtDate(a.created_at)}</span>
+                    <span className="text-[10px] text-zinc-600">{a.shot_count} shots</span>
+                  </div>
+                  <p className="text-xs text-zinc-300">
+                    {a.detected_labels?.length
+                      ? a.detected_labels.join(" · ")
+                      : <span className="text-zinc-600">no labels stored</span>}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <button
+          type="button"
+          onClick={() => setOnlyBad(v => !v)}
+          className={`text-[11px] px-2.5 py-1 rounded-md border ${
+            onlyBad ? "bg-red-400/10 border-red-400/40 text-red-300"
+                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white"
+          }`}
+        >
+          {onlyBad ? "Showing 1–2★ only" : "Show 1–2★ only"}
+        </button>
+      </div>
+
+      {loading ? <Spinner /> : (
+        <div>
+          <Header title={`${rows.length} feedback entries`} onRefresh={refresh} />
+          <div className="space-y-2">
+            {rows.map(f => (
+              <div key={f.id} className={`border rounded-lg p-3 ${
+                f.rating <= 2 ? "bg-red-400/5 border-red-400/30" : "bg-zinc-900/60 border-zinc-800"
+              }`}>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-sm">{"⭐".repeat(f.rating || 0)}</span>
+                  <span className="text-xs text-zinc-400 font-medium">{f.user_email || f.user_name || "guest"}</span>
+                  {(f.analysis_sport || f.sport) && (
+                    <Badge className="bg-zinc-800 text-zinc-300 border-zinc-700 text-[10px] capitalize">
+                      {f.analysis_sport || f.sport}
+                    </Badge>
+                  )}
+                  <span className="text-[10px] text-zinc-500 ml-auto">{fmtDate(f.created_at)}</span>
+                </div>
+                {f.comment && <p className="text-sm text-zinc-200 mb-1.5">“{f.comment}”</p>}
+                {f.detected_labels?.length > 0 && (
+                  <p className="text-[11px] text-zinc-500">
+                    We showed them: <span className="text-amber-300">{f.detected_labels.join(" · ")}</span>
+                  </p>
+                )}
+              </div>
+            ))}
+            {rows.length === 0 && (
+              <p className="text-sm text-zinc-500 py-6 text-center">No feedback yet.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
