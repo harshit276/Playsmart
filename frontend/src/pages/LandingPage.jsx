@@ -59,7 +59,7 @@ const FAQS = [
   },
   {
     q: "Which sports does Formanti support?",
-    a: "We currently support badminton, tennis, table tennis, pickleball, cricket, football, swimming, and basketball with sport-specific AI video analysis — analysis works best for racket and ball sports. We also have gym, weight lifting, and physiotherapy pages with training guides and equipment picks, though video analysis for those is more general and not yet as purpose-built as it is for the sports above.",
+    a: "Badminton, tennis, table tennis, pickleball, cricket, football, swimming and basketball get sport-specific analysis — shot-by-shot detection, drills and equipment matched to how you actually play. Beyond those, the AI reads any activity where the movement is clearly visible in frame, which makes it genuinely useful for gym and weight lifting: film a set and get a coach's read on your form instead of paying for a personal trainer. That feedback is about movement quality and what to fix, rather than sport-tuned shot detection.",
   },
   {
     q: "Is Formanti free?",
@@ -320,10 +320,11 @@ export default function LandingPage() {
             className="text-center mb-16">
             <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Multi-Sport</span>
             <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
-              One Platform. Eight Sports.
+              One Platform. Every Session.
             </h2>
             <p className="text-zinc-400 text-lg max-w-xl mx-auto">
-              Specialized AI models, drills, and coaching for every sport you play.
+              Eight sports get purpose-built AI models, drills and coaching — and anything
+              else you film, from a squat rack to a swim lane, gets a coach's read on your form.
             </p>
           </motion.div>
 
@@ -347,23 +348,42 @@ export default function LandingPage() {
             </motion.div>
           </div>
 
-          {/* Also on Formanti — honestly separated from the purpose-built
-              sport models above: these are training/equipment landing pages
-              with more general-purpose AI feedback, not sport-tuned analysis. */}
+          {/* Gym / lifting promoted out of a footnote row into a real block.
+              It was tucked under "also covered", but it's arguably the
+              strongest pitch on the page: a trainer is ~₹10,000/month and a
+              phone is free. The copy deliberately promises FORM FEEDBACK, not
+              joint-angle measurement — the angle tracker is off for lifting
+              until the bilateral-load work lands, and over-promising here is
+              exactly what earns a 1-star. */}
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
             className="mt-14 pt-10 border-t border-zinc-800/60">
-            <p className="text-center text-zinc-500 text-sm mb-6 max-w-xl mx-auto">
-              Also covered on Formanti — training guides, form tips, and equipment picks
-              (video analysis here is more general-purpose, not tuned sport-by-sport like above):
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {MORE_ACTIVITIES.map((a) => (
-                <Link key={a.key} to={a.path}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-zinc-300 hover:text-white text-sm transition-all">
-                  <span>{a.emoji}</span> {a.label}
-                </Link>
-              ))}
+            <div className="bg-gradient-to-br from-lime-400/10 to-zinc-900 border border-lime-400/25 rounded-2xl p-6 md:p-8">
+              <div className="flex flex-col md:flex-row md:items-center gap-6">
+                <div className="text-5xl md:text-6xl shrink-0">🏋️</div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-heading font-bold text-2xl md:text-3xl uppercase tracking-tight text-white mb-2">
+                    Lifting? Skip the <span className="text-lime-400">₹10,000</span> trainer.
+                  </h3>
+                  <p className="text-zinc-300 leading-relaxed mb-4">
+                    Film a set on your phone and get honest feedback on your form — what looked
+                    solid, what broke down, and what to fix before your next session. Squats,
+                    deadlifts, presses, and the rest.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {MORE_ACTIVITIES.map((a) => (
+                      <Link key={a.key} to={a.path}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-700 hover:border-lime-400/50 text-zinc-200 hover:text-white text-sm font-medium transition-all">
+                        <span>{a.emoji}</span> {a.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
+            <p className="text-center text-zinc-500 text-xs mt-4 max-w-xl mx-auto">
+              Analysis works on any activity where the movement is clearly visible in frame.
+              The eight sports above additionally get sport-tuned shot detection and drills.
+            </p>
           </motion.div>
         </div>
       </section>
