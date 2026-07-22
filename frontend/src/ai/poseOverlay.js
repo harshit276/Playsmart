@@ -404,7 +404,6 @@ const SHOT_ALIASES = {
   cricket: {
     fast_bowling_delivery: "fast_bowling",
     fast_bowling_action: "fast_bowling",
-    bowling_action: "fast_bowling",
     bowling_action_fast: "fast_bowling",
     bowling_action_spin: "spin_bowling",
     seam_bowling: "fast_bowling",
@@ -456,16 +455,15 @@ const SHOT_ALIASES = {
     drop: "drop_shot",
   },
   table_tennis: {
-    forehand: "forehand_drive",
-    backhand: "backhand_drive",
-    loop: "forehand_loop",
-    topspin: "forehand_loop",
-    flick: "backhand_flick",
-    block: "push",
+    // `forehand`/`backhand`/`loop`/`topspin`/`flick` deliberately absent:
+    // they name a family, and resolving them to one variant meant grading a
+    // backhand loop against forehand-loop ideals. `block → push` was worse —
+    // those are different shots (block is passive off topspin; push is
+    // backspin). See AMBIGUOUS_TERMS.
+    serve_short: "serve",
+    serve_long: "serve",
   },
   pickleball: {
-    forehand: "drive",
-    backhand: "drive",
     serve_underhand: "serve",
     drop_shot: "third_shot_drop",
     third_shot: "third_shot_drop",
@@ -475,10 +473,9 @@ const SHOT_ALIASES = {
     backhand_dink: "dink",
   },
   squash: {
-    forehand: "forehand_drive",
-    backhand: "backhand_drive",
-    rail: "forehand_drive",
-    straight_drive: "forehand_drive",
+    // `forehand`/`backhand`/`rail`/`straight_drive` omitted — a rail or a
+    // straight drive can be played off either side, so picking forehand was
+    // a coin flip presented as fact.
     drop: "drop_shot",
     forehand_volley: "volley",
     backhand_volley: "volley",
@@ -492,10 +489,10 @@ const SHOT_ALIASES = {
     mid_iron: "iron_shot",
     short_iron: "iron_shot",
     wedge: "pitch",
-    bunker_shot: "pitch",
+    // bunker_shot omitted — a splash out of sand is its own technique, not a pitch.
   },
   basketball: {
-    shot: "jump_shot",
+    // `shot` omitted — could be a layup, hook, floater or free throw.
     mid_range: "jump_shot",
     three: "three_point",
     three_pointer: "three_point",
@@ -520,6 +517,40 @@ const SHOT_ALIASES = {
     hitting: "batting_swing",
   },
 };
+
+/**
+ * Terms that name a FAMILY of shots rather than one shot.
+ *
+ * THE RULE: an alias may only ever REMOVE detail, never ADD it.
+ *
+ * We used to break that rule in six sports — `bowling_action` resolved to
+ * `fast_bowling`, `loop` to `forehand_loop`, `shot` to `jump_shot`. The model
+ * had said something honest and vague; we turned it into a confident specific
+ * claim, then graded the player's joints against that invented shot's ideal
+ * ranges. A spin bowler was told "fast bowling"; a backhand loop was measured
+ * against forehand-loop ideals.
+ *
+ * When one of these arrives we return no ideal range at all. The skeleton
+ * still renders, the angles just aren't graded — "we measured you but won't
+ * pretend to know which shot this was" beats a confident wrong answer, which
+ * is the failure that makes someone stop trusting the product.
+ *
+ * A term listed here is still honoured as a DIRECT key hit: `drive` is a real,
+ * specific badminton shot even though it's ambiguous in squash.
+ */
+const AMBIGUOUS_TERMS = {
+  cricket:      ["bowling_action", "bowling", "delivery", "batting", "shot"],
+  table_tennis: ["forehand", "backhand", "loop", "topspin", "flick", "block", "drive"],
+  pickleball:   ["forehand", "backhand", "shot"],
+  squash:       ["forehand", "backhand", "rail", "straight_drive", "shot"],
+  basketball:   ["shot", "shooting", "attempt"],
+  badminton:    ["forehand", "backhand", "shot", "stroke"],
+  tennis:       ["shot", "stroke", "groundstroke"],
+  volleyball:   ["hit", "contact"],
+  baseball:     ["shot"],
+  golf:         ["shot", "swing"],
+};
+
 
 const SPORT_ALIASES = {
   ttennis: "table_tennis",
@@ -562,10 +593,19 @@ function getIdealAngles(sport, shotType) {
   const sportMap = IDEAL_ANGLES[s];
   if (!sportMap) return null;
 
-  // 1. Direct hit
+  // 1. Direct hit. Checked BEFORE the ambiguity guard so a term that is
+  // genuinely a specific shot in this sport still resolves — `drive` is a real
+  // badminton shot even though it names a family in squash.
   if (sportMap[t]) return sportMap[t];
 
-  // 2. Alias hit
+  // 2. Ambiguity guard. A family name must not be resolved to one of its
+  // variants by the alias table or the fuzzy matcher below — that's how a
+  // generic bowling action became "fast bowling" and a backhand loop got
+  // graded against forehand-loop ideals. No range means the skeleton still
+  // draws, the angles just aren't graded against a shot we're guessing at.
+  if ((AMBIGUOUS_TERMS[s] || []).includes(t)) return null;
+
+  // 3. Alias hit
   const aliased = SHOT_ALIASES[s]?.[t];
   if (aliased && sportMap[aliased]) return sportMap[aliased];
 

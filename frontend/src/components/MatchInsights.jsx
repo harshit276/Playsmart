@@ -3098,7 +3098,6 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   // YOU panel always has a visual). We render a pro reference inline
   // (not behind a click) so users see "here's what good looks like"
   // automatically after analysis.
-  const [proRef, setProRef] = useState(null);
   const [headlineShot, setHeadlineShot] = useState(null);
   const userVideoRef = useRef(null);
   // useState (not useRef) for the URL so canShowVideo actually re-evaluates
@@ -3163,9 +3162,6 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     }
     if (!reps.length) return;
     setHeadlineShot(reps[0]);
-    fetchProReference(sport, reps[0]._type).then((ref) => {
-      if (!cancelled) setProRef(ref);
-    });
     return () => { cancelled = true; };
   }, [sport, perShot]);
 
@@ -3388,27 +3384,13 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           </span>
         </div>
       )}
-      {proRef?.description && (
-        <div className="px-4 py-2 bg-zinc-800/30 border-t border-zinc-800 flex items-start justify-between gap-3 flex-wrap">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] uppercase tracking-wider text-amber-400 font-bold mb-0.5">
-              How {proRef.player || "the pros"} do it
-            </p>
-            <p className="text-xs text-zinc-300 leading-relaxed">{proRef.description}</p>
-          </div>
-          {proRef.youtube_id && (
-            <a
-              href={`https://www.youtube.com/watch?v=${proRef.youtube_id}&t=${Math.max(0, proRef.start_sec || 0)}s`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[10px] text-amber-400 hover:text-amber-300 font-medium whitespace-nowrap shrink-0 mt-0.5"
-              title="Watch the curated pro reference clip on YouTube"
-            >
-              Watch {proRef.player || "pro"} ↗
-            </a>
-          )}
-        </div>
-      )}
+      {/* The "How the pros do it" strip was removed. It was shown
+          automatically, so when the shot label was generic the resolver
+          picked whichever curated variant was declared first — a spin bowler
+          was told "Fast bowling action — Bumrah's signature". An unrequested
+          claim that can be confidently wrong costs more trust than a curated
+          clip earns. Pro comparison remains available on demand in the
+          per-shot Compare view. */}
     </div>
 
     {/* The per-shot posture gallery was removed deliberately: one card per

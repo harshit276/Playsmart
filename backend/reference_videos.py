@@ -903,20 +903,25 @@ def get_reference(sport: str, shot_type: str) -> dict | None:
         "ball", "court", "side", "front", "back", "type",
     }
 
-    # 1) Direct hit
+    # 1) Direct hit — the ONLY match we accept.
     if shot_l in s:
         out = _wrap(s[shot_l], sport_l, shot_l)
         if out:
             return out
 
-    # 2) Substring fallback
-    for known in s:
-        if known in shot_l or shot_l in known:
-            out = _wrap(s[known], sport_l, known)
-            if out:
-                return out
-
-    # 3) Token-overlap fallback (with stopwords)
+    # 2) Token-overlap, but ONLY when it can't invent detail.
+    #
+    # There used to be a substring fallback here, and it was actively harmful:
+    # a generic label is a substring of every more-specific curated key, so
+    # "bowling_action" matched "bowling_action_fast" — the first one declared —
+    # and a SPIN bowler was shown Bumrah with the caption "Fast bowling action".
+    # That produced a real 1-star. The same trap exists in every sport where a
+    # family name prefixes its variants.
+    #
+    # So a candidate must not be strictly MORE specific than what we were
+    # given: every distinguishing token of the curated key has to be present in
+    # the requested label. Narrowing is fine ("cross_court_cover_drive" →
+    # "cover_drive"); inventing is not ("bowling_action" → "..._fast").
     shot_tokens = {t for t in shot_l.split("_")
                    if len(t) >= 4 and t not in GENERIC_TOKENS}
     if shot_tokens:
@@ -924,15 +929,18 @@ def get_reference(sport: str, shot_type: str) -> dict | None:
         for known, entry in s.items():
             known_tokens = {t for t in known.split("_")
                             if len(t) >= 4 and t not in GENERIC_TOKENS}
-            overlap = len(shot_tokens & known_tokens)
-            if overlap > 0:
-                ranked.append((overlap, known, entry))
+            if not known_tokens or not known_tokens.issubset(shot_tokens):
+                continue  # would add detail the label never claimed
+            ranked.append((len(known_tokens), known, entry))
         ranked.sort(reverse=True)
         for _, known, entry in ranked:
             out = _wrap(entry, sport_l, known)
             if out:
                 return out
 
+    # No confident match → no reference. Showing the wrong pro is worse than
+    # showing none: it tells the player their technique should look like
+    # something it shouldn't.
     return None
 
 
