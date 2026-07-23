@@ -1425,6 +1425,93 @@ async def admin_user_analyses(
     return {"user": user, "analyses": out, "count": len(out)}
 
 
+def _is_quota_exhausted_str(s: str) -> bool:
+    """Server-side mirror of the VLM layer's quota/billing detector, so the
+    async job path can classify a failure without importing the vlm module."""
+    s = (s or "").lower()
+    return any(x in s for x in (
+        "prepayment credits", "credits are depleted", "billing",
+        "quota exceeded", "exceeded your current quota", "insufficient"))
+
+
+async def _log_analysis_failure(user_id, kind: str, error: str, sport=None) -> None:
+    """Record an analysis failure for the admin panel. Best-effort and never
+    raises — logging a failure must not itself break the (already failing)
+    response. Capped collection-ish behaviour is handled by a TTL-ish prune on
+    read; here we just insert a light row."""
+    try:
+        await asyncio.wait_for(db.analysis_failures.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": user_id or None,
+            "kind": (kind or "error")[:32],          # "capacity" | "error"
+            "error": str(error or "")[:400],
+            "sport": (sport or "")[:40],
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }), timeout=3.0)
+    except Exception:
+        pass
+
+
+@api_router.get("/admin/analysis-failures")
+async def admin_analysis_failures(
+    x_admin_key: str = Header(None, alias="X-Admin-Key"), limit: int = 100,
+):
+    """Recent analysis failures + counts by kind and a 24h total, so an outage
+    (or a spike of a specific error) is visible here instead of only scrolling
+    past in Telegram."""
+    _require_admin(x_admin_key)
+    try:
+        rows = await asyncio.wait_for(
+            db.analysis_failures.find({}, {"_id": 0}).sort("created_at", -1).to_list(min(limit, 500)),
+            timeout=8.0)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    by_kind: dict = {}
+    last_24h = 0
+    for r in rows:
+        by_kind[r.get("kind", "error")] = by_kind.get(r.get("kind", "error"), 0) + 1
+        if (r.get("created_at") or "") >= since:
+            last_24h += 1
+    # Attach emails so a failure is traceable to a user (batched).
+    uids = list({r.get("user_id") for r in rows if r.get("user_id")})
+    umap = {}
+    if uids:
+        try:
+            for u in await asyncio.wait_for(db.users.find(
+                {"id": {"$in": uids}}, {"_id": 0, "id": 1, "email": 1}).to_list(len(uids)), timeout=5.0):
+                umap[u["id"]] = u.get("email", "")
+        except Exception:
+            pass
+    for r in rows:
+        r["user_email"] = umap.get(r.get("user_id"), "")
+    return {"failures": rows, "count": len(rows), "by_kind": by_kind, "last_24h": last_24h}
+
+
+@api_router.post("/admin/purge-failed-cache")
+async def admin_purge_failed_cache(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """Delete cached analyses that are actually FAILURES.
+
+    The universal endpoint used to cache every result unconditionally, so
+    during the Gemini billing outage each attempted clip cached an empty
+    error result for 7 days — meaning a re-upload of that clip kept serving the
+    stale failure even after billing was restored. This clears those poisoned
+    entries so the clips re-run live. Successful cached analyses (real events,
+    no error) are kept, so it does NOT trigger a full-cost re-analysis wave."""
+    _require_admin(x_admin_key)
+    try:
+        res = await asyncio.wait_for(db.video_analysis_cache.delete_many({
+            "$or": [
+                {"result._meta.error": {"$exists": True, "$nin": [None, ""]}},
+                {"result.events": {"$size": 0}},
+                {"result.events": {"$exists": False}},
+            ]
+        }), timeout=15.0)
+        return {"ok": True, "purged": res.deleted_count}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Purge failed: {e}")
+
+
 class AdminGrantTokensRequest(BaseModel):
     identifier: str = Field(..., max_length=160)   # email, phone, or user id
     amount: int = Field(..., ge=-1_000_000, le=1_000_000)
@@ -4224,6 +4311,14 @@ async def analyze_video_universal_endpoint(
     # re-upload of the same clip served the cached FAILURE back. Only persist a
     # result that actually succeeded (no error, and it found something).
     _meta_err = (payload.get("_meta") or {}).get("error")
+    # Log analysis failures so they're visible in the admin panel, not only as
+    # fleeting Telegram pings. During an outage this answers "how many users
+    # actually hit a failure, and why" after the fact.
+    if _meta_err:
+        await _log_analysis_failure(
+            (_u or {}).get("id"),
+            (payload.get("_meta") or {}).get("error_kind") or "error",
+            _meta_err, payload.get("sport_detected"))
     _cacheable = not _meta_err and bool(payload.get("events"))
     if _cacheable:
         try:
@@ -4720,6 +4815,7 @@ async def _process_job(job: dict, claimed: bool = False):
         )
     except asyncio.TimeoutError:
         await _update_job(job_id, status="error", error="analysis_timeout")
+        await _log_analysis_failure(job.get("user_id"), "timeout", "analysis timed out >200s")
         try:
             await _notify_admin_now(
                 "❌ Analysis FAILED (timeout, not charged)",
@@ -4734,6 +4830,10 @@ async def _process_job(job: dict, claimed: bool = False):
     except Exception as exc:
         await _update_job(job_id, status="error",
                           error=f"analysis_failed: {str(exc)[:200]}")
+        await _log_analysis_failure(
+            job.get("user_id"),
+            "capacity" if _is_quota_exhausted_str(str(exc)) else "error",
+            str(exc))
         try:
             await _notify_admin_now(
                 "❌ Analysis FAILED (not charged)",
@@ -4781,6 +4881,19 @@ async def _process_job(job: dict, claimed: bool = False):
                                           job.get("time_offset", 0.0))
     await _update_job(job_id, status="complete", result=payload,
                       finished_at=datetime.now(timezone.utc))
+
+    # The executor can return a payload that carries an error (e.g. Gemini
+    # quota exhausted) WITHOUT raising, so it lands here as "complete" with 0
+    # events. Log that as a failure too, and don't cache it (see the cache
+    # guard in the JSON endpoint — the async path writes the job doc, not the
+    # shared cache, so there's nothing to guard here).
+    _job_err = (payload.get("_meta") or {}).get("error")
+    if _job_err:
+        await _log_analysis_failure(
+            job.get("user_id"),
+            (payload.get("_meta") or {}).get("error_kind")
+                or ("capacity" if _is_quota_exhausted_str(_job_err) else "error"),
+            _job_err, payload.get("sport_detected"))
 
     sport_d = payload.get("sport_detected", "your")
     n_events = len(payload.get("events") or [])

@@ -352,6 +352,82 @@ function StatsTab({ headers }) {
           <p className="text-[10px] text-zinc-500 mt-1">From token pack purchases</p>
         </div>
       </div>
+
+      <AnalysisHealthPanel headers={headers} />
+    </div>
+  );
+}
+
+// Analysis failures — logged server-side so an outage (e.g. the Gemini
+// billing running out) is visible here after the fact, not just as Telegram
+// pings that scroll away. "capacity" = provider/quota outage (our side, a
+// temporary technical issue), not a bad clip.
+function AnalysisHealthPanel({ headers }) {
+  const { data, loading, refresh } = useFetch("/admin/analysis-failures?limit=100", headers);
+  const [purging, setPurging] = useState(false);
+
+  const purge = async () => {
+    if (!window.confirm("Delete cached FAILED analyses so those clips re-run live?\n(Keeps successful cache — safe.)")) return;
+    setPurging(true);
+    try {
+      const { data: r } = await api.post("/admin/purge-failed-cache", {}, { headers, timeout: 20000 });
+      toast.success(`Purged ${r.purged} stuck failure${r.purged === 1 ? "" : "s"} from cache`);
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Purge failed");
+    }
+    setPurging(false);
+  };
+
+  const rows = data?.failures || [];
+  const byKind = data?.by_kind || {};
+  return (
+    <div className="mt-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <p className="text-[10px] uppercase tracking-wider text-rose-300 font-bold">Analysis failures</p>
+        <div className="flex gap-2">
+          <Button onClick={purge} disabled={purging} size="sm" variant="outline"
+            className="border-amber-400/30 text-amber-300 hover:bg-amber-400/10 text-xs h-7">
+            {purging ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🧹"} Purge stuck failures
+          </Button>
+          <Button onClick={refresh} size="sm" variant="ghost" className="text-zinc-400 text-xs h-7">
+            <RefreshCw className="w-3 h-3 mr-1" /> Refresh
+          </Button>
+        </div>
+      </div>
+      {loading ? <Spinner /> : (
+        <>
+          <div className="flex flex-wrap gap-2 mb-3">
+            <span className="text-[11px] px-2 py-1 rounded-md bg-zinc-800 text-zinc-300">
+              Last 24h: <span className="font-bold text-white">{data?.last_24h ?? 0}</span>
+            </span>
+            {Object.entries(byKind).map(([k, n]) => (
+              <span key={k} className={`text-[11px] px-2 py-1 rounded-md border ${
+                k === "capacity" ? "bg-amber-400/10 border-amber-400/30 text-amber-300"
+                : k === "timeout" ? "bg-sky-400/10 border-sky-400/30 text-sky-300"
+                : "bg-rose-400/10 border-rose-400/30 text-rose-300"}`}>
+                {k}: {n}
+              </span>
+            ))}
+          </div>
+          {rows.length === 0 ? (
+            <p className="text-xs text-zinc-500 py-3 text-center">No analysis failures logged. 🎉</p>
+          ) : (
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {rows.map((f) => (
+                <div key={f.id} className="flex items-start gap-2 text-[11px] bg-zinc-950 border border-zinc-800/70 rounded-lg px-2.5 py-1.5">
+                  <span className={`shrink-0 uppercase font-bold px-1.5 py-0.5 rounded ${
+                    f.kind === "capacity" ? "text-amber-300 bg-amber-400/10"
+                    : f.kind === "timeout" ? "text-sky-300 bg-sky-400/10"
+                    : "text-rose-300 bg-rose-400/10"}`}>{f.kind}</span>
+                  <span className="text-zinc-400 shrink-0">{f.user_email || "guest"}</span>
+                  <span className="text-zinc-600 truncate flex-1" title={f.error}>{f.error}</span>
+                  <span className="text-zinc-600 shrink-0">{fmtDate(f.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

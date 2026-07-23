@@ -2631,6 +2631,11 @@ export default function AnalyzePage() {
         let msg;
         if (/insufficient_tokens/i.test(raw)) {
           msg = "You don't have enough tokens for this analysis — top up from your Wallet and try again.";
+        } else if (/at capacity|temporarily|resource_exhausted|quota|credits|high demand|overload/i.test(raw)) {
+          // Capacity / quota / provider outage — a temporary technical issue on
+          // OUR side, never the user's clip. Reassure and say try later; they
+          // were not charged (tokens debit only on success).
+          msg = "Analysis is temporarily unavailable due to a technical issue on our side. Please try again in a few minutes — you were not charged.";
         } else if (/couldn't detect any shots|no shots in this clip/i.test(raw)) {
           msg = raw; // already friendly (the 0-event case)
         } else if (status === 413 || status === 403 || /too large|413|compress.*large|overshoot/i.test(raw)) {
