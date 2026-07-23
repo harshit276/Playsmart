@@ -270,11 +270,17 @@ const TONES = {
 
 export default function FeatureShowcase() {
   const reduce = useReducedMotion();
+  // Match the landing page's premium scroll-in: ease-out-expo curve + a subtle
+  // scale-settle, so the feature cards rise the same refined way the rest of
+  // the page does rather than a plainer linear fade.
   const rise = reduce
     ? { hidden: { opacity: 1, y: 0 }, visible: { opacity: 1, y: 0 } }
     : {
-        hidden: { opacity: 0, y: 24 },
-        visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: Math.min(i, 5) * 0.06 } }),
+        hidden: { opacity: 0, y: 36, scale: 0.96 },
+        visible: (i = 0) => ({
+          opacity: 1, y: 0, scale: 1,
+          transition: { duration: 0.7, delay: Math.min(i, 5) * 0.07, ease: [0.16, 1, 0.3, 1] },
+        }),
       };
 
   return (

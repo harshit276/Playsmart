@@ -130,9 +130,17 @@ const FACTS = [
   { icon: Smartphone, value: "~5MB", label: "Installs as an app, no store" },
 ];
 
+// Premium scroll-in: a little more travel, a subtle scale-settle, and an
+// ease-out-expo curve (fast in, soft landing) instead of the default. No blur
+// filter on purpose — animating blur across the 8 sport tiles at once janks on
+// low-end Android, and the scale+ease already reads as "premium".
+const EASE_PREMIUM = [0.16, 1, 0.3, 1];
 const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.6, delay: i * 0.1 } }),
+  hidden: { opacity: 0, y: 40, scale: 0.96 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0, scale: 1,
+    transition: { duration: 0.7, delay: i * 0.08, ease: EASE_PREMIUM },
+  }),
 };
 
 const fadeUpStill = {
@@ -350,41 +358,14 @@ export default function LandingPage() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {SPORTS.map((s, i) => (
-              <motion.div key={s.key} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={rise}>
-                <Link to={s.path}
-                  className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl p-5 sm:p-6 text-center hover:-translate-y-1 hover:border-zinc-600 transition-all duration-300`}>
-                  {/* Sport-tinted wash on hover. Note: every colour class used
-                      here comes verbatim from the SPORTS table above, so
-                      Tailwind's source scan can see it — never build a class
-                      name by string concatenation or it gets purged. */}
-                  <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${s.bg}`} />
-                  <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-                  <div className="relative text-3xl sm:text-4xl mb-3 transition-transform duration-300 group-hover:scale-110">{s.emoji}</div>
-                  <h3 className={`relative font-heading font-semibold text-sm sm:text-lg ${s.color}`}>{s.label}</h3>
-                </Link>
-              </motion.div>
-            ))}
-            {/* "More coming" card */}
-            <motion.div initial="hidden" whileInView="visible" custom={SPORTS.length}
-              viewport={{ once: true }} variants={rise}
-              className="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl p-5 sm:p-6 text-center flex flex-col items-center justify-center">
-              <div className="text-3xl sm:text-4xl mb-3 opacity-50">🎯</div>
-              <h3 className="font-heading font-semibold text-sm sm:text-lg text-zinc-600">More Coming</h3>
-            </motion.div>
-          </div>
-
-          {/* Gym / lifting promoted out of a footnote row into a real block.
-              It was tucked under "also covered", but it's arguably the
-              strongest pitch on the page: a trainer is ~₹10,000/month and a
-              phone is free. The copy deliberately promises FORM FEEDBACK, not
-              joint-angle measurement — the angle tracker is off for lifting
-              until the bilateral-load work lands, and over-promising here is
-              exactly what earns a 1-star. */}
+          {/* Gym / lifting leads the section — it's the strongest pitch on the
+              page (a trainer is ~₹10,000/month, a phone is free), so it sits
+              ABOVE the sport grid rather than under it. Copy promises FORM
+              FEEDBACK, not joint-angle measurement — the angle tracker is off
+              for lifting until the bilateral-load work lands, and over-claiming
+              here is exactly what earns a 1-star. */}
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="mt-12 md:mt-16">
+            className="mb-10 md:mb-14">
             <div className="relative overflow-hidden rounded-3xl border border-lime-400/25 bg-gradient-to-br from-lime-400/[0.12] via-zinc-900 to-zinc-900 p-6 md:p-10">
               <div className="pointer-events-none absolute -top-20 -right-16 w-72 h-72 bg-lime-400/10 rounded-full blur-3xl" />
               <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/50 to-transparent" />
@@ -413,16 +394,42 @@ export default function LandingPage() {
             </div>
             {/* Scope note stays. This is the exact spot where over-claiming
                 would cost us: lifting gets FORM FEEDBACK, not joint angles. */}
-            <div className="mt-5 flex items-start gap-2.5 max-w-2xl mx-auto text-zinc-500 text-xs leading-relaxed">
+            <div className="mt-5 flex items-start gap-2.5 max-w-2xl text-zinc-500 text-xs leading-relaxed">
               <Shield className="w-4 h-4 shrink-0 mt-px text-zinc-600" strokeWidth={1.75} />
               <p>
                 Analysis works on any activity where the movement is clearly visible in frame.
-                The eight sports above additionally get sport-tuned shot detection, drills, and
+                The eight sports below additionally get sport-tuned shot detection, drills, and
                 the joint-angle posture tracker — for gym and lifting you get overall form
                 feedback, not measured angles.
               </p>
             </div>
           </motion.div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            {SPORTS.map((s, i) => (
+              <motion.div key={s.key} initial="hidden" whileInView="visible" custom={i}
+                viewport={{ once: true }} variants={rise}>
+                <Link to={s.path}
+                  className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl p-5 sm:p-6 text-center hover:-translate-y-1.5 hover:border-zinc-600 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 ease-out will-change-transform`}>
+                  {/* Sport-tinted wash on hover. Note: every colour class used
+                      here comes verbatim from the SPORTS table above, so
+                      Tailwind's source scan can see it — never build a class
+                      name by string concatenation or it gets purged. */}
+                  <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${s.bg}`} />
+                  <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+                  <div className="relative text-3xl sm:text-4xl mb-3 transition-transform duration-300 group-hover:scale-110">{s.emoji}</div>
+                  <h3 className={`relative font-heading font-semibold text-sm sm:text-lg ${s.color}`}>{s.label}</h3>
+                </Link>
+              </motion.div>
+            ))}
+            {/* "More coming" card */}
+            <motion.div initial="hidden" whileInView="visible" custom={SPORTS.length}
+              viewport={{ once: true }} variants={rise}
+              className="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl p-5 sm:p-6 text-center flex flex-col items-center justify-center">
+              <div className="text-3xl sm:text-4xl mb-3 opacity-50">🎯</div>
+              <h3 className="font-heading font-semibold text-sm sm:text-lg text-zinc-600">More Coming</h3>
+            </motion.div>
+          </div>
         </div>
       </section>
 
