@@ -1116,7 +1116,11 @@ export default function AnalyzePage() {
         if (cancelled || !mountedRef.current) return;
         // 0 events = failed analysis — don't render/save a fake-score result.
         if (!(result?.events || []).length) {
-          setError("We couldn't detect any shots in that clip — please check your connection and try again.");
+          const _capacity = result?._meta?.error_kind === "capacity"
+            || /resource_exhausted|quota|credits|503|high demand|overload/i.test(String(result?._meta?.error || ""));
+          setError(_capacity
+            ? "Analysis is temporarily at capacity — please try again in a few minutes. You were not charged."
+            : "We couldn't detect any shots in that clip — please check your connection and try again.");
           return;
         }
         const universalResult = buildUniversalResult(result, stash.targetDesc, stash.pickedPlayer);
@@ -2528,11 +2532,16 @@ export default function AnalyzePage() {
           //  (b) an actual failure (gemini error / interrupted upload).
           const _gemErr = data?._meta?.error || null;
           const _summary = (data?.summary || "").trim();
-          // (a) AI provider is overloaded (all fallback models 503'd) — a
-          //     temporary capacity issue on Google's side, not the user's clip.
-          if (_gemErr && /503|high demand|unavailable|overload/i.test(String(_gemErr))) {
+          // (a) Capacity/quota: the analysis backend is temporarily unavailable
+          //     (provider overloaded, or our API quota is exhausted) — NOT a
+          //     problem with the user's clip, and they weren't charged. The
+          //     backend now tags these `error_kind:"capacity"`; we still keep
+          //     the old string match as a fallback for older responses.
+          const _capacity = data?._meta?.error_kind === "capacity"
+            || (_gemErr && /503|high demand|unavailable|overload|resource_exhausted|quota|credits/i.test(String(_gemErr)));
+          if (_capacity) {
             throw new Error(
-              "Our AI is under unusually high demand right now. Please try again in a minute — you were not charged."
+              "Analysis is temporarily at capacity — please try again in a few minutes. You were not charged."
             );
           }
           // (b) analysis SUCCEEDED but the focused player didn't hit anything.

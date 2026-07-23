@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Video, Activity, MessageSquare, GitCompareArrows, LineChart,
-  FileText, ListChecks, ShoppingBag, Users, Mic,
+  FileText, ListChecks, ShoppingBag, Users, Mic, Check, MapPin,
 } from "lucide-react";
 
 /**
@@ -186,6 +186,113 @@ function ReportMock() {
   );
 }
 
+/* ---------- mockup: weekly training plan ---------- */
+function TrainingPlanMock() {
+  const drills = [
+    { name: "Shadow footwork", sets: "3 x 10", done: true },
+    { name: "Net drop control", sets: "4 x 8", done: true },
+    { name: "Smash follow-through", sets: "3 x 12", done: false },
+    { name: "Rotation drill", sets: "2 x 15", done: false },
+  ];
+  const doneCount = drills.filter((d) => d.done).length;
+  const pct = Math.round((doneCount / drills.length) * 100);
+  return (
+    <div className="relative rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 overflow-hidden">
+      <SampleTag />
+      <p className="text-[9px] uppercase tracking-wider text-zinc-500 font-semibold mb-2">This week</p>
+      <div className="space-y-1.5 mb-3">
+        {drills.map((d) => (
+          <div key={d.name} className="flex items-center gap-2 rounded-lg bg-zinc-900/80 border border-zinc-800/80 px-2.5 py-1.5">
+            <span className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+              d.done ? "bg-lime-400 border-lime-400" : "border-zinc-600"
+            }`}>
+              {d.done && <Check className="w-2.5 h-2.5 text-black" strokeWidth={3} />}
+            </span>
+            <span className={`text-[11px] truncate ${d.done ? "text-zinc-500 line-through" : "text-zinc-200"}`}>{d.name}</span>
+            <span className="ml-auto shrink-0 text-[9px] font-mono text-zinc-600">{d.sets}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-1.5 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden">
+          <div className="h-full rounded-full bg-lime-400" style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-[9px] font-mono text-zinc-500 shrink-0">{doneCount}/{drills.length} done</span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- mockup: gear recommendations ---------- */
+function GearMock() {
+  const items = [
+    { cat: "Racket", name: "Balance frame, medium flex", match: 92, price: "₹2,400" },
+    { cat: "Shoes", name: "Court grip, cushioned sole", match: 87, price: "₹3,100" },
+  ];
+  return (
+    <div className="relative rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 overflow-hidden">
+      <SampleTag />
+      <div className="space-y-1.5">
+        {items.map((it) => (
+          <div key={it.cat} className="flex items-center gap-2.5 rounded-lg bg-zinc-900/80 border border-zinc-800/80 px-2.5 py-2">
+            <div className="w-8 h-8 rounded-lg bg-lime-400/10 border border-lime-400/25 flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-3.5 h-3.5 text-lime-400" strokeWidth={1.8} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] uppercase tracking-wider text-zinc-500">{it.cat}</p>
+              <p className="text-[11px] text-zinc-200 truncate">{it.name}</p>
+            </div>
+            <div className="shrink-0 text-right">
+              <span className="block text-[9px] font-bold text-lime-400">{it.match}% match</span>
+              <span className="block text-[10px] font-mono text-zinc-400">{it.price}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- mockup: host & join games ---------- */
+function GameMock() {
+  const players = [
+    { initials: "AK", tone: "bg-lime-400" },
+    { initials: "RS", tone: "bg-sky-400" },
+    { initials: "MJ", tone: "bg-zinc-400" },
+  ];
+  return (
+    <div className="relative rounded-2xl border border-zinc-800 bg-zinc-950/60 p-3 overflow-hidden">
+      <SampleTag />
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full text-lime-300 bg-lime-400/10 border border-lime-400/25">
+          Badminton
+        </span>
+        <span className="text-[9px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full text-amber-300 bg-amber-400/10">
+          2 spots left
+        </span>
+      </div>
+      <p className="text-[12px] font-semibold text-white mb-1">Doubles · 7:00 PM</p>
+      <div className="flex items-center gap-1 text-[10px] text-zinc-500 mb-3">
+        <MapPin className="w-3 h-3 shrink-0" />
+        <span className="truncate">HSR Layout Sports Complex</span>
+      </div>
+      <div className="flex items-center -space-x-2">
+        {players.map((p) => (
+          <div
+            key={p.initials}
+            className={`w-6 h-6 rounded-full border-2 border-zinc-950 flex items-center justify-center text-[8px] font-bold text-black ${p.tone}`}
+          >
+            {p.initials}
+          </div>
+        ))}
+        <div className="w-6 h-6 rounded-full border-2 border-dashed border-zinc-700 flex items-center justify-center text-[10px] text-zinc-600 ml-1">
+          +
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const CARDS = [
   {
     key: "analysis",
@@ -243,6 +350,7 @@ const CARDS = [
     tone: "sky",
     title: "Training plans",
     desc: "Drills and a weekly plan built around the weaknesses your analysis actually found.",
+    mock: <TrainingPlanMock />,
   },
   {
     key: "gear",
@@ -250,6 +358,7 @@ const CARDS = [
     tone: "purple",
     title: "Gear recommendations",
     desc: "Racket, shoe and string picks matched to your play style, level and budget.",
+    mock: <GearMock />,
   },
   {
     key: "games",
@@ -257,6 +366,7 @@ const CARDS = [
     tone: "emerald",
     title: "Host & join games",
     desc: "Post a session, find players near you, and share it out in a tap.",
+    mock: <GameMock />,
   },
 ];
 

@@ -4111,6 +4111,13 @@ async def analyze_video_universal_endpoint(
     # materially changes — old cache entries auto-invalidate so users
     # don't keep getting the pre-fix answer (e.g. "Forehand Serve" on
     # a backhand-only TT clip after we hardened serve detection).
+    #
+    # ⚠️ COST: bumping this invalidates EVERY cached analysis at once, so the
+    # next view/re-analyse of any clip re-runs the paid Gemini API instead of
+    # serving free from cache. A wording-only tweak that doesn't change the
+    # OUTPUT is not worth that spend spike — it once drained the prepaid Gemini
+    # credits to zero and took analysis down for everyone. Only bump when the
+    # produced result genuinely changes, and watch billing after you do.
     PROMPT_VERSION = "v2026-07-23-no-invented-qualifiers"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
@@ -4211,22 +4218,30 @@ async def analyze_video_universal_endpoint(
     payload["events"] = _apply_time_scale(payload["events"], req.time_scale, req.time_offset)
 
     # ─── Cache write (best-effort) ───────────────────────────────────
-    try:
-        from datetime import timedelta as _td
-        await asyncio.wait_for(db.video_analysis_cache.update_one(
-            {"key": cache_key},
-            {"$set": {
-                "key": cache_key,
-                "video_hash": video_hash,
-                "tier": req.tier,
-                "result": payload,
-                "cached_at": datetime.now(timezone.utc),
-                "expires_at": datetime.now(timezone.utc) + _td(days=7),
-            }},
-            upsert=True,
-        ), timeout=3.0)
-    except (Exception, asyncio.TimeoutError):
-        pass  # cache write failure is non-fatal
+    # NEVER cache a failed analysis. The write used to be unconditional, so
+    # when Gemini's billing was exhausted every clip cached an empty
+    # error result for 7 days — meaning even after billing was topped up, a
+    # re-upload of the same clip served the cached FAILURE back. Only persist a
+    # result that actually succeeded (no error, and it found something).
+    _meta_err = (payload.get("_meta") or {}).get("error")
+    _cacheable = not _meta_err and bool(payload.get("events"))
+    if _cacheable:
+        try:
+            from datetime import timedelta as _td
+            await asyncio.wait_for(db.video_analysis_cache.update_one(
+                {"key": cache_key},
+                {"$set": {
+                    "key": cache_key,
+                    "video_hash": video_hash,
+                    "tier": req.tier,
+                    "result": payload,
+                    "cached_at": datetime.now(timezone.utc),
+                    "expires_at": datetime.now(timezone.utc) + _td(days=7),
+                }},
+                upsert=True,
+            ), timeout=3.0)
+        except (Exception, asyncio.TimeoutError):
+            pass  # cache write failure is non-fatal
 
     return {"success": True, **payload}
 

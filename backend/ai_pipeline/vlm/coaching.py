@@ -123,10 +123,34 @@ def _new_sdk_safety_settings(gt):
     return out or None
 
 
+def _is_quota_exhausted(exc) -> bool:
+    """A HARD quota / billing failure, distinct from a transient rate-limit.
+
+    Google returns 429 RESOURCE_EXHAUSTED for two very different situations:
+      - a per-minute rate limit → clears in seconds, worth a short retry
+      - the project's prepaid credits / daily quota are DEPLETED → will NOT
+        clear on its own, and every fallback model shares the same billing
+        account so they all fail identically
+    Retrying and failing over on the second kind just burns ~90s before failing
+    anyway (this actually happened: the account's credits ran dry and every
+    analysis ground through 3 models × backoff before giving up). Detect it by
+    the billing wording so we can fail FAST and surface an honest message."""
+    s = str(exc).lower()
+    return any(x in s for x in (
+        "prepayment credits", "credits are depleted", "billing",
+        "quota exceeded", "exceeded your current quota", "insufficient",
+    ))
+
+
 def _is_transient_gemini_error(exc) -> bool:
     """429 (rate limit) / 503 (model overloaded) / transient network — the
     kind of error a short backoff+retry recovers from. Verified live: Gemini
-    intermittently returns 503 'high demand' that clears within seconds."""
+    intermittently returns 503 'high demand' that clears within seconds.
+
+    A quota/billing exhaustion (see _is_quota_exhausted) is explicitly NOT
+    transient even though it's also a 429 — retrying it is pure waste."""
+    if _is_quota_exhausted(exc):
+        return False
     s = str(exc).lower()
     return any(x in s for x in (
         "429", "503", "resource_exhausted", "unavailable", "high demand",
@@ -2416,9 +2440,18 @@ def analyze_video_universal(
                     continue
                 raise
     except Exception as exc:
+        # `error_kind` is a stable, machine-readable classification so the API
+        # and frontend don't have to string-match Google's prose. "capacity" =
+        # quota/billing exhausted (a temporary operational state, NOT a bad
+        # clip) → the UI should say "try again shortly", not "no shots found".
+        _kind = "capacity" if _is_quota_exhausted(exc) else "error"
+        if _kind == "capacity":
+            _log.error("[universal] ANALYSIS CAPACITY EXHAUSTED (Gemini quota/billing): %s",
+                       str(exc)[:200])
         return {
             "sport_detected": "unknown", "summary": "",
-            "events": [], "_meta": {"error": str(exc)[:300], "backend": backend_obj.name},
+            "events": [], "_meta": {"error": str(exc)[:300], "error_kind": _kind,
+                                    "backend": backend_obj.name},
         }
     finally:
         # Only delete a handle WE created here (large inline bytes). A
@@ -2772,7 +2805,8 @@ def stream_analyze_video_universal(
                 yield {"kind": "error", "msg": f"gemini_call_failed: {str(exc)[:200]}"}
                 return
     except Exception as exc:
-        yield {"kind": "error", "msg": f"gemini_init_failed: {str(exc)[:200]}"}
+        yield {"kind": "error", "msg": f"gemini_init_failed: {str(exc)[:200]}",
+               "error_kind": "capacity" if _is_quota_exhausted(exc) else "error"}
         return
 
     raw_buffer = ""
@@ -2837,7 +2871,8 @@ def stream_analyze_video_universal(
     except Exception as exc:
         # Streaming aborted partway through. Fall through to final parse —
         # raw_buffer may still hold useful partial content.
-        yield {"kind": "error", "msg": f"stream_aborted: {str(exc)[:200]}"}
+        yield {"kind": "error", "msg": f"stream_aborted: {str(exc)[:200]}",
+               "error_kind": "capacity" if _is_quota_exhausted(exc) else "error"}
 
     # Final pass: parse the whole accumulated buffer for the authoritative
     # answer (covers fields outside events[] like summary, sport_detected,
