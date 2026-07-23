@@ -1,28 +1,19 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import SEO from "@/components/SEO";
 import DemoVideo from "@/components/DemoVideo";
 import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
+import FeatureShowcase from "@/components/FeatureShowcase";
 import {
-  Zap, Target, Dumbbell, BarChart3, Play, ChevronRight,
-  Video, Sparkles, TrendingUp, Coins, Upload, UserPlus,
-  ArrowRight, BookOpen, Users, Clock
+  Zap, Play, ChevronRight, Sparkles, TrendingUp, Upload,
+  ArrowRight, Clock, Timer, Smartphone, Activity, Shield
 } from "lucide-react";
 import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-
-const FEATURES = [
-  { icon: Video, title: "AI Video Analysis", desc: "Upload any match or practice video and get instant, frame-by-frame technique feedback powered by computer vision.", color: "text-lime-400", bg: "bg-lime-400/10" },
-  { icon: Dumbbell, title: "Smart Training Plans", desc: "Personalized weekly training programs that adapt to your skill level, goals, and available time.", color: "text-sky-400", bg: "bg-sky-400/10" },
-  { icon: Target, title: "Equipment Recommendations", desc: "AI-powered gear suggestions based on your playing style, level, and budget — with price comparisons.", color: "text-purple-400", bg: "bg-purple-400/10" },
-  { icon: Users, title: "Host & Find Local Games", desc: "Post a match, find players nearby, build your local community. WhatsApp share built in.", color: "text-emerald-400", bg: "bg-emerald-400/10" },
-  { icon: Coins, title: "Tokens & Rewards", desc: "Get 100 free tokens on signup. Earn more by referring friends, a daily login bonus, hosting games, and completing training.", color: "text-amber-400", bg: "bg-amber-400/10" },
-  { icon: TrendingUp, title: "Progress Tracking", desc: "Track improvement over time with detailed stats, streak tracking, and skill development charts.", color: "text-rose-400", bg: "bg-rose-400/10" },
-];
 
 const SPORTS = [
   { key: "badminton", emoji: "🏸", label: "Badminton", path: "/badminton", color: "text-lime-400", border: "border-lime-400/30", bg: "bg-lime-400/5" },
@@ -46,16 +37,21 @@ const MORE_ACTIVITIES = [
   { key: "physiotherapy", emoji: "🩹", label: "Physiotherapy", path: "/physiotherapy" },
 ];
 
+// Mirrors what actually happens: handleCTA() drops users straight into
+// /analyze — there is no intake quiz before the first analysis any more, so
+// don't describe one.
 const HOW_IT_WORKS = [
-  { step: "01", icon: UserPlus, title: "Sign Up & Choose Your Sports", desc: "Create your free account and select the sports you play. Tell us your skill level and goals." },
-  { step: "02", icon: Upload, title: "Upload Videos or Explore Plans", desc: "Upload match footage for AI analysis, or dive into personalized training plans and equipment recommendations." },
-  { step: "03", icon: TrendingUp, title: "Get Feedback & Improve", desc: "Receive detailed AI-powered insights, track your progress over time, and level up your game." },
+  { step: "01", icon: Upload, title: "Film 10–30 seconds", desc: "Any phone, any angle where your body is clearly in frame. A single rally or a couple of reps is plenty — you don't need a tripod or a full match." },
+  { step: "02", icon: Sparkles, title: "Our AI breaks it down", desc: "Shot by shot with timestamps, posture on the contact frame, and a coach's read on what's working and what isn't. Analysis runs on our servers, so you can lock your phone and walk away." },
+  { step: "03", icon: TrendingUp, title: "Train on it, then re-check", desc: "Work the drills and weekly plan it gives you, then re-analyze a later clip and compare the two sessions side by side." },
 ];
 
 const FAQS = [
   {
     q: "How does AI video analysis work?",
-    a: "Formanti uses pose detection AI (MoveNet) to track your body movements in the video. It identifies your shots (smashes, drives, etc.), measures speed, evaluates technique, and provides personalized improvement tips.",
+    // Don't name the underlying model vendor here — it's deliberately not
+    // disclosed anywhere in the product. "Our AI" is the house phrasing.
+    a: "You upload a short clip and our AI breaks it into individual shots with timestamps — what you were trying to do with each one and how it turned out. On racket and ball sports it also runs pose detection on the contact frame, drawing a skeleton overlay and measuring your joint angles against ideal ranges. From that it writes a coach narrative, drills, and a weekly plan.",
   },
   {
     q: "Which sports does Formanti support?",
@@ -114,11 +110,24 @@ const PLACEHOLDER_TESTIMONIALS = [
   // { name: "<name>", quote: "<real user quote here>", rating: 5, sport: "<sport>" },
 ];
 
-const STATS = [
-  { value: "8", label: "Sports Supported" },
-  { value: "10K+", label: "Analyses Performed" },
-  { value: "500+", label: "Training Drills" },
-  { value: "98%", label: "User Satisfaction" },
+// Facts bar — same rule as PLACEHOLDER_TESTIMONIALS and APP_STRUCTURED_DATA
+// below: nothing goes on this page that we cannot point at in the code or in a
+// real user's account. This band previously shipped invented metrics ("10K+
+// Analyses Performed", "500+ Training Drills", "98% User Satisfaction"); none
+// were backed by anything, and the only real rating the product has received
+// so far is a 1-star. They are gone. Every entry here is checkable:
+//   sports count ...... SPORTS.length, derived so it cannot drift
+//   100 tokens ........ backend server.py TOKEN grants: "signup_grant": 100,
+//                       commented "once per user — exactly 1 free analysis"
+//   10–30s ............ the clip-length guidance AnalyzePage gives on oversize
+//                       uploads ("Trim it to your key 10–30 seconds")
+//   ~5MB .............. DownloadPage's stated PWA install size
+// Do NOT re-add user counts, satisfaction percentages, or star ratings.
+const FACTS = [
+  { icon: Activity, value: String(SPORTS.length), label: "Sports with sport-tuned analysis" },
+  { icon: Zap, value: "100", label: "Free tokens on signup — 1 analysis" },
+  { icon: Timer, value: "10–30s", label: "That's all the clip we need" },
+  { icon: Smartphone, value: "~5MB", label: "Installs as an app, no store" },
 ];
 
 const fadeUp = {
@@ -126,10 +135,18 @@ const fadeUp = {
   visible: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.6, delay: i * 0.1 } }),
 };
 
+const fadeUpStill = {
+  hidden: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0 },
+};
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, profile } = useAuth();
   const [blogPosts, setBlogPosts] = useState([]);
+  // Respect prefers-reduced-motion: same layout, no travel/fade.
+  const reduceMotion = useReducedMotion();
+  const rise = reduceMotion ? fadeUpStill : fadeUp;
 
   useEffect(() => {
     api.get("/blog", { timeout: 5000 })
@@ -168,73 +185,92 @@ export default function LandingPage() {
       />
 
       {/* ============ HERO ============ */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background layers */}
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-zinc-900/50 to-zinc-950" />
-        <div className="absolute inset-0 opacity-15"
+      <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden pt-24 pb-16">
+        {/* Background stack: photo → wash → vignette → lime bloom → grid.
+            Layering (rather than a single flat gradient) is what stops the
+            hero reading as "text on a dark rectangle". */}
+        <div className="absolute inset-0 opacity-20"
           style={{
             backgroundImage: "url('https://images.unsplash.com/photo-1461896836934-bd45ba8a0a58?w=1920&q=60')",
             backgroundSize: "cover", backgroundPosition: "center"
           }} />
-        <div className="absolute inset-0 bg-zinc-950/70" />
+        <div className="absolute inset-0 bg-zinc-950/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-transparent to-zinc-950" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-zinc-950 via-transparent to-zinc-950/60" />
 
-        {/* Decorative gradient orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-lime-400/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-400/5 rounded-full blur-3xl" />
+        {/* Lime bloom behind the headline + a cool counterweight */}
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] max-w-full bg-lime-400/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-sky-500/5 rounded-full blur-3xl" />
+
+        {/* Faint grid — texture, not decoration you can consciously see */}
+        <div className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
+            backgroundSize: "72px 72px",
+            maskImage: "radial-gradient(ellipse at center, black 20%, transparent 72%)",
+            WebkitMaskImage: "radial-gradient(ellipse at center, black 20%, transparent 72%)",
+          }} />
 
         <div className="relative z-10 container mx-auto px-4 max-w-5xl text-center">
           {/* Brand mark above the fold — the hero previously opened straight
               into a generic badge, so a first-time visitor met the product
               before they met the name. */}
-          <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-            <FormantiLogo className="h-12 md:h-16 mx-auto mb-8" />
+          <motion.div initial="hidden" animate="visible" variants={rise}>
+            <FormantiLogo className="h-10 md:h-12 mx-auto mb-7" markClassName="h-9 md:h-11"
+              textClassName="font-heading font-bold text-2xl md:text-3xl uppercase tracking-tight text-white" />
           </motion.div>
 
-          <motion.div initial="hidden" animate="visible" custom={0.05} variants={fadeUp}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/20 mb-8" data-testid="hero-badge">
-              <Zap className="w-4 h-4 text-lime-400" />
-              <span className="text-sm font-medium text-lime-400 tracking-wide">AI-Powered Sports Coaching Platform</span>
+          <motion.div initial="hidden" animate="visible" custom={0.05} variants={rise}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 mb-7 backdrop-blur-sm" data-testid="hero-badge">
+              <Zap className="w-3.5 h-3.5 text-lime-400" />
+              <span className="text-xs sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI Sports Coaching</span>
             </div>
           </motion.div>
 
-          <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={fadeUp}
-            className="font-heading font-black text-5xl md:text-7xl lg:text-8xl tracking-tighter uppercase leading-[0.9] mb-6" data-testid="hero-heading">
-            <span className="text-white">Your</span> <span className="neon-glow text-lime-400">AI</span><br />
-            <span className="text-white">Sports Coach</span>
+          <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={rise}
+            className="font-heading font-black text-[3.25rem] leading-[0.85] sm:text-7xl lg:text-8xl tracking-tighter uppercase mb-6" data-testid="hero-heading">
+            <span className="block text-zinc-500 text-2xl sm:text-3xl lg:text-4xl tracking-tight mb-2 sm:mb-3">Film one rally.</span>
+            <span className="block text-white">Get coached</span>
+            <span className="block neon-glow text-lime-400">like a pro.</span>
           </motion.h1>
 
-          <motion.p initial="hidden" animate="visible" custom={0.3} variants={fadeUp}
-            className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 leading-relaxed" data-testid="hero-subtitle">
-            Upload a video. Get instant technique analysis, personalized training plans, and smart gear recommendations — like having a pro coach in your pocket.
-            <span className="block text-lime-400/90 text-sm sm:text-base mt-3 font-medium">
-              🪙 Sign up free — 100 tokens (1 analysis) on us.
-            </span>
+          <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
+            className="text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-7 leading-relaxed" data-testid="hero-subtitle">
+            Our AI breaks your clip down shot by shot, shows you the posture behind each one,
+            and turns it into drills, a plan and a written report.
           </motion.p>
 
-          {/* Sport pills */}
-          <motion.div initial="hidden" animate="visible" custom={0.4} variants={fadeUp}
-            className="flex flex-wrap justify-center gap-2 mb-10">
+          {/* Sport pills — one flowing row, quieter so they support the
+              headline instead of competing with it. */}
+          <motion.div initial="hidden" animate="visible" custom={0.4} variants={rise}
+            className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-9 max-w-2xl mx-auto">
             {SPORTS.map(s => (
-              <span key={s.key} className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${s.border} ${s.bg} text-sm ${s.color}`}>
+              <span key={s.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm text-[11px] sm:text-xs text-zinc-300">
                 <span>{s.emoji}</span> {s.label}
               </span>
             ))}
           </motion.div>
 
-          <motion.div initial="hidden" animate="visible" custom={0.5} variants={fadeUp}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
-              className="bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide px-10 py-6 text-lg rounded-full shadow-[0_0_20px_rgba(190,242,100,0.3)] hover:shadow-[0_0_30px_rgba(190,242,100,0.5)] transition-all hover:scale-105 active:scale-95">
-              Try Free — 3 Analyses on Us <ChevronRight className="w-5 h-5 ml-1" />
+              className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
+              Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
             <Button onClick={() => document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" })}
               variant="ghost" size="lg"
-              className="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-lg transition-all">
-              <Play className="w-5 h-5 mr-1.5" /> Watch 60-sec demo
+              className="w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
+              <Play className="w-5 h-5 mr-1.5" /> Watch the demo
             </Button>
           </motion.div>
 
-          <motion.div initial="hidden" animate="visible" custom={0.6} variants={fadeUp}
+          <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
+            className="text-sm text-lime-400/90 font-medium mt-4">
+            🪙 Free to start — 100 tokens on signup, enough for 1 analysis.
+          </motion.p>
+
+          <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
             className="mt-6 flex flex-col items-center">
             <Link
               to="/download"
@@ -242,34 +278,37 @@ export default function LandingPage() {
               data-testid="hero-get-app"
             >
               <Sparkles className="w-4 h-4 text-lime-400" />
-              <span>Install as an app — works like a native app, ~5MB</span>
+              <span>Install as an app — ~5MB, no store</span>
               <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
             </Link>
-            <p className="text-[11px] text-zinc-600 mt-2 text-center max-w-xs px-2">
-              Free • No Play Store or App Store needed • Installs in 10 seconds • Barely any phone storage
-            </p>
           </motion.div>
         </div>
 
-        {/* Scroll indicator */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2">
-          <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}
-            className="w-6 h-10 border-2 border-zinc-600 rounded-full flex justify-center pt-2">
-            <div className="w-1.5 h-1.5 bg-lime-400 rounded-full" />
+        {/* Scroll indicator — desktop only; on a phone it collides with the
+            CTA stack and adds nothing. */}
+        {!reduceMotion && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
+            className="hidden md:block absolute bottom-8 left-1/2 -translate-x-1/2">
+            <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}
+              className="w-6 h-10 border-2 border-zinc-700 rounded-full flex justify-center pt-2">
+              <div className="w-1.5 h-1.5 bg-lime-400 rounded-full" />
+            </motion.div>
           </motion.div>
-        </motion.div>
+        )}
       </section>
 
-      {/* ============ STATS BAR ============ */}
-      <section className="py-12 bg-zinc-900 border-y border-zinc-800/50">
+      {/* ============ FACTS BAR ============ */}
+      <section className="relative py-10 md:py-12 bg-zinc-900/60 border-y border-zinc-800/60 overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/30 to-transparent" />
         <div className="container mx-auto px-4 max-w-5xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {STATS.map((s, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
+            {FACTS.map((s, i) => (
               <motion.div key={s.label} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={fadeUp} className="text-center">
-                <div className="font-heading font-black text-3xl md:text-4xl text-lime-400 mb-1">{s.value}</div>
-                <div className="text-zinc-400 text-sm uppercase tracking-wider">{s.label}</div>
+                viewport={{ once: true }} variants={rise}
+                className="flex flex-col items-center text-center md:border-r md:last:border-r-0 border-zinc-800/60 px-2">
+                <s.icon className="w-4 h-4 text-lime-400/70 mb-2" strokeWidth={1.75} />
+                <div className="font-heading font-black text-3xl md:text-4xl text-white tracking-tight mb-1">{s.value}</div>
+                <div className="text-zinc-500 text-[11px] sm:text-xs leading-snug max-w-[10rem]">{s.label}</div>
               </motion.div>
             ))}
           </div>
@@ -282,69 +321,58 @@ export default function LandingPage() {
       {/* ============ TOKEN ECONOMY ============ */}
       <EarnTokensSection />
 
-      {/* ============ FEATURES ============ */}
-      <section id="features" className="py-24 bg-zinc-950" data-testid="features-section">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-center mb-16">
-            <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Features</span>
-            <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
-              Everything You Need to Dominate
-            </h2>
-            <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-              From AI-powered video breakdowns to smart gear recommendations — tools built to elevate every aspect of your game.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((f, i) => (
-              <motion.div key={f.title} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={fadeUp}
-                className="group bg-zinc-900 border border-zinc-800 rounded-xl p-6 hover:border-lime-400/30 transition-all duration-300 card-glow cursor-pointer"
-                data-testid={`feature-card-${i}`}>
-                <div className={`w-12 h-12 rounded-lg ${f.bg} flex items-center justify-center mb-4`}>
-                  <f.icon className={`w-6 h-6 ${f.color}`} strokeWidth={1.5} />
-                </div>
-                <h3 className="font-heading font-semibold text-xl text-white mb-2 tracking-tight">{f.title}</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed">{f.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ============ FEATURE SHOWCASE ============ */}
+      {/* Replaces the old six flat "Features" cards, which described the
+          product in generic marketing terms and left most of it undiscovered.
+          Everything in FeatureShowcase maps to shipped code — see the header
+          comment in that file for the feature → source mapping. */}
+      <div id="features" data-testid="features-section">
+        <FeatureShowcase />
+      </div>
 
       {/* ============ SPORTS SECTION ============ */}
-      <section className="py-24 bg-zinc-900/50 border-y border-zinc-800/50">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-center mb-16">
-            <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Multi-Sport</span>
-            <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
-              One Platform. Every Session.
+      <section className="relative py-20 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
+        <div className="pointer-events-none absolute -right-40 top-1/3 w-[32rem] h-[32rem] bg-sky-500/5 rounded-full blur-3xl" />
+        <div className="relative container mx-auto px-4 max-w-5xl">
+          {/* Left-aligned header — the page was every-section-centred, which
+              flattened the rhythm. Alternating alignment gives it a pulse. */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="max-w-2xl mb-10 md:mb-14">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              <span className="w-8 h-px bg-lime-400/60" /> Multi-sport
+            </span>
+            <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95] mb-4">
+              One app.<br />Every session.
             </h2>
-            <p className="text-zinc-400 text-lg max-w-xl mx-auto">
+            <p className="text-zinc-400 text-base md:text-lg leading-relaxed">
               Eight sports get purpose-built AI models, drills and coaching — and anything
               else you film, from a squat rack to a swim lane, gets a coach's read on your form.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {SPORTS.map((s, i) => (
               <motion.div key={s.key} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={fadeUp}>
+                viewport={{ once: true }} variants={rise}>
                 <Link to={s.path}
-                  className={`group block bg-zinc-900 border ${s.border} rounded-xl p-6 text-center hover:scale-105 transition-all duration-300`}>
-                  <div className="text-4xl mb-3">{s.emoji}</div>
-                  <h3 className={`font-heading font-semibold text-lg ${s.color}`}>{s.label}</h3>
+                  className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl p-5 sm:p-6 text-center hover:-translate-y-1 hover:border-zinc-600 transition-all duration-300`}>
+                  {/* Sport-tinted wash on hover. Note: every colour class used
+                      here comes verbatim from the SPORTS table above, so
+                      Tailwind's source scan can see it — never build a class
+                      name by string concatenation or it gets purged. */}
+                  <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${s.bg}`} />
+                  <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+                  <div className="relative text-3xl sm:text-4xl mb-3 transition-transform duration-300 group-hover:scale-110">{s.emoji}</div>
+                  <h3 className={`relative font-heading font-semibold text-sm sm:text-lg ${s.color}`}>{s.label}</h3>
                 </Link>
               </motion.div>
             ))}
             {/* "More coming" card */}
             <motion.div initial="hidden" whileInView="visible" custom={SPORTS.length}
-              viewport={{ once: true }} variants={fadeUp}
-              className="group bg-zinc-900 border border-dashed border-zinc-700 rounded-xl p-6 text-center hover:border-lime-400/30 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center">
-              <div className="text-4xl mb-3">🎯</div>
-              <h3 className="font-heading font-semibold text-lg text-zinc-500">More Coming</h3>
+              viewport={{ once: true }} variants={rise}
+              className="bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl p-5 sm:p-6 text-center flex flex-col items-center justify-center">
+              <div className="text-3xl sm:text-4xl mb-3 opacity-50">🎯</div>
+              <h3 className="font-heading font-semibold text-sm sm:text-lg text-zinc-600">More Coming</h3>
             </motion.div>
           </div>
 
@@ -355,16 +383,18 @@ export default function LandingPage() {
               joint-angle measurement — the angle tracker is off for lifting
               until the bilateral-load work lands, and over-promising here is
               exactly what earns a 1-star. */}
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="mt-14 pt-10 border-t border-zinc-800/60">
-            <div className="bg-gradient-to-br from-lime-400/10 to-zinc-900 border border-lime-400/25 rounded-2xl p-6 md:p-8">
-              <div className="flex flex-col md:flex-row md:items-center gap-6">
-                <div className="text-5xl md:text-6xl shrink-0">🏋️</div>
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="mt-12 md:mt-16">
+            <div className="relative overflow-hidden rounded-3xl border border-lime-400/25 bg-gradient-to-br from-lime-400/[0.12] via-zinc-900 to-zinc-900 p-6 md:p-10">
+              <div className="pointer-events-none absolute -top-20 -right-16 w-72 h-72 bg-lime-400/10 rounded-full blur-3xl" />
+              <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/50 to-transparent" />
+              <div className="relative flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
+                <div className="text-6xl md:text-7xl shrink-0 leading-none">🏋️</div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-heading font-bold text-2xl md:text-3xl uppercase tracking-tight text-white mb-2">
-                    Lifting? Skip the <span className="text-lime-400">₹10,000</span> trainer.
+                  <h3 className="font-heading font-black text-3xl md:text-4xl uppercase tracking-tighter text-white leading-[0.95] mb-3">
+                    Lifting? Skip the<br className="hidden sm:block" /> <span className="text-lime-400">₹10,000</span> trainer.
                   </h3>
-                  <p className="text-zinc-300 leading-relaxed mb-4">
+                  <p className="text-zinc-300 leading-relaxed mb-5 max-w-xl">
                     Film a set on your phone and get honest feedback on your form — what looked
                     solid, what broke down, and what to fix before your next session. Squats,
                     deadlifts, presses, and the rest.
@@ -372,52 +402,68 @@ export default function LandingPage() {
                   <div className="flex flex-wrap gap-2">
                     {MORE_ACTIVITIES.map((a) => (
                       <Link key={a.key} to={a.path}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-900 border border-zinc-700 hover:border-lime-400/50 text-zinc-200 hover:text-white text-sm font-medium transition-all">
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-950/60 border border-zinc-700 hover:border-lime-400/50 hover:bg-zinc-900 text-zinc-200 hover:text-white text-sm font-medium transition-all">
                         <span>{a.emoji}</span> {a.label}
+                        <ArrowRight className="w-3.5 h-3.5 opacity-50" />
                       </Link>
                     ))}
                   </div>
                 </div>
               </div>
             </div>
-            <p className="text-center text-zinc-500 text-xs mt-4 max-w-xl mx-auto">
-              Analysis works on any activity where the movement is clearly visible in frame.
-              The eight sports above additionally get sport-tuned shot detection and drills.
-            </p>
+            {/* Scope note stays. This is the exact spot where over-claiming
+                would cost us: lifting gets FORM FEEDBACK, not joint angles. */}
+            <div className="mt-5 flex items-start gap-2.5 max-w-2xl mx-auto text-zinc-500 text-xs leading-relaxed">
+              <Shield className="w-4 h-4 shrink-0 mt-px text-zinc-600" strokeWidth={1.75} />
+              <p>
+                Analysis works on any activity where the movement is clearly visible in frame.
+                The eight sports above additionally get sport-tuned shot detection, drills, and
+                the joint-angle posture tracker — for gym and lifting you get overall form
+                feedback, not measured angles.
+              </p>
+            </div>
           </motion.div>
         </div>
       </section>
 
       {/* ============ HOW IT WORKS ============ */}
-      <section className="py-24 bg-zinc-950">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-center mb-16">
-            <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">How It Works</span>
-            <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
-              Three Steps to Better Performance
+      {/* Vertical numbered rail rather than a third three-across grid — the
+          page needs a change of shape here, and a sequence reads better as a
+          sequence than as parallel columns. */}
+      <section className="relative py-20 md:py-28 bg-zinc-950 overflow-hidden">
+        <div className="pointer-events-none absolute -left-40 top-1/4 w-[30rem] h-[30rem] bg-lime-400/[0.04] rounded-full blur-3xl" />
+        <div className="relative container mx-auto px-4 max-w-3xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="mb-12 md:mb-16">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              <span className="w-8 h-px bg-lime-400/60" /> How it works
+            </span>
+            <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95]">
+              Three steps.<br />No coach required.
             </h2>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {HOW_IT_WORKS.map((item, i) => (
-              <motion.div key={item.step} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={fadeUp}
-                className="relative text-center">
-                {/* Connector line for desktop */}
-                {i < HOW_IT_WORKS.length - 1 && (
-                  <div className="hidden md:block absolute top-12 left-[60%] w-[80%] h-px bg-gradient-to-r from-zinc-700 to-transparent" />
-                )}
-                <div className="w-16 h-16 rounded-full bg-lime-400/10 border border-lime-400/20 flex items-center justify-center mx-auto mb-6">
-                  <item.icon className="w-7 h-7 text-lime-400" strokeWidth={1.5} />
-                </div>
-                <div className="text-lime-400/40 font-heading font-black text-5xl absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 select-none pointer-events-none">
-                  {item.step}
-                </div>
-                <h3 className="font-heading font-semibold text-xl text-white mb-3">{item.title}</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed max-w-xs mx-auto">{item.desc}</p>
-              </motion.div>
-            ))}
+          <div className="relative">
+            {/* the rail */}
+            <div className="absolute left-6 md:left-8 top-4 bottom-6 w-px bg-gradient-to-b from-lime-400/40 via-zinc-800 to-transparent" />
+            <div className="space-y-8 md:space-y-12">
+              {HOW_IT_WORKS.map((item, i) => (
+                <motion.div key={item.step} initial="hidden" whileInView="visible" custom={i}
+                  viewport={{ once: true, amount: 0.5 }} variants={rise}
+                  className="relative flex gap-5 md:gap-8">
+                  <div className="relative shrink-0">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-zinc-900 border border-lime-400/25 flex items-center justify-center shadow-lg shadow-lime-400/5">
+                      <item.icon className="w-5 h-5 md:w-7 md:h-7 text-lime-400" strokeWidth={1.5} />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1 pt-1">
+                    <span className="font-mono text-xs text-lime-400/60 tracking-widest">{item.step}</span>
+                    <h3 className="font-heading font-bold text-xl md:text-2xl text-white tracking-tight mt-1 mb-2">{item.title}</h3>
+                    <p className="text-zinc-400 text-sm md:text-base leading-relaxed">{item.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -431,7 +477,7 @@ export default function LandingPage() {
       {blogPosts.length > 0 && (
         <section className="py-24 bg-zinc-950">
           <div className="container mx-auto px-4 max-w-7xl">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
               className="text-center mb-16">
               <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Blog</span>
               <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
@@ -445,7 +491,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {blogPosts.slice(0, 3).map((post, i) => (
                 <motion.div key={post.slug} initial="hidden" whileInView="visible" custom={i}
-                  viewport={{ once: true }} variants={fadeUp}>
+                  viewport={{ once: true }} variants={rise}>
                   <Link to={`/blog/${post.slug}`}
                     className="group block bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-lime-400/30 transition-all duration-300">
                     {post.cover_image && (
@@ -483,26 +529,28 @@ export default function LandingPage() {
       )}
 
       {/* ============ FAQ ============ */}
-      <section className="py-24 bg-zinc-900/40 border-y border-zinc-800/50">
+      <section className="py-20 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50">
         <div className="container mx-auto px-4 max-w-3xl">
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }} />
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-            className="text-center mb-12">
-            <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">FAQ</span>
-            <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
-              Frequently Asked Questions
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="mb-10 md:mb-12">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              <span className="w-8 h-px bg-lime-400/60" /> FAQ
+            </span>
+            <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tighter uppercase text-white leading-[0.95]">
+              Straight answers
             </h2>
           </motion.div>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {FAQS.map((f, i) => (
               <motion.details key={i} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={fadeUp}
-                className="group bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-lime-400/30 transition-all">
-                <summary className="cursor-pointer font-heading font-semibold text-white text-lg flex items-center justify-between gap-4">
-                  <span>{f.q}</span>
-                  <ChevronRight className="w-5 h-5 text-lime-400 group-open:rotate-90 transition-transform flex-shrink-0" />
+                viewport={{ once: true }} variants={rise}
+                className="group rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5 open:border-lime-400/30 hover:border-zinc-700 transition-colors">
+                <summary className="cursor-pointer list-none font-heading font-semibold text-white text-base md:text-lg flex items-start justify-between gap-4">
+                  <span className="min-w-0">{f.q}</span>
+                  <ChevronRight className="w-5 h-5 text-lime-400 group-open:rotate-90 transition-transform flex-shrink-0 mt-0.5" />
                 </summary>
-                <p className="text-zinc-400 text-sm leading-relaxed mt-3">{f.a}</p>
+                <p className="text-zinc-400 text-sm leading-relaxed mt-3 pr-8">{f.a}</p>
               </motion.details>
             ))}
           </div>
@@ -510,22 +558,24 @@ export default function LandingPage() {
       </section>
 
       {/* ============ FINAL CTA ============ */}
-      <section className="py-24 bg-zinc-950 border-t border-zinc-800/50">
-        <div className="container mx-auto px-4 max-w-3xl text-center">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/20 mb-8">
-              <Zap className="w-4 h-4 text-lime-400" />
-              <span className="text-sm font-medium text-lime-400">Free to get started</span>
-            </div>
-            <h2 className="font-heading font-bold text-3xl md:text-5xl uppercase tracking-tight text-white mb-4">
-              Start Your Journey Today
+      <section className="relative py-24 md:py-32 bg-zinc-950 border-t border-zinc-800/50 overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 -bottom-40 h-96 bg-lime-400/[0.07] blur-3xl rounded-full" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/30 to-transparent" />
+        <div className="relative container mx-auto px-4 max-w-3xl text-center">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}>
+            <FormantiIcon className="h-10 mx-auto mb-6 opacity-90" />
+            <h2 className="font-heading font-black text-4xl md:text-6xl uppercase tracking-tighter text-white leading-[0.95] mb-5">
+              Your next session<br /><span className="text-lime-400">can be your best one.</span>
             </h2>
-            <p className="text-zinc-400 text-lg mb-8 max-w-xl mx-auto">
-              Join athletes across 8 sports who are training smarter with AI-powered coaching. No credit card required.
+            {/* No user counts here. We don't have a number worth printing and
+                inventing one is how you earn a 1-star. */}
+            <p className="text-zinc-400 text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+              Film 10–30 seconds today and see what our AI finds. No credit card, no app store,
+              100 free tokens on signup.
             </p>
             <Button onClick={handleCTA} size="lg" data-testid="cta-bottom-btn"
-              className="bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide px-10 py-6 text-lg rounded-full shadow-[0_0_20px_rgba(190,242,100,0.3)] hover:shadow-[0_0_30px_rgba(190,242,100,0.5)] hover:scale-105 transition-all active:scale-95">
-              Get Started Free <ChevronRight className="w-5 h-5 ml-1" />
+              className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] hover:scale-[1.03] transition-all active:scale-95">
+              Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
           </motion.div>
         </div>

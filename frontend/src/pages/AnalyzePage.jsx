@@ -3426,81 +3426,92 @@ export default function AnalyzePage() {
 
   const renderUpload = () => (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-      {/* Token-cost banner — always visible so user knows the price BEFORE
-          uploading. Three states: guest, signed-in + enough, signed-in + short. */}
-      <div className={`mb-3 rounded-xl border px-3 py-2 flex items-center gap-2.5 flex-wrap ${
-        user && tokens != null && tokens < 100
-          ? "bg-amber-400/5 border-amber-400/30"
-          : "bg-purple-400/5 border-purple-400/30"
-      }`}>
-        <div className="w-8 h-8 rounded-lg bg-purple-400/15 flex items-center justify-center shrink-0 text-base">
-          🪙
-        </div>
-        <div className="flex-1 min-w-0">
-          {!user ? (
-            <>
-              <p className="text-sm font-semibold text-white">
-                This analysis costs 100 tokens — sign up to get 100 free.
+      {/* Cost + "you can leave" — ONE slim bar instead of two stacked cards.
+          These were two separate bordered boxes that between them ate ~140px
+          above the fold on a phone, pushing the actual upload control off
+          screen. Both facts survive verbatim in a single row:
+            · the price (100 tokens) and the user's balance — cost transparency
+              is non-negotiable and stays the first thing read
+            · that the analysis keeps running if they leave, plus the notify
+              opt-in, demoted to the second line
+          The short-on-tokens case still gets an amber treatment because it's
+          the one state that blocks the flow. */}
+      {(() => {
+        const short = user && tokens != null && tokens < 100;
+        const canNotify = typeof window !== "undefined" && "Notification" in window;
+        return (
+          <div className={`mb-3 rounded-xl border px-3 py-2.5 ${
+            short ? "bg-amber-400/5 border-amber-400/30" : "bg-zinc-900/70 border-zinc-800"
+          }`}>
+            {/* Line 1 — the price. */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm shrink-0" aria-hidden="true">🪙</span>
+              <p className="text-[13px] font-semibold text-white min-w-0">
+                {short ? (
+                  <>Need <span className="text-amber-300">100 tokens</span> · you have {tokens}</>
+                ) : !user ? (
+                  <>Costs <span className="text-lime-400">100 tokens</span> · 100 free on signup</>
+                ) : (
+                  <>Costs <span className="text-lime-400">100 tokens</span> · you have {tokens ?? "—"}</>
+                )}
               </p>
-              <p className="text-[11px] text-zinc-400">
-                That's 1 free analysis on us. Tokens never expire.
-              </p>
-            </>
-          ) : tokens != null && tokens < 100 ? (
-            <>
-              <p className="text-sm font-semibold text-white">Need 100 tokens · You have {tokens}</p>
-              <p className="text-[11px] text-zinc-400">Earn more for free or top up to continue.</p>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold text-white">
-                This analysis costs 100 tokens · You have {tokens ?? "—"}
-              </p>
-              <p className="text-[11px] text-zinc-400">
-                Tokens never expire. Earn more by referring friends or hosting games.
-              </p>
-            </>
-          )}
-        </div>
-        {!user ? (
-          <Link to="/auth"
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-lime-400 hover:bg-lime-500 text-black transition-colors">
-            Sign up free →
-          </Link>
-        ) : (
-          <Link to="/wallet"
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-purple-400/15 hover:bg-purple-400/25 text-purple-200 border border-purple-400/30 transition-colors">
-            Wallet →
-          </Link>
-        )}
-      </div>
+              {!user ? (
+                <Link to="/auth"
+                  className="ml-auto shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-lime-400 hover:bg-lime-500 text-black transition-colors">
+                  Sign up free →
+                </Link>
+              ) : (
+                <Link to="/wallet"
+                  className="ml-auto shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-purple-400/15 hover:bg-purple-400/25 text-purple-200 border border-purple-400/30 transition-colors">
+                  Wallet →
+                </Link>
+              )}
+            </div>
 
-      {/* Notify-me — at the top so users opt in before analyzing. Simple,
-          one line + action. Analysis runs in the background; this is just
-          how we ping them when it's done. */}
-      {typeof window !== "undefined" && "Notification" in window && (
-        <div className="mb-3 rounded-xl border border-sky-400/30 bg-sky-400/5 px-3 py-2 flex items-center gap-2.5">
-          <Bell className="w-4 h-4 text-sky-400 shrink-0" strokeWidth={1.75} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">Leave anytime — we'll ping you</p>
-            <p className="text-[11px] text-zinc-400">
-              {notifyPermission === "denied"
-                ? "Notifications are blocked — enable them in settings to get pinged."
-                : "We'll notify you when your report is ready. iPhone: add to Home Screen first."}
-            </p>
+            {/* Line 2 — you can walk away, and the notify opt-in. */}
+            <div className="mt-1.5 pt-1.5 border-t border-zinc-800/70 flex items-center gap-2 flex-wrap">
+              <Bell className="w-3.5 h-3.5 text-sky-400 shrink-0" strokeWidth={1.75} />
+              <p className="text-[11px] text-zinc-400 min-w-0 flex-1">
+                {canNotify && notifyPermission === "denied"
+                  ? "Runs in the background — notifications are blocked, enable them in settings to get pinged."
+                  : "Runs in the background — leave the page or lock your phone, we'll have it ready."}
+              </p>
+              {canNotify && notifyPermission === "granted" ? (
+                <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-lime-400">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Alerts on
+                </span>
+              ) : canNotify && notifyPermission !== "denied" ? (
+                <button type="button" onClick={requestAnalysisNotifyPermission}
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-400/15 hover:bg-sky-400/25 text-sky-200 border border-sky-400/30 transition-colors">
+                  Notify me
+                </button>
+              ) : null}
+            </div>
           </div>
-          {notifyPermission === "granted" ? (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-lime-400 shrink-0">
-              <CheckCircle2 className="w-4 h-4" /> On
-            </span>
-          ) : notifyPermission !== "denied" ? (
-            <button type="button" onClick={requestAnalysisNotifyPermission}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-400/15 hover:bg-sky-400/25 text-sky-200 border border-sky-400/30 transition-colors shrink-0">
-              <Bell className="w-3 h-3" /> Notify me
-            </button>
-          ) : null}
-        </div>
-      )}
+        );
+      })()}
+
+      {/* Compact "what you get" strip — most users never discover anything
+          past the upload button. Deliberately one small line, no card, no
+          icons big enough to compete with the upload control. Each item is a
+          real, shipped output of an analysis. Posture is qualified because the
+          joint-angle tracker only runs for racket/ball sports. */}
+      <div className="mb-3 flex items-center gap-1.5 overflow-x-auto text-[11px] text-zinc-500">
+        <Sparkles className="w-3 h-3 text-lime-400/70 shrink-0" strokeWidth={2} />
+        <p className="whitespace-nowrap">
+          <span className="text-zinc-300">Shot-by-shot</span>
+          <span className="mx-1.5 text-zinc-700">·</span>
+          <span className="text-zinc-300">Posture</span>
+          <span className="mx-1.5 text-zinc-700">·</span>
+          <span className="text-zinc-300">Coach chat</span>
+          <span className="mx-1.5 text-zinc-700">·</span>
+          <span className="text-zinc-300">Drills</span>
+          <span className="mx-1.5 text-zinc-700">·</span>
+          <span className="text-zinc-300">PDF report</span>
+          <span className="mx-1.5 text-zinc-700">·</span>
+          <span className="text-zinc-300">Saved to progress</span>
+        </p>
+      </div>
 
       {/* Reanalysis baseline banner — pinned above the loading panel
           when a reanalysis is in flight. Shows the previous analysis
