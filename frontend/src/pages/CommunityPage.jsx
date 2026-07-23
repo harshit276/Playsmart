@@ -18,6 +18,7 @@ import {
 import api from "@/lib/api";
 import { swrGet, invalidateMatching } from "@/lib/cachedFetch";
 import VenueAutocomplete from "@/components/VenueAutocomplete";
+import { AttendanceCard, RateGameCard, isGameFinished } from "@/components/PostGameCard";
 
 const SPORT_LABELS = {
   badminton: "Badminton", table_tennis: "Table Tennis", tennis: "Tennis", pickleball: "Pickleball",
@@ -364,7 +365,19 @@ export default function CommunityPage() {
                   </p>
                   <div className="space-y-3">
                     {[...myGames.hosted, ...myGames.joined].map((g, i) => (
-                      <GameCard key={g.id} game={g} userId={user?.id} onJoin={joinGame} onLeave={leaveGame} delay={i * 0.05} />
+                      <div key={g.id}>
+                        <GameCard game={g} userId={user?.id} onJoin={joinGame} onLeave={leaveGame} delay={i * 0.05} />
+                        {/* Post-game prompts appear inline on the finished game
+                            rather than behind a menu — if the host doesn't mark
+                            attendance there's no reputation and no tokens, so
+                            this has to be the obvious next action. */}
+                        {isGameFinished(g) && g.host_id === user?.id && (
+                          <AttendanceCard game={g} currentUserId={user?.id} onDone={loadData} />
+                        )}
+                        {isGameFinished(g) && g.host_id !== user?.id && (
+                          <RateGameCard game={g} currentUserId={user?.id} onDone={loadData} />
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>

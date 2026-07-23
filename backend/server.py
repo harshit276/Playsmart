@@ -5727,11 +5727,83 @@ async def _scan_and_send_reengagement():
             pass
 
 
+async def _scan_and_send_attendance_reminders() -> int:
+    """Nudge hosts to record who turned up.
+
+    The attendance loop is the whole growth mechanic — no marks means no
+    reputation and no tokens — and a prompt buried in the app only works if
+    the host happens to open it. So we push them the evening of the game.
+    Only games that have actually finished, still have nobody marked, and had
+    enough players to matter.
+    """
+    now = datetime.now(timezone.utc)
+    try:
+        games = await asyncio.wait_for(
+            db.games.find(
+                {"status": {"$nin": ["cancelled"]},
+                 "date": {"$gte": (now - timedelta(days=3)).strftime("%Y-%m-%d"),
+                          "$lte": now.strftime("%Y-%m-%d")}},
+                {"_id": 0, "id": 1, "host_id": 1, "date": 1, "time": 1,
+                 "duration_minutes": 1, "players": 1, "title": 1, "sport": 1},
+            ).to_list(200),
+            timeout=8.0)
+    except Exception as exc:
+        logger.warning(f"[attendance] scan failed: {str(exc)[:140]}")
+        return 0
+
+    sent = 0
+    for g in games:
+        end = _game_end_dt(g)
+        # 2h grace after the final whistle, and give up after 36h — a stale
+        # nudge about a game from days ago is just noise.
+        if not end or not (timedelta(hours=2) <= (now - end) <= timedelta(hours=36)):
+            continue
+        if len(g.get("players") or []) < 2:
+            continue
+        try:
+            if await db.game_attendance.find_one({"game_id": g["id"]}, {"_id": 0, "id": 1}):
+                continue  # host already did it
+            if await db.attendance_reminder_log.find_one({"game_id": g["id"]}, {"_id": 0, "id": 1}):
+                continue  # already nudged once — never twice
+        except Exception:
+            continue
+        ok = await _send_reengage_to_user(g.get("host_id") or "", {
+            "title": "Who turned up?",
+            "body": f"Mark attendance for {g.get('title') or 'your game'} — "
+                    f"players who showed up earn tokens.",
+            "url": "/community?tab=my",
+            "job_id": f"attendance-{g['id']}",
+        })
+        if ok:
+            sent += 1
+            try:
+                await db.attendance_reminder_log.insert_one({
+                    "id": str(uuid.uuid4()), "game_id": g["id"],
+                    "sent_at": now.isoformat()})
+            except Exception:
+                pass
+    if sent:
+        logger.info(f"[attendance] sent {sent} host reminder(s)")
+    return sent
+
+
+@api_router.get("/cron/attendance-reminders")
+async def cron_attendance_reminders(authorization: str = Header(None)):
+    """Cron entry point (see vercel.json). The in-process loop below also calls
+    the same scan, but on serverless that loop dies whenever the instance is
+    frozen, so the cron is the reliable trigger and the loop is redundancy."""
+    secret = os.environ.get("CRON_SECRET", "").strip()
+    if secret and authorization != f"Bearer {secret}":
+        raise HTTPException(status_code=403, detail="forbidden")
+    return {"ok": True, "sent": await _scan_and_send_attendance_reminders()}
+
+
 async def _reengagement_loop():
     await asyncio.sleep(180)  # let startup settle
     while True:
         try:
             await _scan_and_send_reengagement()
+            await _scan_and_send_attendance_reminders()
         except Exception as exc:
             try:
                 logger.warning(f"[reengage] loop error: {str(exc)[:160]}")
