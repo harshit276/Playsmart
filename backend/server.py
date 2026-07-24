@@ -1434,6 +1434,93 @@ def _is_quota_exhausted_str(s: str) -> bool:
         "quota exceeded", "exceeded your current quota", "insufficient"))
 
 
+# ─── Per-user / per-IP rate limiting for the expensive analyze endpoints ──
+# Purpose: stop ONE user (or one script) from firing many analyses at once and
+# monopolising the limited Gemini/Vercel concurrency or draining API credits —
+# the token economy caps paid *volume* but nothing stopped a burst of parallel
+# starts. State lives in Mongo (NOT in-memory) because on Vercel each request
+# can land on a different serverless instance, so an in-process counter would
+# only see a fraction of the traffic. Every check FAILS OPEN: a rate-limit
+# store hiccup must never block a paying user from analysing.
+_ANALYSIS_BURST = int(os.environ.get("ANALYSIS_BURST", "4"))          # per 60s
+_ANALYSIS_BURST_WINDOW = int(os.environ.get("ANALYSIS_BURST_WINDOW", "60"))
+_ANALYSIS_HOURLY = int(os.environ.get("ANALYSIS_HOURLY", "15"))       # per hour
+_rate_ttl_index_ready = False
+
+
+async def _ensure_rate_index() -> None:
+    global _rate_ttl_index_ready
+    if _rate_ttl_index_ready:
+        return
+    try:
+        # TTL sweep so old window buckets self-delete instead of piling up.
+        await asyncio.wait_for(
+            db.rate_limits.create_index("exp", expireAfterSeconds=0), timeout=4.0)
+    except Exception:
+        pass
+    _rate_ttl_index_ready = True
+
+
+def _client_ip(request) -> str:
+    """Real client IP behind Vercel's proxy. x-forwarded-for is a list; the
+    FIRST entry is the original client."""
+    try:
+        xff = request.headers.get("x-forwarded-for") if request else None
+        if xff:
+            return xff.split(",")[0].strip()
+        return (request.client.host if request and request.client else "unknown")
+    except Exception:
+        return "unknown"
+
+
+async def _rate_hit(subject: str, window_name: str, limit: int, window_sec: int):
+    """Atomic fixed-window counter. Returns (allowed, retry_after_sec).
+    Fails OPEN on any error."""
+    from pymongo import ReturnDocument
+    now = int(_time.time())
+    bucket = now // window_sec
+    key = f"{subject}|{window_name}|{bucket}"
+    try:
+        doc = await asyncio.wait_for(db.rate_limits.find_one_and_update(
+            {"_id": key},
+            {"$inc": {"n": 1},
+             "$setOnInsert": {"exp": datetime.fromtimestamp(
+                 (bucket + 2) * window_sec, timezone.utc)}},
+            upsert=True, return_document=ReturnDocument.AFTER,
+        ), timeout=2.0)
+        n = (doc or {}).get("n", 1)
+        if n > limit:
+            return False, window_sec - (now % window_sec)
+        return True, 0
+    except Exception:
+        return True, 0  # fail open
+
+
+async def _enforce_analysis_rate_limit(authorization, request) -> None:
+    """Guard the analyze endpoints. Raises 429 with Retry-After when a subject
+    (a signed-in user, else the client IP) exceeds the burst or hourly cap."""
+    await _ensure_rate_index()
+    try:
+        user = await get_current_user_or_none(authorization)
+    except Exception:
+        user = None
+    uid = (user or {}).get("id")
+    subject = f"user:{uid}" if (uid and uid != "guest") else f"ip:{_client_ip(request)}"
+
+    ok, retry = await _rate_hit(subject, "burst", _ANALYSIS_BURST, _ANALYSIS_BURST_WINDOW)
+    if not ok:
+        raise HTTPException(
+            status_code=429,
+            detail="You're starting analyses too quickly. Please wait a moment and try again.",
+            headers={"Retry-After": str(max(1, retry))})
+    ok, retry = await _rate_hit(subject, "hourly", _ANALYSIS_HOURLY, 3600)
+    if not ok:
+        raise HTTPException(
+            status_code=429,
+            detail="You've hit the hourly analysis limit. Please try again a little later.",
+            headers={"Retry-After": str(max(1, retry))})
+
+
 async def _log_analysis_failure(user_id, kind: str, error: str, sport=None) -> None:
     """Record an analysis failure for the admin panel. Best-effort and never
     raises — logging a failure must not itself break the (already failing)
@@ -3988,11 +4075,12 @@ class AnalyzeVideoDirectRequest(BaseModel):
 
 @api_router.post("/analyze-video-direct")
 async def analyze_video_direct_endpoint(
-    req: AnalyzeVideoDirectRequest, authorization: str = Header(None),
+    req: AnalyzeVideoDirectRequest, request: Request, authorization: str = Header(None),
 ):
     """Whole-video Gemini analysis. Returns shot list with timestamps.
     Used by the OPT-IN high-accuracy mode in the frontend; the standard
     keyframe pipeline at /classify-shots-vlm is untouched."""
+    await _enforce_analysis_rate_limit(authorization, request)
     user = await get_current_user(authorization)
     if not req.video_b64:
         raise HTTPException(status_code=400, detail="No video provided")
@@ -4168,7 +4256,7 @@ def _apply_time_scale(events: list, time_scale: float, time_offset: float = 0.0)
 
 @api_router.post("/analyze-video-universal")
 async def analyze_video_universal_endpoint(
-    req: AnalyzeVideoUniversalRequest, authorization: str = Header(None),
+    req: AnalyzeVideoUniversalRequest, request: Request, authorization: str = Header(None),
 ):
     """Sport-agnostic Gemini analysis. No per-sport vocabulary, no
     hardcoded metric schema — returns whatever events Gemini identifies
@@ -4179,6 +4267,7 @@ async def analyze_video_universal_endpoint(
     target returns the saved result instead of re-running Gemini, so
     users no longer get "Overhead Smash" one run and "Back Court Smash"
     the next on the same input. 7-day TTL."""
+    await _enforce_analysis_rate_limit(authorization, request)
     _u = await get_current_user(authorization)
     # Token gate — the async and stream endpoints enforce this, but this
     # legacy JSON path didn't: the frontend's fallback chain landed here
@@ -4352,6 +4441,7 @@ async def analyze_video_universal_endpoint(
 # ──────────────────────────────────────────────────────────────────────
 @api_router.post("/analyze-video-stream")
 async def analyze_video_stream_endpoint(
+    request: Request,
     video: UploadFile = File(...),
     sport: str = "badminton",
     target_player_description: str | None = None,
@@ -4392,6 +4482,7 @@ async def analyze_video_stream_endpoint(
                           frontend can swap endpoints without remapping)
       - `error`        – on failure; the connection still completes 200.
     """
+    await _enforce_analysis_rate_limit(authorization, request)
     # ─── Read the upload eagerly so we can validate size + close the
     # ─── socket before kicking off Gemini.
     user = await get_current_user_or_none(authorization)
@@ -5397,7 +5488,7 @@ async def files_finalize_upload(
 
 @api_router.post("/analyze-video-async")
 async def analyze_video_async_submit(
-    req: AnalyzeVideoUniversalRequest, authorization: str = Header(None),
+    req: AnalyzeVideoUniversalRequest, request: Request, authorization: str = Header(None),
 ):
     """Enqueue a video analysis and return a job_id immediately so the client
     can navigate away and poll /analyze-jobs/{job_id} for the result.
@@ -5408,6 +5499,7 @@ async def analyze_video_async_submit(
                      analyzes the full-resolution original.
       • video_b64  → small inline clip (legacy). Persisted as base64 so the
                      job survives a redeploy."""
+    await _enforce_analysis_rate_limit(authorization, request)
     user = await get_current_user_or_none(authorization)
     import base64
     video_bytes = None

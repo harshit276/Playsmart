@@ -2629,7 +2629,11 @@ export default function AnalyzePage() {
         // Translate any failure into a clear, actionable on-screen message
         // (the user shouldn't see raw codes or a fake result).
         let msg;
-        if (/insufficient_tokens/i.test(raw)) {
+        if (status === 429 || /too quickly|analysis limit|too many/i.test(raw)) {
+          // Rate limited (burst or hourly cap) — show the backend's own clear
+          // message; the user just needs to wait a moment. Never auto-retry.
+          msg = raw || "You're analyzing too quickly. Please wait a moment and try again.";
+        } else if (/insufficient_tokens/i.test(raw)) {
           msg = "You don't have enough tokens for this analysis — top up from your Wallet and try again.";
         } else if (/at capacity|temporarily|resource_exhausted|quota|credits|high demand|overload/i.test(raw)) {
           // Capacity / quota / provider outage — a temporary technical issue on
