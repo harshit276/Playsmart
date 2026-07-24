@@ -83,10 +83,12 @@ export default function PricingPage() {
     );
   }
 
-  const standardCost = costs.keyframes || costs.video || 100;
-  const premiumCost = costs.premium || 250;
-  const flashRupees = Math.round(standardCost * 0.30);   // 100 tokens × ₹0.30
-  const premiumRupees = Math.round(premiumCost * 0.30);
+  // One tier, one price. Every analysis runs the same AI engine and costs a
+  // flat 100 tokens (the backend charges abs(analysis_spend)=100 regardless of
+  // any "tier" flag). The old Standard/Premium split no longer reflects
+  // reality — there is no separate "Pro" model — so we don't advertise it.
+  const analysisCost = costs.universal || costs.video || costs.keyframes || 100;
+  const analysisRupees = Math.round(analysisCost * 0.30);   // 100 tokens × ₹0.30
 
   return (
     <div className="min-h-screen bg-zinc-950 py-8 sm:py-12">
@@ -108,27 +110,22 @@ export default function PricingPage() {
           </p>
         </motion.div>
 
-        {/* Per-analysis cost summary */}
+        {/* Per-analysis cost summary — one flat price */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
           className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="bg-zinc-800/40 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="w-4 h-4 text-sky-400" />
-                <span className="text-sm font-semibold text-white">Standard</span>
-                <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px] ml-auto">{standardCost} tokens</Badge>
-              </div>
-              <p className="text-3xl font-heading font-black text-white">₹{flashRupees}<span className="text-xs text-zinc-500 ml-1">/ analysis</span></p>
-              <p className="text-[11px] text-zinc-500 mt-1">Formanti Coach — fast (~6s), good for most clips</p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/30 flex items-center justify-center shrink-0">
+              <Zap className="w-6 h-6 text-lime-400" />
             </div>
-            <div className="bg-amber-400/5 border border-amber-400/30 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Trophy className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-semibold text-white">Premium</span>
-                <Badge className="bg-amber-400/15 text-amber-300 border-amber-400/30 text-[10px] ml-auto">{premiumCost} tokens</Badge>
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <p className="text-4xl font-heading font-black text-white">₹{analysisRupees}</p>
+                <span className="text-sm text-zinc-500">per analysis</span>
+                <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px]">{analysisCost} tokens</Badge>
               </div>
-              <p className="text-3xl font-heading font-black text-white">₹{premiumRupees}<span className="text-xs text-zinc-500 ml-1">/ analysis</span></p>
-              <p className="text-[11px] text-zinc-500 mt-1">Formanti Pro engine — catches every shot on tough clips</p>
+              <p className="text-[12px] text-zinc-400 mt-1">
+                Full AI breakdown — shot-by-shot analysis, posture, coach notes, PDF report. Usually done in under a minute.
+              </p>
             </div>
           </div>
         </motion.div>
@@ -170,8 +167,7 @@ export default function PricingPage() {
                     <Coins className="w-3 h-3" /> {pack.tokens.toLocaleString()} tokens
                   </p>
                   <div className="space-y-0.5 text-[11px] text-zinc-500">
-                    <p>≈ {pack.analyses_flash} Standard analyses</p>
-                    <p>≈ {pack.analyses_premium} Premium analyses</p>
+                    <p>≈ {pack.analyses_flash} full analyses</p>
                   </div>
                   {pack.per_token_inr && pack.per_token_inr < 0.30 && (
                     <p className="mt-2 text-[10px] text-lime-400/80">
@@ -273,8 +269,12 @@ export default function PricingPage() {
               a: "No. Buy them once, use them whenever — there's no time limit.",
             },
             {
-              q: "What's the difference between Standard and Premium?",
-              a: "Standard is fast and works great on clear, well-lit clips. Premium runs our deeper analysis engine — slower but catches every shot on noisy phone-recorded footage. Try Standard first — only upgrade to Premium if your video is hard to read.",
+              q: "What do I get in one analysis?",
+              a: "A full breakdown of your clip — shot-by-shot detection with timestamps, posture tracking with joint angles, an AI coach you can chat with about your session, drills matched to your weaknesses, and a downloadable PDF report. One flat price, one engine — no confusing tiers.",
+            },
+            {
+              q: "How long does an analysis take?",
+              a: "Usually under a minute. You can leave the page while it runs — the analysis keeps going and your result is saved to your history.",
             },
             {
               q: "What if my analysis fails?",
