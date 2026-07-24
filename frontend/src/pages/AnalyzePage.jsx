@@ -29,7 +29,7 @@ import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
-import AnalysisFeedback from "@/components/AnalysisFeedback";
+import FeedbackPrompt, { useScrollDepthTrigger, hasBeenAsked } from "@/components/FeedbackPrompt";
 import LiveVoiceCoach from "@/components/LiveVoiceCoach";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
 import CoachNarrativeCard from "@/components/CoachNarrativeCard";
@@ -419,6 +419,10 @@ export default function AnalyzePage() {
   // Coach Report download prompt — auto-opens once when a fresh analysis
   // finishes. Guests are routed to sign-in (the report is a logged-in perk).
   const [reportPromptOpen, setReportPromptOpen] = useState(false);
+  // Feedback bottom-sheet: fired on deep scroll through the results, or when
+  // the user downloads the PDF. `trigger` is sent so we can tell the two apart.
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackTrigger, setFeedbackTrigger] = useState("");
   const reportPromptedRef = useRef(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -886,7 +890,19 @@ export default function AnalyzePage() {
       const m = await import("@/lib/coachReport");
       const ok = m.openCoachReport(result, { playerName: user?.name || profile?.name || "Player" });
       if (!ok) toast.error("Allow pop-ups to download the Coach Report.");
-      else setReportPromptOpen(false);
+      else {
+        setReportPromptOpen(false);
+        // Downloading the report is the strongest signal the user values the
+        // output — the best moment to ask what was good or wrong. Delayed so
+        // the prompt doesn't fight the print dialog for attention.
+        const aid = result?.analysis_id || result?._analysis_id || null;
+        if (!hasBeenAsked(aid)) {
+          setTimeout(() => {
+            setFeedbackTrigger("pdf_download");
+            setFeedbackOpen(true);
+          }, 2500);
+        }
+      }
     } catch {
       toast.error("Couldn't generate the report — please try again.");
     }
@@ -904,6 +920,20 @@ export default function AnalyzePage() {
     const t = setTimeout(() => setReportPromptOpen(true), 1800);
     return () => clearTimeout(t);
   }, [result, viewingHistorical]);
+
+  // Ask for feedback once the user has scrolled ~70% through their results —
+  // by then they've read enough to have an opinion. Only for a real result
+  // that found shots, and never if we've already asked for this analysis.
+  const _feedbackAnalysisId = result?.analysis_id || result?._analysis_id || null;
+  const _canAskFeedback = !!result?.success
+    && (result?.shots?.length > 0)
+    && !feedbackOpen
+    && !hasBeenAsked(_feedbackAnalysisId);
+  const onScrollDeep = useCallback(() => {
+    setFeedbackTrigger("scroll_results");
+    setFeedbackOpen(true);
+  }, []);
+  useScrollDepthTrigger(_canAskFeedback, 0.7, onScrollDeep);
 
   const requestAnalysisNotifyPermission = useCallback(() => {
     (async () => {
@@ -5432,11 +5462,10 @@ export default function AnalyzePage() {
           />
         )}
 
-        {/* Post-analysis feedback — rate accuracy (once per analysis) */}
-        <AnalysisFeedback
-          analysisId={result.analysis_id || result._analysis_id || null}
-          sport={result.sport || result.sport_detected || selectedSport}
-        />
+        {/* Feedback is no longer an inline card here — it's a bottom-sheet
+            prompt fired at a high-intent moment (deep scroll or PDF
+            download). See FeedbackPrompt: as a static card it was scrolled
+            past, and feedback is our earliest signal that analysis is wrong. */}
 
         {/* Share + Analyze another */}
         <div className="flex gap-3">
@@ -6155,6 +6184,13 @@ export default function AnalyzePage() {
         isGuest={isGuest}
         onClose={() => setReportPromptOpen(false)}
         onDownload={handleDownloadReport}
+      />
+      <FeedbackPrompt
+        open={feedbackOpen}
+        analysisId={result?.analysis_id || result?._analysis_id || null}
+        sport={result?.sport || result?.sport_detected || selectedSport}
+        trigger={feedbackTrigger}
+        onClose={() => setFeedbackOpen(false)}
       />
       {showGuestUpgrade && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"

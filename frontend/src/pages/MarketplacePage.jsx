@@ -241,8 +241,10 @@ export default function MarketplacePage() {
 
   const clearAllFilters = () => { setCategory("all"); setBucket("all"); setBrands([]); };
 
+  // pb clears BOTH fixed bars on mobile (filter bar ~3.5rem + bottom nav
+  // ~5.5rem) so the last product row isn't trapped behind them.
   return (
-    <div className="min-h-screen bg-zinc-950 pb-24">
+    <div className="min-h-screen bg-zinc-950 pb-40 md:pb-24">
       <SEO
         title="Sports Equipment Marketplace · Compare Prices Across Amazon, Flipkart, Decathlon"
         description="Browse and compare prices for badminton, tennis, table tennis, and pickleball equipment across Amazon, Flipkart, and Decathlon. Curated for Indian players."
@@ -388,8 +390,13 @@ export default function MarketplacePage() {
         )}
       </div>
 
-      {/* Sticky bottom action bar — Myntra-style */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
+      {/* Sticky bottom action bar — Myntra-style.
+          Sits ABOVE the app's mobile bottom nav: that nav is `fixed bottom-0
+          z-50` and ~5.5rem tall, so at bottom-0/z-30 this bar was rendered
+          completely underneath it on phones — Filter and Sort were invisible
+          and unreachable on mobile. On md+ the nav is hidden, so it drops
+          back to the bottom edge. */}
+      <div className="fixed bottom-24 md:bottom-0 left-0 right-0 z-30 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
         <div className="container mx-auto px-3 sm:px-4 max-w-7xl flex">
           <button
             onClick={() => setSortSheet(true)}

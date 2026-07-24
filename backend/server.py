@@ -691,10 +691,52 @@ def _verification_email_html(name: str, link: str) -> str:
 </div>"""
 
 
-async def _send_user_email(to: str, subject: str, html: str, text: str = "") -> bool:
+def _token_grant_email_html(name: str, amount: int, balance, reason: str = "") -> str:
+    """Branded 'we added tokens to your account' email.
+
+    Deliberately does NOT paste the internal admin reason verbatim — that text
+    is written for the ledger ("bad analysis — goodwill"), not for the customer.
+    A short human line plus the numbers reads better and can't leak an internal
+    note. Sent from info@ so a reply reaches a person."""
+    hi = f"Hi {name.split()[0]}," if (name or "").strip() else "Hi there,"
+    analyses = max(1, int(amount) // 100)
+    return f"""\
+<div style="margin:0;padding:0;background:#0b0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:40px 24px;">
+    <div style="font-size:26px;font-weight:800;letter-spacing:-0.02em;color:#a3e635;margin-bottom:28px;">Formanti</div>
+    <div style="background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:32px;">
+      <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#f8fafc;font-weight:700;">
+        {amount} tokens added to your account
+      </h1>
+      <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#cbd5e1;">{hi}</p>
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#cbd5e1;">
+        We've credited <strong style="color:#a3e635;">{amount} tokens</strong> to your Formanti
+        account — that's about {analyses} more video {"analysis" if analyses == 1 else "analyses"}.
+      </p>
+      <div style="background:#0b0f14;border:1px solid #1f2933;border-radius:12px;padding:16px;margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#64748b;">Your balance</p>
+        <p style="margin:4px 0 0;font-size:28px;font-weight:800;color:#f8fafc;">{balance} tokens</p>
+      </div>
+      <a href="{SHARE_SITE_URL}/analyze" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Analyse a video</a>
+      <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
+        Tokens never expire. Just reply to this email if you have any questions —
+        a real person reads it.
+      </p>
+    </div>
+    <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#475569;text-align:center;">Formanti · AI analysis for your game</p>
+  </div>
+</div>"""
+
+
+async def _send_user_email(to: str, subject: str, html: str, text: str = "",
+                           from_addr: str = "") -> bool:
     """Send a transactional email to a user via Resend. Returns True on a 2xx.
     No-ops (returns False) when RESEND_API_KEY is unset so local/dev doesn't
-    crash — the caller decides how to surface that."""
+    crash — the caller decides how to surface that.
+
+    `from_addr` overrides the default sender: account/verification mail goes
+    from noreply@, but human-facing mail (e.g. "we added tokens to your
+    account") should come from a monitored address the user can reply to."""
     if not RESEND_API_KEY:
         logger.warning(f"user email skipped (no RESEND_API_KEY) → {to}: {subject}")
         return False
@@ -703,9 +745,9 @@ async def _send_user_email(to: str, subject: str, html: str, text: str = "") -> 
             r = await c.post(
                 "https://api.resend.com/emails",
                 headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-                json={"from": MAIL_FROM, "to": [to],
+                json={"from": (from_addr or MAIL_FROM), "to": [to],
                       "subject": subject, "html": html,
-                      "text": text or "Open this link to verify your email and claim your 100 free Formanti tokens."},
+                      "text": text or "View this message in an HTML-capable email client."},
             )
             if r.status_code >= 400:
                 logger.warning(f"Resend send to {to} failed {r.status_code}: {r.text[:200]}")
@@ -1670,6 +1712,21 @@ async def admin_grant_tokens(
         f"({user.get('email') or user.get('phone') or '—'}) "
         f"[{before} → {new_balance}] reason={req.reason.strip()!r}"
     )
+
+    # Tell the user their balance changed. Silently topping someone up is a
+    # wasted goodwill gesture — they only find out if they happen to log in.
+    # Only for CREDITS (a deduction is an internal correction, not news) and
+    # only when we actually have an email to reach them on.
+    email_sent = False
+    if req.amount > 0 and (user.get("email") or "").strip():
+        email_sent = await _send_user_email(
+            user["email"].strip(),
+            f"We've added {req.amount} tokens to your Formanti account",
+            _token_grant_email_html(user.get("name", ""), req.amount, new_balance,
+                                    req.reason.strip()),
+            from_addr=MAIL_FROM_INFO,
+        )
+
     return {
         "ok": True,
         "user": {"id": user["id"], "email": user.get("email", ""),
@@ -1677,6 +1734,7 @@ async def admin_grant_tokens(
         "amount": req.amount,
         "balance_before": before,
         "balance": new_balance,
+        "email_sent": email_sent,
     }
 
 
@@ -1758,6 +1816,12 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 # sender ("Formanti <onboarding@resend.dev>"), which works immediately but can
 # only deliver to your own Resend account address.
 MAIL_FROM = os.environ.get("MAIL_FROM", "Formanti <noreply@formanti.com>").strip()
+
+# Human-facing sender for mail a user might reasonably want to REPLY to
+# (goodwill token grants, support follow-ups). noreply@ is for automated
+# account mail only — telling someone "we've added tokens, sorry about that
+# analysis" from an unmonitored address invites a reply into a black hole.
+MAIL_FROM_INFO = os.environ.get("MAIL_FROM_INFO", "Formanti <info@formanti.com>").strip()
 
 # Canonical public URL used in shared messages. www is canonical — vercel.json
 # 308s the apex to www. There is deliberately no per-user/per-analysis deep
@@ -6097,9 +6161,19 @@ async def reengagement_test(authorization: str = Header(None)):
 # ──────────────────────────────────────────────────────────────────────
 class AnalysisFeedbackRequest(BaseModel):
     analysis_id: str | None = None
-    rating: int = 0          # 1-5 stars
+    rating: int = 0          # 1-5 stars — OVERALL (kept as the headline metric)
     comment: str | None = None
     sport: str | None = None
+    # Per-aspect stars (0 = not rated). One blended score told us a user was
+    # unhappy but never WHICH part failed — the leg-spin reporter had to type
+    # it out for us to learn the shot label was wrong. Rating each surface
+    # separately turns "1 star" into an actionable signal.
+    rating_shots: int = 0     # shot-by-shot breakdown
+    rating_coach: int = 0     # Ask Coach / Live Voice Coach
+    rating_pdf: int = 0       # PDF coach report
+    # Where the prompt fired, so we can tell scroll-triggered feedback from
+    # feedback given at PDF download (different intent, different bias).
+    trigger: str | None = None
 
 
 @api_router.post("/analysis-feedback")
@@ -6108,11 +6182,16 @@ async def analysis_feedback(req: AnalysisFeedbackRequest, authorization: str = H
     (Telegram) — low ratings flagged red so we hear about bad analyses fast."""
     user = await get_current_user_or_none(authorization)
     rating = max(1, min(5, int(req.rating or 0)))
+    _clamp = lambda v: max(0, min(5, int(v or 0)))   # 0 = not rated
     record = {
         "id": str(uuid.uuid4()),
         "user_id": (user["id"] if user else None),
         "analysis_id": req.analysis_id,
         "rating": rating,
+        "rating_shots": _clamp(req.rating_shots),
+        "rating_coach": _clamp(req.rating_coach),
+        "rating_pdf": _clamp(req.rating_pdf),
+        "trigger": (req.trigger or "")[:32],
         "comment": (req.comment or "")[:1000].strip(),
         "sport": req.sport,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -6124,10 +6203,17 @@ async def analysis_feedback(req: AnalysisFeedbackRequest, authorization: str = H
     try:
         stars = "⭐" * rating
         flag = "🔴 " if rating <= 2 else ""
+        # Include the per-aspect scores so a bad rating says WHICH part failed
+        # without waiting for the user to explain it in the comment.
+        parts = [f"{lbl}: {record[k]}/5" for k, lbl in
+                 (("rating_shots", "Shots"), ("rating_coach", "Coach"), ("rating_pdf", "PDF"))
+                 if record[k]]
         await _notify_admin_now(
             f"{flag}📝 Analysis feedback: {stars} ({rating}/5)",
             f"User: {record['user_id'] or 'guest'}\nSport: {req.sport or '—'}\n"
-            f"Comment: {record['comment'] or '—'}")
+            + (f"Breakdown: {' · '.join(parts)}\n" if parts else "")
+            + (f"Shown at: {record['trigger']}\n" if record.get("trigger") else "")
+            + f"Comment: {record['comment'] or '—'}")
     except Exception:
         pass
     return {"success": True}
