@@ -227,46 +227,53 @@ export default function DashboardPage() {
                 <div className="absolute -right-8 -bottom-8 text-[180px] opacity-10 select-none">🎯</div>
                 <div className="relative max-w-xl">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-lime-400/15 border border-lime-400/30 text-[10px] uppercase tracking-wider text-lime-300 font-bold mb-3">
-                    <Sparkles className="w-3 h-3" /> AI video analysis · Free
+                    <Sparkles className="w-3 h-3" /> AI video analysis · Free to start
                   </div>
                   <h2 className="font-heading font-bold text-2xl sm:text-3xl md:text-4xl text-white uppercase tracking-tight mb-2 leading-tight">
-                    Upload a clip — get pro-level feedback in 30 seconds
+                    Upload a clip — get pro-level feedback in under a minute
                   </h2>
                   <p className="text-zinc-300 text-sm sm:text-base mb-5">
-                    Our AI breaks down your technique frame-by-frame: shot type, speed, form, and
-                    drill recommendations. <span className="text-lime-300 font-semibold">First analysis is on us — no signup needed.</span>
+                    Our AI breaks down your technique: shot detection, posture, form, and drills
+                    tuned to what it finds. <span className="text-lime-300 font-semibold">Sign up free and get 100 tokens — enough for a full analysis, on us.</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Link to="/analyze"
-                      className="inline-flex items-center gap-1.5 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-5 py-2.5 text-sm shadow-[0_0_20px_rgba(190,242,100,0.25)] transition-colors">
-                      <Video className="w-4 h-4" /> Analyze My First Video
-                    </Link>
                     <Link to="/auth"
+                      className="inline-flex items-center gap-1.5 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-5 py-2.5 text-sm shadow-[0_0_20px_rgba(190,242,100,0.25)] transition-colors">
+                      <Video className="w-4 h-4" /> Sign up — 100 🪙 free
+                    </Link>
+                    <Link to="/assessment"
                       className="inline-flex items-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold rounded-full px-5 py-2.5 text-sm border border-zinc-700 transition-colors">
-                      Sign Up — 300 🪙 free
+                      Take the 30-sec quiz
                     </Link>
                   </div>
                   <p className="text-[11px] text-zinc-500 mt-3">
-                    Or <Link to="/assessment" className="underline hover:text-zinc-300">take a 30-second quiz</Link> first to personalize recommendations.
+                    Verify your email and your 100 tokens are credited automatically — one full analysis, no card required.
                   </p>
                 </div>
               </div>
             </motion.div>
 
-            {/* What you get — quick at-a-glance grid so guests know what's behind the wall */}
+            {/* What you get — tappable so a guest can actually explore each
+                area (not just read a label behind a wall). Browsing is free;
+                only running an analysis needs an account. */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
               className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               {[
-                { icon: "🎯", label: "AI Video Analysis", desc: "Shot detection + technique" },
-                { icon: "🏋️", label: "Training Plan", desc: "Drills tuned to your level" },
-                { icon: "🛒", label: "Equipment Picks", desc: "Compare prices, find local" },
-                { icon: "👥", label: "Local Games", desc: "Host or join community matches" },
+                { icon: "🎯", label: "AI Video Analysis", desc: "Shot detection + technique", to: "/analyze" },
+                { icon: "📈", label: "Progress Tracking", desc: "Every session, trends over time", to: "/progress" },
+                { icon: "🏋️", label: "Training Plans", desc: "Drills tuned to your level", to: "/training" },
+                { icon: "🎒", label: "Gear Picks", desc: "Rackets, shoes, strings for you", to: "/marketplace" },
+                { icon: "👥", label: "Host / Join Games", desc: "Find players near you", to: "/community?host=1" },
+                { icon: "💬", label: "Talk to Coach", desc: "Ask the AI about your clip", to: "/analyze" },
+                { icon: "🔁", label: "Re-analyze & Compare", desc: "See what improved", to: "/analyze" },
+                { icon: "📄", label: "PDF Coach Report", desc: "Take it to the court", to: "/analyze" },
               ].map((f) => (
-                <div key={f.label} className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
-                  <div className="text-2xl mb-1">{f.icon}</div>
+                <Link key={f.label} to={f.to}
+                  className="group bg-zinc-900/60 border border-zinc-800 rounded-xl p-3 hover:border-lime-400/40 hover:bg-zinc-900 transition-all">
+                  <div className="text-2xl mb-1 transition-transform group-hover:scale-110">{f.icon}</div>
                   <p className="text-xs font-bold text-white">{f.label}</p>
                   <p className="text-[10px] text-zinc-500 mt-0.5">{f.desc}</p>
-                </div>
+                </Link>
               ))}
             </motion.div>
           </>

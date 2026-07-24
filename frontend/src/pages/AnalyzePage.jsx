@@ -1502,14 +1502,14 @@ export default function AnalyzePage() {
     // subscription itself is registered once permission is granted.
     requestAnalysisNotifyPermission();
 
-    // Guests get ONE free analysis. After that, force sign-up — they can
-    // claim 100 tokens for free which unlocks 1 more analysis.
+    // Analysis now REQUIRES an account (product decision). Guests used to get
+    // one free run; that let anyone farm free analyses without ever signing
+    // up, and undercut the whole signup → verified-email → 100-tokens funnel.
+    // The free analysis still exists — it's just the 100 tokens you get for
+    // verifying your email, so a guest is sent to sign up first.
     if (!user) {
-      const used = localStorage.getItem("guest_analysis_used") === "true";
-      if (used) {
-        setShowGuestUpgrade(true);
-        return;
-      }
+      setShowGuestUpgrade(true);
+      return;
     }
 
     // Fresh abort controller for this run so Cancel (and the upload stall

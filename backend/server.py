@@ -1539,15 +1539,22 @@ async def _rate_hit(subject: str, window_name: str, limit: int, window_sec: int)
 
 
 async def _enforce_analysis_rate_limit(authorization, request) -> None:
-    """Guard the analyze endpoints. Raises 429 with Retry-After when a subject
-    (a signed-in user, else the client IP) exceeds the burst or hourly cap."""
+    """Guard the analyze endpoints: require a signed-in account, then rate-limit
+    by user. Runs at the top of all four analyze entry points.
+
+    Analysis requires an account (product decision) — guests used to get a free
+    run, which let anyone farm free analyses and bypassed the signup →
+    verified-email → 100-tokens funnel. The free analysis still exists as those
+    100 tokens; you just have to sign up to get them."""
     await _ensure_rate_index()
     try:
         user = await get_current_user_or_none(authorization)
     except Exception:
         user = None
     uid = (user or {}).get("id")
-    subject = f"user:{uid}" if (uid and uid != "guest") else f"ip:{_client_ip(request)}"
+    if not uid or uid == "guest":
+        raise HTTPException(status_code=401, detail="Please sign in to run an analysis.")
+    subject = f"user:{uid}"
 
     ok, retry = await _rate_hit(subject, "burst", _ANALYSIS_BURST, _ANALYSIS_BURST_WINDOW)
     if not ok:

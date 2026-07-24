@@ -323,20 +323,59 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ DEMO VIDEO ============ */}
-      <DemoVideo />
-
-      {/* ============ TOKEN ECONOMY ============ */}
-      <EarnTokensSection />
-
-      {/* ============ FEATURE SHOWCASE ============ */}
-      {/* Replaces the old six flat "Features" cards, which described the
-          product in generic marketing terms and left most of it undiscovered.
-          Everything in FeatureShowcase maps to shipped code — see the header
-          comment in that file for the feature → source mapping. */}
+      {/* ============ FEATURE SHOWCASE — SECTION 2: what you get ============ */}
+      {/* Moved to be the SECOND thing a visitor sees. The whole point of the
+          page is that the product is far more than analysis, and this was
+          getting buried five sections down. Everything here maps to shipped
+          code — see the header comment in that file. */}
       <div id="features" data-testid="features-section">
         <FeatureShowcase />
       </div>
+
+      {/* ============ HOW IT WORKS — SECTION 3: how to run an analysis ======= */}
+      {/* Vertical numbered rail rather than a third three-across grid — the
+          page needs a change of shape here, and a sequence reads better as a
+          sequence than as parallel columns. */}
+      <section className="relative py-20 md:py-28 bg-zinc-950 overflow-hidden">
+        <div className="pointer-events-none absolute -left-40 top-1/4 w-[30rem] h-[30rem] bg-lime-400/[0.04] rounded-full blur-3xl" />
+        <div className="relative container mx-auto px-4 max-w-3xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="mb-12 md:mb-16">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              <span className="w-8 h-px bg-lime-400/60" /> How it works
+            </span>
+            <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95]">
+              Three steps.<br />No coach required.
+            </h2>
+          </motion.div>
+
+          <div className="relative">
+            {/* the rail */}
+            <div className="absolute left-6 md:left-8 top-4 bottom-6 w-px bg-gradient-to-b from-lime-400/40 via-zinc-800 to-transparent" />
+            <div className="space-y-8 md:space-y-12">
+              {HOW_IT_WORKS.map((item, i) => (
+                <motion.div key={item.step} initial="hidden" whileInView="visible" custom={i}
+                  viewport={{ once: true, amount: 0.5 }} variants={rise}
+                  className="relative flex gap-5 md:gap-8">
+                  <div className="relative shrink-0">
+                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-zinc-900 border border-lime-400/25 flex items-center justify-center shadow-lg shadow-lime-400/5">
+                      <item.icon className="w-5 h-5 md:w-7 md:h-7 text-lime-400" strokeWidth={1.5} />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1 pt-1">
+                    <span className="font-mono text-xs text-lime-400/60 tracking-widest">{item.step}</span>
+                    <h3 className="font-heading font-bold text-xl md:text-2xl text-white tracking-tight mt-1 mb-2">{item.title}</h3>
+                    <p className="text-zinc-400 text-sm md:text-base leading-relaxed">{item.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ DEMO VIDEO — moved below the feature + how-it-works ==== */}
+      <DemoVideo />
 
       {/* ============ SPORTS SECTION ============ */}
       <section className="relative py-20 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
@@ -433,47 +472,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ HOW IT WORKS ============ */}
-      {/* Vertical numbered rail rather than a third three-across grid — the
-          page needs a change of shape here, and a sequence reads better as a
-          sequence than as parallel columns. */}
-      <section className="relative py-20 md:py-28 bg-zinc-950 overflow-hidden">
-        <div className="pointer-events-none absolute -left-40 top-1/4 w-[30rem] h-[30rem] bg-lime-400/[0.04] rounded-full blur-3xl" />
-        <div className="relative container mx-auto px-4 max-w-3xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="mb-12 md:mb-16">
-            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
-              <span className="w-8 h-px bg-lime-400/60" /> How it works
-            </span>
-            <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95]">
-              Three steps.<br />No coach required.
-            </h2>
-          </motion.div>
-
-          <div className="relative">
-            {/* the rail */}
-            <div className="absolute left-6 md:left-8 top-4 bottom-6 w-px bg-gradient-to-b from-lime-400/40 via-zinc-800 to-transparent" />
-            <div className="space-y-8 md:space-y-12">
-              {HOW_IT_WORKS.map((item, i) => (
-                <motion.div key={item.step} initial="hidden" whileInView="visible" custom={i}
-                  viewport={{ once: true, amount: 0.5 }} variants={rise}
-                  className="relative flex gap-5 md:gap-8">
-                  <div className="relative shrink-0">
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-zinc-900 border border-lime-400/25 flex items-center justify-center shadow-lg shadow-lime-400/5">
-                      <item.icon className="w-5 h-5 md:w-7 md:h-7 text-lime-400" strokeWidth={1.5} />
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1 pt-1">
-                    <span className="font-mono text-xs text-lime-400/60 tracking-widest">{item.step}</span>
-                    <h3 className="font-heading font-bold text-xl md:text-2xl text-white tracking-tight mt-1 mb-2">{item.title}</h3>
-                    <p className="text-zinc-400 text-sm md:text-base leading-relaxed">{item.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ============ TOKEN ECONOMY — moved below the sports grid ========== */}
+      <EarnTokensSection />
 
       {/* ============ TESTIMONIALS ============ */}
       {/* Renders nothing until PLACEHOLDER_TESTIMONIALS has real, approved
