@@ -1,8 +1,12 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Video, Activity, MessageSquare, GitCompareArrows, LineChart,
-  FileText, ListChecks, ShoppingBag, Users, Mic, Check, MapPin,
+  FileText, ListChecks, ShoppingBag, Users, Mic, Check, MapPin, ArrowRight,
 } from "lucide-react";
+
+const MotionLink = motion.create(Link);
 
 /**
  * FeatureShowcase — the landing page's "what this product actually does"
@@ -302,6 +306,12 @@ const CARDS = [
     desc: "Upload a clip and our AI breaks the session into individual shots with timestamps — what you were trying to do, and how it actually turned out.",
     span: "lg:col-span-2",
     mock: <ShotBreakdownMock />,
+    route: "/analyze",
+    bullets: [
+      "Every shot timestamped on the clip",
+      "Intent vs outcome, shot by shot",
+      "Works from a single uploaded video",
+    ],
   },
   {
     key: "posture",
@@ -311,6 +321,12 @@ const CARDS = [
     desc: "A skeleton overlay on the contact frame, with your joint angles measured against ideal ranges.",
     note: "Racket & ball sports only — not claimed for gym lifting.",
     mock: <PostureMock />,
+    route: "/analyze",
+    bullets: [
+      "Skeleton overlay on the contact frame",
+      "Joint angles vs ideal ranges",
+      "Racket & ball sports only",
+    ],
   },
   {
     key: "coach",
@@ -319,6 +335,12 @@ const CARDS = [
     title: "Ask Coach & Live Voice Coach",
     desc: "Chat with an AI coach about your own clip, or talk to it out loud between sets.",
     mock: <CoachChatMock />,
+    route: "/analyze",
+    bullets: [
+      "Ask follow-up questions about your clip",
+      "Talk to it out loud between sets",
+      "Answers grounded in your own session",
+    ],
   },
   {
     key: "compare",
@@ -327,6 +349,12 @@ const CARDS = [
     title: "Re-analyze & compare",
     desc: "Re-run a clip later and put it side by side with an earlier session to see what actually changed.",
     mock: <CompareMock />,
+    route: "/analyze",
+    bullets: [
+      "Re-run a new clip anytime",
+      "Side-by-side with an earlier session",
+      "See exactly what changed, shot by shot",
+    ],
   },
   {
     key: "progress",
@@ -335,6 +363,12 @@ const CARDS = [
     title: "Progress & history",
     desc: "Every analysis is saved to your account, grouped by sport, so trends show up over time.",
     mock: <ProgressMock />,
+    route: "/progress",
+    bullets: [
+      "Every analysis saved automatically",
+      "Grouped by sport",
+      "Trends visible across sessions",
+    ],
   },
   {
     key: "report",
@@ -343,6 +377,12 @@ const CARDS = [
     title: "PDF coach report",
     desc: "Download a written report of a session — verdict, per-shot table, what to fix, next-session plan.",
     mock: <ReportMock />,
+    route: "/analyze",
+    bullets: [
+      "Verdict + per-shot table",
+      "What to fix, in plain language",
+      "A plan for your next session",
+    ],
   },
   {
     key: "plans",
@@ -351,6 +391,12 @@ const CARDS = [
     title: "Training plans",
     desc: "Drills and a weekly plan built around the weaknesses your analysis actually found.",
     mock: <TrainingPlanMock />,
+    route: "/training",
+    bullets: [
+      "Weekly drill plan",
+      "Built from your own analysis, not generic",
+      "Track what's done each week",
+    ],
   },
   {
     key: "gear",
@@ -359,6 +405,12 @@ const CARDS = [
     title: "Gear recommendations",
     desc: "Racket, shoe and string picks matched to your play style, level and budget.",
     mock: <GearMock />,
+    route: "/marketplace",
+    bullets: [
+      "Racket, shoe & string picks",
+      "Matched to play style and budget",
+      "Match score per item",
+    ],
   },
   {
     key: "games",
@@ -367,6 +419,12 @@ const CARDS = [
     title: "Host & join games",
     desc: "Post a session, find players near you, and share it out in a tap.",
     mock: <GameMock />,
+    route: "/community?host=1",
+    bullets: [
+      "Post a session in a couple taps",
+      "Find players near you",
+      "Share the invite out instantly",
+    ],
   },
 ];
 
@@ -377,6 +435,99 @@ const TONES = {
   emerald: { text: "text-emerald-400", chip: "bg-emerald-400/10 border-emerald-400/25", glow: "group-hover:border-emerald-400/40" },
   amber: { text: "text-amber-400", chip: "bg-amber-400/10 border-amber-400/25", glow: "group-hover:border-amber-400/40" },
 };
+
+// One card: whole thing is a single focusable Link (keyboard + screen-reader
+// friendly), with a "what you get" detail panel that:
+//   - desktop: stays collapsed, opens on hover/focus with a smooth
+//     ease-out-expo height/opacity reveal (no hover on touch, so this never
+//     gates content mobile users can't reach).
+//   - mobile: rendered open by default, condensed — most traffic is Android
+//     phones, so the detail can't hide behind an interaction that doesn't
+//     exist there.
+function FeatureCard({ card, index, reduce, rise }) {
+  const [active, setActive] = useState(false);
+  const tone = TONES[card.tone];
+
+  const detailVariants = {
+    closed: { height: 0, opacity: 0, marginTop: 0 },
+    open: { height: "auto", opacity: 1, marginTop: 16 },
+  };
+
+  return (
+    <MotionLink
+      to={card.route}
+      custom={index}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.2 }}
+      variants={rise}
+      whileHover={reduce ? undefined : { y: -6 }}
+      whileTap={reduce ? undefined : { scale: 0.98 }}
+      whileFocus={reduce ? undefined : { y: -6 }}
+      transition={{ type: "tween", duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      onHoverStart={() => setActive(true)}
+      onHoverEnd={() => setActive(false)}
+      onFocus={() => setActive(true)}
+      onBlur={() => setActive(false)}
+      className={`group relative block rounded-3xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5 md:p-6 transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${tone.glow} ${card.span || ""}`}
+    >
+      {/* top hairline highlight */}
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+
+      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center mb-4 ${tone.chip}`}>
+        <card.icon className={`w-5 h-5 ${tone.text}`} strokeWidth={1.6} />
+      </div>
+      <h3 className="font-heading font-bold text-lg md:text-xl text-white tracking-tight mb-2">{card.title}</h3>
+      <p className="text-zinc-400 text-sm leading-relaxed">{card.desc}</p>
+      {card.note && (
+        <p className="text-[11px] text-zinc-500 mt-2 border-l-2 border-zinc-700 pl-2">{card.note}</p>
+      )}
+      {card.mock && <div className="mt-5">{card.mock}</div>}
+
+      {/* Desktop: collapsed detail, opens on hover/keyboard focus */}
+      {card.bullets && (
+        <motion.div
+          className="hidden md:block overflow-hidden"
+          initial={false}
+          animate={active && !reduce ? "open" : "closed"}
+          variants={detailVariants}
+          transition={{ duration: reduce ? 0 : 0.45, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <div className="pt-4 border-t border-zinc-800/80">
+            <ul className="space-y-1.5 mb-3">
+              {card.bullets.map((b) => (
+                <li key={b} className="flex items-start gap-2 text-xs text-zinc-300">
+                  <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${tone.text}`} strokeWidth={2.5} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+            <span className={`inline-flex items-center gap-1 text-xs font-semibold ${tone.text}`}>
+              See it <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Mobile: always-visible condensed detail — no hover on touch */}
+      {card.bullets && (
+        <div className="md:hidden mt-4 pt-4 border-t border-zinc-800/60">
+          <ul className="space-y-1 mb-2.5">
+            {card.bullets.slice(0, 2).map((b) => (
+              <li key={b} className="flex items-start gap-1.5 text-[11px] text-zinc-400">
+                <Check className={`w-3 h-3 mt-0.5 shrink-0 ${tone.text}`} strokeWidth={2.5} />
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+          <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${tone.text}`}>
+            See it <ArrowRight className="w-3 h-3" />
+          </span>
+        </div>
+      )}
+    </MotionLink>
+  );
+}
 
 export default function FeatureShowcase() {
   const reduce = useReducedMotion();
@@ -416,33 +567,9 @@ export default function FeatureShowcase() {
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-          {CARDS.map((c, i) => {
-            const tone = TONES[c.tone];
-            return (
-              <motion.div
-                key={c.key}
-                custom={i}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }}
-                variants={rise}
-                className={`group relative rounded-3xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5 md:p-6 transition-colors duration-300 ${tone.glow} ${c.span || ""}`}
-              >
-                {/* top hairline highlight */}
-                <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-
-                <div className={`w-10 h-10 rounded-xl border flex items-center justify-center mb-4 ${tone.chip}`}>
-                  <c.icon className={`w-5 h-5 ${tone.text}`} strokeWidth={1.6} />
-                </div>
-                <h3 className="font-heading font-bold text-lg md:text-xl text-white tracking-tight mb-2">{c.title}</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed">{c.desc}</p>
-                {c.note && (
-                  <p className="text-[11px] text-zinc-500 mt-2 border-l-2 border-zinc-700 pl-2">{c.note}</p>
-                )}
-                {c.mock && <div className="mt-5">{c.mock}</div>}
-              </motion.div>
-            );
-          })}
+          {CARDS.map((c, i) => (
+            <FeatureCard key={c.key} card={c} index={i} reduce={reduce} rise={rise} />
+          ))}
         </div>
       </div>
     </section>

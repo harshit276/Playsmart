@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Badge } from "@/components/ui/badge";
 import {
   LogOut, BarChart3, Dumbbell, Target, CreditCard,
-  Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords, ShoppingCart,
+  Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords, Backpack,
   Download, TrendingUp
 } from "lucide-react";
 import { FormantiIcon } from "@/components/FormantiLogo";
@@ -19,7 +19,7 @@ const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/analyze", label: "Analyze", icon: Video },
   { path: "/progress", label: "Progress", icon: TrendingUp },
-  { path: "/marketplace", label: "Gear", icon: ShoppingCart },
+  { path: "/marketplace", label: "Gear", icon: Backpack },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/community?host=1", label: "Host Game", icon: Swords },
 ];
@@ -34,7 +34,7 @@ const MOBILE_NAV_PRIMARY = [
   { path: "/dashboard", label: "Home", icon: Home },
   { path: "/analyze", label: "Analyze", icon: Video },
   { path: "/community?host=1", label: "Host", icon: Swords },
-  { path: "/marketplace", label: "Gear", icon: ShoppingCart },
+  { path: "/marketplace", label: "Gear", icon: Backpack },
 ];
 
 // "More" menu items on mobile
