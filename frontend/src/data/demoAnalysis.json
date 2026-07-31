@@ -1,6 +1,7 @@
 {
  "sport_detected": "Badminton",
  "overall_skill_level": "Intermediate",
+ "summary": "The video presents a split-screen comparison of badminton smash techniques, highlighting the difference between proper hip rotation with a scissor kick (left) and a flat-footed, arm-only swing (right). The analysis focuses on the left-side execution, which demonstrates correct biomechanics for power and steepness.",
  "coach_narrative": {
   "intro": "This session compares two distinct smash techniques: the correct method utilizing full hip rotation and a scissor kick (left) versus a flat-footed, arm-only smash (right). We will focus our analysis on the left-side player, who demonstrates the proper biomechanics essential for generating maximum power and a steep downward angle.",
   "strengths_points": [
@@ -17,54 +18,201 @@
   "takeaway": "Focus on consistently applying the hip rotation and scissor kick during dynamic match play, ensuring you do not revert to flat-footed hitting under pressure.",
   "progress_update": ""
  },
+ "court_map": {
+  "type": "badminton_court",
+  "corners": [
+   [
+    180.0,
+    240.0
+   ],
+   [
+    490.0,
+    240.0
+   ],
+   [
+    490.0,
+    600.0
+   ],
+   [
+    0.0,
+    600.0
+   ]
+  ],
+  "confidence": 0.8,
+  "net_line": [
+   [
+    180.0,
+    240.0
+   ],
+   [
+    490.0,
+    240.0
+   ]
+  ]
+ },
+ "movement": {
+  "distance_covered_m": 2.5,
+  "court_coverage_pct": 15.0,
+  "avg_recovery_quality": "good",
+  "note": "The player maintains a stable base and recovers efficiently using a scissor kick after each smash."
+ },
+ "player_legend": null,
  "events": [
   {
+   "player_position": [
+    370.0,
+    480.0
+   ],
    "timestamp_sec": 0.91,
+   "shot_type": "smash",
+   "event_type": "smash",
    "shot_label": "Forehand smash with hip rotation",
+   "shot_category": "smash",
    "intent": "attacking",
    "outcome": "continued_rally",
    "quality_observation": "Good hip rotation and scissor kick execution, leading to a steep downward angle.",
-   "confidence": 0.9
+   "description": "The player on the left side executes a forehand smash with active hip rotation and leg swap.",
+   "strengths": [
+    "Active hip rotation",
+    "Good scissor kick"
+   ],
+   "weaknesses": [
+    "Non-racket arm dropped slightly early"
+   ],
+   "tip": "Keep your non-racket arm up longer to improve balance.",
+   "confidence": 0.9,
+   "skill_level": "Intermediate",
+   "player_role": "you"
   },
   {
+   "player_position": [
+    370.0,
+    480.0
+   ],
    "timestamp_sec": 2.41,
+   "shot_type": "smash",
+   "event_type": "smash",
    "shot_label": "Forehand smash with hip rotation",
+   "shot_category": "smash",
    "intent": "attacking",
    "outcome": "continued_rally",
    "quality_observation": "Clean contact point high above the shoulder, driving the shuttle down.",
-   "confidence": 0.9
+   "description": "The player on the left side hits another smash, rotating his hips forward during the swing.",
+   "strengths": [
+    "High contact point",
+    "Clean weight transfer"
+   ],
+   "weaknesses": [
+    "Slightly rushed preparation"
+   ],
+   "tip": "Prepare your racket early as the shuttle is fed.",
+   "confidence": 0.9,
+   "skill_level": "Intermediate",
+   "player_role": "you"
   },
   {
+   "player_position": [
+    370.0,
+    480.0
+   ],
    "timestamp_sec": 3.61,
+   "shot_type": "smash",
+   "event_type": "smash",
    "shot_label": "Forehand smash with hip rotation",
+   "shot_category": "smash",
    "intent": "attacking",
    "outcome": "continued_rally",
    "quality_observation": "Excellent timing on the scissor kick, transferring weight effectively.",
-   "confidence": 0.9
+   "description": "The player on the left side performs a smash with a well-timed weight transfer.",
+   "strengths": [
+    "Excellent timing",
+    "Strong leg drive"
+   ],
+   "weaknesses": [
+    "Slightly off-center contact"
+   ],
+   "tip": "Focus on hitting the sweet spot of the racket.",
+   "confidence": 0.9,
+   "skill_level": "Intermediate",
+   "player_role": "you"
   },
   {
+   "player_position": [
+    370.0,
+    480.0
+   ],
    "timestamp_sec": 5.11,
+   "shot_type": "smash",
+   "event_type": "smash",
    "shot_label": "Forehand smash with hip rotation",
+   "shot_category": "smash",
    "intent": "attacking",
    "outcome": "continued_rally",
    "quality_observation": "High contact point and solid wrist snap at the peak of the jump.",
-   "confidence": 0.9
+   "description": "The player on the left side hits a powerful smash with a high contact point.",
+   "strengths": [
+    "High contact point",
+    "Solid wrist snap"
+   ],
+   "weaknesses": [
+    "Slightly unbalanced landing"
+   ],
+   "tip": "Engage your core to stabilize your landing.",
+   "confidence": 0.9,
+   "skill_level": "Intermediate",
+   "player_role": "you"
   },
   {
+   "player_position": [
+    370.0,
+    480.0
+   ],
    "timestamp_sec": 6.41,
+   "shot_type": "smash",
+   "event_type": "smash",
    "shot_label": "Forehand smash with hip rotation",
+   "shot_category": "smash",
    "intent": "attacking",
    "outcome": "continued_rally",
    "quality_observation": "Consistent footwork and body rotation, maintaining good balance.",
-   "confidence": 0.9
+   "description": "The player on the left side executes a smash with consistent body rotation.",
+   "strengths": [
+    "Consistent footwork",
+    "Good body rotation"
+   ],
+   "weaknesses": [
+    "Slightly low follow-through"
+   ],
+   "tip": "Complete the follow-through across your body.",
+   "confidence": 0.9,
+   "skill_level": "Intermediate",
+   "player_role": "you"
   },
   {
+   "player_position": [
+    370.0,
+    480.0
+   ],
    "timestamp_sec": 7.61,
+   "shot_type": "smash",
+   "event_type": "smash",
    "shot_label": "Forehand smash with hip rotation",
+   "shot_category": "smash",
    "intent": "attacking",
    "outcome": "continued_rally",
    "quality_observation": "Strong follow-through across the body, completing the rotation.",
-   "confidence": 0.9
+   "description": "The player on the left side finishes the drill with a well-executed smash.",
+   "strengths": [
+    "Strong follow-through",
+    "Complete rotation"
+   ],
+   "weaknesses": [
+    "None observed"
+   ],
+   "tip": "Maintain this level of rotation in your matches.",
+   "confidence": 0.9,
+   "skill_level": "Intermediate",
+   "player_role": "you"
   }
  ]
 }
