@@ -266,10 +266,10 @@ export default function LandingPage() {
               className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
               Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
-            <Button onClick={() => document.getElementById("demo")?.scrollIntoView({ behavior: "smooth" })}
+            <Button onClick={() => navigate("/demo")}
               variant="ghost" size="lg"
               className="w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
-              <Play className="w-5 h-5 mr-1.5" /> Watch the demo
+              <Play className="w-5 h-5 mr-1.5" /> See a sample analysis
             </Button>
           </motion.div>
 

@@ -19,6 +19,7 @@ const TrainingPage = lazy(() => import("@/pages/TrainingPage"));
 const ProgressPage = lazy(() => import("@/pages/ProgressPage"));
 const PlayerCardPage = lazy(() => import("@/pages/PlayerCardPage"));
 const AnalyzePage = lazy(() => import("@/pages/AnalyzePage"));
+const DemoAnalysisPage = lazy(() => import("@/pages/DemoAnalysisPage"));
 const CommunityPage = lazy(() => import("@/pages/CommunityPage"));
 const BlogListPage = lazy(() => import("@/pages/BlogListPage"));
 const BlogPostPage = lazy(() => import("@/pages/BlogPostPage"));
@@ -303,6 +304,9 @@ function AppRoutes() {
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/wallet" element={<WalletPage />} />
       <Route path="/pricing" element={<PricingPage />} />
+      {/* No-signup, no-upload sample result — the value-first landing for cold
+          ad traffic (see DemoAnalysisPage). */}
+      <Route path="/demo" element={<DemoAnalysisPage />} />
       <Route path="/plans" element={<Navigate to="/pricing" replace />} />
       <Route path="/referral" element={<ReferralPage />} />
       <Route path="/marketplace" element={<MarketplacePage />} />

@@ -1,0 +1,70 @@
+{
+ "sport_detected": "Badminton",
+ "overall_skill_level": "Intermediate",
+ "coach_narrative": {
+  "intro": "This session compares two distinct smash techniques: the correct method utilizing full hip rotation and a scissor kick (left) versus a flat-footed, arm-only smash (right). We will focus our analysis on the left-side player, who demonstrates the proper biomechanics essential for generating maximum power and a steep downward angle.",
+  "strengths_points": [
+   "Excellent hip rotation and weight transfer from the back foot to the front foot during the swing phase.",
+   "High contact point with a fully extended racket arm, allowing for a steep downward shuttle trajectory.",
+   "Consistent scissor kick footwork that aids in rapid recovery and maintaining balance."
+  ],
+  "improvements_points": [
+   "Keep the non-racket arm raised slightly longer to assist with tracking and body balance before initiating the swing.",
+   "Increase the speed of the wrist snap at the precise moment of contact to generate additional power."
+  ],
+  "strengths_paragraph": "Excellent hip rotation and weight transfer from the back foot to the front foot during the swing phase. High contact point with a fully extended racket arm, allowing for a steep downward shuttle trajectory. Consistent scissor kick footwork that aids in rapid recovery and maintaining balance.",
+  "improvements_paragraph": "Keep the non-racket arm raised slightly longer to assist with tracking and body balance before initiating the swing. Increase the speed of the wrist snap at the precise moment of contact to generate additional power.",
+  "takeaway": "Focus on consistently applying the hip rotation and scissor kick during dynamic match play, ensuring you do not revert to flat-footed hitting under pressure.",
+  "progress_update": ""
+ },
+ "events": [
+  {
+   "timestamp_sec": 0.91,
+   "shot_label": "Forehand smash with hip rotation",
+   "intent": "attacking",
+   "outcome": "continued_rally",
+   "quality_observation": "Good hip rotation and scissor kick execution, leading to a steep downward angle.",
+   "confidence": 0.9
+  },
+  {
+   "timestamp_sec": 2.41,
+   "shot_label": "Forehand smash with hip rotation",
+   "intent": "attacking",
+   "outcome": "continued_rally",
+   "quality_observation": "Clean contact point high above the shoulder, driving the shuttle down.",
+   "confidence": 0.9
+  },
+  {
+   "timestamp_sec": 3.61,
+   "shot_label": "Forehand smash with hip rotation",
+   "intent": "attacking",
+   "outcome": "continued_rally",
+   "quality_observation": "Excellent timing on the scissor kick, transferring weight effectively.",
+   "confidence": 0.9
+  },
+  {
+   "timestamp_sec": 5.11,
+   "shot_label": "Forehand smash with hip rotation",
+   "intent": "attacking",
+   "outcome": "continued_rally",
+   "quality_observation": "High contact point and solid wrist snap at the peak of the jump.",
+   "confidence": 0.9
+  },
+  {
+   "timestamp_sec": 6.41,
+   "shot_label": "Forehand smash with hip rotation",
+   "intent": "attacking",
+   "outcome": "continued_rally",
+   "quality_observation": "Consistent footwork and body rotation, maintaining good balance.",
+   "confidence": 0.9
+  },
+  {
+   "timestamp_sec": 7.61,
+   "shot_label": "Forehand smash with hip rotation",
+   "intent": "attacking",
+   "outcome": "continued_rally",
+   "quality_observation": "Strong follow-through across the body, completing the rotation.",
+   "confidence": 0.9
+  }
+ ]
+}

@@ -117,7 +117,7 @@ export default function Navbar() {
   const isGuest = !isAuthenticated;
   const showNav = true; // Always show navbar on app pages
 
-  if (location.pathname === "/" || location.pathname === "/auth" || location.pathname === "/privacy") return null;
+  if (location.pathname === "/" || location.pathname === "/auth" || location.pathname === "/privacy" || location.pathname === "/demo") return null;
 
   const activeSport = profile?.active_sport || "badminton";
   const accentKey = SPORT_ACCENT[activeSport] || "lime";
