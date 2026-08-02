@@ -3,7 +3,7 @@ import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { motion, useReducedMotion } from "framer-motion";
 import SEO from "@/components/SEO";
-import DemoVideo from "@/components/DemoVideo";
+import DemoPhone from "@/components/DemoPhone";
 import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import FeatureShowcase from "@/components/FeatureShowcase";
@@ -237,108 +237,106 @@ export default function LandingPage() {
             WebkitMaskImage: "radial-gradient(ellipse at center, black 20%, transparent 72%)",
           }} />
 
-        <div className="relative z-10 container mx-auto px-4 max-w-5xl text-center">
-          {/* Brand mark above the fold — the hero previously opened straight
-              into a generic badge, so a first-time visitor met the product
-              before they met the name. */}
-          <motion.div initial="hidden" animate="visible" variants={rise}>
-            <FormantiLogo className="h-10 md:h-12 mx-auto mb-7" markClassName="h-9 md:h-11"
-              textClassName="font-heading font-bold text-2xl md:text-3xl uppercase tracking-tight text-white" />
-          </motion.div>
-
-          <motion.div initial="hidden" animate="visible" custom={0.05} variants={rise}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 mb-7 backdrop-blur-sm" data-testid="hero-badge">
-              <Zap className="w-3.5 h-3.5 text-lime-400" />
-              <span className="text-xs sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI Sports Coaching</span>
-            </div>
-          </motion.div>
-
-          <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={rise}
-            className="font-heading font-black text-[3.25rem] leading-[0.85] sm:text-7xl lg:text-8xl tracking-tighter uppercase mb-6" data-testid="hero-heading">
-            <span className="block text-zinc-500 text-2xl sm:text-3xl lg:text-4xl tracking-tight mb-2 sm:mb-3">Film one rally.</span>
-            <span className="block text-white">Get coached</span>
-            <span className="block neon-glow text-lime-400">like a pro.</span>
-          </motion.h1>
-
-          <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
-            className="text-base sm:text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-7 leading-relaxed" data-testid="hero-subtitle">
-            Our AI breaks your clip down shot by shot, shows you the posture behind each one,
-            and turns it into drills, a plan and a written report.
-          </motion.p>
-
-          {/* Sport pills — one flowing row, quieter so they support the
-              headline instead of competing with it. */}
-          <motion.div initial="hidden" animate="visible" custom={0.4} variants={rise}
-            className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-9 max-w-2xl mx-auto">
-            {SPORTS.map(s => (
-              <span key={s.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm text-[11px] sm:text-xs text-zinc-300">
-                <span>{s.emoji}</span> {s.label}
-              </span>
-            ))}
-          </motion.div>
-
-          <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-            <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
-              className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
-              Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
-            </Button>
-            <Button onClick={() => navigate("/demo")}
-              variant="ghost" size="lg"
-              className="w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
-              <Play className="w-5 h-5 mr-1.5" /> See a sample analysis
-            </Button>
-          </motion.div>
-
-          <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
-            className="text-sm text-lime-400/90 font-medium mt-4">
-            🪙 Free to start — 100 tokens on signup, enough for 1 analysis.
-          </motion.p>
-
-          <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
-            className="mt-6 flex flex-col items-center">
-            <Link
-              to="/download"
-              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900/70 border border-zinc-800 hover:border-lime-400/40 text-zinc-300 hover:text-white text-sm transition-all"
-              data-testid="hero-get-app"
-            >
-              <Sparkles className="w-4 h-4 text-lime-400" />
-              <span>Install as an app — ~5MB, no store</span>
-              <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator — desktop only; on a phone it collides with the
-            CTA stack and adds nothing. */}
-        {!reduceMotion && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
-            className="hidden md:block absolute bottom-8 left-1/2 -translate-x-1/2">
-            <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 2 }}
-              className="w-6 h-10 border-2 border-zinc-700 rounded-full flex justify-center pt-2">
-              <div className="w-1.5 h-1.5 bg-lime-400 rounded-full" />
-            </motion.div>
-          </motion.div>
-        )}
-      </section>
-
-      {/* ============ FACTS BAR ============ */}
-      <section className="relative py-10 md:py-12 bg-zinc-900/60 border-y border-zinc-800/60 overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/30 to-transparent" />
-        <div className="container mx-auto px-4 max-w-5xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8">
-            {FACTS.map((s, i) => (
-              <motion.div key={s.label} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={rise}
-                className="flex flex-col items-center text-center md:border-r md:last:border-r-0 border-zinc-800/60 px-2">
-                <s.icon className="w-4 h-4 text-lime-400/70 mb-2" strokeWidth={1.75} />
-                <div className="font-heading font-black text-3xl md:text-4xl text-white tracking-tight mb-1">{s.value}</div>
-                <div className="text-zinc-500 text-[11px] sm:text-xs leading-snug max-w-[10rem]">{s.label}</div>
+        <div className="relative z-10 container mx-auto px-4 max-w-6xl w-full">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-10 items-center">
+            {/* LEFT: the pitch */}
+            <div className="text-center lg:text-left">
+              {/* Brand mark — desktop only; on mobile the navbar already shows
+                  the logo and the phone leads, so a second mark just adds height. */}
+              <motion.div initial="hidden" animate="visible" variants={rise} className="hidden lg:block">
+                <FormantiLogo className="h-9 md:h-11 mx-auto lg:mx-0 mb-5" markClassName="h-8 md:h-10"
+                  textClassName="font-heading font-bold text-2xl md:text-3xl uppercase tracking-tight text-white" />
               </motion.div>
-            ))}
+
+              <motion.div initial="hidden" animate="visible" custom={0.05} variants={rise}>
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 mb-5 backdrop-blur-sm" data-testid="hero-badge">
+                  <Zap className="w-3.5 h-3.5 text-lime-400" />
+                  <span className="text-xs sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI Sports Coaching</span>
+                </div>
+              </motion.div>
+
+              <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={rise}
+                className="font-heading font-black text-[2.75rem] leading-[0.85] sm:text-6xl lg:text-7xl tracking-tighter uppercase mb-5" data-testid="hero-heading">
+                <span className="block text-zinc-500 text-2xl sm:text-3xl tracking-tight mb-2 sm:mb-3">Film one rally.</span>
+                <span className="block text-white">Get coached</span>
+                <span className="block neon-glow text-lime-400">like a pro.</span>
+              </motion.h1>
+
+              <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
+                className="text-base sm:text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0 mb-6 leading-relaxed" data-testid="hero-subtitle">
+                Our AI breaks your clip down shot by shot, shows you the posture behind each one,
+                and turns it into drills, a plan and a written report.
+              </motion.p>
+
+              {/* Sport pills — one flowing row, quieter than the headline. */}
+              <motion.div initial="hidden" animate="visible" custom={0.4} variants={rise}
+                className="flex flex-wrap justify-center lg:justify-start gap-1.5 sm:gap-2 mb-7 max-w-xl mx-auto lg:mx-0">
+                {SPORTS.map(s => (
+                  <span key={s.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm text-[11px] sm:text-xs text-zinc-300">
+                    <span>{s.emoji}</span> {s.label}
+                  </span>
+                ))}
+              </motion.div>
+
+              <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
+                className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3 sm:gap-4">
+                <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
+                  className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
+                  Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
+                </Button>
+                <Button onClick={() => navigate("/demo")}
+                  variant="ghost" size="lg"
+                  className="w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
+                  <Play className="w-5 h-5 mr-1.5" /> See a sample analysis
+                </Button>
+              </motion.div>
+
+              <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
+                className="text-sm text-lime-400/90 font-medium mt-4">
+                🪙 Free to start — 100 tokens on signup, enough for 1 analysis.
+              </motion.p>
+
+              <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
+                className="mt-5 flex flex-col items-center lg:items-start">
+                <Link
+                  to="/download"
+                  className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900/70 border border-zinc-800 hover:border-lime-400/40 text-zinc-300 hover:text-white text-sm transition-all"
+                  data-testid="hero-get-app"
+                >
+                  <Sparkles className="w-4 h-4 text-lime-400" />
+                  <span>Install as an app — ~5MB, no store</span>
+                  <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </motion.div>
+            </div>
+
+            {/* RIGHT: the demo, in a phone — visible the moment the page opens.
+                Tap-to-play walkthrough reel (see DemoPhone). */}
+            <motion.div initial="hidden" animate="visible" custom={0.35} variants={rise}
+              className="flex justify-center lg:justify-end order-first lg:order-last">
+              <div className="flex flex-col items-center gap-2">
+                <DemoPhone />
+                <span className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold">A quick walkthrough</span>
+              </div>
+            </motion.div>
           </div>
+
+          {/* FACTS — folded into the hero so the proof sits with the pitch and
+              the demo, seen at once (was a separate strip below). */}
+          <motion.div initial="hidden" animate="visible" custom={0.7} variants={rise}
+            className="mt-10 lg:mt-14 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-6 border-t border-zinc-800/60 pt-8">
+            {FACTS.map((s) => (
+              <div key={s.label} className="flex flex-col items-center text-center px-2">
+                <s.icon className="w-4 h-4 text-lime-400/70 mb-2" strokeWidth={1.75} />
+                <div className="font-heading font-black text-2xl md:text-3xl text-white tracking-tight mb-1">{s.value}</div>
+                <div className="text-zinc-500 text-[11px] leading-snug max-w-[10rem]">{s.label}</div>
+              </div>
+            ))}
+          </motion.div>
         </div>
       </section>
+
+      {/* (Facts bar folded into the hero above — no longer a separate strip.) */}
 
       {/* ============ RESULT PREVIEW — a real result, right on the home page ==
           Cold ad traffic bounced off /analyze without ever seeing what the app
@@ -486,8 +484,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ DEMO VIDEO — moved below the feature + how-it-works ==== */}
-      <DemoVideo />
+      {/* (Walkthrough demo now lives in the hero — see DemoPhone in the hero.) */}
 
       {/* ============ SPORTS SECTION ============ */}
       <section className="relative py-20 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
