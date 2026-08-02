@@ -1,12 +1,20 @@
 /**
- * DemoVideo — embeds a YouTube demo if REACT_APP_DEMO_VIDEO_ID is set,
- * otherwise shows a clean placeholder. Reuses the iframe pattern from
- * TrainingPage's drill cards.
+ * DemoVideo — a real walkthrough reel shown inside a phone mockup.
  *
- * Set the env var on Vercel to a real video ID once you have one — no
- * code change needed.
+ * The reel is a 9:16 (portrait) clip, so it lives in a phone frame rather than
+ * a letterboxed 16:9 box. It is CLICK-TO-PLAY (poster + play button), not
+ * autoplay: the clip is ~3 min with narration, so we neither force a multi-MB
+ * download on every landing visitor nor mute the audio that carries the point.
+ * On tap it loads and plays with sound and native controls.
+ *
+ * Swappable: drop a new portrait mp4 at src/assets/demo/formanti-demo.mp4 (and
+ * a poster jpg) — no other change needed. Keep the .vercelignore negation for
+ * the mp4 so Vercel bundles it (see that file).
  */
+import { useState } from "react";
 import { Play } from "lucide-react";
+import demoReel from "@/assets/demo/formanti-demo.mp4";
+import demoPoster from "@/assets/demo/formanti-demo-poster.jpg";
 
 const FEATURES = [
   { emoji: "🎯", text: "Shot detection + technique consistency" },
@@ -17,52 +25,76 @@ const FEATURES = [
 ];
 
 export default function DemoVideo() {
-  const videoId = (typeof process !== "undefined"
-    && process?.env?.REACT_APP_DEMO_VIDEO_ID
-    || "").trim();
+  const [playing, setPlaying] = useState(false);
 
   return (
     <section id="demo" className="relative py-12 sm:py-16 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold mb-2">See it in action</p>
           <h2 className="font-heading font-bold text-3xl sm:text-4xl uppercase tracking-tight text-white">
-            60 seconds — what Formanti does
+            A quick walkthrough
           </h2>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 items-center">
-          <div className="lg:col-span-2 relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 aspect-video">
-            {videoId ? (
-              <iframe
-                src={`https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1`}
-                title="Formanti demo"
-                className="w-full h-full"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-lime-500/10 via-zinc-900 to-zinc-950 text-center px-6">
-                <div className="w-16 h-16 rounded-full bg-lime-400/15 border border-lime-400/40 flex items-center justify-center mb-3">
-                  <Play className="w-7 h-7 text-lime-400 ml-1" fill="currentColor" />
-                </div>
-                <p className="text-white font-bold text-lg mb-1">Demo video coming soon</p>
-                <p className="text-zinc-400 text-sm max-w-md">
-                  In the meantime — try the app yourself with a 30-second clip. Free signup gets you 1 analysis on us.
-                </p>
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+          {/* Phone mockup holding the portrait reel */}
+          <div className="flex justify-center">
+            <div className="relative w-[240px] sm:w-[270px] shrink-0">
+              {/* bezel */}
+              <div className="relative rounded-[2.4rem] border-[6px] border-zinc-800 bg-black shadow-2xl shadow-black/60 overflow-hidden aspect-[9/19]">
+                {/* notch */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 w-24 h-5 bg-zinc-800 rounded-b-2xl" />
+                {playing ? (
+                  <video
+                    src={demoReel}
+                    poster={demoPoster}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    controls
+                    autoPlay
+                    playsInline
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPlaying(true)}
+                    aria-label="Play the Formanti walkthrough"
+                    className="absolute inset-0 w-full h-full group"
+                  >
+                    <img
+                      src={demoPoster}
+                      alt="Formanti walkthrough preview"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <span className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <span className="w-16 h-16 rounded-full bg-lime-400/90 group-hover:bg-lime-400 flex items-center justify-center shadow-lg shadow-lime-400/30 transition-all group-hover:scale-105">
+                        <Play className="w-7 h-7 text-black ml-1" fill="currentColor" />
+                      </span>
+                    </span>
+                    <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-wider font-bold text-white/90 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+                      Tap to watch
+                    </span>
+                  </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
-          <ul className="space-y-3">
-            {FEATURES.map((f) => (
-              <li key={f.text} className="flex items-start gap-3 bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
-                <span className="text-2xl shrink-0 leading-none">{f.emoji}</span>
-                <span className="text-sm text-zinc-200 leading-snug">{f.text}</span>
-              </li>
-            ))}
-          </ul>
+          {/* What you're looking at */}
+          <div>
+            <h3 className="font-heading font-black text-2xl sm:text-3xl uppercase tracking-tight text-white leading-tight mb-4">
+              Upload a clip.<br /><span className="text-lime-400">Get coached back.</span>
+            </h3>
+            <ul className="space-y-3">
+              {FEATURES.map((f) => (
+                <li key={f.text} className="flex items-start gap-3 bg-zinc-900/60 border border-zinc-800 rounded-xl p-3">
+                  <span className="text-2xl shrink-0 leading-none">{f.emoji}</span>
+                  <span className="text-sm text-zinc-200 leading-snug">{f.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </section>
