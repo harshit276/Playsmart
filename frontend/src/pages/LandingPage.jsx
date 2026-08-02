@@ -14,6 +14,23 @@ import {
 import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
+import demo from "@/data/demoAnalysis.json";
+import sampleClip from "@/assets/demo/sample-badminton.mp4";
+
+// A lightweight, static taste of the REAL result — shown right on the home page
+// so cold visitors see value before deciding to click through to the full
+// interactive /demo. Pulls real fields from the same demoAnalysis.json the /demo
+// page uses (no pose detection here — the heavy MatchInsights stays on /demo so
+// the landing page loads fast on cheap phones). Everything is real sample data.
+const PREVIEW_SHOTS = (demo.events || []).slice(0, 3).map((e) => ({
+  t: `0:${String(Math.max(1, Math.round(e.timestamp_sec))).padStart(2, "0")}`,
+  label: (e.shot_label || "Shot").replace(/\s+with\s+.*/i, ""), // trim "…with hip rotation"
+  strength: (e.strengths && e.strengths[0]) || null,
+  fix:
+    (e.weaknesses && e.weaknesses[0] && !/^none/i.test(e.weaknesses[0])
+      ? e.weaknesses[0]
+      : e.tip) || null,
+}));
 
 const SPORTS = [
   { key: "badminton", emoji: "🏸", label: "Badminton", path: "/badminton", color: "text-lime-400", border: "border-lime-400/30", bg: "bg-lime-400/5" },
@@ -320,6 +337,101 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ============ RESULT PREVIEW — a real result, right on the home page ==
+          Cold ad traffic bounced off /analyze without ever seeing what the app
+          produces. Rather than rely on them clicking "see a sample", we show a
+          static taste of the REAL result here (clip + verdict + 3 real shot
+          cards + coach line), then hand off to /demo for the full interactive
+          version. Kept deliberately light — no pose detection on the landing
+          page. All copy is real sample data; no provider named. */}
+      <section className="relative py-16 md:py-24 bg-zinc-950 overflow-hidden">
+        <div className="pointer-events-none absolute -right-40 top-0 w-[30rem] h-[30rem] bg-lime-400/[0.05] rounded-full blur-3xl" />
+        <div className="relative container mx-auto px-4 max-w-4xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="mb-8 md:mb-10 text-center">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              <span className="w-8 h-px bg-lime-400/60" /> See it first
+            </span>
+            <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95] mb-3">
+              This is what you<br />get back.
+            </h2>
+            <p className="text-zinc-400 text-base md:text-lg max-w-xl mx-auto">
+              A real result our AI produced from one short clip — every shot found,
+              timed, and coached. Here's a taste; the full interactive version is one tap away.
+            </p>
+          </motion.div>
+
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-900/40 p-4 sm:p-6 md:p-8">
+            {/* Clip + verdict */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+              <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-black aspect-video">
+                <video src={sampleClip} muted autoPlay loop playsInline
+                  className="w-full h-full object-cover" />
+                <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5 flex items-center gap-1">
+                  <Play className="w-3 h-3 text-lime-400" />
+                  <span className="text-[10px] uppercase tracking-wider font-bold text-white">Sample clip</span>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-400/10 to-zinc-900 p-4 flex flex-col justify-center gap-1">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <Sparkles className="w-4 h-4 text-lime-400" />
+                  <span className="text-[10px] uppercase tracking-wider text-lime-300 font-bold">Detected</span>
+                </div>
+                <p className="font-heading font-black text-2xl md:text-3xl text-white capitalize leading-none">
+                  {demo.sport_detected || "Badminton"}
+                </p>
+                <p className="text-zinc-400 text-sm">
+                  Skill read: <span className="text-white font-semibold">{demo.overall_skill_level}</span>
+                </p>
+                <p className="text-zinc-400 text-sm">
+                  <span className="text-white font-semibold">{(demo.events || []).length}</span> shots detected + timed
+                </p>
+              </div>
+            </div>
+
+            {/* 3 real shot cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+              {PREVIEW_SHOTS.map((s, i) => (
+                <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-heading font-bold text-sm text-white truncate">{s.label}</span>
+                    <span className="font-mono text-[10px] text-lime-400/70 shrink-0 ml-2">{s.t}</span>
+                  </div>
+                  {s.strength && (
+                    <p className="text-[12px] text-zinc-300 leading-snug mb-1.5">
+                      <span className="text-lime-400 font-bold">✓ </span>{s.strength}
+                    </p>
+                  )}
+                  {s.fix && (
+                    <p className="text-[12px] text-zinc-400 leading-snug">
+                      <span className="text-amber-400 font-bold">→ </span>{s.fix}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Coach line */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 mb-6 flex gap-3">
+              <span className="text-[10px] uppercase tracking-wider text-lime-300 font-bold shrink-0 pt-0.5">Coach</span>
+              <p className="text-[13px] text-zinc-200 leading-relaxed">{demo.coach_narrative?.takeaway}</p>
+            </div>
+
+            {/* Hand off to the full interactive demo */}
+            <div className="text-center">
+              <Link to="/demo"
+                className="inline-flex items-center justify-center gap-2 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-6 py-3 text-sm shadow-[0_0_24px_rgba(190,242,100,0.25)] transition-colors">
+                Open the full interactive analysis <ArrowRight className="w-4 h-4" />
+              </Link>
+              <p className="text-[11px] text-zinc-500 mt-3">
+                Shot-by-shot breakdown · coach chat · downloadable PDF — no signup to look.
+              </p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
