@@ -90,13 +90,52 @@ function uploadAttemptXHR(uploadUrl, formData, { onProgress, signal } = {}) {
     // on a ~10Mbps uplink legitimately takes 2+ minutes — the old
     // STALL_TIMEOUT*4 ceiling was killing uploads that were still moving.
     // The stall watchdog (no progress for 25s) already covers dead links.
+    // Live upload-speed tracking. We measure the ACTUAL bytes/sec of this
+    // upload (smoothed) so we can tell the user how fast THEIR connection is
+    // moving and roughly how long is left — the honest way to explain a slow
+    // upload ("your network", not "our app"). Works on every browser, unlike
+    // navigator.connection (Chrome-only, and it reports download not upload).
+    let lastT = 0, lastLoaded = 0, emaBps = 0;
     xhr.upload.onprogress = (e) => {
       armStall(); // reset the watchdog every time bytes actually move
       if (e.lengthComputable) {
-        const pct = 25 + (e.loaded / e.total) * 50; // 25-75%
+        const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+        if (lastT) {
+          const dt = (now - lastT) / 1000;
+          const db = e.loaded - lastLoaded;
+          if (dt > 0 && db >= 0) {
+            const inst = db / dt;                       // bytes/sec this tick
+            emaBps = emaBps ? emaBps * 0.7 + inst * 0.3 : inst; // smooth
+          }
+        }
+        lastT = now; lastLoaded = e.loaded;
+
+        const bytesPerSec = emaBps;
+        const etaSec = bytesPerSec > 0 ? (e.total - e.loaded) / bytesPerSec : 0;
+        const pctUploaded = Math.round((e.loaded / e.total) * 100);
+        const pct = 25 + (e.loaded / e.total) * 50;     // 25-75% of overall bar
+        // Consider < ~400 KB/s a slow uplink (a 100MB clip would take >4 min).
+        const slow = bytesPerSec > 0 && bytesPerSec < 400 * 1024;
+
+        let detail = "";
+        if (bytesPerSec > 0) {
+          const mbps = bytesPerSec / (1024 * 1024);
+          const speedStr = mbps >= 1
+            ? `${mbps.toFixed(1)} MB/s`
+            : `${Math.max(1, Math.round(bytesPerSec / 1024))} KB/s`;
+          const etaStr = etaSec > 90
+            ? `~${Math.ceil(etaSec / 60)} min left`
+            : `~${Math.max(1, Math.round(etaSec))}s left`;
+          detail = ` · ${speedStr} · ${etaStr}`;
+        }
+
         onProgress?.({
           percent: pct,
-          message: `Uploading... ${Math.round((e.loaded / e.total) * 100)}%`,
+          message: `Uploading... ${pctUploaded}%${detail}`,
+          phase: "upload",
+          bytesPerSec,
+          etaSec,
+          slow,
         });
       }
     };

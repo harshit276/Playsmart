@@ -449,6 +449,10 @@ export default function AnalyzePage() {
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState("");
   const [loadingSubtext, setLoadingSubtext] = useState("");
+  // True while the live upload speed is slow (< ~400 KB/s) — used to reassure
+  // the user it's their network, not the app, so they don't blame us for a
+  // slow upload. Set from the upload's real measured bytes/sec.
+  const [slowUpload, setSlowUpload] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
   const [loadingStartedAt, setLoadingStartedAt] = useState(null);
   const [result, setResult] = useState(null);
@@ -1552,6 +1556,7 @@ export default function AnalyzePage() {
 
     // ─── Pre-scan the video for players (used by BOTH client + server modes) ───
     setLoadingText("Scanning video for players...");
+    setSlowUpload(false); // fresh each run; only re-armed if the upload is slow
     setProgress(5);
     try {
       const mod = await import("@/ai/videoProcessor");
@@ -1777,8 +1782,9 @@ export default function AnalyzePage() {
                 const { uploadDirectToGemini } = await import("@/lib/geminiDirectUpload");
                 const direct = await uploadDirectToGemini(file, {
                   signal: analysisAbortRef.current?.signal,
-                  onProgress: ({ percent, message }) => {
+                  onProgress: ({ percent, message, slow }) => {
                     setLoadingText(message || "Uploading your video...");
+                    setSlowUpload(!!slow);
                     setProgress(15 + Math.round((percent || 0) * 0.26));
                   },
                 });
@@ -1824,12 +1830,14 @@ export default function AnalyzePage() {
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
               const cloudOrig = await uploadToCloudinary(file, {
                 signal: analysisAbortRef.current?.signal,
-                onProgress: ({ percent, message }) => {
+                onProgress: ({ percent, message, slow }) => {
                   setLoadingText(message || "Uploading your video...");
+                  setSlowUpload(!!slow);
                   setProgress(15 + Math.round((percent || 0) * 0.26));
                 },
               });
               if (cloudOrig?.secure_url) {
+                setSlowUpload(false);
                 setLoadingText("Preparing analysis...");
                 setProgress(42);
                 // Send the RAW Cloudinary URL. (We tried inserting an
@@ -1910,12 +1918,14 @@ export default function AnalyzePage() {
               // then the response is unreadable). Cloudinary is the route.
               const { uploadToCloudinary } = await import("@/lib/cloudinaryUpload");
               const cloud = await uploadToCloudinary(prepared, {
-                onProgress: ({ percent, message }) => {
+                onProgress: ({ percent, message, slow }) => {
                   setLoadingText(message || "Uploading your video...");
+                  setSlowUpload(!!slow);
                   setProgress(30 + Math.round((percent || 0) * 0.12));
                 },
               });
               if (cloud?.secure_url) {
+                setSlowUpload(false);
                 cloudinaryPublicId = cloud.public_id || null;
                 setLoadingText("Preparing analysis...");
                 setProgress(44);
@@ -3617,6 +3627,18 @@ export default function AnalyzePage() {
                 <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                 <p className="text-amber-200/90 text-[11px] leading-snug">
                   Preparing your video on this device — <span className="font-semibold">please keep this page open until the green "you can leave" message appears.</span> After that, you can switch apps or lock your phone.
+                </p>
+              </div>
+            )}
+
+            {/* Slow-connection reassurance — only during upload, only when the
+                REAL measured upload speed is slow. Tells the user it's their
+                network so they don't blame the app for a long upload. */}
+            {!analysisJobId && slowUpload && (
+              <div className="mb-4 flex items-start gap-2 rounded-xl bg-sky-400/10 border border-sky-400/30 px-3 py-2">
+                <Activity className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sky-200/90 text-[11px] leading-snug">
+                  Your connection looks slow right now — the upload speed above is your network, not the app. It'll finish; a stronger Wi-Fi or signal makes it faster.
                 </p>
               </div>
             )}
