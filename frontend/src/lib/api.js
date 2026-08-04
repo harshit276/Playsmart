@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getGuestId } from '@/lib/guestId';
 
 let backendUrl = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/+$/, '');
 // Guard against a scheme-less value (e.g. "formanti.com"): without http(s)://
@@ -39,6 +40,9 @@ const api = axios.create({ baseURL: API_URL });
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('playsmart_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Best-effort anonymous id so the backend can rate-limit the one free guest
+  // analysis. Harmless for signed-in users (the server ignores it for them).
+  try { config.headers['X-Guest-Id'] = getGuestId(); } catch { /* noop */ }
   return config;
 });
 
