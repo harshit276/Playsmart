@@ -1489,22 +1489,6 @@ _ANALYSIS_BURST_WINDOW = int(os.environ.get("ANALYSIS_BURST_WINDOW", "60"))
 _ANALYSIS_HOURLY = int(os.environ.get("ANALYSIS_HOURLY", "15"))       # per hour
 _rate_ttl_index_ready = False
 
-# ── Guest (no-signup) free-analysis allowance ─────────────────────────────
-# Value-first funnel: an anonymous visitor gets ONE free analysis so they see a
-# real result on their OWN clip before signing up. This CANNOT be enforced
-# perfectly — incognito, a different browser/device, or a VPN all evade a
-# per-person limit — so it is best-effort by device fingerprint (X-Guest-Id).
-# We deliberately bias toward NOT false-blocking a real prospect (that kills the
-# conversion the feature exists for); the true cost ceiling is the GLOBAL daily
-# cap, which bounds worst-case guest spend no matter how the per-person limit
-# leaks, with a per-IP daily cap as the anti-"just clear storage" backstop.
-_GUEST_FREE_LIMIT = int(os.environ.get("GUEST_FREE_LIMIT", "1"))          # runs per fingerprint per window
-_GUEST_FREE_WINDOW_DAYS = int(os.environ.get("GUEST_FREE_WINDOW_DAYS", "30"))
-_GUEST_DEDUP_SEC = int(os.environ.get("GUEST_DEDUP_SEC", "900"))          # collapse one analysis' multiple gated calls
-_GUEST_IP_DAILY = int(os.environ.get("GUEST_IP_DAILY", "5"))             # shared-IP tolerance (carrier NAT)
-_GUEST_GLOBAL_DAILY = int(os.environ.get("GUEST_GLOBAL_DAILY", "300"))   # site-wide daily cost ceiling
-_guest_ttl_index_ready = False
-
 
 async def _ensure_rate_index() -> None:
     global _rate_ttl_index_ready
@@ -1517,84 +1501,6 @@ async def _ensure_rate_index() -> None:
     except Exception:
         pass
     _rate_ttl_index_ready = True
-
-
-async def _ensure_guest_index() -> None:
-    global _guest_ttl_index_ready
-    if _guest_ttl_index_ready:
-        return
-    try:
-        # TTL on `exp` so a guest's free run renews after the window instead of
-        # the doc living forever.
-        await asyncio.wait_for(
-            db.guest_usage.create_index("exp", expireAfterSeconds=0), timeout=4.0)
-    except Exception:
-        pass
-    _guest_ttl_index_ready = True
-
-
-async def _enforce_guest_allowance(request) -> None:
-    """Best-effort 'one free analysis' gate for anonymous users. Raises 402 when
-    a guest has already used their free run (→ frontend shows the signup
-    upsell) or 429 when the shared-IP or global daily cap is hit. Fails OPEN
-    (allows) on any datastore error — a monitoring blip must not block a real
-    prospect. See the guest-allowance constants above for the trade-offs."""
-    from pymongo import ReturnDocument
-    await _ensure_guest_index()
-    now = int(_time.time())
-    ip = _client_ip(request)
-    try:
-        fp = (request.headers.get("x-guest-id") or "").strip()[:80] if request else ""
-    except Exception:
-        fp = ""
-    if not fp:
-        fp = f"ip:{ip}"   # no fingerprint sent → fall back to IP alone
-
-    try:
-        usage = await asyncio.wait_for(db.guest_usage.find_one({"_id": fp}), timeout=2.0)
-    except Exception:
-        return  # datastore down → fail open (never block a real prospect on a blip)
-
-    # A single analysis can touch more than one gated endpoint (fallbacks);
-    # collapse those into one "use" so the flow isn't blocked mid-way.
-    if usage and (now - int(usage.get("last", 0))) < _GUEST_DEDUP_SEC:
-        try:
-            await asyncio.wait_for(db.guest_usage.update_one(
-                {"_id": fp}, {"$set": {"last": now}}), timeout=2.0)
-        except Exception:
-            pass
-        return
-
-    # A genuinely NEW analysis attempt.
-    if usage and int(usage.get("count", 0)) >= _GUEST_FREE_LIMIT:
-        raise HTTPException(
-            status_code=402,
-            detail="You've used your free analysis. Sign up free to get 100 tokens — "
-                   "enough for another analysis, plus your history, training plan and coach report.")
-
-    # Cost ceilings — only charged for genuinely new analyses. Fail open.
-    ok, _ = await _rate_hit("guest:global", "gday", _GUEST_GLOBAL_DAILY, 86400)
-    if not ok:
-        raise HTTPException(
-            status_code=429,
-            detail="Free trials are full for today. Sign up free to get 100 tokens and analyze right now.")
-    ok, _ = await _rate_hit(f"guest:ipday:{ip}", "gip", _GUEST_IP_DAILY, 86400)
-    if not ok:
-        raise HTTPException(
-            status_code=429,
-            detail="Too many free trials from this network today. Sign up free to keep going.")
-
-    # Record the use (TTL-expiring so the free run renews after the window).
-    try:
-        exp = datetime.fromtimestamp(now + _GUEST_FREE_WINDOW_DAYS * 86400, timezone.utc)
-        await asyncio.wait_for(db.guest_usage.find_one_and_update(
-            {"_id": fp},
-            {"$inc": {"count": 1},
-             "$set": {"last": now, "exp": exp, "ip": ip},
-             "$setOnInsert": {"first": now}},
-            upsert=True, return_document=ReturnDocument.AFTER), timeout=2.0)
-    except Exception:
-        pass
 
 
 def _client_ip(request) -> str:
@@ -1633,14 +1539,13 @@ async def _rate_hit(subject: str, window_name: str, limit: int, window_sec: int)
 
 
 async def _enforce_analysis_rate_limit(authorization, request) -> None:
-    """Guard the analyze endpoints: rate-limit by user, or apply the best-effort
-    guest allowance for anonymous visitors. Runs at the top of all four analyze
-    entry points.
+    """Guard the analyze endpoints: require a signed-in account, then rate-limit
+    by user. Runs at the top of all four analyze entry points.
 
-    Value-first funnel: a guest gets ONE free analysis of their own clip (deep
-    coaching/PDF/history stay locked in the UI until signup) so they see a real
-    result before committing. That allowance is best-effort per device
-    fingerprint with a global daily cost ceiling — see _enforce_guest_allowance."""
+    Analysis requires an account (product decision) — guests used to get a free
+    run, which let anyone farm free analyses and bypassed the signup →
+    verified-email → 100-tokens funnel. The free analysis still exists as those
+    100 tokens; you just have to sign up to get them."""
     await _ensure_rate_index()
     try:
         user = await get_current_user_or_none(authorization)
@@ -1648,8 +1553,7 @@ async def _enforce_analysis_rate_limit(authorization, request) -> None:
         user = None
     uid = (user or {}).get("id")
     if not uid or uid == "guest":
-        await _enforce_guest_allowance(request)
-        return
+        raise HTTPException(status_code=401, detail="Please sign in to run an analysis.")
     subject = f"user:{uid}"
 
     ok, retry = await _rate_hit(subject, "burst", _ANALYSIS_BURST, _ANALYSIS_BURST_WINDOW)

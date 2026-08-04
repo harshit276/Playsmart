@@ -18,7 +18,6 @@ import {
   Eye, BarChart2, Volume2, AlertCircle, MessageCircle, GitCompare, Bell
 } from "lucide-react";
 import api, { API_ORIGIN } from "@/lib/api";
-import { getGuestId } from "@/lib/guestId";
 import { buildUniversalResult } from "@/lib/buildUniversalResult";
 import InsufficientTokensModal from "@/components/InsufficientTokensModal";
 import ShareModal from "@/components/ShareModal";
@@ -1450,17 +1449,14 @@ export default function AnalyzePage() {
     // subscription itself is registered once permission is granted.
     requestAnalysisNotifyPermission();
 
-    // Value-first: a guest gets ONE free analysis of their own clip (deep
-    // coaching, PDF, history, training plan stay locked in the UI until they
-    // sign up). The backend enforces the real per-device limit + global daily
-    // cost cap (see _enforce_guest_allowance); this localStorage check is just a
-    // fast short-circuit so a guest who already used theirs sees the signup
-    // upsell without re-uploading. (Easily cleared — that's fine, the server is
-    // the real gate.)
+    // Analysis now REQUIRES an account (product decision). Guests used to get
+    // one free run; that let anyone farm free analyses without ever signing
+    // up, and undercut the whole signup → verified-email → 100-tokens funnel.
+    // The free analysis still exists — it's just the 100 tokens you get for
+    // verifying your email, so a guest is sent to sign up first.
     if (!user) {
-      let usedFree = false;
-      try { usedFree = localStorage.getItem("guest_analysis_used") === "true"; } catch { /* noop */ }
-      if (usedFree) { setShowGuestUpgrade(true); return; }
+      setShowGuestUpgrade(true);
+      return;
     }
 
     // Fresh abort controller for this run so Cancel (and the upload stall
@@ -2356,13 +2352,7 @@ export default function AnalyzePage() {
             const resp = await fetch(`${baseUrl}/api/analyze-video-stream`, {
               method: "POST",
               body: fd,
-              // Send the SAME X-Guest-Id as the axios calls so one guest
-              // analysis isn't counted twice (this raw fetch bypasses the
-              // api.js interceptor).
-              headers: {
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                "X-Guest-Id": getGuestId(),
-              },
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
             if (!resp.ok || !resp.body) {
               throw new Error(`stream_http_${resp.status}`);
@@ -3024,19 +3014,6 @@ export default function AnalyzePage() {
       }
     } catch (err) {
       clearInterval(interval);
-      // Guest hit the free-analysis limit (402) or a guest cost cap (429) →
-      // show the signup upsell, not a raw error. (Logged-in 402 = insufficient
-      // tokens, handled separately above, so this only fires for guests.)
-      const gStatus = err.response?.status;
-      const streamGuestLimit = /stream_http_(402|429)/.test(err?.message || "");
-      if (isGuest && (gStatus === 402 || gStatus === 429 || streamGuestLimit)) {
-        setAnalyzing(false);
-        setResult(null);
-        setProgress(0);
-        try { localStorage.setItem("guest_analysis_used", "true"); } catch { /* noop */ }
-        setShowGuestUpgrade(true);
-        return;
-      }
       const msg = err.response?.data?.detail || err.message || "Analysis failed";
       // Auto-retry once on transient failures — most analysis errors come
       // from Vercel cold-start timeouts, Gemini quota-hiccups, or Mongo
