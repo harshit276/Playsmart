@@ -15,7 +15,7 @@ import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import demo from "@/data/demoAnalysis.json";
-import sampleClip from "@/assets/demo/sample-badminton.mp4";
+import samplePoster from "@/assets/demo/sample-badminton-poster.jpg";
 
 // A lightweight, static taste of the REAL result — shown right on the home page
 // so cold visitors see value before deciding to click through to the full
@@ -366,14 +366,24 @@ export default function LandingPage() {
             className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-900/40 p-4 sm:p-6 md:p-8">
             {/* Clip + verdict */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-              <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-black aspect-video">
-                <video src={sampleClip} muted autoPlay loop playsInline
+              {/* Poster image, NOT an autoplaying video — the hero already
+                  carries a video, and a second ~1.3MB autoplay clip here was
+                  roughly doubling mobile page weight and driving ad-click
+                  bounces. Tapping opens the full interactive result on /demo. */}
+              <Link to="/demo" className="group relative block rounded-2xl overflow-hidden border border-zinc-800 bg-black aspect-video">
+                <img src={samplePoster} alt="Sample badminton analysis" loading="lazy"
                   className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="w-12 h-12 rounded-full bg-lime-400/90 group-hover:bg-lime-400 flex items-center justify-center shadow-lg shadow-lime-400/30 transition-transform group-hover:scale-105">
+                    <Play className="w-5 h-5 text-black ml-0.5" fill="currentColor" />
+                  </span>
+                </div>
                 <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5 flex items-center gap-1">
                   <Play className="w-3 h-3 text-lime-400" />
                   <span className="text-[10px] uppercase tracking-wider font-bold text-white">Sample clip</span>
                 </div>
-              </div>
+              </Link>
               <div className="rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-400/10 to-zinc-900 p-4 flex flex-col justify-center gap-1">
                 <div className="flex items-center gap-2 mb-0.5">
                   <Sparkles className="w-4 h-4 text-lime-400" />
