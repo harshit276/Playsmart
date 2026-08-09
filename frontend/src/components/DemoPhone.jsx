@@ -1,15 +1,18 @@
 /**
- * DemoPhone — the walkthrough reel inside a phone mockup.
+ * DemoPhone — the walkthrough reel in a clean device frame.
  *
- * Portrait 9:16 clip, so it lives in a phone frame. CLICK-TO-PLAY (poster +
- * play button), not autoplay: the reel is ~3 min with narration, so we neither
- * force a multi-MB download on every landing visitor nor mute the audio that
- * carries the point. On tap it loads and plays with sound + native controls.
+ * IMPORTANT: the frame is aspect-[9/16] to MATCH the source clip (1080x1920).
+ * It used to be 9/19, which made object-cover zoom and crop the video/poster —
+ * that's what made the demo look "not fitting". Keep these in sync if the clip
+ * is ever swapped.
  *
- * Rendered in the hero (right column) so the demo is visible the moment the
- * home page opens. Swappable: drop a new portrait mp4 at
- * src/assets/demo/formanti-demo.mp4 (+ poster jpg) — keep the .vercelignore
- * negation for the mp4 so Vercel bundles it.
+ * CLICK-TO-PLAY (poster + play button), not autoplay: the reel carries audio and
+ * we don't want a multi-MB download on every landing visit. On tap it loads and
+ * plays with sound + native controls.
+ *
+ * Swappable: drop a new portrait mp4 at src/assets/demo/formanti-demo-short.mp4
+ * (+ poster jpg) — keep the .vercelignore negation for the mp4 so Vercel
+ * bundles it.
  */
 import { useState } from "react";
 import { Play } from "lucide-react";
@@ -20,43 +23,48 @@ export default function DemoPhone({ className = "" }) {
   const [playing, setPlaying] = useState(false);
 
   return (
-    <div className={`relative w-[180px] sm:w-[220px] lg:w-[250px] shrink-0 ${className}`}>
-      {/* bezel */}
-      <div className="relative rounded-[2.4rem] border-[6px] border-zinc-800 bg-black shadow-2xl shadow-black/60 overflow-hidden aspect-[9/19]">
-        {/* notch */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 w-24 h-5 bg-zinc-800 rounded-b-2xl" />
-        {playing ? (
-          <video
-            src={demoReel}
-            poster={demoPoster}
-            className="absolute inset-0 w-full h-full object-cover"
-            controls
-            autoPlay
-            playsInline
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setPlaying(true)}
-            aria-label="Play the Formanti walkthrough"
-            className="absolute inset-0 w-full h-full group"
-          >
-            <img
-              src={demoPoster}
-              alt="Formanti walkthrough preview"
+    <div className={`relative w-[185px] sm:w-[215px] lg:w-[265px] shrink-0 ${className}`}>
+      {/* lime bloom behind the device so it lifts off the dark background */}
+      <div className="pointer-events-none absolute -inset-6 bg-lime-400/15 blur-3xl rounded-full" />
+
+      {/* device bezel */}
+      <div className="relative rounded-[2rem] p-[5px] bg-gradient-to-b from-zinc-700 via-zinc-800 to-zinc-900 shadow-2xl shadow-black/70 ring-1 ring-white/10">
+        <div className="relative rounded-[1.7rem] overflow-hidden bg-black aspect-[9/16]">
+          {playing ? (
+            <video
+              src={demoReel}
+              poster={demoPoster}
               className="absolute inset-0 w-full h-full object-cover"
+              controls
+              autoPlay
+              playsInline
             />
-            <span className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
-            <span className="absolute inset-0 flex items-center justify-center">
-              <span className="w-16 h-16 rounded-full bg-lime-400/90 group-hover:bg-lime-400 flex items-center justify-center shadow-lg shadow-lime-400/30 transition-all group-hover:scale-105">
-                <Play className="w-7 h-7 text-black ml-1" fill="currentColor" />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPlaying(true)}
+              aria-label="Play the Formanti walkthrough"
+              className="absolute inset-0 w-full h-full group"
+            >
+              <img
+                src={demoPoster}
+                alt="A real Formanti analysis result — score, level and full report"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20 group-hover:from-black/60 transition-colors" />
+              <span className="absolute inset-0 flex items-center justify-center">
+                <span className="w-14 h-14 rounded-full bg-lime-400 flex items-center justify-center shadow-lg shadow-lime-400/40 transition-transform group-hover:scale-110 group-active:scale-95">
+                  <Play className="w-6 h-6 text-black ml-0.5" fill="currentColor" />
+                </span>
               </span>
-            </span>
-            <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-wider font-bold text-white/90 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-              Tap to watch
-            </span>
-          </button>
-        )}
+              <span className="absolute bottom-3 inset-x-0 flex justify-center">
+                <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-white/95 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1">
+                  Watch it work · 25s
+                </span>
+              </span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

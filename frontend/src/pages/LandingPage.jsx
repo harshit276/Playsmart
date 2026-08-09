@@ -210,7 +210,7 @@ export default function LandingPage() {
       />
 
       {/* ============ HERO ============ */}
-      <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden pt-24 pb-16">
+      <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden pt-20 sm:pt-24 pb-12 sm:pb-16">
         {/* Background stack: photo → wash → vignette → lime bloom → grid.
             Layering (rather than a single flat gradient) is what stops the
             hero reading as "text on a dark rectangle". */}
@@ -238,65 +238,75 @@ export default function LandingPage() {
           }} />
 
         <div className="relative z-10 container mx-auto px-4 max-w-6xl w-full">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-10 items-center">
-            {/* LEFT: the pitch */}
-            <div className="text-center lg:text-left">
-              {/* Brand mark — desktop only; on mobile the navbar already shows
-                  the logo and the phone leads, so a second mark just adds height. */}
-              <motion.div initial="hidden" animate="visible" variants={rise} className="hidden lg:block">
-                <FormantiLogo className="h-9 md:h-11 mx-auto lg:mx-0 mb-5" markClassName="h-8 md:h-10"
-                  textClassName="font-heading font-bold text-2xl md:text-3xl uppercase tracking-tight text-white" />
+          {/* Hero grid. Three blocks so MOBILE reads brand → hook → demo → CTA
+              (a first-time ad visitor must see who we are and what they get
+              before any scroll), while DESKTOP stays two columns with the demo
+              spanning both rows on the right. */}
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-y-5 lg:gap-x-12 lg:gap-y-0 items-center">
+
+            {/* 1 — brand + headline */}
+            <div className="order-1 w-full text-center lg:text-left lg:col-start-1 lg:row-start-1 lg:self-end">
+              <motion.div initial="hidden" animate="visible" variants={rise}>
+                <FormantiLogo className="h-8 sm:h-9 lg:h-11 mx-auto lg:mx-0 mb-4 lg:mb-5" markClassName="h-7 sm:h-8 lg:h-10"
+                  textClassName="font-heading font-bold text-xl sm:text-2xl lg:text-3xl uppercase tracking-tight text-white" />
               </motion.div>
 
               <motion.div initial="hidden" animate="visible" custom={0.05} variants={rise}>
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 mb-5 backdrop-blur-sm" data-testid="hero-badge">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-lime-400/10 border border-lime-400/25 mb-4 lg:mb-5 backdrop-blur-sm" data-testid="hero-badge">
                   <Zap className="w-3.5 h-3.5 text-lime-400" />
-                  <span className="text-xs sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI Sports Coaching</span>
+                  <span className="text-[11px] sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI Sports Coaching</span>
                 </div>
               </motion.div>
 
               <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={rise}
-                className="font-heading font-black text-[2.75rem] leading-[0.85] sm:text-6xl lg:text-7xl tracking-tighter uppercase mb-5" data-testid="hero-heading">
-                <span className="block text-zinc-500 text-2xl sm:text-3xl tracking-tight mb-2 sm:mb-3">Film one rally.</span>
+                className="font-heading font-black text-[2.5rem] leading-[0.85] sm:text-6xl lg:text-7xl tracking-tighter uppercase" data-testid="hero-heading">
+                <span className="block text-zinc-500 text-xl sm:text-3xl tracking-tight mb-1.5 sm:mb-3">Film one rally.</span>
                 <span className="block text-white">Get coached</span>
                 <span className="block neon-glow text-lime-400">like a pro.</span>
               </motion.h1>
+            </div>
 
+            {/* 2 — the demo, in a device frame (spans both rows on desktop) */}
+            <motion.div initial="hidden" animate="visible" custom={0.35} variants={rise}
+              className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex justify-center lg:justify-end lg:self-center">
+              <DemoPhone />
+            </motion.div>
+
+            {/* 3 — pitch + CTA */}
+            <div className="order-3 w-full text-center lg:text-left lg:col-start-1 lg:row-start-2 lg:self-start">
               <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
-                className="text-base sm:text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0 mb-6 leading-relaxed" data-testid="hero-subtitle">
+                className="hidden lg:block text-base sm:text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0 mb-6 mt-6 leading-relaxed" data-testid="hero-subtitle">
                 Our AI breaks your clip down shot by shot, shows you the posture behind each one,
                 and turns it into drills, a plan and a written report.
               </motion.p>
 
-              {/* Sport pills — one flowing row, quieter than the headline. */}
+              <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
+                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
+                <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
+                  className="w-full sm:w-auto max-w-[320px] bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
+                  Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
+                </Button>
+                <Button onClick={() => navigate("/demo")}
+                  variant="ghost" size="lg"
+                  className="hidden sm:inline-flex w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
+                  <Play className="w-5 h-5 mr-1.5" /> See a sample analysis
+                </Button>
+              </motion.div>
+
+              <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
+                className="text-xs sm:text-sm text-lime-400/90 font-medium mt-3 lg:mt-4">
+                🪙 Free to start — 100 tokens on signup, enough for 1 analysis.
+              </motion.p>
+
+              {/* Sport pills — quieter than the headline, below the CTA on mobile. */}
               <motion.div initial="hidden" animate="visible" custom={0.4} variants={rise}
-                className="flex flex-wrap justify-center lg:justify-start gap-1.5 sm:gap-2 mb-7 max-w-xl mx-auto lg:mx-0">
+                className="flex flex-wrap justify-center lg:justify-start gap-1.5 sm:gap-2 mt-5 max-w-xl mx-auto lg:mx-0">
                 {SPORTS.map(s => (
                   <span key={s.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm text-[11px] sm:text-xs text-zinc-300">
                     <span>{s.emoji}</span> {s.label}
                   </span>
                 ))}
               </motion.div>
-
-              {/* Desktop CTAs. On mobile the phone leads and its CTA sits right
-                  under the phone (below) so ad visitors see it without scrolling. */}
-              <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
-                className="hidden lg:flex lg:flex-row items-center lg:justify-start gap-4">
-                <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
-                  className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
-                  Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
-                </Button>
-                <Button onClick={() => navigate("/demo")}
-                  variant="ghost" size="lg"
-                  className="w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
-                  <Play className="w-5 h-5 mr-1.5" /> See a sample analysis
-                </Button>
-              </motion.div>
-
-              <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
-                className="hidden lg:block text-sm text-lime-400/90 font-medium mt-4">
-                🪙 Free to start — 100 tokens on signup, enough for 1 analysis.
-              </motion.p>
 
               <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
                 className="mt-5 flex flex-col items-center lg:items-start">
@@ -311,28 +321,6 @@ export default function LandingPage() {
                 </Link>
               </motion.div>
             </div>
-
-            {/* RIGHT: the demo, in a phone — visible the moment the page opens.
-                Tap-to-play walkthrough reel (see DemoPhone). On mobile the
-                primary CTA sits right under the phone so it's on the first screen. */}
-            <motion.div initial="hidden" animate="visible" custom={0.35} variants={rise}
-              className="flex flex-col items-center lg:items-end order-first lg:order-last">
-              <DemoPhone />
-              <span className="hidden lg:block mt-2 text-[11px] uppercase tracking-wider text-zinc-500 font-semibold">A quick walkthrough</span>
-
-              {/* Mobile-only CTA under the phone */}
-              <div className="lg:hidden mt-4 w-full max-w-[300px] flex flex-col items-center gap-2">
-                <Button onClick={handleCTA} size="lg"
-                  className="w-full bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide py-6 text-base rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] active:scale-95">
-                  Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
-                </Button>
-                <p className="text-xs text-lime-400/90 font-medium">🪙 Free — 100 tokens on signup</p>
-                <button onClick={() => navigate("/demo")}
-                  className="text-xs text-zinc-400 hover:text-white underline underline-offset-2">
-                  or watch a sample analysis
-                </button>
-              </div>
-            </motion.div>
           </div>
 
           {/* FACTS — folded into the hero so the proof sits with the pitch and
