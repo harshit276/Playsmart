@@ -278,8 +278,10 @@ export default function LandingPage() {
                 ))}
               </motion.div>
 
+              {/* Desktop CTAs. On mobile the phone leads and its CTA sits right
+                  under the phone (below) so ad visitors see it without scrolling. */}
               <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
-                className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3 sm:gap-4">
+                className="hidden lg:flex lg:flex-row items-center lg:justify-start gap-4">
                 <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
                   className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
                   Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
@@ -292,7 +294,7 @@ export default function LandingPage() {
               </motion.div>
 
               <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
-                className="text-sm text-lime-400/90 font-medium mt-4">
+                className="hidden lg:block text-sm text-lime-400/90 font-medium mt-4">
                 🪙 Free to start — 100 tokens on signup, enough for 1 analysis.
               </motion.p>
 
@@ -311,12 +313,24 @@ export default function LandingPage() {
             </div>
 
             {/* RIGHT: the demo, in a phone — visible the moment the page opens.
-                Tap-to-play walkthrough reel (see DemoPhone). */}
+                Tap-to-play walkthrough reel (see DemoPhone). On mobile the
+                primary CTA sits right under the phone so it's on the first screen. */}
             <motion.div initial="hidden" animate="visible" custom={0.35} variants={rise}
-              className="flex justify-center lg:justify-end order-first lg:order-last">
-              <div className="flex flex-col items-center gap-2">
-                <DemoPhone />
-                <span className="text-[11px] uppercase tracking-wider text-zinc-500 font-semibold">A quick walkthrough</span>
+              className="flex flex-col items-center lg:items-end order-first lg:order-last">
+              <DemoPhone />
+              <span className="hidden lg:block mt-2 text-[11px] uppercase tracking-wider text-zinc-500 font-semibold">A quick walkthrough</span>
+
+              {/* Mobile-only CTA under the phone */}
+              <div className="lg:hidden mt-4 w-full max-w-[300px] flex flex-col items-center gap-2">
+                <Button onClick={handleCTA} size="lg"
+                  className="w-full bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide py-6 text-base rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] active:scale-95">
+                  Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
+                </Button>
+                <p className="text-xs text-lime-400/90 font-medium">🪙 Free — 100 tokens on signup</p>
+                <button onClick={() => navigate("/demo")}
+                  className="text-xs text-zinc-400 hover:text-white underline underline-offset-2">
+                  or watch a sample analysis
+                </button>
               </div>
             </motion.div>
           </div>
@@ -350,8 +364,8 @@ export default function LandingPage() {
         <div className="relative container mx-auto px-4 max-w-4xl">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
             className="mb-8 md:mb-10 text-center">
-            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
-              <span className="w-8 h-px bg-lime-400/60" /> See it first
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400 text-black text-xs sm:text-sm font-black uppercase tracking-[0.15em] mb-4 shadow-[0_0_24px_rgba(163,230,53,0.35)]">
+              <Sparkles className="w-3.5 h-3.5" /> See it first — real result
             </span>
             <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95] mb-3">
               This is what you<br />get back.

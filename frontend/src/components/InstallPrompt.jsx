@@ -13,6 +13,7 @@ function isInStandaloneMode() {
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+  const [showAndroidPrompt, setShowAndroidPrompt] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -28,17 +29,20 @@ export default function InstallPrompt() {
       return;
     }
 
-    // iOS doesn't support beforeinstallprompt — show manual instructions
+    // iOS doesn't support beforeinstallprompt — show manual instructions.
+    // Delay 20s so a first-time (esp. paid-ad) visitor sees the pitch + CTA
+    // first; the prompt must never cover the first screen.
     if (isIOS()) {
-      // Delay showing iOS prompt by 3 seconds so user sees the app first
-      const timer = setTimeout(() => setShowIOSPrompt(true), 3000);
+      const timer = setTimeout(() => setShowIOSPrompt(true), 20000);
       return () => clearTimeout(timer);
     }
 
-    // Android/Desktop: use the standard install prompt
+    // Android/Desktop: capture the install event, but hold the visible card
+    // back ~45s so it doesn't cover the hero/CTA for a new visitor.
     const handler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
+      setTimeout(() => setShowAndroidPrompt(true), 45000);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
@@ -93,8 +97,8 @@ export default function InstallPrompt() {
     );
   }
 
-  // Android/Desktop: Standard install prompt
-  if (!deferredPrompt) return null;
+  // Android/Desktop: Standard install prompt — only after the hold-back delay.
+  if (!deferredPrompt || !showAndroidPrompt) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-50 animate-in slide-in-from-bottom-4">

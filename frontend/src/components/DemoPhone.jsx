@@ -13,14 +13,14 @@
  */
 import { useState } from "react";
 import { Play } from "lucide-react";
-import demoReel from "@/assets/demo/formanti-demo.mp4";
-import demoPoster from "@/assets/demo/formanti-demo-poster.jpg";
+import demoReel from "@/assets/demo/formanti-demo-short.mp4";
+import demoPoster from "@/assets/demo/formanti-demo-short-poster.jpg";
 
 export default function DemoPhone({ className = "" }) {
   const [playing, setPlaying] = useState(false);
 
   return (
-    <div className={`relative w-[220px] sm:w-[250px] shrink-0 ${className}`}>
+    <div className={`relative w-[180px] sm:w-[220px] lg:w-[250px] shrink-0 ${className}`}>
       {/* bezel */}
       <div className="relative rounded-[2.4rem] border-[6px] border-zinc-800 bg-black shadow-2xl shadow-black/60 overflow-hidden aspect-[9/19]">
         {/* notch */}
