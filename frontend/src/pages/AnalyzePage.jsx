@@ -1505,7 +1505,9 @@ export default function AnalyzePage() {
           // analysis detects the real sport regardless, so never block the
           // pipeline for the old 45s. If it's slow, we just proceed on the
           // fallback sport (no functional loss).
-          const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 12000 });
+          // 12s was under the real response time (~10s warm, ~30s cold), so
+          // this effectively always failed and we fell back to the guess.
+          const { data } = await api.post("/detect-sport-vlm", { keyframes }, { timeout: 40000 });
           if (data?.success && data.sport) {
             detected = { sport: data.sport, confidence: data.confidence ?? 0 };
             setDetectedSport(data.sport);
@@ -2112,7 +2114,11 @@ export default function AnalyzePage() {
                 fileName
                   ? { mime_type: uploadFile.type || file.type || "video/mp4", file_name: fileName }
                   : { mime_type: uploadFile.type || file.type || "video/mp4", video_b64: b64 },
-                { timeout: 25000 });
+                // Must exceed the server's own 55s cap — otherwise the browser
+                // aborts a call that was about to succeed and we lose the
+                // roster, which silently disables doubles attribution.
+                // Measured: ~30s warm, +15-25s on a cold Vercel start.
+                { timeout: 70000 });
               descData = resp.data;
             } catch (descAttemptErr) {
               console.warn("[universal] describe-players failed, proceeding without picker:",

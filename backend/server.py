@@ -7125,7 +7125,10 @@ async def describe_players_endpoint(
             # 40s (was 35s) — Gemini reads the Files API video for the player
             # pre-pass; give it room. The frontend waits 45s, so it still
             # receives this 504 (not its own client-side timeout) if we overrun.
-            timeout=40.0,
+            timeout=55.0,   # was 40s: a warm call measured ~30s and a cold
+            # Vercel start adds 15-25s on top, so 40s 504'd legitimate
+            # responses. The client now waits longer than this (see
+            # AnalyzePage) so THIS timeout is the one that governs.
         )
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="Player description timed out")
