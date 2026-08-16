@@ -1472,15 +1472,21 @@ def _build_roster_block(
         f"  shorts colour, court side, jersey number, racket — and use that\n"
         f"  distinguishing cue on EVERY shot.\n"
         f"• The target's team-mate is the single most likely person to be\n"
-        f"  mistaken for them. Before emitting a shot, ask: could this have\n"
-        f"  been the partner? If yes, it is NOT the target's shot.\n"
+        f"  mistaken for them. For each shot ask: could this have been the\n"
+        f"  partner? If you can positively identify the partner, tag it with\n"
+        f"  THEIR id. If you simply cannot rule them out, tag \"unsure\" —\n"
+        f"  still EMIT the event. Never delete a shot over attribution doubt\n"
+        f"  and never assume an unclear shot was the target.\n"
         f"• Track the target CONTINUOUSLY through the rally. Players rotate\n"
         f"  and swap sides — re-verify identity at each contact rather than\n"
         f"  assuming whoever is in the target's starting position is them.\n\n"
         f"REQUIRED per-event field — `player_id`:\n"
         f"• Set `player_id` to the bracketed roster id of whoever actually\n"
         f"  hit that shot (e.g. \"{tid}\").\n"
-        f"• Emit events for the TARGET (`player_id` == \"{tid}\").\n"
+        f"• Emit every near-side contact you can see, each with its own\n"
+        f"  `player_id`. The system keeps the target's ({tid}) and the\n"
+        f"  unsure ones and discards the rest — so completeness here costs\n"
+        f"  nothing, while a missing shot is lost for good.\n"
         f"• If you genuinely cannot tell who hit a shot, set\n"
         f"  `player_id` to \"unsure\" and lower `confidence` — do NOT guess\n"
         f"  the target's id. An honest \"unsure\" is far better than a\n"
@@ -1598,13 +1604,33 @@ def _build_universal_prompt(
         f"   skip it. The target's response (block, return, lift) is what "
         f"   counts as the target's event.\n"
         f"\n"
-        f"4. If a moment is ambiguous (camera angle hides the contact, multiple "
-        f"   players in frame, motion blur), SKIP it. Do not guess.\n"
-        f"\n"
-        f"5. After producing the events array, re-read each one and ask 'am I "
-        f"   100% sure this was the target person?' — if no, delete it. The "
-        f"   final array should contain ONLY events you would defend to a coach.\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        + (
+            # ROSTER MODE — the backend filters by `player_id`, so the model
+            # must NOT also self-censor. Stacking both filters is what cut a
+            # real 20s doubles rally down to 2 shots: with motion blur and
+            # matching black kit, the legacy rule 4 below calls essentially
+            # EVERY contact "ambiguous" and deletes it. Model observes and
+            # attributes; the server decides what to keep.
+            f"4. Do NOT delete an event because attribution is hard. Emit "
+            f"   EVERY near-side contact you can see and record who hit it in "
+            f"   `player_id`, using \"unsure\" when you truly cannot tell. "
+            f"   Dropping real shots is a WORSE error than an honest "
+            f"   \"unsure\" — the user knows how many shots they played, and "
+            f"   an almost-empty analysis reads as broken.\n"
+            f"\n"
+            f"5. Only omit an event when you did not actually SEE a contact "
+            f"   (no swing, no change of direction of the ball/shuttle). "
+            f"   Doubt about WHO hit it is expressed through `player_id`, "
+            f"   never by deleting the event.\n"
+            if roster_block else
+            f"4. If a moment is ambiguous (camera angle hides the contact, multiple "
+            f"   players in frame, motion blur), SKIP it. Do not guess.\n"
+            f"\n"
+            f"5. After producing the events array, re-read each one and ask 'am I "
+            f"   100% sure this was the target person?' — if no, delete it. The "
+            f"   final array should contain ONLY events you would defend to a coach.\n"
+        )
+        + f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
     )
 
     sys_prompt = (
@@ -3046,11 +3072,27 @@ def stream_analyze_video_universal(
     if not sport_vocab:
         sport_vocab = _get_sport_vocab(str(data.get("sport_detected", "")))
     events_out: list = []
-    for e in (data.get("events") or [])[:20]:
+    _raw_events = (data.get("events") or [])[:20]
+    for e in _raw_events:
         norm = _normalize_universal_event(e, sport_vocab, target_player_description,
                                           target_player_id, _roster_ids)
         if norm:
             events_out.append(norm)
+    # ATTRIBUTION DIAGNOSTICS. Without this, "only 2 shots came back" is
+    # ambiguous between "the model only found 2" and "we filtered 9 away" —
+    # and those have opposite fixes. Log the model's own player_id tally next
+    # to how many survived so the next report is one log line to resolve.
+    if _roster_ids:
+        try:
+            from collections import Counter as _Counter
+            _tally = _Counter(
+                str((e or {}).get("player_id") or "missing").strip().lower()
+                for e in _raw_events if isinstance(e, dict))
+            _log.info(
+                "[universal] attribution: model emitted %d event(s) %s | target=%s | kept %d",
+                len(_raw_events), dict(_tally), target_player_id, len(events_out))
+        except Exception:
+            pass
     # Collapse same-contact duplicates (see _dedupe_events). The streamed
     # live badges may still show a transient duplicate, but the AUTHORITATIVE
     # `complete` payload below carries the deduped list the UI renders.

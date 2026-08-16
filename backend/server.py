@@ -4376,7 +4376,7 @@ async def analyze_video_universal_endpoint(
     # OUTPUT is not worth that spend spike — it once drained the prepaid Gemini
     # credits to zero and took analysis down for everyone. Only bump when the
     # produced result genuinely changes, and watch billing after you do.
-    PROMPT_VERSION = "v2026-08-16-contrastive-player-roster"
+    PROMPT_VERSION = "v2026-08-17-roster-recall-rebalance"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
