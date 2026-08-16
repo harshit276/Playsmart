@@ -4282,6 +4282,17 @@ class AnalyzeVideoUniversalRequest(BaseModel):
     # strings). When present, the coach narrative gets a progress_update
     # paragraph explicitly assessing whether this clip shows progress.
     previous_session_focus: list | None = None
+    # CONTRASTIVE PLAYER IDENTITY (doubles attribution fix).
+    # The full roster from /describe-players — every athlete we detected, as
+    # [{id, description, clothing, court_position}] — plus which id the user
+    # picked. Passing the OTHER players (not just the target's description)
+    # is what makes attribution work in doubles: "blue shirt" is ambiguous
+    # when the partner also wears blue, but "blue shirt + BLACK shorts vs
+    # blue shirt + WHITE shorts" is discriminative. The model tags every
+    # event with the roster id that hit it, and we filter on that id instead
+    # of fuzzy-matching prose. Optional — omitted means legacy behaviour.
+    player_roster: list | None = None
+    target_player_id: str | None = None
 
 
 def _apply_time_scale(events: list, time_scale: float, time_offset: float = 0.0) -> list:
@@ -4365,7 +4376,7 @@ async def analyze_video_universal_endpoint(
     # OUTPUT is not worth that spend spike — it once drained the prepaid Gemini
     # credits to zero and took analysis down for everyone. Only bump when the
     # produced result genuinely changes, and watch billing after you do.
-    PROMPT_VERSION = "v2026-07-23-no-invented-qualifiers"
+    PROMPT_VERSION = "v2026-08-16-contrastive-player-roster"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
@@ -4395,6 +4406,10 @@ async def analyze_video_universal_endpoint(
     cache_key = (
         f"{PROMPT_VERSION}:{video_hash}:{req.tier}:{int(bool(req.fast_mode))}:"
         f"{_focus_sig}:{(req.target_player_description or '')[:80]}"
+        # The picked player's roster id must key the cache too: re-analysing
+        # the SAME clip for a different team-mate is a different question, and
+        # two players' descriptions can collide once truncated to 80 chars.
+        f":{(req.target_player_id or '')[:16]}"
     )
     try:
         cached = await asyncio.wait_for(
@@ -4425,6 +4440,8 @@ async def analyze_video_universal_endpoint(
                 file_name=req.file_name,
                 fast_mode=bool(req.fast_mode),
                 previous_session_focus=req.previous_session_focus,
+                player_roster=req.player_roster,
+                target_player_id=req.target_player_id,
             )),
             # 180s: dense doubles clips (both near-court players, many events)
             # routinely need 110-160s of Gemini generation. The old 110s cap
@@ -4531,6 +4548,11 @@ async def analyze_video_stream_endpoint(
     time_offset: str = "0",
     # Short-clip fast path (Flash, no thinking). Form string "true"/"false".
     fast_mode: str = "false",
+    # Contrastive player identity (doubles attribution). JSON array string of
+    # the detected roster [{id, description, ...}] + the picked player's id.
+    # Multipart can't carry a real list, hence the JSON string.
+    player_roster: str | None = None,
+    target_player_id: str | None = None,
     # Previous session's top fixes as a JSON array string (multipart can't
     # carry a real list). Empty/absent = no continuity section.
     previous_session_focus: str | None = None,
@@ -4633,6 +4655,15 @@ async def analyze_video_stream_endpoint(
 
         _doubles_flag = str(doubles_mode or "false").strip().lower() in ("1", "true", "yes")
         _fast_flag = str(fast_mode or "false").strip().lower() in ("1", "true", "yes")
+        _target_player_id = (target_player_id or "").strip() or None
+        _player_roster = None
+        if player_roster:
+            try:
+                _pr = json.loads(player_roster)
+                if isinstance(_pr, list):
+                    _player_roster = _pr[:8]
+            except (ValueError, TypeError):
+                _player_roster = None
         _prev_focus = None
         if previous_session_focus:
             try:
@@ -4659,6 +4690,8 @@ async def analyze_video_stream_endpoint(
                     doubles_mode=_doubles_flag,
                     fast_mode=_fast_flag,
                     previous_session_focus=_prev_focus,
+                    player_roster=_player_roster,
+                    target_player_id=_target_player_id,
                 ):
                     q.put(ev)
             except Exception as exc:
@@ -4972,6 +5005,8 @@ async def _process_job(job: dict, claimed: bool = False):
                 file_name=file_name,
                 fast_mode=job.get("fast_mode", False),
                 previous_session_focus=job.get("previous_session_focus"),
+                player_roster=job.get("player_roster"),
+                target_player_id=job.get("target_player_id"),
             )),
             timeout=200.0,
         )
@@ -5618,6 +5653,10 @@ async def analyze_video_async_submit(
         "status": "queued",
         "mime_type": req.mime_type or "video/mp4",
         "target_player_description": req.target_player_description,
+        # Contrastive identity (doubles attribution) — the job runner reads
+        # these back out to rebuild the prompt's roster block.
+        "player_roster": req.player_roster,
+        "target_player_id": req.target_player_id,
         "backend": req.backend,
         "tier": req.tier,
         "doubles_mode": req.doubles_mode,

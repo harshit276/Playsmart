@@ -2178,7 +2178,7 @@ export default function AnalyzePage() {
             }
             if (players.length === 1) {
               // Single athlete → auto-select, skip the picker.
-              options = { ...options, universalPick: players[0] };
+              options = { ...options, universalPick: players[0], universalRoster: players };
             }
           } catch (descErr) {
             // Description failed — proceed without target_player_description.
@@ -2192,12 +2192,29 @@ export default function AnalyzePage() {
         const targetDesc = options.universalPick
           ? `${options.universalPick.description} (${options.universalPick.clothing}, ${options.universalPick.court_position})`.replace(/\(\s*,\s*\)/g, "").trim()
           : null;
+        // CONTRASTIVE IDENTITY (doubles attribution fix). Send the WHOLE
+        // detected roster, not just the picked player's description. Naming
+        // only the target ("blue shirt, near-left") is ambiguous the moment a
+        // doubles partner wears matching kit — which is the normal case — and
+        // the partner's shots then get credited to the user. With the full
+        // roster the model must pick the discriminating cue, and it tags each
+        // event with the roster id that hit it so the backend can filter on an
+        // id instead of grepping prose.
+        const rosterForCall = (options.universalRoster || []).map((p) => ({
+          id: p.id,
+          description: p.description,
+          clothing: p.clothing,
+          court_position: p.court_position,
+        })).filter((p) => p.id);
+        const targetPlayerId = options.universalPick?.id || null;
+        const sendRoster = rosterForCall.length >= 2 && !!targetPlayerId;
         // When the user explicitly PICKED one player from the multi-player
         // picker, analyze ONLY that player (doubles-both off) — otherwise a
         // doubles clip with 4 people would mix several players' shots into one
         // confusing list. doubles_mode stays on only when no specific player
         // was chosen (so a clip the user didn't disambiguate still covers both
-        // near-court players).
+        // near-court players). The roster block above is what keeps the
+        // PARTNER's shots out while we're in this single-target mode.
         const effectiveDoubles = options.fromPicker ? false : doublesMode;
 
         // ── Fast-mode routing: short clips → Flash with thinking off ──
@@ -2282,6 +2299,7 @@ export default function AnalyzePage() {
             // Large clips reference the Files API handle; small clips inline.
             ...(fileName ? { file_name: fileName } : { video_b64: b64 }),
             target_player_description: targetDesc,
+            ...(sendRoster ? { player_roster: rosterForCall, target_player_id: targetPlayerId } : {}),
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: effectiveDoubles,
             fast_mode: fastMode,
@@ -2333,6 +2351,10 @@ export default function AnalyzePage() {
             fd.append("sport", sportToAnalyze || "badminton");
             fd.append("tier", "premium");
             if (targetDesc) fd.append("target_player_description", targetDesc);
+            if (sendRoster) {
+              fd.append("player_roster", JSON.stringify(rosterForCall));
+              fd.append("target_player_id", targetPlayerId);
+            }
             // Doubles flag forwarded to backend — flips the prompt to
             // analyse-both-near-court mode and tags each event with
             // player_role.
@@ -2470,6 +2492,7 @@ export default function AnalyzePage() {
             mime_type: uploadFile.type || file.type || "video/mp4",
             ...(fileName ? { file_name: fileName } : { video_b64: b64 }),
             target_player_description: targetDesc,
+            ...(sendRoster ? { player_roster: rosterForCall, target_player_id: targetPlayerId } : {}),
             tier: accuracyMode === "premium" ? "premium" : "standard",
             doubles_mode: effectiveDoubles,
             fast_mode: fastMode,
@@ -5950,7 +5973,7 @@ export default function AnalyzePage() {
           runClientAnalysis(
             result?.sport || selectedSport || "unknown",
             null,
-            { universalPick: picked, fromPicker: true },
+            { universalPick: picked, fromPicker: true, universalRoster: universalPlayers },
           );
         };
         const BOX_COLORS = [

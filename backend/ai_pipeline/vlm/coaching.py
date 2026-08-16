@@ -1409,10 +1409,93 @@ def _clean_bullet_points(raw, max_pts: int = 4, max_len: int = 240) -> list:
     return parts[:max_pts]
 
 
+def _build_roster_block(
+    player_roster: list | None,
+    target_player_id: str | None,
+    described: str,
+) -> str:
+    """CONTRASTIVE player identity — the doubles attribution fix.
+
+    Describing only the target ("blue shirt, near-left") is ambiguous the
+    moment a partner wears similar kit, which is the normal case in doubles
+    team kit. The model then attributes the partner's shots to the target and
+    the user sees shots they never played.
+
+    So we show the model the WHOLE roster, split into the target and everyone
+    else, and make it name the discriminating cue. Identity becomes a
+    categorical choice between labelled options instead of a fuzzy prose
+    match, and every event carries the roster id that hit it so we can filter
+    on an id downstream rather than grepping reasoning text.
+
+    Returns "" when there's no usable roster (→ caller keeps legacy behaviour).
+    """
+    if not isinstance(player_roster, list) or len(player_roster) < 2:
+        return ""
+
+    def _fmt(p: dict) -> tuple[str, str]:
+        pid = str(p.get("id") or "").strip()
+        desc = str(p.get("description") or "").strip()
+        if not desc:
+            desc = " ".join(x for x in [
+                str(p.get("clothing") or "").strip(),
+                str(p.get("court_position") or "").strip(),
+            ] if x).strip()
+        return pid, (desc or "unlabelled player")
+
+    target_line, other_lines = "", []
+    for p in player_roster:
+        if not isinstance(p, dict):
+            continue
+        pid, desc = _fmt(p)
+        if not pid:
+            continue
+        if target_player_id and pid == str(target_player_id).strip():
+            target_line = f"  [{pid}] {desc}"
+        else:
+            other_lines.append(f"  [{pid}] {desc}")
+
+    # Without a resolved target id we can't build a categorical filter.
+    if not target_line or not other_lines:
+        return ""
+
+    tid = str(target_player_id).strip()
+    return (
+        f"\n\n━━━ WHO TO ANALYSE — READ THIS BEFORE EVERY SHOT ━━━\n"
+        f"{len(player_roster)} people were detected on court.\n\n"
+        f"TARGET — analyse ONLY this person's shots:\n{target_line}\n\n"
+        f"EVERYONE ELSE — do NOT emit their shots:\n"
+        + "\n".join(other_lines) + "\n\n"
+        f"DISAMBIGUATION (this is where attribution usually goes wrong):\n"
+        f"• Players on the SAME side are often in matching team kit. Do not\n"
+        f"  identify the target by a shared attribute. Find what DIFFERS\n"
+        f"  between the target's description and each other player's above —\n"
+        f"  shorts colour, court side, jersey number, racket — and use that\n"
+        f"  distinguishing cue on EVERY shot.\n"
+        f"• The target's team-mate is the single most likely person to be\n"
+        f"  mistaken for them. Before emitting a shot, ask: could this have\n"
+        f"  been the partner? If yes, it is NOT the target's shot.\n"
+        f"• Track the target CONTINUOUSLY through the rally. Players rotate\n"
+        f"  and swap sides — re-verify identity at each contact rather than\n"
+        f"  assuming whoever is in the target's starting position is them.\n\n"
+        f"REQUIRED per-event field — `player_id`:\n"
+        f"• Set `player_id` to the bracketed roster id of whoever actually\n"
+        f"  hit that shot (e.g. \"{tid}\").\n"
+        f"• Emit events for the TARGET (`player_id` == \"{tid}\").\n"
+        f"• If you genuinely cannot tell who hit a shot, set\n"
+        f"  `player_id` to \"unsure\" and lower `confidence` — do NOT guess\n"
+        f"  the target's id. An honest \"unsure\" is far better than a\n"
+        f"  confident mis-attribution: users spot shots they never played\n"
+        f"  immediately and stop trusting the whole analysis.\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    )
+
+
 def _build_universal_prompt(
     target_player_description: str | None = None,
     doubles_mode: bool = False,
     previous_session_focus: list | None = None,
+    player_roster: list | None = None,
+    target_player_id: str | None = None,
 ) -> tuple[str, str]:
     """Build the (sys_prompt, user_msg) for the universal sport-agnostic
     analysis call. Extracted so the streaming variant can reuse it without
@@ -1420,11 +1503,17 @@ def _build_universal_prompt(
 
     `doubles_mode=True` switches the target-player filter from
     "single player only" to "both near-court players, tagged per-event"
-    — see the DOUBLES section of the box_hint."""
+    — see the DOUBLES section of the box_hint.
+
+    `player_roster` + `target_player_id` add CONTRASTIVE identity (see
+    _build_roster_block). When supplied they take precedence over the plain
+    single-target hint, because naming the other players on court is what
+    stops a doubles partner's shots being credited to the target."""
     # If no target description, default to "the player closest to the
     # camera / in the foreground" — gives Gemini a deterministic anchor
     # in 2-player clips so it doesn't randomly mix shots from both sides.
     described = target_player_description or "the player closest to the camera (foreground)"
+    roster_block = _build_roster_block(player_roster, target_player_id, described)
 
     # DOUBLES MODE — when the user opted in via the doubles toggle, we
     # REPLACE the single-target box_hint with a doubles-aware one. The
@@ -1682,7 +1771,12 @@ def _build_universal_prompt(
         "overhead contact = NOT a clear, even if the shuttle eventually "
         "reaches a deep landing zone. Use the actual shuttle path, not "
         "the landing depth, to decide.\n"
-        f"{box_hint_doubles if doubles_mode else box_hint_singles}\n\n"
+        # The roster block (when we have one) goes AFTER the mode hint so its
+        # named, contrastive instructions are the last word on identity — it
+        # is the only part of the prompt that can separate a target from a
+        # partner in matching kit.
+        f"{box_hint_doubles if doubles_mode else box_hint_singles}"
+        f"{roster_block}\n\n"
         "CRITICAL — RALLY SHOT VARIETY (racquet sports). Competitive "
         "rallies are NEVER all drives and blocks. Apply these cues per "
         "contact before defaulting to drive/block:\n"
@@ -1854,9 +1948,17 @@ def _build_universal_prompt(
         '      "speed_estimate_kmh": <number|null>,\n'
         + (
             '      "player_role": "<you|partner|opponent — which '
-            'near-court player; required in doubles mode>"\n'
+            'near-court player; required in doubles mode>",\n'
             if doubles_mode else
-            '      "player_role": "you"\n'
+            '      "player_role": "you",\n'
+        )
+        # Roster id of whoever hit this shot. Only requested when we actually
+        # sent a roster — otherwise the model would invent ids we can't map.
+        + (
+            '      "player_id": "<roster id of the person who hit this shot, '
+            'or \\"unsure\\">"\n'
+            if roster_block else
+            '      "player_id": "unsure"\n'
         ) +
         '    }\n'
         '  ],\n'
@@ -2007,6 +2109,37 @@ def _detect_target_mismatch(
         "picked": target_player_description,
         "detected_phrases": sorted(set(found_phrases))[:4],
     }
+
+
+def _belongs_to_target_by_id(
+    e: dict, target_player_id: str | None, roster_ids: set | None,
+) -> bool | None:
+    """Categorical attribution check using the roster id the model tagged.
+
+    Returns True (keep), False (drop — it's a known OTHER player), or None
+    ("can't tell from the id" → caller falls back to the text heuristic).
+
+    This is the real doubles fix. The text filter below can only catch shots
+    whose prose says "opponent hit this"; it can never catch a PARTNER's shot,
+    because nothing in that phrasing is opponent-flavoured. An explicit id
+    lets us drop it — but only when the model named a DIFFERENT roster member.
+    Anything unsure stays in, because silently dropping a user's whole session
+    is a worse failure than one stray shot (see PHILOSOPHY in
+    _belongs_to_target).
+    """
+    if not target_player_id or not roster_ids:
+        return None
+    pid = str(e.get("player_id") or "").strip().lower()
+    if not pid or pid in ("unsure", "unknown", "null", "none"):
+        return None  # honest uncertainty → defer, don't drop
+    tid = str(target_player_id).strip().lower()
+    if pid == tid:
+        return True
+    # Only drop when the id is one we actually know about. An unrecognised id
+    # is model noise, not evidence that this was somebody else.
+    if pid in {str(r).strip().lower() for r in roster_ids}:
+        return False
+    return None
 
 
 def _belongs_to_target(e: dict, target_player_description: str | None) -> bool:
@@ -2182,11 +2315,14 @@ def _sanitize_movement(data: dict) -> dict | None:
     return out or None
 
 
-def _normalize_universal_event(e: dict, sport_vocab: list, target_player_description: str | None = None) -> dict | None:
+def _normalize_universal_event(
+    e: dict, sport_vocab: list, target_player_description: str | None = None,
+    target_player_id: str | None = None, roster_ids: set | None = None,
+) -> dict | None:
     """Normalize one raw event dict from Gemini into the stable output
-    schema. Returns None if `e` isn't usable OR if the strict target-player
-    filter says this event belongs to someone else. Extracted so the
-    streaming variant can normalize per-event as objects stream in."""
+    schema. Returns None if `e` isn't usable OR if the target-player filter
+    says this event belongs to someone else. Extracted so the streaming
+    variant can normalize per-event as objects stream in."""
     if not isinstance(e, dict):
         return None
     # Doubles bypass: when Gemini tagged the event with player_role
@@ -2196,10 +2332,16 @@ def _normalize_universal_event(e: dict, sport_vocab: list, target_player_descrip
     # strict heuristic filter to catch hallucinated target-attribution.
     _role = str(e.get("player_role", "you")).strip().lower()
     if _role not in ("partner", "opponent"):
-        # Strict filter — drop events the target person clearly didn't perform.
-        # Permissive when no target description: returns True.
-        if not _belongs_to_target(e, target_player_description):
+        # Preferred: categorical roster-id check. It is the only filter that
+        # can catch a PARTNER's shot (the text heuristic below only knows
+        # opponent phrasing), which is the doubles bug users actually hit.
+        by_id = _belongs_to_target_by_id(e, target_player_id, roster_ids)
+        if by_id is False:
             return None
+        if by_id is None:
+            # No usable id → fall back to the permissive text heuristic.
+            if not _belongs_to_target(e, target_player_description):
+                return None
     try:
         ts = float(e.get("timestamp_sec") or 0.0)
     except Exception:
@@ -2329,6 +2471,8 @@ def analyze_video_universal(
     file_name: str | None = None,
     fast_mode: bool = False,
     previous_session_focus: list | None = None,
+    player_roster: list | None = None,
+    target_player_id: str | None = None,
 ) -> dict:
     """Sport-agnostic whole-video analysis. Sends the video to Gemini with
     an OPEN-ENDED prompt (no hardcoded shot vocab, no per-sport metric
@@ -2345,7 +2489,17 @@ def analyze_video_universal(
     """
     sys_prompt, user_msg = _build_universal_prompt(
         target_player_description, doubles_mode=doubles_mode,
-        previous_session_focus=previous_session_focus)
+        previous_session_focus=previous_session_focus,
+        player_roster=player_roster, target_player_id=target_player_id)
+
+    # Roster ids we're willing to treat as "definitely someone else" when the
+    # model tags an event with one. Built once here and passed to every
+    # per-event normalize call.
+    _roster_ids = set()
+    if isinstance(player_roster, list):
+        for _p in player_roster:
+            if isinstance(_p, dict) and _p.get("id"):
+                _roster_ids.add(str(_p["id"]).strip())
 
     # Diagnostic log — lets us see, in Railway logs, EXACTLY what we
     # handed to Gemini and what came back. The recurring "Gemini only
@@ -2706,6 +2860,8 @@ def stream_analyze_video_universal(
     file_name: str | None = None,
     fast_mode: bool = False,
     previous_session_focus: list | None = None,
+    player_roster: list | None = None,
+    target_player_id: str | None = None,
 ):
     """Generator wrapper around analyze_video_universal that yields
     progress dicts as the Gemini response streams in.
@@ -2722,7 +2878,15 @@ def stream_analyze_video_universal(
     """
     sys_prompt, user_msg = _build_universal_prompt(
         target_player_description, doubles_mode=doubles_mode,
-        previous_session_focus=previous_session_focus)
+        previous_session_focus=previous_session_focus,
+        player_roster=player_roster, target_player_id=target_player_id)
+    # Same roster-id set the non-streaming path builds — the per-event
+    # normalize calls below need it in scope.
+    _roster_ids = set()
+    if isinstance(player_roster, list):
+        for _p in player_roster:
+            if isinstance(_p, dict) and _p.get("id"):
+                _roster_ids.add(str(_p["id"]).strip())
     # Pro-tier routing REMOVED (per product decision): Pro models are
     # quota-blocked on the current key (429) and gemini-3.5-flash is reliable
     # at finding shots, so EVERY tier uses the same Flash model (the
@@ -2859,7 +3023,8 @@ def stream_analyze_video_universal(
                     parsed = json.loads(raw_obj)
                 except Exception:
                     continue
-                norm = _normalize_universal_event(parsed, sport_vocab, target_player_description)
+                norm = _normalize_universal_event(parsed, sport_vocab, target_player_description,
+                                                   target_player_id, _roster_ids)
                 if not norm:
                     continue
                 emitted_indices.append(len(emitted_indices))
@@ -2882,7 +3047,8 @@ def stream_analyze_video_universal(
         sport_vocab = _get_sport_vocab(str(data.get("sport_detected", "")))
     events_out: list = []
     for e in (data.get("events") or [])[:20]:
-        norm = _normalize_universal_event(e, sport_vocab, target_player_description)
+        norm = _normalize_universal_event(e, sport_vocab, target_player_description,
+                                          target_player_id, _roster_ids)
         if norm:
             events_out.append(norm)
     # Collapse same-contact duplicates (see _dedupe_events). The streamed
