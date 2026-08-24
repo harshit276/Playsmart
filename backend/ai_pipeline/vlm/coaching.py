@@ -66,6 +66,31 @@ def _thinking_budget_for(model_name: str, tier: str = "standard"):
     return None
 
 
+# Which Gemini SDK path served the most recent video call ("new_sdk" or
+# "legacy"). Surfaced in the analysis _meta: the legacy path is the one that
+# historically lost the fps hint, so knowing which ran explains a thin result.
+_SDK_PATH: dict = {"last": None}
+
+
+def _video_fps_env(default: float = 4.0) -> float:
+    """Frames per second Gemini samples from the video (GEMINI_VIDEO_FPS).
+
+    This is the single biggest lever on shot detection quality. Gemini's own
+    default is 1 fps — at that rate a badminton contact (~50-100ms) falls
+    between frames almost every time, so the model infers the shot from body
+    pose and routinely mislabels forehand vs backhand. We ask for 4 fps.
+
+    Raising it catches more contacts but costs tokens and latency linearly
+    (every sampled frame is billed), so it's env-tunable for experiments
+    without a redeploy. Clamped to a sane range.
+    """
+    try:
+        v = float(os.getenv("GEMINI_VIDEO_FPS", "").strip() or default)
+    except (TypeError, ValueError):
+        return default
+    return max(0.5, min(10.0, v))
+
+
 def _media_resolution_env():
     """Optional media-resolution override (GEMINI_MEDIA_RESOLUTION =
     low|medium|high). Low cuts video tokens ~4x (faster prefill, cheaper)
@@ -542,13 +567,27 @@ def _build_video_parts(sys_prompt: str, user_msg: str, video_bytes,
             uri = getattr(file_ref, "uri", None)
             fmime = _normalize_video_mime(getattr(file_ref, "mime_type", None) or mime_type)
             if uri:
+                # Attach VideoMetadata here too. Without it this path inherits
+                # Gemini's 1 fps default, so any silent fall-back from the new
+                # SDK quartered the frames we actually analyse — the exact
+                # failure mode that makes contacts (and backhands) disappear.
                 try:
                     part = genai.protos.Part(
-                        file_data=genai.protos.FileData(file_uri=uri, mime_type=fmime))
+                        file_data=genai.protos.FileData(file_uri=uri, mime_type=fmime),
+                        video_metadata=genai.protos.VideoMetadata(fps=fps),
+                    )
                     return [{"text": sys_prompt}, {"text": user_msg}, part]
+                except (AttributeError, TypeError, ValueError):
+                    try:  # older protos without video_metadata support
+                        part = genai.protos.Part(
+                            file_data=genai.protos.FileData(file_uri=uri, mime_type=fmime))
+                        return [{"text": sys_prompt}, {"text": user_msg}, part]
+                    except Exception:
+                        pass
                 except Exception:
-                    return [{"text": sys_prompt}, {"text": user_msg},
-                            {"file_data": {"file_uri": uri, "mime_type": fmime}}]
+                    pass
+                return [{"text": sys_prompt}, {"text": user_msg},
+                        {"file_data": {"file_uri": uri, "mime_type": fmime}}]
             # No uri (shouldn't happen) — last resort, the bare handle.
             return [{"text": sys_prompt}, {"text": user_msg}, file_ref]
         # SDK proto-based inline path (preferred — explicit VideoMetadata)
@@ -1691,6 +1730,22 @@ def _build_universal_prompt(
         "satisfy the be-specific instruction, and never report high "
         "confidence for a detail you did not verify — a confidently wrong "
         "label makes the user distrust everything else in the analysis.\n"
+        # Users report shot lists where EVERY contact says "forehand" on
+        # clips that plainly contain backhands. The generic "don't invent
+        # qualifiers" rule above wasn't enough: with contacts often falling
+        # between sampled frames, the model needs to know HOW to read the
+        # side, and that omitting it is the expected answer when it can't.
+        "   Racket sports specifically — do NOT default to FOREHAND. Read "
+        "the side from WHERE CONTACT HAPPENS relative to the racket arm: "
+        "contact out on the racket-arm side of the body = FOREHAND; contact "
+        "reached across the body, with the back of the hand leading and the "
+        "shoulder closed = BACKHAND. A backhand often shows the player's "
+        "back or shoulder turned toward the net at contact. If the contact "
+        "frame is blurred, occluded, or simply not captured, name the shot "
+        "WITHOUT a side ('Clear', 'Drive', 'Net shot', 'Lift') and set "
+        "confidence below 0.6. A list in which every single shot is labelled "
+        "forehand is a strong signal the side was guessed — players spot "
+        "that instantly and stop trusting the analysis.\n"
         "   Cricket bowling specifically — do NOT default to pace. Read, in "
         "this order: the WICKETKEEPER (standing UP at the stumps means a "
         "SPINNER, standing back means PACE — the most reliable cue, and "
@@ -2571,10 +2626,12 @@ def analyze_video_universal(
             try:
                 _resp = _new_sdk_video_call(
                     _mname, sys_prompt, user_msg, video_bytes,
-                    mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
+                    mime_type or "video/mp4", file_ref=_file_ref, fps=_video_fps_env(),
                     tier=tier, stream=False, max_tries=_max_tries,
                 )
-                _log.info("[universal] new-SDK call ok (model=%s)", _mname)
+                _SDK_PATH["last"] = "new_sdk"
+                _log.info("[universal] new-SDK call ok (model=%s, fps=%s)",
+                          _mname, _video_fps_env())
                 return _resp.text
             except ImportError:
                 pass  # new SDK missing → legacy path below
@@ -2590,8 +2647,9 @@ def analyze_video_universal(
             import os as _os
             genai.configure(api_key=_os.environ["GEMINI_API_KEY"])
             _model = genai.GenerativeModel(_mname)
+            _SDK_PATH["last"] = "legacy"
             _parts = _build_video_parts(sys_prompt, user_msg, video_bytes,
-                                        mime_type or "video/mp4", fps=4.0, file_ref=_file_ref)
+                                        mime_type or "video/mp4", fps=_video_fps_env(), file_ref=_file_ref)
             _resp = _model.generate_content(
                 _parts,
                 generation_config={"temperature": 0.0, "response_mime_type": "application/json"},
@@ -2816,6 +2874,16 @@ def analyze_video_universal(
             "via_files_api": bool(file_name),
             "mime_type": mime_type,
             "mode": "universal", "tier": tier, "fast_mode": fast_mode,
+            # WHAT GEMINI ACTUALLY WATCHED. Shot-detection quality is mostly a
+            # function of how densely the video was sampled, so record it —
+            # otherwise "it missed my backhands" is unanswerable. `sdk_path`
+            # matters because the legacy fallback used to drop the fps hint on
+            # Files API refs and silently sample at Gemini's 1 fps default.
+            "video_fps": _video_fps_env(),
+            "sdk_path": _SDK_PATH.get("last") or "unknown",
+            "media_resolution": _media_resolution_env() or "api_default",
+            "roster_sent": bool(player_roster),
+            "target_player_id": target_player_id,
         },
     }
 
@@ -2946,7 +3014,7 @@ def stream_analyze_video_universal(
                 # (fps on Files API refs + thinking-budget latency cut).
                 return _new_sdk_video_call(
                     _mname, sys_prompt, user_msg, video_bytes,
-                    mime_type or "video/mp4", file_ref=_file_ref, fps=4.0,
+                    mime_type or "video/mp4", file_ref=_file_ref, fps=_video_fps_env(),
                     tier=tier, stream=True, max_tries=_max_tries,
                 )
             except ImportError:
@@ -2964,7 +3032,7 @@ def stream_analyze_video_universal(
             _model = genai.GenerativeModel(_mname)
             _parts = _build_video_parts(
                 sys_prompt, user_msg, video_bytes,
-                mime_type or "video/mp4", fps=4.0, file_ref=_file_ref,
+                mime_type or "video/mp4", fps=_video_fps_env(), file_ref=_file_ref,
             )
             return _model.generate_content(
                 _parts, stream=True,
