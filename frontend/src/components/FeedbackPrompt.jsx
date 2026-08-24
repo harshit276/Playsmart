@@ -187,21 +187,51 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
  * page. Used to catch someone who has read enough of their results to have an
  * opinion. Passive listener so it never costs scroll performance.
  */
-export function useScrollDepthTrigger(enabled, depth, onTrigger) {
+export function useScrollDepthTrigger(
+  enabled, depth, onTrigger,
+  { minDwellMs = 8000, fitsFallbackMs = 15000 } = {},
+) {
   const firedRef = useRef(false);
   useEffect(() => {
     if (!enabled || firedRef.current) return undefined;
-    const onScroll = () => {
+    const startedAt = Date.now();
+    let fitsTimer = null;
+
+    const atDepth = () => {
       const el = document.documentElement;
-      const scrolled = (window.scrollY + window.innerHeight) / (el.scrollHeight || 1);
-      if (scrolled >= depth && !firedRef.current) {
-        firedRef.current = true;
-        window.removeEventListener("scroll", onScroll);
-        onTrigger("scroll");
-      }
+      return (window.scrollY + window.innerHeight) / (el.scrollHeight || 1) >= depth;
     };
+    const fire = (reason) => {
+      if (firedRef.current) return;
+      firedRef.current = true;
+      window.removeEventListener("scroll", onScroll);
+      if (fitsTimer) clearTimeout(fitsTimer);
+      onTrigger(reason);
+    };
+    const onScroll = () => {
+      // DWELL GATE. Never ask before the user has had a few seconds with the
+      // result — a rating given before they've read anything is both annoying
+      // and worthless as signal. Also guards a fast flick to the bottom.
+      if (Date.now() - startedAt < minDwellMs) return;
+      if (atDepth()) fire("scroll_results");
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();   // in case the results already fit without scrolling
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [enabled, depth, onTrigger]);
+
+    // Results that fit on one screen can never fire a scroll event, so they
+    // get a timed fallback instead.
+    //
+    // This replaces a bare `onScroll()` call at mount, which was the bug: at
+    // first paint the results haven't laid out yet, so scrollHeight is still
+    // tiny and (scrollY + innerHeight) / scrollHeight is ~1 — clearing the
+    // 70% bar instantly and popping the prompt the moment analysis finished.
+    fitsTimer = setTimeout(() => {
+      if (atDepth()) fire("dwell_short_page");
+    }, fitsFallbackMs);
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (fitsTimer) clearTimeout(fitsTimer);
+    };
+  }, [enabled, depth, onTrigger, minDwellMs, fitsFallbackMs]);
 }
