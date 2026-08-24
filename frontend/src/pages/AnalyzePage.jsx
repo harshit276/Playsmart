@@ -353,6 +353,19 @@ async function computeVideoHash(file) {
 // buildUniversalResult moved to @/lib/buildUniversalResult (imported above)
 // so the no-signup demo page reuses the exact same result shape.
 
+// Huge-clip handling. Shared by analyze() (which warns the user up front) and
+// runClientAnalysis() (which routes around the upload-the-original path) —
+// they're separate functions, so this can't live in either one's scope.
+const HUGE_CLIP_MB = 150;    // beyond this: trim to the busiest window locally
+const REFUSE_CLIP_MB = 600;  // beyond this: a phone genuinely can't cope
+
+function shouldForceLocalCompress(file) {
+  if (!file) return false;
+  const isMobile = typeof navigator !== "undefined"
+    && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  return isMobile && (file.size / 1024 / 1024) > HUGE_CLIP_MB;
+}
+
 export default function AnalyzePage() {
   const { user, profile, refreshProfile, login, tokens, refreshTokens, updateTokens } = useAuth();
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
@@ -449,6 +462,10 @@ export default function AnalyzePage() {
   const [progress, setProgress] = useState(0);
   const [loadingText, setLoadingText] = useState("");
   const [loadingSubtext, setLoadingSubtext] = useState("");
+  // When a long clip is trimmed to its busiest stretch, this records which
+  // stretch — shown with the result so the user knows what was actually
+  // analysed rather than assuming it covered the whole video.
+  const [analyzedWindowNote, setAnalyzedWindowNote] = useState("");
   // True while the live upload speed is slow (< ~400 KB/s) — used to reassure
   // the user it's their network, not the app, so they don't blame us for a
   // slow upload. Set from the upload's real measured bytes/sec.
@@ -1423,13 +1440,29 @@ export default function AnalyzePage() {
     const _fileMb = file.size / (1024 * 1024);
     const _isMobile = typeof navigator !== "undefined"
       && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-    if (_isMobile && _fileMb > 150) {
+    // HUGE CLIPS: trim + compress on-device instead of refusing.
+    //
+    // The problem with a 200MB clip was never the analysis — it was pushing
+    // 200MB up a mobile uplink. So don't send it: pick the busiest window,
+    // re-encode THAT to ~16MB locally, and upload the small file. Encode time
+    // scales with the WINDOW (~60s of footage), not the file, so this stays
+    // fast no matter how long the source is. We tell the user which stretch
+    // we analysed rather than silently studying their warm-up.
+    //
+    // A ceiling still exists: past ~600MB even seeking/decoding on a phone is
+    // unreliable, and asking for a trim is the honest answer.
+    const forceLocalCompress = shouldForceLocalCompress(file);
+    if (_isMobile && _fileMb > REFUSE_CLIP_MB) {
       toast.error(
-        `This video is ${Math.round(_fileMb)} MB — too large to process smoothly on a phone. ` +
-        `Trim it to your key 10–30 seconds and try again for a faster, more accurate analysis.`,
+        `This video is ${Math.round(_fileMb)} MB — too large to process on a phone. ` +
+        `Trim it to your key 10–30 seconds and try again.`,
         { duration: 8000 },
       );
       return;
+    }
+    if (forceLocalCompress) {
+      toast(`${Math.round(_fileMb)} MB clip — we'll trim it to the busiest stretch and analyse that.`,
+            { duration: 6000, icon: "✂️" });
     }
 
     // Token spend gate — UX hint, server enforces. If we know the user
@@ -1559,6 +1592,7 @@ export default function AnalyzePage() {
     // ─── Pre-scan the video for players (used by BOTH client + server modes) ───
     setLoadingText("Scanning video for players...");
     setSlowUpload(false); // fresh each run; only re-armed if the upload is slow
+    setAnalyzedWindowNote(""); // cleared per run; set only if we trim a window
     setProgress(5);
     try {
       const mod = await import("@/ai/videoProcessor");
@@ -1604,6 +1638,10 @@ export default function AnalyzePage() {
    * box chosen by the user from the player selection modal.
    */
   const runClientAnalysis = async (sportToAnalyze, customCropBox, options = {}) => {
+    // Recomputed here rather than threaded through options: analyze() owns the
+    // user-facing warning, this function owns the routing, and both are a pure
+    // function of the same file.
+    const forceLocalCompress = shouldForceLocalCompress(file);
     setAnalyzing(true);
     setResult(null);
     setError(null);
@@ -1695,7 +1733,7 @@ export default function AnalyzePage() {
             // Only the >60MB optimize path truncates to a window now; the
             // 2-60MB original-upload path analyzes the FULL video, and tiny
             // <2MB clips are short. So windowing applies only to >60MB.
-            const willCompress = mbForWindow > 60;
+            const willCompress = mbForWindow > 60 || forceLocalCompress;
             if (willCompress) {
               // findBusiestWindow reads the duration itself (8s budget) and
               // short-circuits cheaply for clips that fit the window — a
@@ -1703,13 +1741,31 @@ export default function AnalyzePage() {
               // files and skipped windowing entirely (live-QA caught
               // timeScale=4.00 on the 148MB tournament video).
               setLoadingText("Checking video length & action...");
-              const win = await vp.findBusiestWindow(file, 88);
-              if (win.totalDuration > 110) {
+              // Huge clips get a SHORTER window: the optimize step captures in
+              // real time (at 1.5x), so 60s of footage ≈ 40s of encoding where
+              // 88s ≈ 59s. Keeps a 300MB upload feeling like a normal one.
+              const targetWindowSec = forceLocalCompress ? 60 : 88;
+              const win = await vp.findBusiestWindow(file, targetWindowSec);
+              // Huge clips window even when short, because the point there is
+              // shrinking the upload, not just skipping a long warm-up.
+              if (win.totalDuration > 110 || (forceLocalCompress && win.totalDuration > targetWindowSec * 1.1)) {
                 windowApplied = true;
                 windowStartSec = win.start || 0;
                 windowTotalDur = win.totalDuration;
-                windowLenSec = Math.min(88, windowTotalDur - windowStartSec);
+                windowLenSec = Math.min(targetWindowSec, windowTotalDur - windowStartSec);
                 timeOffset = windowStartSec;
+                // Tell the user WHICH part we analysed. Silently studying
+                // someone's warm-up and reporting it as "your session" is the
+                // kind of thing that makes an analysis feel wrong without them
+                // being able to say why.
+                const _fmt = (sec) => {
+                  const m = Math.floor(sec / 60);
+                  const ss = String(Math.floor(sec % 60)).padStart(2, "0");
+                  return `${m}:${ss}`;
+                };
+                setAnalyzedWindowNote(
+                  `Analysed the busiest ${Math.round(windowLenSec)}s of your ${_fmt(windowTotalDur)} clip — ${_fmt(windowStartSec)} to ${_fmt(windowStartSec + windowLenSec)}.`
+                );
                 // eslint-disable-next-line no-console
                 console.info(`[window] analyzing busiest ${windowLenSec.toFixed(0)}s starting at ${windowStartSec.toFixed(0)}s of ${windowTotalDur.toFixed(0)}s`);
               }
@@ -1825,7 +1881,10 @@ export default function AnalyzePage() {
           // through to the legacy MediaRecorder optimize only if Cloudinary
           // genuinely fails. Skipped entirely when the fast direct→Gemini
           // path above already produced a fileName.
-          if (!fileName && origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
+          // `!forceLocalCompress`: for a huge clip, uploading the ORIGINAL is
+          // exactly the thing that stalls on mobile, so skip straight to the
+          // trim+optimize branch below.
+          if (!fileName && !forceLocalCompress && origMbRaw >= DIRECT_UPLOAD_MIN_MB) {
             try {
               setLoadingText("Uploading your video...");
               setProgress(15);
@@ -4810,6 +4869,19 @@ export default function AnalyzePage() {
               </div>
             )}
           </motion.div>
+        )}
+
+        {/* Trimmed-window notice. A long clip is analysed as its busiest
+            stretch, not end-to-end — say so, or the user reasonably assumes
+            the shot count covers their whole session. */}
+        {analyzedWindowNote && !viewingHistorical && result?.shots?.length > 0 && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl bg-sky-400/10 border border-sky-400/30 px-3 py-2">
+            <Clock className="w-4 h-4 text-sky-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sky-200/90 text-[11px] leading-snug">
+              {analyzedWindowNote}{" "}
+              <span className="text-sky-200/60">Upload a shorter clip to have every second analysed.</span>
+            </p>
+          </div>
         )}
 
         {/* Match Insights — renders for live AND historical analyses.
