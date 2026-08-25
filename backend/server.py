@@ -1236,6 +1236,154 @@ def _require_admin(x_admin_key: str):
         raise HTTPException(status_code=403, detail="forbidden")
 
 
+# ══════════════════════════════════════════════════════════════════════
+# TEMPORARY EXPERIMENT — prompt A/B. DELETE THIS BLOCK WHEN DONE.
+# Added 2026-08-25 to answer, with measurements rather than opinion, whether
+# the ~22k-char analysis prompt earns its keep versus a ~750-char minimal one,
+# and how much of the run-to-run variance users see comes from the prompt
+# versus the frame rate we sample the video at.
+#
+# It lives here rather than in a local script only because GEMINI_API_KEY
+# exists in Vercel's environment and cannot be read back out of the dashboard.
+#
+# SAFETY: disabled unless PROMPT_AB_KEY is set, and the caller must present it
+# as X-Admin-Key. With no PROMPT_AB_KEY configured this 403s for everyone,
+# including us. Total model calls per request are capped so a stray or repeated
+# call cannot run up a Gemini bill.
+# ══════════════════════════════════════════════════════════════════════
+PROMPT_AB_KEY = os.environ.get("PROMPT_AB_KEY", "").strip()
+
+_AB_MAX_CALLS = 12   # hard ceiling on model calls per request
+
+
+class PromptABRequest(BaseModel):
+    file_name: str                       # Gemini Files API handle
+    roster: list                         # [{id, description}, ...]
+    target_player_id: str = "p1"
+    arms: list | None = None             # subset of ["A", "B"]
+    fps_list: list | None = None         # e.g. [4, 8]
+    runs: int = 2
+    mime_type: str = "video/mp4"
+
+
+def _ab_minimal_prompt(roster: list, target_id: str):
+    """Arm B — schema, who to watch, and 'report only what you can see'.
+    No coaching rules, no anti-hallucination essay, no doubles section."""
+    target = next((p for p in roster if str(p.get("id")) == target_id), roster[0])
+    nl = chr(10)
+    others = nl.join(
+        "  [{}] {}".format(p.get("id"), p.get("description", ""))
+        for p in roster if str(p.get("id")) != target_id)
+    schema = (
+        '{"sport_detected":"<sport>","events":[{"timestamp_sec":<number>,'
+        '"shot_label":"<what a coach would call it>",'
+        '"player_id":"<roster id or unsure>","confidence":<0-1>,'
+        '"reasoning":"<what you saw at contact>"}]}'
+    )
+    sysp = (
+        "You are analysing a sports video." + nl + nl
+        + "TARGET PLAYER: [{}] {}".format(target_id, target.get("description", "")) + nl
+        + "OTHER PEOPLE ON COURT:" + nl + others + nl + nl
+        + "List every shot the TARGET player hits, in time order. Report only "
+          "what you can actually see. If you cannot tell something, say so "
+          "rather than guessing: write the shot name without a "
+          "forehand/backhand qualifier and lower the confidence." + nl + nl
+        + "Tag every shot with player_id: the roster id of whoever hit it, "
+          'or "unsure".' + nl + nl
+        + "Return JSON only:" + nl + schema
+    )
+    return sysp, "Analyse this video and return the JSON described."
+
+
+@api_router.post("/admin/prompt-ab")
+async def admin_prompt_ab(
+    req: PromptABRequest, x_admin_key: str = Header(None, alias="X-Admin-Key"),
+):
+    """Run one clip through {production prompt, minimal prompt} x {frame rates}
+    and return per-run shot counts, so 'do the rules help?' is answered by
+    measurement instead of argument."""
+    if not PROMPT_AB_KEY or x_admin_key != PROMPT_AB_KEY:
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    import re as _re
+    from collections import Counter as _Counter
+    try:
+        from ai_pipeline.vlm import files_api_get
+        from ai_pipeline.vlm.coaching import (
+            _build_universal_prompt, _new_sdk_video_call, _parse_json_safe)
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail="engine unavailable: {}".format(exc))
+
+    roster = [p for p in (req.roster or []) if isinstance(p, dict) and p.get("id")]
+    if len(roster) < 2:
+        raise HTTPException(status_code=400, detail="roster needs at least 2 players")
+    target_id = str(req.target_player_id or "p1")
+    arms = [a for a in (req.arms or ["A", "B"]) if a in ("A", "B")] or ["A", "B"]
+    fps_list = [float(f) for f in (req.fps_list or [4.0, 8.0])][:3]
+    runs = max(1, min(3, int(req.runs or 2)))
+    if len(arms) * len(fps_list) * runs > _AB_MAX_CALLS:
+        raise HTTPException(
+            status_code=400,
+            detail="too many model calls requested (max {})".format(_AB_MAX_CALLS))
+
+    loop = asyncio.get_event_loop()
+    file_ref = await loop.run_in_executor(None, lambda: files_api_get(req.file_name))
+    model = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+    side_re = _re.compile(r"\b(fore|back)hand\b", _re.I)
+
+    target_desc = next(
+        (p.get("description") for p in roster if str(p.get("id")) == target_id), None)
+    prompts = {}
+    if "A" in arms:
+        prompts["A"] = _build_universal_prompt(
+            target_desc, doubles_mode=False,
+            player_roster=roster, target_player_id=target_id)
+    if "B" in arms:
+        prompts["B"] = _ab_minimal_prompt(roster, target_id)
+
+    rows = []
+    for arm in arms:
+        sysp, usr = prompts[arm]
+        for fps in fps_list:
+            for r in range(runs):
+                started = _time.time()
+                try:
+                    def _call(_s=sysp, _u=usr, _f=fps):
+                        return _new_sdk_video_call(
+                            model, _s, _u, None, req.mime_type,
+                            file_ref=file_ref, fps=_f, tier="standard",
+                            stream=False, max_tries=1)
+                    resp = await loop.run_in_executor(None, _call)
+                    data = _parse_json_safe(resp.text) or {}
+                    evs = [e for e in (data.get("events") or []) if isinstance(e, dict)]
+                    labels = [str(e.get("shot_label") or "") for e in evs]
+                    sides = _Counter()
+                    for lab in labels:
+                        m = side_re.search(lab)
+                        sides[m.group(1).lower() if m else "none"] += 1
+                    ids = _Counter(
+                        str(e.get("player_id") or "missing").lower() for e in evs)
+                    rows.append({
+                        "arm": arm, "fps": fps, "run": r + 1,
+                        "prompt_chars": len(sysp),
+                        "n": len(evs),
+                        "mine": ids.get(target_id, 0),
+                        "other": sum(v for k, v in ids.items()
+                                     if k not in (target_id, "unsure", "missing")),
+                        "unsure": ids.get("unsure", 0) + ids.get("missing", 0),
+                        "fore": sides["fore"], "back": sides["back"],
+                        "no_side": sides["none"],
+                        "labels": labels[:20],
+                        "secs": round(_time.time() - started, 1),
+                    })
+                except Exception as exc:
+                    rows.append({
+                        "arm": arm, "fps": fps, "run": r + 1,
+                        "error": "{}: {}".format(type(exc).__name__, str(exc)[:200]),
+                    })
+    return {"model": model, "target_player_id": target_id, "rows": rows}
+
+
 @api_router.get("/admin/stats")
 async def admin_stats(x_admin_key: str = Header(None, alias="X-Admin-Key")):
     """One-shot summary for the admin dashboard top tiles."""
