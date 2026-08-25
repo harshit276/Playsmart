@@ -466,6 +466,11 @@ export default function AnalyzePage() {
   // stretch — shown with the result so the user knows what was actually
   // analysed rather than assuming it covered the whole video.
   const [analyzedWindowNote, setAnalyzedWindowNote] = useState("");
+  // Why the player picker didn't appear, when it didn't. Both skip paths used
+  // to be silent, so a doubles clip could be analysed for an arbitrary player
+  // ("p1" — the model's own generic id) with the user never told that no
+  // selection was made, and no way to correct it.
+  const [pickerSkipNote, setPickerSkipNote] = useState("");
   // True while the live upload speed is slow (< ~400 KB/s) — used to reassure
   // the user it's their network, not the app, so they don't blame us for a
   // slow upload. Set from the upload's real measured bytes/sec.
@@ -1593,6 +1598,7 @@ export default function AnalyzePage() {
     setLoadingText("Scanning video for players...");
     setSlowUpload(false); // fresh each run; only re-armed if the upload is slow
     setAnalyzedWindowNote(""); // cleared per run; set only if we trim a window
+    setPickerSkipNote("");     // cleared per run; set only if the picker is skipped
     setProgress(5);
     try {
       const mod = await import("@/ai/videoProcessor");
@@ -2150,6 +2156,13 @@ export default function AnalyzePage() {
           // and run the picker, never as "no players".
           const skipDescribe = nPeopleEarly === 1;
           if (skipDescribe) {
+            // A local pose scan on a distant/blurry doubles clip can easily
+            // see one person where there are four, and the consequence is a
+            // whole analysis attributed to the wrong player. Say so.
+            setPickerSkipNote(
+              "We saw a single player in this clip and analysed them directly. "
+              + "If your clip has more than one player, re-analyse to pick the right one."
+            );
             // eslint-disable-next-line no-console
             console.info("[universal] exactly 1 athlete detected locally — skipping the picker pre-pass");
           }
@@ -2184,6 +2197,21 @@ export default function AnalyzePage() {
                            descAttemptErr?.message);
             }
             let players = (descData?.players || []).filter((p) => p.is_likely_athlete !== false);
+            // Falling through here means NO target player is sent, so the model
+            // analyses whoever it considers most prominent and labels them with
+            // its own id ("p1"). That is a legitimate degrade, but it must not
+            // be silent — users correctly read an unselected player as a bug.
+            if (!descData) {
+              setPickerSkipNote(
+                "Player detection didn't finish in time, so we analysed the most "
+                + "prominent player in the clip. Re-analyse to choose a specific player."
+              );
+            } else if (players.length === 0) {
+              setPickerSkipNote(
+                "We couldn't pick out individual players in this clip, so we analysed "
+                + "the most prominent one. A steadier, closer shot helps."
+              );
+            }
             // Also extract a single mid-frame keyframe of the whole
             // video — used as the BACKGROUND of the player picker so
             // bboxes can be overlaid on it (the old MoveNet-style UI
@@ -4869,6 +4897,17 @@ export default function AnalyzePage() {
               </div>
             )}
           </motion.div>
+        )}
+
+        {/* Picker-skipped notice. When no player was explicitly chosen the
+            analysis covers whoever the model judged most prominent — the user
+            has to be told, otherwise a result attributed to a player they
+            never selected reads (fairly) as a broken analysis. */}
+        {pickerSkipNote && !viewingHistorical && result?.shots?.length > 0 && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl bg-amber-400/10 border border-amber-400/30 px-3 py-2">
+            <Users className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-200/90 text-[11px] leading-snug">{pickerSkipNote}</p>
+          </div>
         )}
 
         {/* Trimmed-window notice. A long clip is analysed as its busiest
