@@ -1,0 +1,1 @@
+{"model":"gemini-pro-latest","target_player_id":"p1","rows":[{"prompt_chars":22838,"n":4,"mine":4,"other":0,"unsure":0,"fore":4,"back":0,"no_side":0,"labels":["Forehand clear","Forehand lift","Forehand drive","Forehand drive"],"arm":"A","fps":4.0,"run":1,"secs":61.5,"tok_in":11273,"tok_out":2053,"model_calls":1}]}

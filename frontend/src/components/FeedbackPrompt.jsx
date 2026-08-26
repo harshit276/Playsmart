@@ -97,14 +97,22 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
     }
     setBusy(true);
     try {
-      await api.post("/analysis-feedback", {
+      const res = await api.post("/analysis-feedback", {
         analysis_id: analysisId || null,
         sport: sport || null,
         trigger: trigger || null,
         comment: comment.trim(),
         ...ratings,
-      }, { timeout: 10000 });
-      toast.success("Thanks — this genuinely helps us fix things.");
+      }, { timeout: 15000 });
+      // The server owns the reward decision (once per user, and only while the
+      // early-adopter offer is open), so only celebrate what it actually paid.
+      const credited = res?.data?.tokens_credited || 0;
+      if (credited > 0) {
+        toast.success(`Thanks — ${credited} tokens added to your account.`, { duration: 6000 });
+        try { window.dispatchEvent(new CustomEvent("formanti:tokens-changed")); } catch { /* noop */ }
+      } else {
+        toast.success("Thanks — this genuinely helps us fix things.");
+      }
       close(true);
     } catch {
       // Never block the user on our telemetry failing.
@@ -135,7 +143,8 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
                     How was this analysis?
                   </h2>
                   <p className="text-[12px] text-zinc-400 mt-1">
-                    Takes 10 seconds. If something was wrong, this is how we find out.
+                    Takes 10 seconds. If something was wrong, this is how we find out —
+                    and early feedback earns bonus tokens whether you rate us high or low.
                   </p>
                 </div>
                 <button onClick={() => close(false)} aria-label="Close"

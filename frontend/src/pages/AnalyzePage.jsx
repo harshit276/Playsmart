@@ -15,6 +15,7 @@ import {
   ChevronDown, ChevronUp, ExternalLink, ThumbsUp, Calendar,
   Bot, Lightbulb, Youtube, Download, Share2, Film, Scissors, Copy,
   Users, Cpu, Cloud, Lock, Footprints, Wind, Activity, Flame, Crosshair,
+  MessageSquare,
   Eye, BarChart2, Volume2, AlertCircle, MessageCircle, GitCompare, Bell
 } from "lucide-react";
 import api, { API_ORIGIN } from "@/lib/api";
@@ -422,6 +423,20 @@ export default function AnalyzePage() {
 
   // Set page title
   useEffect(() => { document.title = "Analyze | Formanti"; }, []);
+
+  // The feedback nudge (email + push) links to /analyze?feedback=1. Open the
+  // form directly rather than dropping people on the page hoping they find it.
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get("feedback") === "1") {
+        setFeedbackTrigger("nudge_link");
+        setFeedbackOpen(true);
+        const u = new URL(window.location.href);
+        u.searchParams.delete("feedback");
+        window.history.replaceState({}, "", u.toString());
+      }
+    } catch { /* noop */ }
+  }, []);
 
   // Lambda pre-warm: fire-and-forget a ping when the page mounts so the
   // serverless container is hot by the time the user finishes picking a
@@ -4897,6 +4912,32 @@ export default function AnalyzePage() {
               </div>
             )}
           </motion.div>
+        )}
+
+        {/* Always-available feedback entry point. The automatic prompt only
+            catches someone still on the page at the right moment, which is why
+            almost nobody was rating anything — this gives them a control they
+            can reach whenever they've formed an opinion. */}
+        {result?.shots?.length > 0 && !hasBeenAsked(result?.analysis_id || result?._analysis_id) && (
+          <button
+            onClick={() => { setFeedbackTrigger("manual_button"); setFeedbackOpen(true); }}
+            className="mb-4 w-full flex items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-left hover:border-lime-400/40 transition-colors"
+          >
+            <span className="flex items-center gap-3 min-w-0">
+              <MessageSquare className="w-4 h-4 text-lime-400 shrink-0" />
+              <span className="min-w-0">
+                <span className="block text-white font-semibold text-sm leading-tight">
+                  Was this analysis right?
+                </span>
+                <span className="block text-zinc-400 text-[11px] leading-tight">
+                  Tell us what it got wrong — 30 seconds, and it earns you bonus tokens
+                </span>
+              </span>
+            </span>
+            <span className="shrink-0 text-[11px] font-bold text-black bg-lime-400 rounded-full px-3 py-1.5">
+              Rate it
+            </span>
+          </button>
         )}
 
         {/* Picker-skipped notice. When no player was explicitly chosen the
