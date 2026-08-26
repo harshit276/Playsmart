@@ -1326,20 +1326,31 @@ def _ab_detect_prompt(roster: list, target_id: str):
     )
     sysp = (
         "You are watching a sports video frame by frame. You have exactly ONE "
-        "job: find every moment a player's racket makes contact with the "
-        "shuttle/ball." + nl + nl
+        "job: find every moment the athlete executes a distinct technique "
+        "action." + nl + nl
+        + "WHAT COUNTS AS AN ACTION depends on the sport. Identify the sport "
+          "first, then look for its unit of action:" + nl
+        + "  - racket sports: the racket meets the shuttle/ball" + nl
+        + "  - cricket: the bowler releases the ball, or bat meets ball" + nl
+        + "  - football: a touch, pass or shot" + nl
+        + "  - basketball: a shot, pass or drive to the basket" + nl
+        + "  - swimming: each stroke cycle" + nl
+        + "  - gym / weightlifting: each repetition" + nl
+        + "  - anything else: each discrete repetition of the movement "
+          "being practised" + nl + nl
         + "TARGET PLAYER: [{}] {}".format(target_id, target.get("description", "")) + nl
         + "OTHER PEOPLE ON COURT:" + nl + others + nl + nl
         + "Do NOT classify the shots. Do NOT judge technique or quality. Do NOT "
           "write coaching advice. Only locate contacts in time." + nl + nl
-        + "Rally play is fast and contacts alternate between players every "
-          "0.5-1.5s, so expect MANY contacts in a rally. Include a moment even "
-          "if you are unsure who hit it — mark that one "
-          '"unsure". A later step filters; a contact you omit here is lost '
+        + "Actions come faster than you expect: in a rally, contacts "
+          "alternate between players every 0.5-1.5s; in a drill or a bowling "
+          "spell, repetitions come every few seconds. Expect MANY. Include a "
+          "moment even if you are unsure who performed it — mark that one "
+          '"unsure". A later step filters; an action you omit here is lost '
           "for good." + nl + nl
         + "Return JSON only:" + nl + schema
     )
-    return sysp, "Find every racket-shuttle contact in this video."
+    return sysp, "Find every technique action in this video."
 
 
 def _ab_label_prompt(roster: list, target_id: str, contacts: list):
@@ -1363,7 +1374,8 @@ def _ab_label_prompt(roster: list, target_id: str, contacts: list):
         + "CONTACTS FOUND:" + nl + listing + nl + nl
         + "For EACH contact above, look at that moment in the video and name "
           "the shot as a coach would (2-5 words), and say who hit it." + nl + nl
-        + "Read the stroke side from where contact happens relative to the "
+        + "FOR RACKET SPORTS ONLY, read the stroke side from where contact "
+          "happens relative to the "
           "racket arm: out on the racket-arm side is FOREHAND; reached across "
           "the body with the back of the hand leading is BACKHAND. If the "
           "contact is blurred or hidden, name the shot WITHOUT a side "
@@ -1449,8 +1461,10 @@ async def admin_prompt_ab(
         raise HTTPException(status_code=500, detail="engine unavailable: {}".format(exc))
 
     roster = [p for p in (req.roster or []) if isinstance(p, dict) and p.get("id")]
-    if len(roster) < 2:
-        raise HTTPException(status_code=400, detail="roster needs at least 2 players")
+    # 1 is legitimate: cricket bowling, swimming, gym reps are single-athlete.
+    # The contrastive block simply does not engage there.
+    if not roster:
+        raise HTTPException(status_code=400, detail="roster needs at least 1 player")
     target_id = str(req.target_player_id or "p1")
     arms = [a for a in (req.arms or ["A", "C"]) if a in ("A", "B", "C", "D")] or ["A", "C"]
     fps_list = [float(f) for f in (req.fps_list or [4.0])][:3]
