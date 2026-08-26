@@ -1275,6 +1275,7 @@ class PromptABRequest(BaseModel):
     fps_list: list | None = None         # e.g. [4, 8]
     runs: int = 2
     mime_type: str = "video/mp4"
+    nonce: bool = False   # prepend a unique token to defeat prefix caching
 
 
 def _ab_roster_lines(roster: list, target_id: str):
@@ -1375,6 +1376,60 @@ def _ab_label_prompt(roster: list, target_id: str, contacts: list):
     return sysp, "Label each contact listed above."
 
 
+def _ab_label_prompt_v2(roster: list, target_id: str, contacts: list):
+    """Arm D pass 2 — same job as _ab_label_prompt, restructured so the stroke
+    side CANNOT default.
+
+    In arm C every shot came back "Forehand X". The side was living inside a
+    free-text label, so the model filled it in as prose rather than deciding
+    it. Two structural changes:
+      * the side is its own required enum with "unknown" listed FIRST, and the
+        label itself is forbidden from containing the words forehand/backhand
+      * the model must write what it SAW at contact before naming the side,
+        so the conclusion follows evidence instead of leading it
+    """
+    target, others, nl = _ab_roster_lines(roster, target_id)
+    listing = nl.join(
+        "  - {:.2f}s ({})".format(float(c.get("timestamp_sec") or 0.0),
+                                  str(c.get("seen") or "")[:60])
+        for c in contacts)
+    schema = (
+        '{"events":[{"timestamp_sec":<number>,'
+        '"contact_evidence":"<what you SEE at the instant of contact: where the '
+        'racket meets the shuttle relative to the body, which way the shoulder '
+        'and hand face; or say the contact is not visible>",'
+        '"stroke_side":"unknown|forehand|backhand",'
+        '"shot_label":"<2-5 words. MUST NOT contain the word forehand or '
+        'backhand>","player_id":"<roster id or unsure>","confidence":<0-1>}]}'
+    )
+    sysp = (
+        "You are labelling shots in a sports video. Another pass already "
+        "located the contact moments; your job is to name each one." + nl + nl
+        + "TARGET PLAYER: [{}] {}".format(target_id, target.get("description", "")) + nl
+        + "OTHER PEOPLE ON COURT:" + nl + others + nl + nl
+        + "CONTACTS FOUND:" + nl + listing + nl + nl
+        + "For EACH contact, work in this order:" + nl
+        + "1. contact_evidence — describe ONLY what is visible at that instant. "
+          "If the contact is blurred, hidden behind a player, or simply not "
+          "captured in a frame, say exactly that." + nl
+        + "2. stroke_side — decide from the evidence you just wrote. Contact "
+          "out on the racket-arm side of the body is forehand. Contact reached "
+          "ACROSS the body, back of the hand leading, shoulder closed, is "
+          "backhand. If your evidence line did not establish which side of the "
+          'body contact happened on, stroke_side MUST be "unknown".' + nl
+        + "3. shot_label — the stroke name only (Clear, Drive, Smash, Net "
+          "shot, Lift, Block, Push, Drop). The side is recorded separately, so "
+          "the label must NOT contain the word forehand or backhand." + nl + nl
+        + '"unknown" is a correct, expected answer and costs you nothing. '
+          "Choosing a side you did not actually see is the one error that "
+          "makes a player distrust every other line in the analysis." + nl + nl
+        + "Keep every contact the target player hit. Drop only those clearly "
+          "hit by someone else." + nl + nl
+        + "Return JSON only:" + nl + schema
+    )
+    return sysp, "Label each contact listed above, evidence first."
+
+
 @api_router.post("/admin/prompt-ab")
 async def admin_prompt_ab(
     req: PromptABRequest, x_admin_key: str = Header(None, alias="X-Admin-Key"),
@@ -1397,10 +1452,10 @@ async def admin_prompt_ab(
     if len(roster) < 2:
         raise HTTPException(status_code=400, detail="roster needs at least 2 players")
     target_id = str(req.target_player_id or "p1")
-    arms = [a for a in (req.arms or ["A", "C"]) if a in ("A", "B", "C")] or ["A", "C"]
+    arms = [a for a in (req.arms or ["A", "C"]) if a in ("A", "B", "C", "D")] or ["A", "C"]
     fps_list = [float(f) for f in (req.fps_list or [4.0])][:3]
     runs = max(1, min(5, int(req.runs or 2)))
-    cost = sum(2 if a == "C" else 1 for a in arms) * len(fps_list) * runs
+    cost = sum(2 if a in ("C", "D") else 1 for a in arms) * len(fps_list) * runs
     if cost > _AB_MAX_CALLS:
         raise HTTPException(
             status_code=400,
@@ -1414,10 +1469,16 @@ async def admin_prompt_ab(
     target_desc = next(
         (p.get("description") for p in roster if str(p.get("id")) == target_id), None)
 
+    def _mk_nonce():
+        # PREPENDED, not appended: prefix caching keys on the leading
+        # tokens, so a trailing nonce would still hit the cache and we
+        # would keep measuring cached replies instead of determinism.
+        return "[run {}]".format(uuid.uuid4().hex[:10]) + chr(10) if req.nonce else ""
+
     async def _call(sysp, usr, fps):
         def _go():
             return _new_sdk_video_call(
-                model, sysp, usr, None, req.mime_type,
+                model, _mk_nonce() + sysp, usr, None, req.mime_type,
                 file_ref=file_ref, fps=fps, tier="standard",
                 stream=False, max_tries=1)
         resp = await loop.run_in_executor(None, _go)
@@ -1426,9 +1487,17 @@ async def admin_prompt_ab(
     def _score(evs, prompt_chars, extra=None):
         labels = [str(e.get("shot_label") or "") for e in evs]
         sides = _Counter()
-        for lab in labels:
-            m = side_re.search(lab)
-            sides[m.group(1).lower() if m else "none"] += 1
+        for e, lab in zip(evs, labels):
+            # Arm D reports the side in its own field; A/B/C bake it into
+            # the label text, so fall back to reading the prose.
+            explicit = str(e.get("stroke_side") or "").strip().lower()
+            if explicit in ("forehand", "backhand"):
+                sides[explicit[:4]] += 1
+            elif explicit == "unknown":
+                sides["none"] += 1
+            else:
+                m = side_re.search(lab)
+                sides[m.group(1).lower() if m else "none"] += 1
         ids = _Counter(str(e.get("player_id") or "missing").lower() for e in evs)
         row = {
             "prompt_chars": prompt_chars,
@@ -1450,7 +1519,7 @@ async def admin_prompt_ab(
             for r in range(runs):
                 started = _time.time()
                 try:
-                    if arm == "C":
+                    if arm in ("C", "D"):
                         d_sys, d_usr = _ab_detect_prompt(roster, target_id)
                         raw1 = await _call(d_sys, d_usr, fps)
                         d1 = _parse_json_safe(raw1) or {}
@@ -1461,7 +1530,8 @@ async def admin_prompt_ab(
                                          "n": 0, "pass1": 0,
                                          "error": "pass1 found no contacts"})
                             continue
-                        l_sys, l_usr = _ab_label_prompt(roster, target_id, contacts)
+                        l_sys, l_usr = (_ab_label_prompt_v2 if arm == "D"
+                                        else _ab_label_prompt)(roster, target_id, contacts)
                         raw2 = await _call(l_sys, l_usr, fps)
                         d2 = _parse_json_safe(raw2) or {}
                         evs = [e for e in (d2.get("events") or []) if isinstance(e, dict)]
