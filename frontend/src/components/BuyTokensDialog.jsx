@@ -101,19 +101,53 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
           prefill: { email: data.prefill_email || "", contact: data.prefill_contact || "" },
           theme: { color: "#bef264" },
           handler: async (resp) => {
-            try {
-              // 3. Server-side signature verification — never trust the client
-              const verify = await api.post("/payments/razorpay/verify", {
-                razorpay_order_id: resp.razorpay_order_id,
-                razorpay_payment_id: resp.razorpay_payment_id,
-                razorpay_signature: resp.razorpay_signature,
-              }, { timeout: 30000 });
-              onVerified(verify, pack);
-            } catch (e) {
-              toast.error(e?.response?.data?.detail || "Couldn't confirm payment — refresh in a moment.");
-            } finally {
-              resolve();
+            // By the time this fires the customer HAS been charged. A single
+            // failed verify used to lose the purchase outright: the server
+            // could not reach Mongo within its old 3s budget, returned "Order
+            // not found", and the tokens were never credited — paying a second
+            // time worked only because everything was warm by then.
+            //
+            // So: retry. A cold serverless container plus a cold Atlas
+            // connection is slow, not broken, and giving up on the first
+            // attempt is the one outcome we cannot accept here.
+            const MAX_TRIES = 4;
+            let lastErr = null;
+            for (let attempt = 1; attempt <= MAX_TRIES; attempt++) {
+              try {
+                const verify = await api.post("/payments/razorpay/verify", {
+                  razorpay_order_id: resp.razorpay_order_id,
+                  razorpay_payment_id: resp.razorpay_payment_id,
+                  razorpay_signature: resp.razorpay_signature,
+                }, { timeout: 45000 });
+                onVerified(verify, pack);
+                resolve();
+                return;
+              } catch (e) {
+                lastErr = e;
+                const status = e?.response?.status;
+                // 4xx other than 408/429 is a real verdict (bad signature,
+                // someone else's order) — retrying cannot change it.
+                const worthRetry = !status || status >= 500 || status === 408 || status === 429;
+                if (!worthRetry || attempt === MAX_TRIES) break;
+                toast.loading(`Confirming your payment… (${attempt}/${MAX_TRIES})`,
+                              { id: "rzp-verify", duration: 4000 });
+                await new Promise((r) => setTimeout(r, 1500 * attempt));
+              }
             }
+            toast.dismiss("rzp-verify");
+            // Still failed. Tell the truth: the money left their account, so
+            // do NOT imply the payment failed, and give them the payment id to
+            // quote rather than a dead end.
+            toast.error(
+              (lastErr?.response?.data?.detail
+                || "We couldn't confirm your purchase automatically.")
+              + ` Your payment went through (ref ${String(resp.razorpay_payment_id || "").slice(-8)}). `
+              + "Reload in a minute — if tokens still aren't there, contact support with that ref.",
+              { duration: 15000 },
+            );
+            console.error("[razorpay] verify failed after retries", {
+              payment_id: resp.razorpay_payment_id, err: lastErr?.message });
+            resolve();
           },
           modal: { ondismiss: () => { toast.error("Payment cancelled"); resolve(); } },
         });

@@ -71,6 +71,10 @@ def _thinking_budget_for(model_name: str, tier: str = "standard"):
 # historically lost the fps hint, so knowing which ran explains a thin result.
 _SDK_PATH: dict = {"last": None}
 
+# Token usage from the most recent video call, surfaced in the analysis _meta
+# so real cost per analysis is visible instead of estimated.
+_LAST_USAGE: dict = {"in": 0, "out": 0, "model": None}
+
 
 def _video_fps_env(default: float = 4.0) -> float:
     """Frames per second Gemini samples from the video (GEMINI_VIDEO_FPS).
@@ -2630,8 +2634,21 @@ def analyze_video_universal(
                     tier=tier, stream=False, max_tries=_max_tries,
                 )
                 _SDK_PATH["last"] = "new_sdk"
-                _log.info("[universal] new-SDK call ok (model=%s, fps=%s)",
-                          _mname, _video_fps_env())
+                # Record what this analysis actually cost. Nothing read
+                # usage_metadata before, so per-analysis cost was never known —
+                # only estimated, and the estimate in the docstrings predates
+                # 4 fps sampling. Measured: a 20s clip is ~11.3k in / ~1.4k out.
+                try:
+                    _um = getattr(_resp, "usage_metadata", None)
+                    if _um is not None:
+                        _LAST_USAGE["in"] = int(getattr(_um, "prompt_token_count", 0) or 0)
+                        _LAST_USAGE["out"] = int(getattr(_um, "candidates_token_count", 0) or 0)
+                        _LAST_USAGE["model"] = _mname
+                except Exception:
+                    pass
+                _log.info("[universal] new-SDK ok (model=%s fps=%s tokens in=%s out=%s)",
+                          _mname, _video_fps_env(),
+                          _LAST_USAGE.get("in"), _LAST_USAGE.get("out"))
                 return _resp.text
             except ImportError:
                 pass  # new SDK missing → legacy path below
@@ -2881,6 +2898,8 @@ def analyze_video_universal(
             # Files API refs and silently sample at Gemini's 1 fps default.
             "video_fps": _video_fps_env(),
             "sdk_path": _SDK_PATH.get("last") or "unknown",
+            "tokens_in": _LAST_USAGE.get("in") or 0,
+            "tokens_out": _LAST_USAGE.get("out") or 0,
             "media_resolution": _media_resolution_env() or "api_default",
             "roster_sent": bool(player_roster),
             "target_player_id": target_player_id,
