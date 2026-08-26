@@ -38,6 +38,7 @@ class PromptABRequest(BaseModel):
     runs: int = 2
     mime_type: str = "video/mp4"
     nonce: bool = False   # prepend a unique token to defeat prefix caching
+    model: str | None = None   # override GEMINI_MODEL (e.g. to try a Pro tier)
 
 
 def _ab_roster_lines(roster: list, target_id: str):
@@ -239,7 +240,7 @@ async def admin_prompt_ab(
 
     loop = asyncio.get_event_loop()
     file_ref = await loop.run_in_executor(None, lambda: files_api_get(req.file_name))
-    model = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+    model = (req.model or "").strip() or os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
     side_re = _re.compile(r"\b(fore|back)hand\b", _re.I)
 
     target_desc = next(
@@ -251,6 +252,21 @@ async def admin_prompt_ab(
         # would keep measuring cached replies instead of determinism.
         return "[run {}]".format(uuid.uuid4().hex[:10]) + chr(10) if req.nonce else ""
 
+    # Token accounting. Production never reads usage_metadata, so the real
+    # per-analysis cost has never been measured — the estimate in the code
+    # predates 4 fps sampling and understates video tokens by ~4x.
+    usage = {"in": 0, "out": 0, "calls": 0}
+
+    def _add_usage(resp):
+        try:
+            um = getattr(resp, "usage_metadata", None)
+            if um is not None:
+                usage["in"] += int(getattr(um, "prompt_token_count", 0) or 0)
+                usage["out"] += int(getattr(um, "candidates_token_count", 0) or 0)
+                usage["calls"] += 1
+        except Exception:
+            pass
+
     async def _call(sysp, usr, fps):
         def _go():
             return _new_sdk_video_call(
@@ -258,6 +274,7 @@ async def admin_prompt_ab(
                 file_ref=file_ref, fps=fps, tier="standard",
                 stream=False, max_tries=1)
         resp = await loop.run_in_executor(None, _go)
+        _add_usage(resp)
         return resp.text
 
     def _score(evs, prompt_chars, extra=None):
@@ -294,6 +311,7 @@ async def admin_prompt_ab(
         for fps in fps_list:
             for r in range(runs):
                 started = _time.time()
+                usage.update({"in": 0, "out": 0, "calls": 0})
                 try:
                     if arm in ("C", "D"):
                         d_sys, d_usr = _ab_detect_prompt(roster, target_id)
@@ -325,7 +343,9 @@ async def admin_prompt_ab(
                         evs = [e for e in (data.get("events") or []) if isinstance(e, dict)]
                         row = _score(evs, len(sysp))
                     row.update(arm=arm, fps=fps, run=r + 1,
-                               secs=round(_time.time() - started, 1))
+                               secs=round(_time.time() - started, 1),
+                               tok_in=usage["in"], tok_out=usage["out"],
+                               model_calls=usage["calls"])
                     rows.append(row)
                 except Exception as exc:
                     rows.append({
