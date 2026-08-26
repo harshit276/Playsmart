@@ -2499,14 +2499,25 @@ async def razorpay_webhook(request: Request):
     order_id, payment_id = pay.get("order_id"), pay.get("id")
     if not order_id or not payment_id:
         return {"ok": False, "error": "missing fields"}
-    try:
-        order = await asyncio.wait_for(
-            db.payment_orders.find_one({"razorpay_order_id": order_id}, {"_id": 0}), timeout=2.0)
-    except Exception:
-        order = None
+    # Same retrying lookup as /verify. This path had the identical 2s-timeout
+    # bug: a cold Atlas connection made a real paid order look missing, so the
+    # BACKSTOP failed for exactly the same reason the primary path did.
+    order, db_ok = await _find_payment_order(order_id)
+    if not db_ok:
+        # 500 on purpose. Razorpay retries failed webhooks for hours; a 200
+        # here would be read as "handled" and the delivery dropped forever —
+        # turning the safety net into another way to silently lose a payment.
+        raise HTTPException(status_code=500, detail="datastore unavailable, retry")
     if not order:
+        # Genuinely unknown order (e.g. created against another environment).
+        # 200 so Razorpay stops retrying something we can never settle.
         return {"ok": False, "error": "order not found"}
-    bal = await _credit_razorpay_order(order["user_id"], order, payment_id)
+    try:
+        bal = await _credit_razorpay_order(order["user_id"], order, payment_id)
+    except Exception as exc:
+        logger.error("razorpay webhook: credit failed for %s: %s",
+                     payment_id[:16], str(exc)[:160])
+        raise HTTPException(status_code=500, detail="credit failed, retry")
     return {"ok": True, "credited": bal is not None, "balance": bal}
 
 
