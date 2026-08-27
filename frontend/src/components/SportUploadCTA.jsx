@@ -14,7 +14,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UploadCloud, ArrowRight } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 // Must match AnalyzePage's PENDING_SIGNUP_VIDEO_KEY — that page looks here for
 // a clip chosen elsewhere.
