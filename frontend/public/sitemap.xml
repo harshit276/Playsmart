@@ -13,6 +13,12 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://www.formanti.com/demo</loc>
+    <lastmod>2026-07-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://www.formanti.com/training</loc>
     <lastmod>2026-07-08</lastmod>
     <changefreq>weekly</changefreq>

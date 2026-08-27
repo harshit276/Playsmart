@@ -237,7 +237,7 @@ export default function DemoAnalysisPage() {
             Sign up free and get 100 tokens — enough for a full analysis of your
             own game. No card required.
           </p>
-          <SignupCTA label="Analyse your own video — free (100 tokens on signup)" />
+          <SignupCTA label="Analyse your own video — first one free" />
           <p className="text-[11px] text-zinc-500 mt-3">
             Works for badminton, tennis, cricket, pickleball and more — any clip
             where the action is clearly in frame.

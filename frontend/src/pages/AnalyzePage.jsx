@@ -313,6 +313,11 @@ const ACTIVE_JOB_KEY = "playsmart_active_analysis_job";
 // localStorage, so it's kept in IndexedDB under INFLIGHT_VIDEO_KEY.
 const PICKER_SESSION_KEY = "playsmart_picker_session";
 const INFLIGHT_VIDEO_KEY = "analysis_inflight";
+// A guest who picks a clip and is then sent to sign up used to come back to an
+// EMPTY page and have to find the video on their phone all over again. Finding
+// a clip is the hardest step in the whole funnel, so throwing it away at the
+// exact moment we ask for commitment is the worst possible place to lose them.
+const PENDING_SIGNUP_VIDEO_KEY = "analysis_pending_signup";
 
 // Base64-encode a Blob/File the FAST way. The old approach built a string
 // char-by-char (`bin += String.fromCharCode(bytes[i])`) which is O(n²) and
@@ -423,6 +428,24 @@ export default function AnalyzePage() {
 
   // Set page title
   useEffect(() => { document.title = "Analyze | Formanti"; }, []);
+
+  // Restore the clip a guest picked before we sent them to sign up, so they
+  // land back ready to analyse instead of hunting for the video again.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const vs = await import("@/lib/videoStore");
+        const cached = await vs.loadVideo(PENDING_SIGNUP_VIDEO_KEY);
+        if (cancelled || !cached?.file) return;
+        setFile(cached.file);
+        await vs.purgeVideo(PENDING_SIGNUP_VIDEO_KEY);
+        toast.success("Your clip is ready — tap Analyze to run it.", { duration: 6000 });
+      } catch { /* nothing to restore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   // The feedback nudge (email + push) links to /analyze?feedback=1. Open the
   // form directly rather than dropping people on the page hoping they find it.
@@ -1508,6 +1531,13 @@ export default function AnalyzePage() {
     // The free analysis still exists — it's just the 100 tokens you get for
     // verifying your email, so a guest is sent to sign up first.
     if (!user) {
+      // Keep their clip. They get it back automatically after signing up.
+      if (file) {
+        try {
+          const vs = await import("@/lib/videoStore");
+          await vs.saveVideo(file, 2 * 60 * 60 * 1000, PENDING_SIGNUP_VIDEO_KEY);
+        } catch { /* best-effort: worst case they re-pick */ }
+      }
       setShowGuestUpgrade(true);
       return;
     }

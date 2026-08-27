@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import SEO from "@/components/SEO";
+import SportUploadCTA from "@/components/SportUploadCTA";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -163,6 +164,10 @@ export default function GymPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Do-the-thing box. Organic search lands here; give it one unmistakable action instead of a page of links. */}
+      <SportUploadCTA sport="gym" label="gym" />
+
 
       {/* Features */}
       <section className="py-20 px-4 bg-zinc-900/50 border-y border-zinc-800/50">
