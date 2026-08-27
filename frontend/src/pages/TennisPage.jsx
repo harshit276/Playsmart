@@ -148,6 +148,12 @@ export default function TennisPage() {
             Upload any match or practice video. Get serve speed, forehand and backhand analysis,
             personalized training plans, and racquet recommendations — powered by computer vision.
           </motion.p>
+          {/* The one action this page exists for, in the hero itself so it is
+              the first thing an organic visitor sees. */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+            <SportUploadCTA sport="tennis" label="tennis" compact />
+          </motion.div>
+
           <motion.div
             initial="hidden"
             animate="visible"
@@ -155,18 +161,12 @@ export default function TennisPage() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button asChild size="lg" className="bg-amber-400 text-black hover:bg-amber-500 font-bold uppercase tracking-wide">
-              <Link to="/analyze?sport=tennis">Analyze Your Serve</Link>
-            </Button>
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
               <Link to="/equipment?sport=tennis">View Racquets</Link>
             </Button>
           </motion.div>
         </div>
       </section>
-
-      {/* Do-the-thing box. Organic search lands here; give it one unmistakable action instead of a page of links. */}
-      <SportUploadCTA sport="tennis" label="tennis" />
 
 
       {/* Features */}

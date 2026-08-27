@@ -20,7 +20,7 @@ import { toast } from "sonner";
 // a clip chosen elsewhere.
 const HANDOFF_KEY = "analysis_pending_signup";
 
-export default function SportUploadCTA({ sport = "", label = "" }) {
+export default function SportUploadCTA({ sport = "", label = "", compact = false, accent = "lime" }) {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -43,8 +43,8 @@ export default function SportUploadCTA({ sport = "", label = "" }) {
   }, [navigate, sport]);
 
   return (
-    <section className="py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <section className={compact ? "" : "py-12 px-4"}>
+      <div className={compact ? "max-w-xl mx-auto" : "max-w-2xl mx-auto"}>
         <div
           role="button"
           tabIndex={0}
@@ -57,29 +57,35 @@ export default function SportUploadCTA({ sport = "", label = "" }) {
             setDragging(false);
             handOff(e.dataTransfer?.files?.[0]);
           }}
-          className={`group cursor-pointer rounded-3xl border-2 border-dashed p-8 sm:p-10 text-center transition-all ${
+          className={`group cursor-pointer rounded-3xl border-2 border-dashed text-center transition-all ${
+            compact ? "p-5 sm:p-6" : "p-8 sm:p-10"
+          } ${
             dragging
               ? "border-lime-400 bg-lime-400/10"
               : "border-zinc-700 bg-zinc-900/50 hover:border-lime-400/60 hover:bg-zinc-900"
           }`}
         >
-          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-lime-400/15 border border-lime-400/30 flex items-center justify-center">
-            <UploadCloud className="w-7 h-7 text-lime-400" />
+          <div className={`${compact ? "w-11 h-11 mb-2.5" : "w-14 h-14 mb-4"} mx-auto rounded-2xl bg-lime-400/15 border border-lime-400/30 flex items-center justify-center`}>
+            <UploadCloud className={compact ? "w-5 h-5 text-lime-400" : "w-7 h-7 text-lime-400"} />
           </div>
-          <h2 className="font-heading font-black text-2xl sm:text-3xl uppercase tracking-tight text-white mb-2">
-            Analyse your {sportName} clip
-          </h2>
-          <p className="text-zinc-400 text-sm sm:text-base mb-5 max-w-md mx-auto">
-            Drop a 10–30 second video here — or tap to choose one. You'll get a
-            shot-by-shot breakdown, posture read and a coach's verdict.
+          {!compact && (
+            <h2 className="font-heading font-black text-2xl sm:text-3xl uppercase tracking-tight text-white mb-2">
+              Analyse your {sportName} clip
+            </h2>
+          )}
+          <p className={`text-zinc-300 mx-auto ${compact ? "text-sm mb-3 max-w-sm" : "text-zinc-400 text-sm sm:text-base mb-5 max-w-md"}`}>
+            {compact
+              ? <>Drop a 10–30s clip of your {sportName} here — or tap to choose one.</>
+              : <>Drop a 10–30 second video here — or tap to choose one. You'll get a
+                 shot-by-shot breakdown, posture read and a coach's verdict.</>}
           </p>
-          <span className="inline-flex items-center gap-2 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-6 py-3 text-sm transition-colors">
+          <span className={`inline-flex items-center gap-2 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full transition-colors ${compact ? "px-5 py-2.5 text-sm" : "px-6 py-3 text-sm"}`}>
             Choose a video <ArrowRight className="w-4 h-4" />
           </span>
           {/* Say the account is coming BEFORE they invest, not after. A signup
               sprung on someone who has already waited through an upload reads
               as a bait-and-switch. */}
-          <p className="text-[11px] text-zinc-500 mt-4">
+          <p className={`text-[11px] text-zinc-500 ${compact ? "mt-3" : "mt-4"}`}>
             Your first analysis is free · free account needed to see results
           </p>
           <input

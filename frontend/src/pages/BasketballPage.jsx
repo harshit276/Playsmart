@@ -148,6 +148,12 @@ export default function BasketballPage() {
             Improve your game with AI-powered analysis of your shooting form, ball handling, and
             vertical, plus personalized training plans and smart shoe recommendations — built for ballers.
           </motion.p>
+          {/* The one action this page exists for, in the hero itself so it is
+              the first thing an organic visitor sees. */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+            <SportUploadCTA sport="basketball" label="basketball" compact />
+          </motion.div>
+
           <motion.div
             initial="hidden"
             animate="visible"
@@ -155,18 +161,12 @@ export default function BasketballPage() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button asChild size="lg" className="bg-orange-400 text-black hover:bg-orange-500 font-bold uppercase tracking-wide">
-              <Link to="/analyze?sport=basketball">Analyze Your Game</Link>
-            </Button>
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
               <Link to="/equipment?sport=basketball">View Shoes</Link>
             </Button>
           </motion.div>
         </div>
       </section>
-
-      {/* Do-the-thing box. Organic search lands here; give it one unmistakable action instead of a page of links. */}
-      <SportUploadCTA sport="basketball" label="basketball" />
 
 
       {/* Features */}

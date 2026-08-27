@@ -148,6 +148,12 @@ export default function PickleballPage() {
             AI shot analysis, third-shot drop feedback, personalized training plans, and smart paddle
             recommendations — everything you need to climb from 3.0 to 4.5 and beyond.
           </motion.p>
+          {/* The one action this page exists for, in the hero itself so it is
+              the first thing an organic visitor sees. */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+            <SportUploadCTA sport="pickleball" label="pickleball" compact />
+          </motion.div>
+
           <motion.div
             initial="hidden"
             animate="visible"
@@ -155,18 +161,12 @@ export default function PickleballPage() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button asChild size="lg" className="bg-emerald-400 text-black hover:bg-emerald-500 font-bold uppercase tracking-wide">
-              <Link to="/analyze?sport=pickleball">Analyze Your Game</Link>
-            </Button>
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
               <Link to="/equipment?sport=pickleball">View Paddles</Link>
             </Button>
           </motion.div>
         </div>
       </section>
-
-      {/* Do-the-thing box. Organic search lands here; give it one unmistakable action instead of a page of links. */}
-      <SportUploadCTA sport="pickleball" label="pickleball" />
 
 
       {/* Features */}

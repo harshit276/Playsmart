@@ -148,6 +148,12 @@ export default function SwimmingPage() {
             Swim faster and smoother with AI-powered stroke analysis, body-position feedback,
             personalized training plans, and gear recommendations — built specifically for swimmers.
           </motion.p>
+          {/* The one action this page exists for, in the hero itself so it is
+              the first thing an organic visitor sees. */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+            <SportUploadCTA sport="swimming" label="swimming" compact />
+          </motion.div>
+
           <motion.div
             initial="hidden"
             animate="visible"
@@ -155,18 +161,12 @@ export default function SwimmingPage() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button asChild size="lg" className="bg-cyan-400 text-black hover:bg-cyan-500 font-bold uppercase tracking-wide">
-              <Link to="/analyze?sport=swimming">Analyze Your Stroke</Link>
-            </Button>
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
               <Link to="/equipment?sport=swimming">View Gear</Link>
             </Button>
           </motion.div>
         </div>
       </section>
-
-      {/* Do-the-thing box. Organic search lands here; give it one unmistakable action instead of a page of links. */}
-      <SportUploadCTA sport="swimming" label="swimming" />
 
 
       {/* Features */}

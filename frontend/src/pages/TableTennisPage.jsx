@@ -148,6 +148,12 @@ export default function TableTennisPage() {
             Upload any training session or match. Get stroke-by-stroke classification, spin and technique
             breakdowns, training programs, and paddle recommendations — all powered by AI.
           </motion.p>
+          {/* The one action this page exists for, in the hero itself so it is
+              the first thing an organic visitor sees. */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+            <SportUploadCTA sport="table_tennis" label="table tennis" compact />
+          </motion.div>
+
           <motion.div
             initial="hidden"
             animate="visible"
@@ -155,18 +161,12 @@ export default function TableTennisPage() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button asChild size="lg" className="bg-sky-400 text-black hover:bg-sky-500 font-bold uppercase tracking-wide">
-              <Link to="/analyze?sport=table_tennis">Analyze Your Game</Link>
-            </Button>
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
               <Link to="/equipment?sport=table_tennis">View Paddles</Link>
             </Button>
           </motion.div>
         </div>
       </section>
-
-      {/* Do-the-thing box. Organic search lands here; give it one unmistakable action instead of a page of links. */}
-      <SportUploadCTA sport="table_tennis" label="table tennis" />
 
 
       {/* Features */}

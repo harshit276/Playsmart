@@ -148,6 +148,12 @@ export default function WeightLiftingPage() {
             Upload your squat, bench, deadlift, or Olympic lift and get AI-powered bar path tracking,
             technique feedback, and a training plan built around your numbers.
           </motion.p>
+          {/* The one action this page exists for, in the hero itself so it is
+              the first thing an organic visitor sees. */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+            <SportUploadCTA sport="weight_lifting" label="lifting" compact />
+          </motion.div>
+
           <motion.div
             initial="hidden"
             animate="visible"
@@ -155,18 +161,12 @@ export default function WeightLiftingPage() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
-            <Button asChild size="lg" className="bg-lime-400 text-black hover:bg-lime-500 font-bold uppercase tracking-wide">
-              <Link to="/analyze">Analyze Your Lift</Link>
-            </Button>
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
               <Link to="/marketplace">View Lifting Gear</Link>
             </Button>
           </motion.div>
         </div>
       </section>
-
-      {/* Do-the-thing box. Organic search lands here; give it one unmistakable action instead of a page of links. */}
-      <SportUploadCTA sport="weight_lifting" label="lifting" />
 
 
       {/* Features */}
