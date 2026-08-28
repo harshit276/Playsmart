@@ -11701,6 +11701,24 @@ class UpdateProfileFromAnalysisRequest(BaseModel):
     update_focus_areas: bool = True
 
 
+@api_router.post("/profile/reset")
+async def reset_profile(authorization: str = Header(None)):
+    """Wipe the caller's player profile back to defaults.
+
+    Deliberately narrow: it clears the PROFILE (sport, skill read, goals,
+    measurements) only. Analyses, tokens and payment history are untouched —
+    someone resetting a wrong skill level is not asking to destroy what they
+    paid for, and a reset that silently deleted purchases would be indefensible.
+    """
+    user = await get_current_user(authorization)
+    try:
+        await asyncio.wait_for(
+            db.player_profiles.delete_many({"user_id": user["id"]}), timeout=8.0)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not reset: {}".format(str(exc)[:120]))
+    return {"success": True, "message": "Profile reset. Your analyses and tokens are unchanged."}
+
+
 @api_router.post("/profile/update-from-analysis")
 async def update_profile_from_analysis(
     req: UpdateProfileFromAnalysisRequest, authorization: str = Header(None),

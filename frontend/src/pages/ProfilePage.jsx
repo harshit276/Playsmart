@@ -3,9 +3,11 @@
  * AssessmentPage flow for actually updating preferences (no need to
  * duplicate the form here).
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
+import { toast } from "sonner";
+import api from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -25,6 +27,7 @@ const SPORT_EMOJI = {
 
 export default function ProfilePage() {
   const { user, profile, tokens, logout } = useAuth();
+  const [resetting, setResetting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => { document.title = "Profile · Formanti"; }, []);
@@ -148,6 +151,30 @@ export default function ProfilePage() {
             <p className="text-[10px] text-zinc-500">+100 tokens each side</p>
           </Link>
         </motion.div>
+
+        {/* Reset profile. Scoped ON PURPOSE: sport, skill read and goals only.
+            Analyses and tokens survive — someone fixing a wrong skill level is
+            not asking to lose what they paid for. */}
+        <button
+          onClick={async () => {
+            if (!window.confirm(
+              "Reset your profile?\n\nThis clears your sport, skill level and goals so you can set them again. Your past analyses and tokens are NOT affected."
+            )) return;
+            setResetting(true);
+            try {
+              await api.post("/profile/reset", {}, { timeout: 15000 });
+              toast.success("Profile reset — set it up again from the quiz.");
+              navigate("/assessment");
+            } catch (e) {
+              toast.error(e?.response?.data?.detail || "Couldn't reset your profile");
+            }
+            setResetting(false);
+          }}
+          disabled={resetting}
+          className="w-full inline-flex items-center justify-center gap-2 text-sm text-zinc-400 hover:text-amber-400 transition-colors py-3 disabled:opacity-50">
+          <RefreshCw className={"w-4 h-4" + (resetting ? " animate-spin" : "")} />
+          {resetting ? "Resetting…" : "Reset profile"}
+        </button>
 
         {/* Logout */}
         <button onClick={() => { logout(); navigate("/"); }}

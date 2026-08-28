@@ -248,6 +248,43 @@ export default function ProgressPage() {
           ))}
         </div>
 
+        {/* Per-sport cards. The pill row below only showed which sport was
+            SELECTED; you could not see at a glance what you had actually
+            analysed across sports, which is the thing people open this page
+            for. One card per sport, each doubling as the selector. */}
+        {sports.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+            {sports.map((s) => {
+              const rows = bySport[s] || [];
+              const st = computeSportStats(rows);
+              const last = st?.scoreSeries?.length
+                ? st.scoreSeries[st.scoreSeries.length - 1].score : null;
+              const isActive = activeSport === s;
+              return (
+                <button key={"card-" + s} onClick={() => setActiveSport(s)}
+                  className={`text-left rounded-2xl border p-3.5 transition-colors ${
+                    isActive
+                      ? "bg-lime-400/10 border-lime-400/50"
+                      : "bg-zinc-900/70 border-zinc-800 hover:border-zinc-600"
+                  }`}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xl leading-none">{emojiFor(s)}</span>
+                    <span className="text-white font-bold text-sm truncate">{labelFor(s)}</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400">
+                    {rows.length} {rows.length === 1 ? "analysis" : "analyses"}
+                  </p>
+                  {last != null && (
+                    <p className="text-[11px] text-lime-300 font-mono mt-0.5">
+                      latest {Number(last).toFixed(1)}/10
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Sport selector */}
         {sports.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-5 -mx-1 px-1">
