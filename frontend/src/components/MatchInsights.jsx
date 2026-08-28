@@ -570,11 +570,18 @@ export default function MatchInsights({
   // Stable object URL for the player. Revoked when videoFile changes.
   // Hooks MUST be declared before any conditional return — keeping them
   // here so they're called in the same order every render.
-  const playerUrl = useMemo(
-    () => (videoFile ? URL.createObjectURL(videoFile) : null),
-    [videoFile],
-  );
-  useEffect(() => () => { if (playerUrl) URL.revokeObjectURL(playerUrl); }, [playerUrl]);
+  // Created in an EFFECT, not useMemo. React may discard and re-run a memo
+  // factory, which orphaned one blob URL and could leave the <video> pointing
+  // at a revoked one — the intermittent black player users reported. An effect
+  // pairs creation and revocation with the committed render, so the URL the
+  // player holds is always the live one.
+  const [playerUrl, setPlayerUrl] = useState(null);
+  useEffect(() => {
+    if (!videoFile) { setPlayerUrl(null); return undefined; }
+    const url = URL.createObjectURL(videoFile);
+    setPlayerUrl(url);
+    return () => { try { URL.revokeObjectURL(url); } catch { /* noop */ } };
+  }, [videoFile]);
 
   // Don't render at all when there are no shots from the parent.
   if (!shotsAvailable) return null;
@@ -3244,7 +3251,19 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   const canShowVideo = !!userVideoUrl && typeof headlineShot.timestamp === "number";
   // Keep the skeleton panel while it's still working, drop it once we know it
   // failed — so a clip we can't measure doesn't leave a permanent empty box.
-  const showPosture = heroPosture.status === "loading" || heroPosture.status === "ready";
+  // Only show the tracked-posture panel when we can actually vouch for WHO is
+  // being tracked. With several people in frame and no contact box to crop to,
+  // the single-pose detector locks onto whoever is most prominent — which
+  // users reported as "the posture tracker is on the wrong person". Showing a
+  // confident skeleton over someone else's body is worse than showing nothing,
+  // so in that case the panel is dropped and the clip takes the full width.
+  const postureIsTrustworthy = (
+    heroPosture.status !== "ready"
+    || !!headlineShot?.contactBox
+    || (heroPosture.result?.peopleCount ?? 1) <= 1
+  );
+  const showPosture = (heroPosture.status === "loading" || heroPosture.status === "ready")
+    && postureIsTrustworthy;
 
   // Click YOU panel → seek the page's main video to this shot AND
   // scroll it into view, so users have one path to "study this in
@@ -3343,7 +3362,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             {heroPosture.status === "ready" && heroPosture.result.peopleCount > 1 && (
               <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-1">
                 <p className="text-[9px] text-zinc-300 leading-snug">
-                  {heroPosture.result.peopleCount} people in frame — tracking the closest player
+                  {heroPosture.result.peopleCount} people in frame — tracked the player at the contact point
                 </p>
               </div>
             )}

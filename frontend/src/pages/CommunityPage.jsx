@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -275,6 +275,33 @@ export default function CommunityPage() {
       </div>
     </div>
   );
+
+  // Guests used to get the hero and then NOTHING — loadData() returns early
+  // without a user, so every list rendered empty with no explanation. A
+  // visitor could only conclude the page was broken, which is exactly what the
+  // rage-clicks on this route were. Say what is happening and give them the
+  // one action that fixes it.
+  if (!user?.id) {
+    return (
+      <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="community-page">
+        <div className="container mx-auto px-4 max-w-lg">
+          <div className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-lime-400/10 via-zinc-900 to-zinc-950 p-8 text-center">
+            <h1 className="font-heading font-bold text-3xl uppercase tracking-tight text-white mb-2">
+              Find players. Host matches.
+            </h1>
+            <p className="text-zinc-400 text-sm mb-6">
+              Open games near you, players to match with, and one-tap invites.
+              Sign in to see who is playing.
+            </p>
+            <Button asChild
+              className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-7 py-5">
+              <Link to="/auth">Sign in — it is free</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="community-page">
