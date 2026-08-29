@@ -2228,11 +2228,48 @@ import string as _string
 TOKEN_PACKS = [
     # Baseline: 100 tokens = ₹30 = 1 Standard analysis (or 0.4 Premium).
     # Bulk packs give progressive discount to reward repeat users.
-    {"key": "pack_100",  "tokens":   100, "price_inr":   30, "label": "Trial"},
-    {"key": "pack_500",  "tokens":   500, "price_inr":  130, "label": "Starter"},
-    {"key": "pack_1500", "tokens":  1500, "price_inr":  350, "label": "Best Value", "highlight": True},
-    {"key": "pack_5000", "tokens":  5000, "price_inr": 1000, "label": "Power"},
+    # price_usd is the INTERNATIONAL price, not a converted INR price. ~3x the
+    # India rate, which is ordinary geo-pricing: $1 for a first analysis is a
+    # trivial sum in the US/EU while Rs 30 is the right number in India.
+    {"key": "pack_100",  "tokens":   100, "price_inr":   30, "price_usd":  1, "label": "Trial"},
+    {"key": "pack_500",  "tokens":   500, "price_inr":  130, "price_usd":  4, "label": "Starter"},
+    {"key": "pack_1500", "tokens":  1500, "price_inr":  350, "price_usd": 10, "label": "Best Value", "highlight": True},
+    {"key": "pack_5000", "tokens":  5000, "price_inr": 1000, "price_usd": 30, "label": "Power"},
 ]
+
+# Razorpay only settles USD once International Payments is approved on the
+# account. Until then we still SHOW local pricing, but the actual charge stays
+# in INR (a foreign card is billed the converted amount and works fine) —
+# flipping this on before approval would just make every foreign order fail.
+INTERNATIONAL_CHARGING = os.environ.get("INTERNATIONAL_CHARGING", "").strip().lower() in ("1", "true", "yes")
+
+
+def _request_country(request) -> str:
+    """Two-letter country from Vercel's edge header. '' when unknown."""
+    try:
+        return (request.headers.get("x-vercel-ip-country") or "").strip().upper()
+    except Exception:
+        return ""
+
+
+def _is_india(request) -> bool:
+    """Default to India when the country is unknown: our pricing, support and
+    payment rails are India-first, so an unknown visitor seeing Rs 30 is a
+    better failure than an Indian one being quoted dollars."""
+    c = _request_country(request)
+    return c in ("", "IN")
+
+
+def _packs_for(request) -> list:
+    """Packs with a `price` + `currency` the client can render directly."""
+    india = _is_india(request)
+    out = []
+    for p in TOKEN_PACKS:
+        q = dict(p)
+        q["currency"] = "INR" if india else "USD"
+        q["price"] = p["price_inr"] if india else p.get("price_usd", p["price_inr"])
+        out.append(q)
+    return out
 
 # Earn / spend amounts — change here, log everywhere (kind matches the
 # transaction "kind" field).
@@ -2561,7 +2598,7 @@ async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> 
 
 
 @api_router.post("/payments/razorpay/create-order")
-async def razorpay_create_order(req: CreateOrderRequest, authorization: str = Header(None)):
+async def razorpay_create_order(req: CreateOrderRequest, request: Request, authorization: str = Header(None)):
     """Create a Razorpay order; returns what Checkout.js needs (order_id +
     key_id + amount)."""
     user = await get_current_user(authorization)
@@ -2582,7 +2619,15 @@ async def razorpay_create_order(req: CreateOrderRequest, authorization: str = He
         return {"order_id": order_id, "amount": int(pack["price_inr"] * 100), "currency": "INR",
                 "key_id": "demo", "provider": "razorpay", "demo_mode": True}
 
-    payload = {"amount": int(round(pack["price_inr"] * 100)), "currency": "INR",
+    # Charge in USD only once Razorpay has approved International Payments on
+    # the account. Before that a USD order is rejected outright, so a foreign
+    # buyer is better served by an INR charge their bank converts — which is
+    # what happens when INTERNATIONAL_CHARGING is off.
+    _use_usd = (INTERNATIONAL_CHARGING and not _is_india(request)
+                and pack.get("price_usd"))
+    _amount = (pack["price_usd"] if _use_usd else pack["price_inr"])
+    _currency = "USD" if _use_usd else "INR"
+    payload = {"amount": int(round(_amount * 100)), "currency": _currency,
                "receipt": f"ath_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
                "notes": {"user_id": user["id"], "pack_key": pack["key"], "tokens": str(pack["tokens"])}}
     try:
@@ -2615,7 +2660,7 @@ async def razorpay_create_order(req: CreateOrderRequest, authorization: str = He
             "created_at": datetime.now(timezone.utc).isoformat()}), timeout=2.0)
     except Exception as e:
         logger.warning(f"razorpay create-order persist failed: {e}")
-    return {"order_id": order_id, "amount": data.get("amount"), "currency": "INR",
+    return {"order_id": order_id, "amount": data.get("amount"), "currency": _currency,
             "key_id": RAZORPAY_KEY_ID, "provider": "razorpay", "name": "Formanti",
             "description": f"{pack['tokens']} tokens",
             "prefill_email": user.get("email") or "", "prefill_contact": user.get("phone") or ""}
@@ -2786,9 +2831,13 @@ async def get_token_balance(authorization: str = Header(None)):
 
 
 @api_router.get("/tokens/packs")
-async def get_token_packs():
-    """Public — anyone can browse pack pricing."""
-    return {"packs": TOKEN_PACKS, "currency": "INR"}
+async def get_token_packs(request: Request):
+    """Public — anyone can browse pack pricing. Geo-priced: India sees INR,
+    everyone else sees USD (see _packs_for)."""
+    india = _is_india(request)
+    return {"packs": _packs_for(request),
+            "currency": "INR" if india else "USD",
+            "country": _request_country(request)}
 
 
 # ─── Hybrid equipment recommendation engine ──────────────────────────
