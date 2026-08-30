@@ -13,6 +13,7 @@
  *   directly so the flow is testable without a real charge.
  */
 import { useState, useEffect, useCallback } from "react";
+import { formatPackPrice } from "@/lib/price";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -183,7 +184,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
 
           <div className="grid grid-cols-2 gap-3 mt-2">
             {packs.map((p) => {
-              const perToken = (p.price_inr / p.tokens) * 100;
+              const perToken = ((p.price != null ? p.price : p.price_inr) / p.tokens) * 100;
               const isSelected = selected?.key === p.key;
               return (
                 <button
@@ -202,7 +203,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
                   <p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">{p.label}</p>
                   <p className="font-heading font-black text-2xl text-white mt-1">{p.tokens.toLocaleString("en-IN")}</p>
                   <p className="text-[10px] text-zinc-500 mb-2">tokens</p>
-                  <p className="text-base font-bold text-purple-300">₹{p.price_inr}</p>
+                  <p className="text-base font-bold text-purple-300">{formatPackPrice(p)}</p>
                   <p className="text-[9px] text-zinc-600 mt-0.5">~{perToken.toFixed(1)}p / token</p>
                   {isSelected && loading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 rounded-xl">
@@ -231,7 +232,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
       tokensCredited={success?.tokens}
       newBalance={success?.balance}
       packLabel={success?.pack?.label ? `${success.pack.label} pack` : null}
-      amountInr={success?.pack?.price_inr}
+      amountLabel={formatPackPrice(success?.pack)}
     />
     </>
   );

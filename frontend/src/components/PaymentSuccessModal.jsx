@@ -62,7 +62,7 @@ export default function PaymentSuccessModal({
   tokensCredited,
   newBalance,
   packLabel,
-  amountInr,
+  amountLabel,
 }) {
   // Auto-haptic ping on mount (best-effort on mobile)
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function PaymentSuccessModal({
             </h2>
             {packLabel && (
               <p className="text-zinc-500 text-xs mb-5">
-                {packLabel} {amountInr ? `· ₹${amountInr}` : ""}
+                {packLabel} {amountLabel ? `· ${amountLabel}` : ""}
               </p>
             )}
 

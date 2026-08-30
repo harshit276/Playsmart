@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatPackPrice } from "@/lib/price";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -144,7 +145,7 @@ export default function PricingPage() {
             {packs.map((pack) => {
               const isHighlight = pack.highlight;
               const perAnalysis = pack.tokens > 0
-                ? Math.round((pack.price_inr / pack.analyses_flash) || 0)
+                ? Math.round(((pack.price != null ? pack.price : pack.price_inr) / pack.analyses_flash) || 0)
                 : 0;
               return (
                 <Link
@@ -162,7 +163,7 @@ export default function PricingPage() {
                     </div>
                   )}
                   <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">{pack.label}</p>
-                  <p className="text-3xl font-heading font-black text-white mb-0.5">₹{pack.price_inr}</p>
+                  <p className="text-3xl font-heading font-black text-white mb-0.5">{formatPackPrice(pack)}</p>
                   <p className="text-xs text-lime-400 font-semibold flex items-center gap-1 mb-2">
                     <Coins className="w-3 h-3" /> {pack.tokens.toLocaleString()} tokens
                   </p>
