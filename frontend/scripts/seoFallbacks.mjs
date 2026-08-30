@@ -438,6 +438,7 @@ async function buildBlog(template) {
   }
 
   console.log(`[seo-fallbacks] blog: ${ok}/${slugs.length} articles rendered with real content.`);
+  writeSitemap(posts);
   if (ok === 0 && slugs.length) {
     // Every article fell back to the homepage shell. The deploy would ship
     // the exact duplicate-content bug this script exists to fix, so fail and
@@ -445,6 +446,93 @@ async function buildBlog(template) {
     console.error("[seo-fallbacks] blog API returned nothing — refusing to ship duplicate shells.");
     process.exitCode = 1;
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * sitemap.xml
+ *
+ * WHY GENERATED: the checked-in sitemap dated every URL to mid-July and
+ * stayed there, so after the blog pages changed from homepage duplicates
+ * into real articles the sitemap still told Google nothing had changed.
+ * lastmod is a recrawl hint; a stale one asks a crawler to skip exactly
+ * the pages that most need looking at again.
+ *
+ * NOT "today" on every build. A sitemap that claims every page changed
+ * every deploy is noise, and Google learns to ignore lastmod entirely.
+ * Instead each URL reports the later of its own content date and
+ * TEMPLATE_REVISION - the date the served markup last materially changed.
+ * Bump TEMPLATE_REVISION when the output actually changes; leave it alone
+ * for code that does not alter what a crawler sees.
+ * ------------------------------------------------------------------ */
+
+// Last material change to the generated HTML these URLs serve.
+const TEMPLATE_REVISION = "2026-08-30";
+
+// Static routes: [path, changefreq, priority, content date]
+const SITEMAP_STATIC = [
+  ["/", "weekly", "1.0", TEMPLATE_REVISION],
+  ["/analyze", "weekly", "0.9", TEMPLATE_REVISION],
+  ["/demo", "monthly", "0.8", "2026-07-12"],
+  ["/training", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/blog", "daily", "0.8", TEMPLATE_REVISION],
+  ["/badminton", "weekly", "0.9", TEMPLATE_REVISION],
+  ["/tennis", "weekly", "0.9", TEMPLATE_REVISION],
+  ["/table-tennis", "weekly", "0.9", TEMPLATE_REVISION],
+  ["/pickleball", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/cricket", "weekly", "0.9", TEMPLATE_REVISION],
+  ["/swimming", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/football", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/basketball", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/gym", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/weight-lifting", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/physiotherapy", "weekly", "0.8", TEMPLATE_REVISION],
+  ["/marketplace", "weekly", "0.7", TEMPLATE_REVISION],
+  ["/pricing", "monthly", "0.7", "2026-07-08"],
+  ["/download", "monthly", "0.6", "2026-07-08"],
+  ["/help", "monthly", "0.5", "2026-07-08"],
+  ["/contact", "monthly", "0.5", "2026-07-08"],
+  ["/terms", "yearly", "0.3", "2026-07-08"],
+  ["/refund", "yearly", "0.3", "2026-07-08"],
+  ["/cancellation", "yearly", "0.3", "2026-07-08"],
+  ["/shipping", "yearly", "0.3", "2026-07-08"],
+];
+
+const laterOf = (a, b) => (String(a || "") > String(b || "") ? a : b);
+
+function writeSitemap(posts) {
+  const rows = SITEMAP_STATIC.map(([loc, freq, pri, date]) => ({
+    loc: `${ORIGIN}${loc === "/" ? "/" : loc}`,
+    lastmod: date,
+    freq,
+    pri,
+  }));
+
+  // Articles carry their own publish date, floored at the template revision
+  // because the markup they serve changed even when the words did not.
+  const slugs = posts.length ? posts : knownSlugs().map((id) => ({ id }));
+  for (const p of slugs) {
+    rows.push({
+      loc: `${ORIGIN}/blog/${p.id}`,
+      lastmod: laterOf(p.published_date || "", TEMPLATE_REVISION),
+      freq: "monthly",
+      pri: "0.7",
+    });
+  }
+
+  const body = rows
+    .map(
+      (r) =>
+        `  <url>\n    <loc>${esc(r.loc)}</loc>\n    <lastmod>${r.lastmod}</lastmod>\n` +
+        `    <changefreq>${r.freq}</changefreq>\n    <priority>${r.pri}</priority>\n  </url>`
+    )
+    .join("\n");
+
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+
+  fs.writeFileSync(path.join(BUILD_DIR, "sitemap.xml"), xml, "utf8");
+  console.log(`[seo-fallbacks] sitemap.xml: ${rows.length} urls (revision ${TEMPLATE_REVISION}).`);
 }
 
 async function run() {
