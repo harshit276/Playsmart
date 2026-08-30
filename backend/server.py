@@ -2791,6 +2791,20 @@ async def _settle_pending_referrals(user_id: str) -> None:
                              {"role": "redeemer", "code": ref["code"], "from_user_id": owner_id})
         await _credit_tokens(owner_id, "referral_credit", TOKEN_RULES["referral_credit"],
                              {"role": "referrer", "code": ref["code"], "to_user_id": user_id})
+        # Referrals are the one growth loop that costs nothing, so a completed
+        # one is worth knowing about the moment it happens rather than being
+        # discovered later in the ledger.
+        try:
+            await _notify_admin_now(
+                "🤝 Referral completed",
+                chr(10).join([
+                    "Referrer: " + str(owner_id)[:12],
+                    "New user: " + str(user_id)[:12],
+                    "Code: " + str(ref.get("code")),
+                    "+" + str(TOKEN_RULES["referral_credit"]) + " tokens each",
+                ]))
+        except Exception:
+            pass
         # Mark this redemption as completed + bump total_credited counter
         now = datetime.now(timezone.utc).isoformat()
         await asyncio.wait_for(

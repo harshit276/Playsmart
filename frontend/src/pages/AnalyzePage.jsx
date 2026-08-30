@@ -934,8 +934,28 @@ export default function AnalyzePage() {
   const _feedbackAnalysisId = result?.analysis_id || result?._analysis_id || null;
   const _canAskFeedback = !!result?.success
     && (result?.shots?.length > 0)
+    && shotsSeen                       // they've actually reached the breakdown
     && !feedbackOpen
     && !hasBeenAsked(_feedbackAnalysisId);
+  // The shot breakdown is the part a user can actually judge, so nothing is
+  // asked until they have reached it. Scroll depth alone fired on people who
+  // had only skimmed the summary — they were being asked about a list they had
+  // not looked at yet.
+  const [shotsSeen, setShotsSeen] = useState(false);
+  const shotsSectionRef = useRef(null);
+  useEffect(() => {
+    setShotsSeen(false);
+  }, [result?.analysis_id, result?._analysis_id]);
+  useEffect(() => {
+    const el = shotsSectionRef.current;
+    if (!el || shotsSeen || typeof IntersectionObserver === "undefined") return undefined;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { setShotsSeen(true); io.disconnect(); }
+    }, { threshold: 0.25 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [shotsSeen, result?.shots?.length]);
+
   const onScrollDeep = useCallback(() => {
     setFeedbackTrigger("scroll_results");
     setFeedbackOpen(true);
@@ -4998,6 +5018,7 @@ export default function AnalyzePage() {
             When viewingHistorical, we have no video file but the saved
             shots[] is enough to surface AI Coach feedback + tiles. */}
         {(file || viewingHistorical) && result?.shots?.length > 0 && (
+          <div ref={shotsSectionRef}>
           <MatchInsights
             videoFile={viewingHistorical ? null : file}
             shots={result.shots}
@@ -5024,6 +5045,7 @@ export default function AnalyzePage() {
             lockDetail={isGuest && !viewingHistorical}
             onUnlock={() => navigate("/auth")}
           />
+          </div>
         )}
 
         {/* VS PRO REFERENCE — one collapsible card per distinct shot

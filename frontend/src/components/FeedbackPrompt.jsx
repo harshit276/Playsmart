@@ -198,7 +198,7 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
  */
 export function useScrollDepthTrigger(
   enabled, depth, onTrigger,
-  { minDwellMs = 8000, fitsFallbackMs = 15000 } = {},
+  { minDwellMs = 20000, fitsFallbackMs = 35000 } = {},
 ) {
   const firedRef = useRef(false);
   useEffect(() => {
@@ -218,9 +218,10 @@ export function useScrollDepthTrigger(
       onTrigger(reason);
     };
     const onScroll = () => {
-      // DWELL GATE. Never ask before the user has had a few seconds with the
-      // result — a rating given before they've read anything is both annoying
-      // and worthless as signal. Also guards a fast flick to the bottom.
+      // DWELL GATE. 8s was still too early in practice — people were being
+      // asked mid-read. 20s is roughly how long it takes to actually get down
+      // to the per-shot breakdown, which is the part they can judge. A rating
+      // given before that is annoying AND worthless as signal.
       if (Date.now() - startedAt < minDwellMs) return;
       if (atDepth()) fire("scroll_results");
     };
