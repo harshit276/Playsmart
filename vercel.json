@@ -19,45 +19,157 @@
     }
   ],
   "crons": [
-    { "path": "/api/cron/attendance-reminders", "schedule": "30 15 * * *" }
+    {
+      "path": "/api/cron/attendance-reminders",
+      "schedule": "30 15 * * *"
+    }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
     {
       "src": "/(.*)",
-      "has": [{ "type": "host", "value": "^(www\\.)?(athlyticai\\.com|atheonics\\.com)$" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "^(www\\.)?(athlyticai\\.com|atheonics\\.com)$"
+        }
+      ],
       "status": 301,
-      "headers": { "Location": "https://www.formanti.com/$1" }
+      "headers": {
+        "Location": "https://www.formanti.com/$1"
+      }
     },
     {
       "src": "/(.*)",
-      "has": [{ "type": "host", "value": "^formanti\\.com$" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "^formanti\\.com$"
+        }
+      ],
       "status": 308,
-      "headers": { "Location": "https://www.formanti.com/$1" }
+      "headers": {
+        "Location": "https://www.formanti.com/$1"
+      }
     },
-    { "src": "/static/(.*)", "dest": "/frontend/static/$1" },
-    { "src": "/models/(.*)", "dest": "/frontend/models/$1" },
-    { "src": "/icons/(.*)", "dest": "/frontend/icons/$1" },
-    { "src": "/manifest.json", "dest": "/frontend/manifest.json" },
-    { "src": "/service-worker.js", "dest": "/frontend/service-worker.js" },
-    { "src": "/robots.txt", "dest": "/frontend/robots.txt" },
-    { "src": "/sitemap.xml", "dest": "/frontend/sitemap.xml" },
-    { "src": "/_headers", "dest": "/frontend/_headers" },
-    { "src": "/_redirects", "dest": "/frontend/_redirects" },
-    { "src": "/data/(.*)", "dest": "/frontend/data/$1" },
-    { "src": "/audio/(.*)", "dest": "/frontend/audio/$1" },
-    { "src": "/(.*\\.(json|png|jpg|jpeg|svg|webp|ico|mp3|mp4))", "dest": "/frontend/$1" },
-    { "src": "/badminton", "dest": "/frontend/badminton/index.html" },
-    { "src": "/tennis", "dest": "/frontend/tennis/index.html" },
-    { "src": "/table-tennis", "dest": "/frontend/table-tennis/index.html" },
-    { "src": "/pickleball", "dest": "/frontend/pickleball/index.html" },
-    { "src": "/cricket", "dest": "/frontend/cricket/index.html" },
-    { "src": "/swimming", "dest": "/frontend/swimming/index.html" },
-    { "src": "/football", "dest": "/frontend/football/index.html" },
-    { "src": "/basketball", "dest": "/frontend/basketball/index.html" },
-    { "src": "/gym", "dest": "/frontend/gym/index.html" },
-    { "src": "/weight-lifting", "dest": "/frontend/weight-lifting/index.html" },
-    { "src": "/physiotherapy", "dest": "/frontend/physiotherapy/index.html" },
-    { "src": "/(.*)", "dest": "/frontend/index.html" }
+    {
+      "src": "/static/(.*)",
+      "dest": "/frontend/static/$1"
+    },
+    {
+      "src": "/models/(.*)",
+      "dest": "/frontend/models/$1"
+    },
+    {
+      "src": "/icons/(.*)",
+      "dest": "/frontend/icons/$1"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/frontend/manifest.json"
+    },
+    {
+      "src": "/service-worker.js",
+      "dest": "/frontend/service-worker.js"
+    },
+    {
+      "src": "/robots.txt",
+      "dest": "/frontend/robots.txt"
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "/frontend/sitemap.xml"
+    },
+    {
+      "src": "/_headers",
+      "dest": "/frontend/_headers"
+    },
+    {
+      "src": "/_redirects",
+      "dest": "/frontend/_redirects"
+    },
+    {
+      "src": "/data/(.*)",
+      "dest": "/frontend/data/$1"
+    },
+    {
+      "src": "/audio/(.*)",
+      "dest": "/frontend/audio/$1"
+    },
+    {
+      "src": "/(.*\\.(json|png|jpg|jpeg|svg|webp|ico|mp3|mp4))",
+      "dest": "/frontend/$1"
+    },
+    {
+      "src": "/badminton",
+      "dest": "/frontend/badminton/index.html"
+    },
+    {
+      "src": "/tennis",
+      "dest": "/frontend/tennis/index.html"
+    },
+    {
+      "src": "/table-tennis",
+      "dest": "/frontend/table-tennis/index.html"
+    },
+    {
+      "src": "/pickleball",
+      "dest": "/frontend/pickleball/index.html"
+    },
+    {
+      "src": "/cricket",
+      "dest": "/frontend/cricket/index.html"
+    },
+    {
+      "src": "/swimming",
+      "dest": "/frontend/swimming/index.html"
+    },
+    {
+      "src": "/football",
+      "dest": "/frontend/football/index.html"
+    },
+    {
+      "src": "/basketball",
+      "dest": "/frontend/basketball/index.html"
+    },
+    {
+      "src": "/gym",
+      "dest": "/frontend/gym/index.html"
+    },
+    {
+      "src": "/weight-lifting",
+      "dest": "/frontend/weight-lifting/index.html"
+    },
+    {
+      "src": "/physiotherapy",
+      "dest": "/frontend/physiotherapy/index.html"
+    },
+    {
+      "src": "/analyze",
+      "dest": "/frontend/analyze/index.html"
+    },
+    {
+      "src": "/training",
+      "dest": "/frontend/training/index.html"
+    },
+    {
+      "src": "/marketplace",
+      "dest": "/frontend/marketplace/index.html"
+    },
+    {
+      "src": "/blog",
+      "dest": "/frontend/blog/index.html"
+    },
+    {
+      "src": "/blog/([^/]+)",
+      "dest": "/frontend/blog/$1/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/index.html"
+    }
   ]
 }

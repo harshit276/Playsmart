@@ -164,6 +164,42 @@ const ROUTES = {
       ["Do I need a coach as well?", "Formanti gives instant, objective feedback between sessions; it complements, not replaces, hands-on coaching."],
     ],
   },
+  "/analyze": {
+    title: "Free AI Sports Video Analysis - Upload & Get Feedback",
+    description:
+      "Upload a clip from your phone and get frame-by-frame technique feedback, shot-by-shot breakdown and drills to fix what is holding you back. Free to try.",
+    h1: "Analyze Your Technique From Any Phone Video",
+    blurb:
+      "Record a rally, a serve, a delivery or a lift on any phone, upload it, and Formanti returns a shot-by-shot breakdown, a coach summary and the drills that fix your weakest link. No sensors, no wearables, no setup.",
+    faqs: [
+      ["What video do I need to upload?", "A 10-30 second clip filmed from the side or back of the court works best. Any modern phone camera is enough - no special equipment."],
+      ["How long does analysis take?", "Most clips come back in under two minutes. You can close the tab while it runs; the analysis finishes on our servers."],
+    ],
+  },
+  "/training": {
+    title: "Personalized AI Training Plans for Your Sport",
+    description:
+      "Get a training plan built around your level, your goals and the time you actually have. Drills, progressions and weekly structure across badminton, tennis, cricket and more.",
+    h1: "Training Plans Built Around Your Game",
+    blurb:
+      "Generic programs assume a player you are not. Formanti builds a weekly plan from your own analysis - your level, your weak links, and the hours you can genuinely commit - then adjusts as you improve.",
+    faqs: [
+      ["How is this different from a generic training plan?", "It starts from your own video analysis, so the drills target the specific technique gaps found in your footage rather than a generic curriculum."],
+      ["How much time do I need per week?", "Plans scale from two short sessions a week upward. You set the time available and the plan is built to fit it."],
+    ],
+  },
+  "/marketplace": {
+    title: "Sports Equipment Finder - Rackets, Shoes & Gear Picks",
+    description:
+      "Find the right racket, shoes, rubbers or gear for your playing style, level and budget - matched by AI rather than sponsored rankings.",
+    h1: "Find Equipment That Suits How You Actually Play",
+    blurb:
+      "Gear advice online is mostly affiliate rankings. Formanti matches rackets, shoes, strings and rubbers to your level, playing style and budget, using what your own analysis shows about your game.",
+    faqs: [
+      ["How are recommendations chosen?", "They are matched to your playing style, level and budget from your analysis - not ordered by commission."],
+      ["Do I need an analysis first?", "No, you can browse by sport and budget. An analysis makes the match more specific to your technique."],
+    ],
+  },
   "/physiotherapy": {
     title: "AI Physiotherapy Tracker - Exercise Form Analysis",
     description:
@@ -197,48 +233,221 @@ function buildMain(data) {
             </main>`;
 }
 
-function render(template, route, data) {
-  const url = `${ORIGIN}${route}`;
-  const fullTitle = `${data.title} | Formanti`;
-  let html = template;
+// Replace once, with a function so `$&`/`$1` inside article HTML stay literal.
+function replaceOnce(html, re, replacement) {
+  return html.replace(re, () => replacement);
+}
 
-  // Guarded replacements — each only fires if its target exists; the file is
+// Swap the shell's homepage <head> tags for this page's. Shared by the
+// landing pages and the blog so the two can never drift apart.
+function renderMeta(template, { url, fullTitle, description }) {
+  let html = template;
+  // Guarded replacements - each only fires if its target exists; the file is
   // written regardless, so an explicit Vercel route to it can never 404.
-  html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${esc(fullTitle)}</title>`);
-  html = html.replace(
-    /<meta name="description" content="[^"]*"\s*\/>/,
-    `<meta name="description" content="${esc(data.description)}" />`
-  );
-  html = html.replace(
-    /<link rel="canonical" href="[^"]*"\s*\/>/,
-    `<link rel="canonical" href="${url}" />`
-  );
-  html = html.replace(
-    /<meta property="og:url" content="[^"]*"\s*\/>/,
-    `<meta property="og:url" content="${url}" />`
-  );
-  html = html.replace(
-    /<meta property="og:title" content="[^"]*"\s*\/>/,
-    `<meta property="og:title" content="${esc(fullTitle)}" />`
-  );
-  html = html.replace(
-    /<meta property="og:description" content="[^"]*"\s*\/>/,
-    `<meta property="og:description" content="${esc(data.description)}" />`
-  );
-  html = html.replace(
-    /<meta name="twitter:title" content="[^"]*"\s*\/>/,
-    `<meta name="twitter:title" content="${esc(fullTitle)}" />`
-  );
-  html = html.replace(
-    /<meta name="twitter:description" content="[^"]*"\s*\/>/,
-    `<meta name="twitter:description" content="${esc(data.description)}" />`
-  );
-  // Swap the homepage static fallback <main> for this page's content.
-  html = html.replace(/<main[\s\S]*?<\/main>/, buildMain(data));
+  const swaps = [
+    [/<title>[\s\S]*?<\/title>/, `<title>${esc(fullTitle)}</title>`],
+    [/<meta name="description" content="[^"]*"\s*\/>/, `<meta name="description" content="${esc(description)}" />`],
+    [/<link rel="canonical" href="[^"]*"\s*\/>/, `<link rel="canonical" href="${url}" />`],
+    [/<meta property="og:url" content="[^"]*"\s*\/>/, `<meta property="og:url" content="${url}" />`],
+    [/<meta property="og:title" content="[^"]*"\s*\/>/, `<meta property="og:title" content="${esc(fullTitle)}" />`],
+    [/<meta property="og:description" content="[^"]*"\s*\/>/, `<meta property="og:description" content="${esc(description)}" />`],
+    [/<meta name="twitter:title" content="[^"]*"\s*\/>/, `<meta name="twitter:title" content="${esc(fullTitle)}" />`],
+    [/<meta name="twitter:description" content="[^"]*"\s*\/>/, `<meta name="twitter:description" content="${esc(description)}" />`],
+  ];
+  for (const [re, out] of swaps) html = replaceOnce(html, re, out);
   return html;
 }
 
-function run() {
+function render(template, route, data) {
+  const url = `${ORIGIN}${route}`;
+  const fullTitle = `${data.title} | Formanti`;
+  let html = renderMeta(template, { url, fullTitle, description: data.description });
+  // Swap the homepage static fallback <main> for this page's content.
+  html = replaceOnce(html, /<main[\s\S]*?<\/main>/, buildMain(data));
+  return html;
+}
+
+/* ------------------------------------------------------------------ *
+ * Blog articles.
+ *
+ * WHY THIS EXISTS: the 35 blog posts are served from the API, so before
+ * this they had no static fallback at all — every /blog/<slug> fell
+ * through vercel.json's catch-all to build/index.html and returned the
+ * HOMEPAGE's title, description and body. To a crawler that is 35 URLs
+ * of byte-identical duplicate content, which is worse than having no
+ * blog: it buries the real articles and dilutes the domain. Most of the
+ * badminton keyword coverage lives in those posts, which is why the
+ * sports whose SEO rests on a landing page (cricket, basketball) were
+ * the only ones showing up at all.
+ *
+ * The post bodies come from our own API at build time. That is a
+ * network call inside the build, so it is written to degrade rather
+ * than break: retries on the list, per-post failures isolated, and a
+ * checked-in slug list (blogSlugs.json) as the floor. A file is ALWAYS
+ * written for every known slug — vercel.json routes /blog/<slug>
+ * straight at these files, so a missing one would 404 a live URL.
+ * ------------------------------------------------------------------ */
+
+const API = `${ORIGIN}/api`;
+const SLUGS_FILE = path.join(__dirname, "blogSlugs.json");
+
+function knownSlugs() {
+  try {
+    return JSON.parse(fs.readFileSync(SLUGS_FILE, "utf8"));
+  } catch {
+    return [];
+  }
+}
+
+async function getJSON(url, tries = 3) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      // Generous timeout: this hits a cold serverless function.
+      const res = await fetch(url, { signal: AbortSignal.timeout(45000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      lastErr = err;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
+// Strip tags for the meta description fallback / word count.
+const stripTags = (html) => String(html || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+function buildArticleMain(post) {
+  const date = post.published_date || "";
+  const meta = [date, post.read_time, post.sport].filter(Boolean).map(esc).join(" · ");
+  // post.content is our own authored HTML — rendered as-is so the crawler
+  // gets the real article, not a summary of it.
+  return `<main style="max-width:760px;margin:0 auto;padding:48px 20px;font-family:Inter,system-ui,sans-serif;color:#e5e5e5;background:#0a0a0a;min-height:100vh">
+                <p style="font-size:.85rem;color:#a3e635"><a href="/blog" style="color:#a3e635">&larr; Coaching guides &amp; blog</a></p>
+                <h1 style="font-size:2rem;line-height:1.25;color:#fff">${esc(post.title)}</h1>
+                <p style="font-size:.85rem;color:#9a9a9a">${meta}</p>
+                <p style="font-size:1.05rem;color:#cfcfcf">${esc(post.description || "")}</p>
+                <article style="line-height:1.8">${post.content || ""}</article>
+                <p style="line-height:1.9;margin-top:32px"><a href="/analyze" style="color:#a3e635">Analyze your technique free</a> &middot; <a href="/training" style="color:#a3e635">Training plans</a> &middot; <a href="/marketplace" style="color:#a3e635">Equipment finder</a></p>
+                <noscript><p style="color:#fbbf24">Enable JavaScript for the full interactive Formanti experience.</p></noscript>
+            </main>`;
+}
+
+function articleSchema(post, url) {
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.description,
+    datePublished: post.published_date,
+    dateModified: post.published_date,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    author: { "@type": "Organization", name: "Formanti", url: ORIGIN },
+    publisher: {
+      "@type": "Organization",
+      name: "Formanti",
+      logo: { "@type": "ImageObject", url: OG_IMAGE },
+    },
+    keywords: (post.tags || []).join(", "),
+    articleSection: post.category,
+  });
+}
+
+function buildBlogIndexMain(posts) {
+  // A real, crawlable link to every article — without this the posts are
+  // reachable only through JS and the sitemap.
+  const items = posts
+    .map(
+      (p) =>
+        `<li style="margin-bottom:14px"><a href="/blog/${esc(p.id)}" style="color:#a3e635;font-weight:600">${esc(p.title)}</a><br><span style="color:#9a9a9a;font-size:.9rem">${esc(p.description || "")}</span></li>`
+    )
+    .join("");
+  return `<main style="max-width:880px;margin:0 auto;padding:48px 20px;font-family:Inter,system-ui,sans-serif;color:#e5e5e5;background:#0a0a0a;min-height:100vh">
+                <h1 style="font-size:2rem;line-height:1.2;color:#fff">Coaching Guides, Drills &amp; Gear Reviews</h1>
+                <p style="font-size:1.05rem;color:#cfcfcf">Technique breakdowns, training plans and equipment guides for badminton, tennis, table tennis, cricket and more — written to be used on court, not just read.</p>
+                <ul style="line-height:1.6;padding-left:18px">${items}</ul>
+                <noscript><p style="color:#fbbf24">Enable JavaScript for the full interactive Formanti experience.</p></noscript>
+            </main>`;
+}
+
+// Render one article page off the built index.html shell.
+function renderArticle(template, post) {
+  const url = `${ORIGIN}/blog/${post.id}`;
+  const fullTitle = `${post.title} | Formanti`;
+  const desc = post.description || stripTags(post.content).slice(0, 155);
+  let html = renderMeta(template, { url, fullTitle, description: desc });
+  html = replaceOnce(html, /<main[\s\S]*?<\/main>/, buildArticleMain(post));
+  // Article structured data, injected just before </head>.
+  html = replaceOnce(
+    html,
+    /<\/head>/,
+    `<script type="application/ld+json">${articleSchema(post, url)}</script></head>`
+  );
+  return html;
+}
+
+async function buildBlog(template) {
+  const outRoot = path.join(BUILD_DIR, "blog");
+  const fallback = knownSlugs();
+  let posts = [];
+
+  try {
+    const list = await getJSON(`${API}/blog`);
+    posts = Array.isArray(list) ? list : list.posts || [];
+  } catch (err) {
+    console.warn(`[seo-fallbacks] blog list unavailable (${err.message}) — using ${fallback.length} checked-in slugs`);
+  }
+
+  const slugs = posts.length ? posts.map((p) => p.id) : fallback;
+  const missing = fallback.filter((s) => !slugs.includes(s));
+  if (posts.length && missing.length) {
+    // The API dropped a slug we ship routes for; still write a page so the
+    // URL does not start 404ing mid-deploy.
+    console.warn(`[seo-fallbacks] ${missing.length} checked-in slug(s) absent from API: ${missing.join(", ")}`);
+    slugs.push(...missing);
+  }
+
+  let ok = 0;
+  for (const slug of slugs) {
+    const outDir = path.join(outRoot, slug);
+    fs.mkdirSync(outDir, { recursive: true });
+    let html = template;
+    try {
+      const post = await getJSON(`${API}/blog/${slug}`, 2);
+      if (!post || !post.title) throw new Error("empty post");
+      html = renderArticle(template, { ...post, id: post.id || slug });
+      ok++;
+    } catch (err) {
+      // Untouched shell: no worse than today, and the route still resolves.
+      console.warn(`[seo-fallbacks] ✗ /blog/${slug} — ${err.message}`);
+    }
+    fs.writeFileSync(path.join(outDir, "index.html"), html, "utf8");
+  }
+
+  // The listing page — the crawl path into all of the above.
+  if (posts.length) {
+    const url = `${ORIGIN}/blog`;
+    const fullTitle = "Sports Coaching Guides, Drills & Gear Reviews | Formanti";
+    const desc =
+      "Technique guides, training drills and equipment reviews for badminton, tennis, table tennis, cricket and more — from the Formanti AI coaching team.";
+    let html = renderMeta(template, { url, fullTitle, description: desc });
+    html = replaceOnce(html, /<main[\s\S]*?<\/main>/, buildBlogIndexMain(posts));
+    fs.mkdirSync(outRoot, { recursive: true });
+    fs.writeFileSync(path.join(outRoot, "index.html"), html, "utf8");
+  }
+
+  console.log(`[seo-fallbacks] blog: ${ok}/${slugs.length} articles rendered with real content.`);
+  if (ok === 0 && slugs.length) {
+    // Every article fell back to the homepage shell. The deploy would ship
+    // the exact duplicate-content bug this script exists to fix, so fail and
+    // leave the previous deployment serving.
+    console.error("[seo-fallbacks] blog API returned nothing — refusing to ship duplicate shells.");
+    process.exitCode = 1;
+  }
+}
+
+async function run() {
   const indexPath = path.join(BUILD_DIR, "index.html");
   if (!fs.existsSync(indexPath)) {
     console.error("[seo-fallbacks] build/index.html not found — run `craco build` first.");
@@ -264,6 +473,7 @@ function run() {
       } catch { /* ignore */ }
     }
   }
+  await buildBlog(template);
   console.log(`[seo-fallbacks] done: ${ok}/${Object.keys(ROUTES).length} routes generated.`);
 }
 
