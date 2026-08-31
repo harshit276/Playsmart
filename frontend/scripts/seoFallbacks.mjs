@@ -438,7 +438,6 @@ async function buildBlog(template) {
   }
 
   console.log(`[seo-fallbacks] blog: ${ok}/${slugs.length} articles rendered with real content.`);
-  writeSitemap(posts);
   if (ok === 0 && slugs.length) {
     // Every article fell back to the homepage shell. The deploy would ship
     // the exact duplicate-content bug this script exists to fix, so fail and
@@ -446,6 +445,7 @@ async function buildBlog(template) {
     console.error("[seo-fallbacks] blog API returned nothing — refusing to ship duplicate shells.");
     process.exitCode = 1;
   }
+  return posts;
 }
 
 /* ------------------------------------------------------------------ *
@@ -499,7 +499,7 @@ const SITEMAP_STATIC = [
 
 const laterOf = (a, b) => (String(a || "") > String(b || "") ? a : b);
 
-function writeSitemap(posts) {
+function writeSitemap(posts, equipSlugs = []) {
   const rows = SITEMAP_STATIC.map(([loc, freq, pri, date]) => ({
     loc: `${ORIGIN}${loc === "/" ? "/" : loc}`,
     lastmod: date,
@@ -519,6 +519,15 @@ function writeSitemap(posts) {
     });
   }
 
+  for (const slug of equipSlugs) {
+    rows.push({
+      loc: `${ORIGIN}/${slug}/equipment`,
+      lastmod: TEMPLATE_REVISION,
+      freq: "monthly",
+      pri: "0.8",
+    });
+  }
+
   const body = rows
     .map(
       (r) =>
@@ -533,6 +542,148 @@ function writeSitemap(posts) {
 
   fs.writeFileSync(path.join(BUILD_DIR, "sitemap.xml"), xml, "utf8");
   console.log(`[seo-fallbacks] sitemap.xml: ${rows.length} urls (revision ${TEMPLATE_REVISION}).`);
+}
+
+/* ------------------------------------------------------------------ *
+ * Per-sport equipment hub pages (/<sport>/equipment).
+ *
+ * WHY: the product data (public/data/equipment/<file>.json) is rich -
+ * real rackets, bats, boots with specs, pros/cons and prices - but it
+ * was only ever reachable through the client-rendered marketplace. So
+ * "best badminton rackets", "best cricket bats" and every other buying
+ * query returned nothing crawlable. These pages put that catalogue in
+ * static HTML, one hub per sport, targeting the commercial long-tail the
+ * blog buying guides only partly cover.
+ *
+ * The copy (title/description/intro/faqs) comes from the SAME
+ * equipmentSeo.json the React page imports, so the crawlable page and the
+ * interactive one cannot drift. Product data is read from the built
+ * copy under build/data/equipment so it matches exactly what is served.
+ * ------------------------------------------------------------------ */
+
+const EQUIP_SEO_PATH = path.resolve(__dirname, "..", "src", "data", "equipmentSeo.json");
+
+function loadEquipSeo() {
+  try {
+    return JSON.parse(fs.readFileSync(EQUIP_SEO_PATH, "utf8"));
+  } catch (err) {
+    console.warn(`[seo-fallbacks] equipmentSeo.json unreadable (${err.message}) — skipping equipment pages`);
+    return null;
+  }
+}
+
+const inrLabel = (item) => {
+  const inr = item && item.price_ranges && item.price_ranges.INR;
+  if (inr && (inr.min || inr.max)) {
+    if (inr.min && inr.max && inr.min !== inr.max) return `₹${inr.min.toLocaleString("en-IN")}–₹${inr.max.toLocaleString("en-IN")}`;
+    return `₹${(inr.min || inr.max).toLocaleString("en-IN")}`;
+  }
+  const mp = (item.marketplace_prices || []).map((p) => p.price).filter(Boolean);
+  return mp.length ? `₹${Math.min(...mp).toLocaleString("en-IN")}+` : "";
+};
+
+function equipItemHtml(item) {
+  const price = inrLabel(item);
+  const pros = (item.pros || []).slice(0, 3).map((p) => `<li>${esc(p)}</li>`).join("");
+  const level = esc(item.level || (item.recommended_for || [])[0] || "");
+  const links = [];
+  for (const p of item.marketplace_prices || []) {
+    if (p.url && p.platform) links.push(`<a href="${esc(p.url)}" rel="nofollow noopener" style="color:#a3e635">${esc(p.platform)}</a>`);
+  }
+  const buy = links.slice(0, 2).join(" &middot; ");
+  return `<div style="border:1px solid #27272a;border-radius:12px;padding:14px;margin:10px 0">
+                  <p style="margin:0;font-weight:700;color:#fff">${esc(item.name)}${level ? ` <span style="font-weight:400;color:#a1a1aa;font-size:.85rem">(${level})</span>` : ""}</p>
+                  ${item.brand ? `<p style="margin:2px 0;color:#71717a;font-size:.8rem">${esc(item.brand)}</p>` : ""}
+                  ${price ? `<p style="margin:4px 0;color:#a3e635;font-weight:700">${price}</p>` : ""}
+                  ${item.description ? `<p style="margin:4px 0;color:#cfcfcf;font-size:.9rem">${esc(item.description)}</p>` : ""}
+                  ${pros ? `<ul style="margin:6px 0;color:#d4d4d8;font-size:.85rem">${pros}</ul>` : ""}
+                  ${buy ? `<p style="margin:4px 0;font-size:.85rem">Buy: ${buy}</p>` : ""}
+                </div>`;
+}
+
+function buildEquipmentMain(meta, cats, labels) {
+  const label = (c) => labels[c] || c.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  const sections = cats
+    .map((c) => {
+      const items = (c.items || []).map(equipItemHtml).join("");
+      return `<section id="${esc(c.category)}">
+                <h2 style="color:#fff;margin-top:28px">Best ${esc(meta.sportName)} ${esc(label(c.category))}</h2>
+                ${items}
+              </section>`;
+    })
+    .join("");
+  const faqs = (meta.faqs || [])
+    .map(([q, a]) => `<h3 style="color:#fff;font-size:1rem">${esc(q)}</h3><p>${esc(a)}</p>`)
+    .join("");
+  return `<main style="max-width:880px;margin:0 auto;padding:48px 20px;font-family:Inter,system-ui,sans-serif;color:#e5e5e5;background:#0a0a0a;min-height:100vh">
+                <p style="font-size:.85rem;color:#a3e635"><a href="/${esc(meta.sport)}" style="color:#a3e635">${esc(meta.sportName)} AI coach</a></p>
+                <h1 style="font-size:2rem;line-height:1.2;color:#fff">Best ${esc(meta.sportName)} Equipment</h1>
+                <p style="font-size:1.05rem;color:#cfcfcf">${esc(meta.intro)}</p>
+                <p style="line-height:1.9"><a href="/analyze" style="color:#a3e635">Analyze your game free</a> &middot; <a href="/${esc(meta.sport)}" style="color:#a3e635">${esc(meta.sportName)} coaching</a> &middot; <a href="/blog" style="color:#a3e635">Guides</a> &middot; <a href="/marketplace" style="color:#a3e635">All gear</a></p>
+                ${sections}
+                ${faqs ? `<h2 style="color:#fff;margin-top:32px">Frequently asked questions</h2>${faqs}` : ""}
+                <noscript><p style="color:#fbbf24">Enable JavaScript for the full interactive Formanti experience.</p></noscript>
+            </main>`;
+}
+
+function equipSchema(meta, cats, url) {
+  const items = cats.flatMap((c) => c.items || []).slice(0, 40);
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: `Best ${meta.sportName} Equipment`,
+      url,
+      itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name })),
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: (meta.faqs || []).map(([q, a]) => ({
+        "@type": "Question",
+        name: q,
+        acceptedAnswer: { "@type": "Answer", text: a },
+      })),
+    },
+  ];
+}
+
+// Returns the list of sport slugs that got a page (for the sitemap).
+function buildEquipment(template) {
+  const seo = loadEquipSeo();
+  if (!seo || !seo.sports) return [];
+  const labels = seo.categoryLabels || {};
+  const done = [];
+
+  for (const [slug, meta] of Object.entries(seo.sports)) {
+    const dataPath = path.join(BUILD_DIR, "data", "equipment", `${meta.file}.json`);
+    let cats = [];
+    try {
+      const d = JSON.parse(fs.readFileSync(dataPath, "utf8"));
+      cats = d.equipment_categories || [];
+    } catch (err) {
+      console.warn(`[seo-fallbacks] equipment data missing for ${slug} (${err.message})`);
+    }
+
+    const url = `${ORIGIN}/${slug}/equipment`;
+    const outDir = path.join(BUILD_DIR, slug, "equipment");
+    fs.mkdirSync(outDir, { recursive: true });
+
+    let html = renderMeta(template, { url, fullTitle: `${meta.title} | Formanti`, description: meta.description });
+    if (cats.length) {
+      html = replaceOnce(html, /<main[\s\S]*?<\/main>/, buildEquipmentMain(meta, cats, labels));
+      const schema = equipSchema(meta, cats, url)
+        .map((s) => `<script type="application/ld+json">${JSON.stringify(s)}</script>`)
+        .join("");
+      html = replaceOnce(html, /<\/head>/, `${schema}</head>`);
+      done.push(slug);
+    }
+    // Even with no data we still write a titled shell so the route never 404s.
+    fs.writeFileSync(path.join(outDir, "index.html"), html, "utf8");
+    console.log(`[seo-fallbacks] ${cats.length ? "✓" : "∅"} /${slug}/equipment${cats.length ? ` (${cats.reduce((n, c) => n + (c.items || []).length, 0)} products)` : " (no data)"}`);
+  }
+  console.log(`[seo-fallbacks] equipment: ${done.length}/${Object.keys(seo.sports).length} sport pages with products.`);
+  return done;
 }
 
 async function run() {
@@ -561,7 +712,9 @@ async function run() {
       } catch { /* ignore */ }
     }
   }
-  await buildBlog(template);
+  const posts = await buildBlog(template);
+  const equipSlugs = buildEquipment(template);
+  writeSitemap(posts, equipSlugs);
   console.log(`[seo-fallbacks] done: ${ok}/${Object.keys(ROUTES).length} routes generated.`);
 }
 

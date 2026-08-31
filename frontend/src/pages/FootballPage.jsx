@@ -162,7 +162,7 @@ export default function FootballPage() {
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
-              <Link to="/equipment?sport=football">View Boots</Link>
+              <Link to="/football/equipment">View Boots</Link>
             </Button>
           </motion.div>
         </div>
@@ -266,7 +266,7 @@ export default function FootballPage() {
           </div>
           <div className="mt-8 text-center">
             <Button asChild className="bg-green-400 text-black hover:bg-green-500">
-              <Link to="/equipment?sport=football">See All Boot Recommendations</Link>
+              <Link to="/football/equipment">See All Boot Recommendations</Link>
             </Button>
           </div>
         </div>

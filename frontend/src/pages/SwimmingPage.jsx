@@ -162,7 +162,7 @@ export default function SwimmingPage() {
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
-              <Link to="/equipment?sport=swimming">View Gear</Link>
+              <Link to="/swimming/equipment">View Gear</Link>
             </Button>
           </motion.div>
         </div>
@@ -266,7 +266,7 @@ export default function SwimmingPage() {
           </div>
           <div className="mt-8 text-center">
             <Button asChild className="bg-cyan-400 text-black hover:bg-cyan-500">
-              <Link to="/equipment?sport=swimming">See All Gear Recommendations</Link>
+              <Link to="/swimming/equipment">See All Gear Recommendations</Link>
             </Button>
           </div>
         </div>

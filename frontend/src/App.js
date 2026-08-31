@@ -16,6 +16,7 @@ const AuthPage = lazyWithReload(() => import("@/pages/AuthPage"));
 const AssessmentPage = lazyWithReload(() => import("@/pages/AssessmentPage"));
 const DashboardPage = lazyWithReload(() => import("@/pages/DashboardPage"));
 const EquipmentPage = lazyWithReload(() => import("@/pages/EquipmentPage"));
+const SportEquipmentPage = lazyWithReload(() => import("@/pages/SportEquipmentPage"));
 const TrainingPage = lazyWithReload(() => import("@/pages/TrainingPage"));
 const ProgressPage = lazyWithReload(() => import("@/pages/ProgressPage"));
 const PlayerCardPage = lazyWithReload(() => import("@/pages/PlayerCardPage"));
@@ -301,6 +302,13 @@ function AppRoutes() {
       <Route path="/gym" element={<GymPage />} />
       <Route path="/weight-lifting" element={<WeightLiftingPage />} />
       <Route path="/physiotherapy" element={<PhysiotherapyPage />} />
+      <Route path="/badminton/equipment" element={<SportEquipmentPage />} />
+      <Route path="/tennis/equipment" element={<SportEquipmentPage />} />
+      <Route path="/table-tennis/equipment" element={<SportEquipmentPage />} />
+      <Route path="/pickleball/equipment" element={<SportEquipmentPage />} />
+      <Route path="/cricket/equipment" element={<SportEquipmentPage />} />
+      <Route path="/football/equipment" element={<SportEquipmentPage />} />
+      <Route path="/swimming/equipment" element={<SportEquipmentPage />} />
       <Route path="/assessment" element={<AssessmentPage />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/wallet" element={<WalletPage />} />

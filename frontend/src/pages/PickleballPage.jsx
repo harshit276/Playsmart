@@ -162,7 +162,7 @@ export default function PickleballPage() {
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
-              <Link to="/equipment?sport=pickleball">View Paddles</Link>
+              <Link to="/pickleball/equipment">View Paddles</Link>
             </Button>
           </motion.div>
         </div>
@@ -265,7 +265,7 @@ export default function PickleballPage() {
           </div>
           <div className="mt-8 text-center">
             <Button asChild className="bg-emerald-400 text-black hover:bg-emerald-500">
-              <Link to="/equipment?sport=pickleball">See All Paddle Recommendations</Link>
+              <Link to="/pickleball/equipment">See All Paddle Recommendations</Link>
             </Button>
           </div>
         </div>

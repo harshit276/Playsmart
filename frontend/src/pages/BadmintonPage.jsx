@@ -163,7 +163,7 @@ export default function BadmintonPage() {
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
-              <Link to="/equipment?sport=badminton">View Rackets</Link>
+              <Link to="/badminton/equipment">View Rackets</Link>
             </Button>
           </motion.div>
         </div>
@@ -267,7 +267,7 @@ export default function BadmintonPage() {
           </div>
           <div className="mt-8 text-center">
             <Button asChild className="bg-lime-400 text-black hover:bg-lime-500">
-              <Link to="/equipment?sport=badminton">See All Racket Recommendations</Link>
+              <Link to="/badminton/equipment">See All Racket Recommendations</Link>
             </Button>
           </div>
         </div>

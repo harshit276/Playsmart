@@ -163,7 +163,7 @@ export default function CricketPage() {
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
-              <Link to="/equipment?sport=cricket">View Bats</Link>
+              <Link to="/cricket/equipment">View Bats</Link>
             </Button>
           </motion.div>
         </div>
@@ -267,7 +267,7 @@ export default function CricketPage() {
           </div>
           <div className="mt-8 text-center">
             <Button asChild className="bg-blue-400 text-black hover:bg-blue-500">
-              <Link to="/equipment?sport=cricket">See All Bat Recommendations</Link>
+              <Link to="/cricket/equipment">See All Bat Recommendations</Link>
             </Button>
           </div>
         </div>

@@ -168,6 +168,34 @@
       "dest": "/frontend/blog/$1/index.html"
     },
     {
+      "src": "/badminton/equipment",
+      "dest": "/frontend/badminton/equipment/index.html"
+    },
+    {
+      "src": "/tennis/equipment",
+      "dest": "/frontend/tennis/equipment/index.html"
+    },
+    {
+      "src": "/table-tennis/equipment",
+      "dest": "/frontend/table-tennis/equipment/index.html"
+    },
+    {
+      "src": "/pickleball/equipment",
+      "dest": "/frontend/pickleball/equipment/index.html"
+    },
+    {
+      "src": "/cricket/equipment",
+      "dest": "/frontend/cricket/equipment/index.html"
+    },
+    {
+      "src": "/football/equipment",
+      "dest": "/frontend/football/equipment/index.html"
+    },
+    {
+      "src": "/swimming/equipment",
+      "dest": "/frontend/swimming/equipment/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/frontend/index.html"
     }

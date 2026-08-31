@@ -162,7 +162,7 @@ export default function TableTennisPage() {
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
-              <Link to="/equipment?sport=table_tennis">View Paddles</Link>
+              <Link to="/table-tennis/equipment">View Paddles</Link>
             </Button>
           </motion.div>
         </div>
@@ -266,7 +266,7 @@ export default function TableTennisPage() {
           </div>
           <div className="mt-8 text-center">
             <Button asChild className="bg-sky-400 text-black hover:bg-sky-500">
-              <Link to="/equipment?sport=table_tennis">See All Paddle Recommendations</Link>
+              <Link to="/table-tennis/equipment">See All Paddle Recommendations</Link>
             </Button>
           </div>
         </div>

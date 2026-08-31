@@ -1,0 +1,125 @@
+{
+  "_note": "Per-sport SEO copy for the equipment hub pages. Imported by SportEquipmentPage.jsx (webpack) AND read at build time by scripts/seoFallbacks.mjs, so the page a crawler sees and the page a user sees stay in sync. Product data itself lives in public/data/equipment/<file>.json. No fabricated ratings or counts here.",
+  "categoryLabels": {
+    "rackets": "Rackets",
+    "shoes": "Shoes",
+    "shuttlecocks": "Shuttlecocks",
+    "strings": "Strings",
+    "grips": "Grips & Overgrips",
+    "bats": "Bats",
+    "balls": "Balls",
+    "pads": "Batting Pads",
+    "gloves": "Gloves",
+    "helmets": "Helmets",
+    "footballs": "Footballs",
+    "boots": "Boots",
+    "shin_guards": "Shin Guards",
+    "goalkeeper_gloves": "Goalkeeper Gloves",
+    "paddles": "Paddles",
+    "goggles": "Goggles",
+    "swimsuits": "Swimsuits",
+    "swim_caps": "Swim Caps",
+    "fins": "Fins",
+    "pull_buoys": "Pull Buoys",
+    "blades": "Blades",
+    "rubbers": "Rubbers",
+    "ready_made_rackets": "Ready-Made Rackets",
+    "tennis_rackets": "Rackets",
+    "tennis_shoes": "Shoes",
+    "tennis_strings": "Strings",
+    "tennis_balls": "Balls"
+  },
+  "sports": {
+    "badminton": {
+      "sport": "badminton",
+      "file": "badminton",
+      "sportName": "Badminton",
+      "title": "Best Badminton Equipment 2026 - Rackets, Shoes & Gear Guide",
+      "description": "Compare the best badminton rackets, shoes, shuttlecocks, strings and grips for every level and budget. Real specs, pros and cons, and current prices in one place.",
+      "intro": "Choosing badminton gear is mostly about matching a racket's weight, balance and flex to how you actually play - not buying the most expensive frame. Below is a curated guide across rackets, shoes, shuttlecocks and strings for beginners through advanced players, with the specs and trade-offs that matter and where to buy.",
+      "faqs": [
+        ["Which badminton racket is best for beginners?", "Beginners want a light, even-balance, flexible-shaft racket that is forgiving on off-centre hits - a control frame rather than a stiff attacking one. See the beginner picks in the rackets section below."],
+        ["How much should I spend on a first badminton racket?", "A solid beginner racket sits in the entry-to-mid range; you do not need a pro frame to learn. The rackets below are grouped by level so you can match spend to your stage."],
+        ["Does the racket or the player matter more?", "The player, by far - but a racket that fights your style slows you down. The point of this guide is to remove that mismatch so your technique, not your gear, is the limit."]
+      ]
+    },
+    "tennis": {
+      "sport": "tennis",
+      "file": "tennis",
+      "sportName": "Tennis",
+      "title": "Best Tennis Equipment 2026 - Rackets, Shoes, Strings & Balls",
+      "description": "Compare the best tennis rackets, shoes, strings and balls for every level and budget. Real specs, pros and cons, and current prices to help you choose with confidence.",
+      "intro": "The right tennis racket depends on your swing and your arm as much as your level - head size, weight and stiffness change how much power and control you get, and how kind the frame is to your elbow. This guide covers rackets, shoes, strings and balls with the trade-offs that actually matter.",
+      "faqs": [
+        ["What tennis racket should a beginner buy?", "Beginners are best served by a larger head size and a lighter, more forgiving frame that adds power and is easy on the arm. The beginner rackets below fit that profile."],
+        ["How often should I restring my racket?", "A common rule is to restring as many times per year as you play per week. Fresh string matters more than most players think - the strings section explains why."],
+        ["Do expensive rackets make you better?", "No. A frame that suits your swing helps; a pro racket in the wrong hands hurts. The picks here are grouped by level so you can match the racket to your game."]
+      ]
+    },
+    "table-tennis": {
+      "sport": "table-tennis",
+      "file": "table_tennis",
+      "sportName": "Table Tennis",
+      "title": "Best Table Tennis Equipment 2026 - Blades, Rubbers & Bats",
+      "description": "Compare the best table tennis blades, rubbers, ready-made bats and balls for every level and budget. Real specs, pros and cons, and prices to build the right setup.",
+      "intro": "Table tennis gear is a system: the blade sets speed and feel, the rubbers control spin and throw, and the two have to match your style. Beginners are usually better off with a good ready-made bat; improvers assemble their own. This guide covers blades, rubbers, ready-made bats and balls.",
+      "faqs": [
+        ["Should a beginner buy a ready-made bat or assemble one?", "Most beginners should start with a quality ready-made bat - it is cheaper, balanced, and lets you learn strokes before you commit to a blade-and-rubber setup. See the ready-made section below."],
+        ["What is the difference between the blade and the rubber?", "The blade is the wooden paddle that sets speed and feel; the rubbers glued to each side control spin and throw. Both are covered in their own sections below."],
+        ["When should I move to a custom blade and rubbers?", "Once your strokes are consistent and you know whether you favour attack, all-round or defence - that is when a matched blade and rubbers start to pay off."]
+      ]
+    },
+    "pickleball": {
+      "sport": "pickleball",
+      "file": "pickleball",
+      "sportName": "Pickleball",
+      "title": "Best Pickleball Equipment 2026 - Paddles, Balls & Shoes",
+      "description": "Compare the best pickleball paddles, balls and court shoes for every level and budget. Real specs, pros and cons, and prices to help you pick the right gear.",
+      "intro": "The paddle is the decision that matters most in pickleball - weight, surface and shape change power, control and how much your arm takes. Court shoes matter more than players expect too, since the sport is all lateral movement. This guide covers paddles, balls and shoes.",
+      "faqs": [
+        ["What pickleball paddle is best for beginners?", "Beginners usually want a mid-weight paddle with a large sweet spot and a comfortable grip - forgiving and controllable rather than maximum power. See the beginner paddles below."],
+        ["Can I wear running shoes for pickleball?", "It is not recommended - running shoes are built for forward motion and roll on the sharp lateral cuts pickleball demands. Court shoes are safer, and the shoes section explains why."],
+        ["Are indoor and outdoor pickleballs different?", "Yes - outdoor balls are harder with smaller holes to handle wind, indoor balls are softer with larger holes. Both are covered in the balls section."]
+      ]
+    },
+    "cricket": {
+      "sport": "cricket",
+      "file": "cricket",
+      "sportName": "Cricket",
+      "title": "Best Cricket Equipment 2026 - Bats, Balls, Pads & Gear",
+      "description": "Compare the best cricket bats, balls, pads, gloves, helmets and shoes for every level and budget. Real specs, pros and cons, and prices to kit up with confidence.",
+      "intro": "A cricket bat has to suit your height, strength and the surfaces you play on - weight and willow grade change pickup and power, and a heavy bat you cannot swing is slower, not stronger. Protective gear is not optional. This guide covers bats, balls, pads, gloves, helmets and shoes.",
+      "faqs": [
+        ["How do I choose the right cricket bat weight?", "Pick the heaviest bat you can still swing fast and control through a full session - pickup matters more than raw weight. The bats below are grouped by level to help you match it."],
+        ["What protective gear do I actually need?", "At minimum a helmet, pads, batting gloves and an abdominal guard for batting. The pads, gloves and helmets sections cover trusted options."],
+        ["English willow or Kashmir willow?", "English willow performs better and costs more; Kashmir willow is durable and affordable for beginners and casual play. Both appear in the bats section."]
+      ]
+    },
+    "football": {
+      "sport": "football",
+      "file": "football",
+      "sportName": "Football",
+      "title": "Best Football Equipment 2026 - Boots, Balls & Gear",
+      "description": "Compare the best football boots, balls, shin guards and goalkeeper gloves for every level and budget. Real specs, pros and cons, and prices to gear up right.",
+      "intro": "Boots are the football decision that matters most, and the surface you play on decides the stud type - firm ground, artificial grass and turf each need a different sole, and the wrong one costs grip and risks injury. This guide covers boots, balls, shin guards and goalkeeper gloves.",
+      "faqs": [
+        ["How do I choose football boots for my pitch?", "Match the stud type to your surface - FG for natural grass, AG for artificial grass, TF turf for hard synthetic. The boots section flags which surface each pair is built for."],
+        ["What size football should I buy?", "Size 5 for age 12 and up, size 4 for roughly 8-12, size 3 for younger kids. The balls section covers options across sizes."],
+        ["Are expensive boots worth it?", "Pricier boots use lighter materials and better grip, but fit matters more than price - a well-fitted mid-range boot beats an ill-fitting flagship. The picks are grouped by level."]
+      ]
+    },
+    "swimming": {
+      "sport": "swimming",
+      "file": "swimming",
+      "sportName": "Swimming",
+      "title": "Best Swimming Equipment 2026 - Goggles, Suits & Training Gear",
+      "description": "Compare the best swimming goggles, swimsuits, caps, fins and pull buoys for every level and budget. Real specs, pros and cons, and prices for pool and open water.",
+      "intro": "Most swimming gear problems come down to fit - goggles that leak and caps that drag ruin a session faster than anything else. Training aids like fins and pull buoys are worth it once you are working on technique. This guide covers goggles, suits, caps, fins and pull buoys.",
+      "faqs": [
+        ["How do I stop my goggles leaking?", "Fit is everything - press the goggles to your eye sockets without the strap; if they seal for a second on suction, they fit. The goggles section highlights fit-friendly options."],
+        ["Do I need fins and a pull buoy?", "Not to start, but they are among the most useful training aids once you are drilling technique - fins for kick and ankle flexibility, a pull buoy to isolate your stroke. Both have sections below."],
+        ["What swim cap is best?", "Silicone caps are durable and comfortable for most swimmers; latex is cheaper and thinner. The caps section covers the trade-offs."]
+      ]
+    }
+  }
+}
