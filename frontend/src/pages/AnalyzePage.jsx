@@ -931,18 +931,18 @@ export default function AnalyzePage() {
   // Ask for feedback once the user has scrolled ~70% through their results —
   // by then they've read enough to have an opinion. Only for a real result
   // that found shots, and never if we've already asked for this analysis.
-  const _feedbackAnalysisId = result?.analysis_id || result?._analysis_id || null;
-  const _canAskFeedback = !!result?.success
-    && (result?.shots?.length > 0)
-    && shotsSeen                       // they've actually reached the breakdown
-    && !feedbackOpen
-    && !hasBeenAsked(_feedbackAnalysisId);
   // The shot breakdown is the part a user can actually judge, so nothing is
   // asked until they have reached it. Scroll depth alone fired on people who
   // had only skimmed the summary — they were being asked about a list they had
   // not looked at yet.
   const [shotsSeen, setShotsSeen] = useState(false);
   const shotsSectionRef = useRef(null);
+  const _feedbackAnalysisId = result?.analysis_id || result?._analysis_id || null;
+  const _canAskFeedback = !!result?.success
+    && (result?.shots?.length > 0)
+    && shotsSeen                       // they've actually reached the breakdown
+    && !feedbackOpen
+    && !hasBeenAsked(_feedbackAnalysisId);
   useEffect(() => {
     setShotsSeen(false);
   }, [result?.analysis_id, result?._analysis_id]);
