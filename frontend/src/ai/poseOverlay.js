@@ -843,6 +843,13 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
     racketSide,
     shotLabel: ideal?.label || null,
     hasIdealRange: !!ideal,
+    // Raw keypoints in SOURCE image pixels, plus the source dimensions, so a
+    // caller can re-render the skeleton itself rather than being stuck with the
+    // baked JPEG above. FormCompareView needs these to draw the corrected pose
+    // (see poseCorrection) against the same frame at any display size.
+    keypoints: keypoints.map((k) => (k ? { x: k.x, y: k.y, score: k.score } : null)),
+    sourceWidth: img.width,
+    sourceHeight: img.height,
     // How many people were in frame — lets the UI say "we tracked the closest
     // player" instead of leaving the user wondering who the skeleton is on.
     peopleCount,

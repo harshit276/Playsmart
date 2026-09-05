@@ -29,6 +29,7 @@ import CoachNoteOverlay from "@/components/CoachNoteOverlay";
 // TF-free on purpose — see posturePolicy. Importing the pose stack to answer
 // "is this supported?" would defeat the point of asking.
 import { isPostureSupported } from "@/ai/posturePolicy";
+import FormCompareView from "@/components/FormCompareView";
 
 
 // "Coach's read" text quality gate. The VLM sometimes emits a purely
@@ -3005,7 +3006,7 @@ function usePostureAnalysis({ videoFile, timestamp, thumbnail, sport, shotType, 
           if (!r || r.error || !r.annotatedDataUrl) continue;
           const graded = (r.measurements || []).filter((m) => m.ideal).length;
           const score = graded * 2 + (r.measurements || []).length;
-          if (!best || score > best.score) best = { r, score, graded };
+          if (!best || score > best.score) best = { r, score, graded, frame };
           if (best.graded >= 2) break; // good enough — stop burning frames
         }
         if (cancelled) return;
@@ -3016,7 +3017,10 @@ function usePostureAnalysis({ videoFile, timestamp, thumbnail, sport, shotType, 
           setState({ status: "failed" });
           return;
         }
-        setState({ status: "ready", result: best.r });
+        // frameUrl rides along so FormCompareView can render the corrected
+        // skeleton over the same frame at any size (the baked annotatedDataUrl
+        // is fixed-size and already has the original skeleton burned in).
+        setState({ status: "ready", result: { ...best.r, frameUrl: best.frame } });
       } catch {
         if (!cancelled) setState({ status: "failed" });
       }
@@ -3373,6 +3377,19 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       {heroPosture.status === "ready" && (
         <div className="px-4 py-2.5 border-t border-zinc-800">
           <PostureMetricsRow state={heroPosture} />
+        </div>
+      )}
+      {/* FORM COMPARE — the angles above say a joint is 30° out; this shows
+          where it should actually be, by rotating the player's own limb to the
+          ideal and drawing it against the same frame. Only rendered when we
+          already trust who is being tracked (same gate as the skeleton panel),
+          because a corrected pose drawn on the wrong body is worse than none. */}
+      {showPosture && heroPosture.status === "ready" && heroPosture.result?.keypoints && (
+        <div className="px-4 pb-4 pt-1">
+          <FormCompareView
+            pose={heroPosture.result}
+            shotLabel={heroPosture.result.shotLabel || headlineShot?._name || null}
+          />
         </div>
       )}
       {/* Speed controls row — only when a real video is loaded; we
