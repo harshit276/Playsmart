@@ -628,6 +628,13 @@ async def firebase_auth(req: FirebaseAuthRequest):
         "user": {"id": user_id, "email": email, "phone": phone, "name": req.name, "photo": req.photo},
         "has_profile": has_profile,
         "tokens": balance,
+        # Surfaced so the client can fire the Google Ads signup conversion on a
+        # genuine first sign-in only. This endpoint serves BOTH signup and every
+        # subsequent Google login, so without this flag we would report a
+        # conversion every time a returning user signed in — inflating the
+        # number ad bidding optimises against, which is worse than not
+        # measuring at all.
+        "is_new_user": bool(is_new_user),
     }
 
 

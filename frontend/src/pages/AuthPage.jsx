@@ -8,6 +8,7 @@ import { ArrowLeft, LogIn, Mail, MailCheck } from "lucide-react";
 import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, getRedirectResult } from "firebase/auth";
+import { trackSignupConversion } from "@/lib/adsConversion";
 import api from "@/lib/api";
 
 export default function AuthPage() {
@@ -72,6 +73,9 @@ export default function AuthPage() {
     });
 
     login(data.token, data.user, data.has_profile, data.tokens);
+    // This endpoint also serves every returning Google login, so the signup
+    // conversion is gated on the server's is_new_user flag.
+    if (data.is_new_user) trackSignupConversion(data.user?.id);
     if (typeof data.tokens === "number" && data.tokens >= 100) {
       toast.success(`Welcome${name ? ", " + name : ""}! 🪙 ${data.tokens} tokens credited.`);
     } else {
@@ -94,6 +98,10 @@ export default function AuthPage() {
       try {
         const { data } = await api.post("/auth/verify-email", { token });
         login(data.token, data.user, data.has_profile, data.tokens);
+        // Verifying the link is the moment an email signup actually completes.
+        // trackSignupConversion is idempotent per user, so a link clicked twice
+        // still reports once.
+        trackSignupConversion(data.user?.id);
         toast.success(`Email verified! 🪙 ${data.tokens} tokens credited.`);
         navigate(data.has_profile ? "/dashboard" : "/analyze", { replace: true });
       } catch (err) {
