@@ -51,9 +51,20 @@ api.interceptors.response.use(
     if (err.response?.status === 401) {
       const url = err.config?.url || '';
       const isAuthEndpoint = url.includes('/auth/me') || url.includes('/auth/refresh');
-      if (isAuthEndpoint) {
+      // The server says this account was erased. Their JWT stays
+      // cryptographically valid for up to 30 days, so the session has to be
+      // dropped here or a deleted user keeps browsing on every device they
+      // were already signed in on. Matched on the exact detail string rather
+      // than any 401, so this does not reintroduce the bug above where a
+      // stray 401 from any endpoint logged people out.
+      const isDeleted = err.response?.data?.detail === 'account_deleted';
+      if (isAuthEndpoint || isDeleted) {
         localStorage.removeItem('playsmart_token');
         localStorage.removeItem('playsmart_user');
+      }
+      if (isDeleted && typeof window !== 'undefined') {
+        // Full reload so every in-memory store drops with the token.
+        window.location.replace('/auth');
       }
       // Never auto-redirect — let the AuthProvider decide based on real
       // state so users stay on the page they were viewing.

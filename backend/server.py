@@ -396,6 +396,26 @@ def _derive_profile_from_analyses(analyses: list, sport: str | None = None) -> d
     }
 
 
+async def _is_deleted_account(user_id: str) -> bool:
+    """Has this account been erased by an admin?
+
+    get_current_user deliberately tolerates a MISSING user document, because a
+    signup can hand out a JWT while the user doc is still being written. That
+    tolerance also meant a deleted account stayed logged in for the token's full
+    30-day life — the JWT still verified and a user object was synthesised from
+    its claims. The tombstone tells the two cases apart: missing-and-tombstoned
+    is gone for good, missing-and-not is the harmless race.
+
+    Fails OPEN on a DB error: a lookup blip must not sign out every live user.
+    """
+    try:
+        row = await asyncio.wait_for(
+            db.deleted_users.find_one({"user_id": user_id}, {"_id": 1}), timeout=3.0)
+        return row is not None
+    except Exception:
+        return False
+
+
 async def get_current_user_or_none(authorization: str = Header(None)):
     """Like get_current_user but returns None instead of raising for guests."""
     if not authorization or not authorization.startswith("Bearer "):
@@ -408,6 +428,8 @@ async def get_current_user_or_none(authorization: str = Header(None)):
         except (Exception, asyncio.TimeoutError):
             user = None
         if not user:
+            if await _is_deleted_account(payload["user_id"]):
+                return None
             user = {"id": payload["user_id"], "email": payload.get("phone", ""), "name": "", "photo": ""}
         return user
     except Exception:
@@ -468,7 +490,15 @@ async def get_current_user(authorization: str = Header(None)):
         except (Exception, asyncio.TimeoutError):
             user = None
         if not user:
-            # User may not be in DB yet (background save pending) - construct from token
+            # A missing doc is normally the harmless signup race (the doc is
+            # still being written), so we synthesise the user from the token.
+            # A tombstoned id is not: that account was erased and every device
+            # still holding its JWT must be signed out. "account_deleted" is the
+            # exact string the client checks, so it can clear the session from
+            # ANY endpoint without going back to the old behaviour of treating
+            # every stray 401 as a logout.
+            if await _is_deleted_account(payload["user_id"]):
+                raise HTTPException(status_code=401, detail="account_deleted")
             user = {"id": payload["user_id"], "email": payload.get("phone", ""), "name": "", "photo": ""}
         return user
     except pyjwt.ExpiredSignatureError:
@@ -1481,6 +1511,20 @@ async def admin_delete_user(
         deleted["users"] = res.deleted_count
     except Exception as exc:
         deleted["users"] = "error: {}".format(str(exc)[:80])
+
+    # Tombstone LAST, and only once the account is actually gone. Their JWT
+    # stays cryptographically valid for up to 30 days, so without this the
+    # "deleted" user would keep working on every device already signed in.
+    try:
+        await asyncio.wait_for(db.deleted_users.update_one(
+            {"user_id": user_id},
+            {"$set": {"user_id": user_id, "email": email,
+                      "deleted_at": datetime.now(timezone.utc).isoformat()}},
+            upsert=True), timeout=8.0)
+        deleted["_tombstoned"] = True
+    except Exception as exc:
+        # Loud, because without the tombstone the sessions survive the delete.
+        deleted["_tombstoned"] = "FAILED: {}".format(str(exc)[:80])
 
     try:
         await _notify_admin_now(
