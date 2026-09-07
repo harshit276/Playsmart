@@ -1337,6 +1337,166 @@ async def admin_stats(x_admin_key: str = Header(None, alias="X-Admin-Key")):
     }
 
 
+
+
+class AdminDeleteUserRequest(BaseModel):
+    identifier: str = Field(..., max_length=200)   # email or user id
+    confirm_email: str = Field("", max_length=200) # must echo the resolved email to delete
+    dry_run: bool = True
+
+
+# Every collection that can hold something belonging to a user, and the field
+# names that could point at them. Candidate keys rather than one exact key
+# because these grew organically — referrals use owner_user_id, friendships use
+# from_user/to_user, most use user_id. Trying each is cheap and means a renamed
+# field leaves data behind loudly (counted as 0) rather than silently orphaned.
+_USER_OWNED_COLLECTIONS = [
+    ("video_analyses", ["user_id"]),
+    ("player_profiles", ["user_id"]),
+    ("token_transactions", ["user_id"]),
+    ("push_subscriptions", ["user_id"]),
+    ("training_progress", ["user_id"]),
+    ("training_plans", ["user_id"]),
+    ("payment_orders", ["user_id"]),
+    ("game_attendance", ["user_id"]),
+    ("game_ratings", ["user_id"]),
+    ("analysis_feedback", ["user_id"]),
+    ("analysis_jobs", ["user_id"]),
+    ("analysis_failures", ["user_id"]),
+    ("shot_labels", ["user_id"]),
+    ("support_tickets", ["user_id"]),
+    ("equipment_enquiries", ["user_id"]),
+    ("drill_videos", ["user_id"]),
+    ("reengagement_log", ["user_id"]),
+    ("video_generation_jobs", ["user_id"]),
+    ("referrals", ["owner_user_id", "user_id"]),
+    ("friendships", ["from_user", "to_user", "user_id"]),
+    ("friend_requests", ["from_user", "to_user", "user_id"]),
+    ("games", ["host_user_id", "user_id"]),
+]
+
+
+@api_router.post("/admin/delete-user")
+async def admin_delete_user(
+    req: AdminDeleteUserRequest, x_admin_key: str = Header(None, alias="X-Admin-Key"),
+):
+    """Erase a user and everything belonging to them.
+
+    DRY RUN BY DEFAULT, and even a real run requires confirm_email to echo the
+    resolved address exactly. Deletion is irreversible and there is no backup to
+    restore from, so a mistyped id must not be able to wipe the wrong account.
+
+    Exists because an admin genuinely needs it — for support, for test accounts,
+    and because a data-erasure request under the DPDP Act is not optional. It
+    therefore removes the token_transactions too, which has a side effect worth
+    stating plainly: the signup grant record disappears with them, so that email
+    can sign up again and receive a fresh 100-token grant. That is correct for a
+    true erasure, but it means this endpoint must never be casually exposed —
+    repeated delete-and-resignup is exactly the abuse the grant check prevents.
+    """
+    _require_admin(x_admin_key)
+    ident = (req.identifier or "").strip()
+    if not ident:
+        raise HTTPException(status_code=400, detail="Provide an email or user id")
+
+    lower = ident.lower()
+    try:
+        user = await asyncio.wait_for(db.users.find_one(
+            {"$or": [{"email": lower}, {"id": ident}, {"phone": ident}]},
+            {"_id": 0, "id": 1, "email": 1, "name": 1, "phone": 1}), timeout=8.0)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="DB error: {}".format(str(exc)[:120]))
+
+    # Same fallback as the grant endpoints: accounts credited before their user
+    # doc existed are only findable by the derived id.
+    if not user and "@" in lower:
+        try:
+            derived = _user_id_for_email(lower)
+            user = await asyncio.wait_for(
+                db.users.find_one({"id": derived}, {"_id": 0, "id": 1, "email": 1, "name": 1}),
+                timeout=6.0)
+            if not user:
+                user = {"id": derived, "email": lower, "name": None}
+        except Exception:
+            user = None
+
+    if not user:
+        raise HTTPException(status_code=404, detail="No account matches '{}'".format(ident[:80]))
+
+    user_id = user["id"]
+    email = (user.get("email") or "").lower()
+
+    # Count first — the same query set the delete will use, so the preview is
+    # exactly what gets removed rather than an estimate.
+    breakdown = {}
+    total = 0
+    for coll_name, keys in _USER_OWNED_COLLECTIONS:
+        coll = getattr(db, coll_name, None)
+        if coll is None:
+            continue
+        q = {"$or": [{k: user_id} for k in keys]}
+        try:
+            n = await asyncio.wait_for(coll.count_documents(q), timeout=8.0)
+        except Exception:
+            n = -1          # surfaced to the caller rather than silently skipped
+        if n:
+            breakdown[coll_name] = n
+            if n > 0:
+                total += n
+
+    if req.dry_run:
+        return {
+            "dry_run": True,
+            "user": {"id": user_id, "email": email, "name": user.get("name")},
+            "would_delete": breakdown,
+            "total_documents": total,
+            "note": ("Re-send with dry_run=false and confirm_email set to the exact "
+                     "address above. This cannot be undone, and the signup-grant "
+                     "record goes with it, so this email could sign up again for a "
+                     "fresh token grant."),
+        }
+
+    if (req.confirm_email or "").strip().lower() != email or not email:
+        raise HTTPException(
+            status_code=400,
+            detail="confirm_email must exactly match the account's email to delete")
+
+    deleted = {}
+    for coll_name, keys in _USER_OWNED_COLLECTIONS:
+        coll = getattr(db, coll_name, None)
+        if coll is None:
+            continue
+        q = {"$or": [{k: user_id} for k in keys]}
+        try:
+            res = await asyncio.wait_for(coll.delete_many(q), timeout=20.0)
+            if res.deleted_count:
+                deleted[coll_name] = res.deleted_count
+        except Exception as exc:
+            deleted[coll_name] = "error: {}".format(str(exc)[:80])
+
+    # The user document goes last: if anything above fails we still know who the
+    # orphaned rows belonged to.
+    try:
+        res = await asyncio.wait_for(db.users.delete_many({"id": user_id}), timeout=15.0)
+        deleted["users"] = res.deleted_count
+    except Exception as exc:
+        deleted["users"] = "error: {}".format(str(exc)[:80])
+
+    try:
+        await _notify_admin_now(
+            "\U0001f5d1 User deleted",
+            chr(10).join([
+                "Email: " + (email or "-"),
+                "User id: " + str(user_id)[:16],
+                "Collections touched: " + str(len(deleted)),
+                "Documents removed: " + str(sum(v for v in deleted.values() if isinstance(v, int))),
+            ]))
+    except Exception:
+        pass
+
+    return {"dry_run": False, "deleted_user": {"id": user_id, "email": email}, "deleted": deleted}
+
+
 @api_router.get("/admin/users")
 async def admin_users(x_admin_key: str = Header(None, alias="X-Admin-Key"), limit: int = 100):
     _require_admin(x_admin_key)

@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, Users, MessageSquare, Coins, CreditCard,
-  RefreshCw, Loader2, Lock, LogOut, ExternalLink, Phone,
+  RefreshCw, Loader2, Lock, LogOut, ExternalLink, Phone, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -567,6 +567,124 @@ function EnquiriesTab({ headers }) {
  * before anything goes out. Opt-outs are filtered server-side too — a manual
  * send must respect an unsubscribe or the link in every footer is a lie.
  */
+/**
+ * DeleteUserPanel — erase an account and everything attached to it.
+ *
+ * Deliberately the most guarded control on this page: preview first, then the
+ * exact email has to be typed back before Delete enables. There is no undo and
+ * no backup to restore from, so a mistyped id must not be able to wipe a real
+ * customer. The preview shows the per-collection document counts the delete
+ * will actually use, not an estimate.
+ */
+function DeleteUserPanel({ headers }) {
+  const [ident, setIdent] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState(null);
+
+  const reset = () => { setPreview(null); setConfirm(""); };
+
+  const run = async (dry) => {
+    if (!ident.trim()) { toast.error("Enter an email or user id"); return; }
+    if (!dry) {
+      const email = preview?.user?.email || "";
+      if (confirm.trim().toLowerCase() !== email.toLowerCase() || !email) {
+        toast.error("Type the account's exact email to confirm"); return;
+      }
+      if (!window.confirm(
+        `Permanently delete ${email} and all ${preview?.total_documents ?? "?"} of their records?\n\nThis cannot be undone.`)) return;
+    }
+    setBusy(true);
+    try {
+      const { data } = await api.post("/admin/delete-user",
+        { identifier: ident.trim(), confirm_email: dry ? "" : confirm.trim(), dry_run: dry },
+        { headers, timeout: 120000 });
+      if (dry) {
+        setPreview(data);
+        toast.success(`${data.total_documents} document(s) would be deleted`);
+      } else {
+        toast.success(`Deleted ${data.deleted_user?.email}`);
+        setIdent(""); reset();
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Delete failed");
+    }
+    setBusy(false);
+  };
+
+  const rows = Object.entries(preview?.would_delete || preview?.deleted || {});
+
+  return (
+    <div className="bg-zinc-900/60 border border-rose-500/30 rounded-xl p-4 mb-6">
+      <p className="text-[11px] uppercase tracking-wider text-rose-400 font-bold mb-1 flex items-center gap-1.5">
+        <Trash2 className="w-3.5 h-3.5" /> Delete a user
+      </p>
+      <p className="text-[12px] text-zinc-500 mb-3 leading-relaxed">
+        Erases the account and every record attached to it. Irreversible. The signup-grant
+        record goes too, so that email can sign up again and receive a fresh token grant.
+      </p>
+
+      <input
+        value={ident}
+        onChange={(e) => { setIdent(e.target.value); reset(); }}
+        placeholder="Email or user id"
+        disabled={busy}
+        className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-rose-400 focus:outline-none mb-2 font-mono"
+      />
+
+      <div className="flex gap-2 flex-wrap">
+        <Button size="sm" variant="outline" onClick={() => run(true)} disabled={busy}
+          className="border-zinc-700 text-white hover:bg-zinc-800">
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Preview (no changes)"}
+        </Button>
+      </div>
+
+      {preview && (
+        <div className="mt-3 bg-zinc-950/70 border border-zinc-800 rounded-lg p-3">
+          <p className="text-[12px] text-white mb-1">
+            {preview.user?.email || preview.deleted_user?.email}
+            <span className="text-zinc-500 font-mono ml-2 text-[11px]">
+              {(preview.user?.id || preview.deleted_user?.id || "").slice(0, 14)}
+            </span>
+          </p>
+          <div className="max-h-40 overflow-auto mt-2">
+            {rows.length === 0 && <p className="text-[11px] text-zinc-500">No records found.</p>}
+            {rows.map(([coll, n]) => (
+              <div key={coll} className="flex justify-between font-mono text-[11px] text-zinc-400">
+                <span>{coll}</span>
+                <span className={typeof n === "number" && n > 0 ? "text-rose-300" : "text-zinc-600"}>{String(n)}</span>
+              </div>
+            ))}
+          </div>
+
+          {preview.dry_run && (
+            <>
+              <p className="text-[11px] text-amber-400/90 mt-3 leading-relaxed">
+                Type <b className="font-mono">{preview.user?.email}</b> below to enable Delete.
+              </p>
+              <input
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Retype the email to confirm"
+                disabled={busy}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-rose-400 focus:outline-none mt-2 mb-2 font-mono"
+              />
+              <Button
+                size="sm"
+                onClick={() => run(false)}
+                disabled={busy || confirm.trim().toLowerCase() !== (preview.user?.email || "").toLowerCase()}
+                className="bg-rose-500 text-white hover:bg-rose-600 font-bold disabled:opacity-40"
+              >
+                Delete permanently
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MailPanel({ headers }) {
   const [users, setUsers] = useState([]);
   const [picked, setPicked] = useState({});
@@ -971,6 +1089,7 @@ function TransactionsTab({ headers }) {
       <BulkGrantPanel headers={headers} />
       <FeedbackCampaignPanel headers={headers} />
       <MailPanel headers={headers} />
+      <DeleteUserPanel headers={headers} />
       <Header title={`${rows.length} transactions`} onRefresh={refresh} />
       <Table cols={["Kind", "Δ", "Balance after", "User", "When"]}>
         {rows.map(t => (
