@@ -5,6 +5,7 @@ import { ShoppingBag, ArrowRight, Check, X, ExternalLink, Sparkles, ChevronRight
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import equipmentSeo from "@/data/equipmentSeo.json";
+import { withAffiliate } from "@/lib/affiliateLinks";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -29,13 +30,17 @@ function priceLabel(item) {
   return null;
 }
 
+// Every outbound buy link goes through withAffiliate, same as the marketplace.
+// These pages exist to catch buying intent from search, so an untagged link
+// here is revenue walking out the door. withAffiliate only rewrites Amazon
+// hosts and never overrides a tag that is already present.
 function buyLinks(item) {
   const out = [];
   for (const p of item?.marketplace_prices || []) {
-    if (p.url && p.platform) out.push({ label: p.platform, url: p.url });
+    if (p.url && p.platform) out.push({ label: p.platform, url: withAffiliate(p.url) });
   }
   if (!out.length && item?.buy_links) {
-    if (item.buy_links.amazon) out.push({ label: "Amazon", url: item.buy_links.amazon });
+    if (item.buy_links.amazon) out.push({ label: "Amazon", url: withAffiliate(item.buy_links.amazon) });
     if (item.buy_links.flipkart) out.push({ label: "Flipkart", url: item.buy_links.flipkart });
   }
   return out.slice(0, 2);

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import SEO from "@/components/SEO";
 import SportUploadCTA from "@/components/SportUploadCTA";
+import EquipmentFinderCTA from "@/components/EquipmentFinderCTA";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -161,8 +162,14 @@ export default function FootballPage() {
             variants={fadeUp}
             className="flex flex-col sm:flex-row gap-3 justify-center"
           >
+            {/* Proof before commitment: cold traffic from an ad will not
+                film themselves on trust alone, so give them a real result
+                to look at first. */}
+            <Button asChild size="lg" variant="outline" className="border-lime-400/40 text-lime-300 hover:bg-lime-400/10">
+              <Link to="/demo">See a real analysis</Link>
+            </Button>
             <Button asChild size="lg" variant="outline" className="border-zinc-700 text-white hover:bg-zinc-900">
-              <Link to="/football/equipment">View Boots</Link>
+              <Link to="/football/equipment">Find your football gear</Link>
             </Button>
           </motion.div>
         </div>
@@ -264,10 +271,8 @@ export default function FootballPage() {
               </div>
             ))}
           </div>
-          <div className="mt-8 text-center">
-            <Button asChild className="bg-green-400 text-black hover:bg-green-500">
-              <Link to="/football/equipment">See All Boot Recommendations</Link>
-            </Button>
+          <div className="mt-10">
+            <EquipmentFinderCTA sport="Football" href="/football/equipment" noun="boots & gear" />
           </div>
         </div>
       </section>
