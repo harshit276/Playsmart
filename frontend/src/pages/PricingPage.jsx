@@ -89,7 +89,12 @@ export default function PricingPage() {
   // any "tier" flag). The old Standard/Premium split no longer reflects
   // reality — there is no separate "Pro" model — so we don't advertise it.
   const analysisCost = costs.universal || costs.video || costs.keyframes || 100;
-  const analysisRupees = Math.round(analysisCost * 0.30);   // 100 tokens × ₹0.30
+  // Per-analysis price = the pack that buys exactly one analysis, in whatever
+  // currency the server resolved for this visitor. Was hardcoded rupees
+  // (tokens x 0.30), so international visitors saw ₹30 on a page that should
+  // have said $1.
+  const unitPack = packs.find((p) => p.tokens === analysisCost) || null;
+  const analysisPriceLabel = unitPack ? formatPackPrice(unitPack) : `₹${Math.round(analysisCost * 0.30)}`;
 
   return (
     <div className="min-h-screen bg-zinc-950 py-8 sm:py-12">
@@ -106,7 +111,7 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto">
-            ₹30 per analysis. Buy tokens, use them whenever — they don't expire.
+            {analysisPriceLabel} per analysis. Buy tokens, use them whenever — they don't expire.
             Start with 1 free analysis on signup.
           </p>
         </motion.div>
@@ -120,7 +125,7 @@ export default function PricingPage() {
             </div>
             <div className="min-w-0">
               <div className="flex items-baseline gap-2 flex-wrap">
-                <p className="text-4xl font-heading font-black text-white">₹{analysisRupees}</p>
+                <p className="text-4xl font-heading font-black text-white">{analysisPriceLabel}</p>
                 <span className="text-sm text-zinc-500">per analysis</span>
                 <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px]">{analysisCost} tokens</Badge>
               </div>

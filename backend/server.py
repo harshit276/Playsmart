@@ -186,10 +186,21 @@ async def get_pro_reference(sport: str, shot_type: str):
 
 
 @api_router.get("/plans")
-async def list_plans():
+async def list_plans(request: Request):
     """Token packs + (optionally) subscription tiers. v1 launch only
     exposes packs; subscriptions live behind a flag so we can re-enable
-    them later without a code change."""
+    them later without a code change.
+
+    Geo-priced the same way as /tokens/packs. This endpoint used to return
+    ONE_OFF_PACKS with a hardcoded "currency": "INR" and never looked at the
+    request, so the whole Pricing page showed rupees to every country — while
+    the Wallet (which reads /tokens/packs) correctly showed USD abroad. Same
+    visitor, two currencies, depending on which page they opened.
+
+    ONE_OFF_PACKS is kept for the fields the Pricing page renders
+    (analyses_flash, highlight, per_token_inr); price and currency are laid
+    over it from _packs_for, matched by key, so both pages agree.
+    """
     try:
         from pricing_config import (
             SUBSCRIPTION_PLANS, ONE_OFF_PACKS, ANALYSIS_TOKEN_COST,
@@ -198,11 +209,29 @@ async def list_plans():
     except ImportError:
         return {"plans": [], "packs": [], "costs": {}, "currency": "INR",
                 "show_subscriptions": False}
+
+    geo = {p["key"]: p for p in _packs_for(request)}
+    currency = "INR" if _is_india(request) else "USD"
+    packs = []
+    for p in ONE_OFF_PACKS:
+        q = dict(p)
+        g = geo.get(p.get("key"))
+        if g:
+            q["currency"] = g["currency"]
+            q["price"] = g["price"]
+            q["price_usd"] = g.get("price_usd")
+        else:
+            # A pack with no geo counterpart can't be priced abroad; show it in
+            # rupees rather than mislabel a rupee amount as dollars.
+            q["currency"] = "INR"
+            q["price"] = p.get("price_inr")
+        packs.append(q)
+
     return {
         "plans": SUBSCRIPTION_PLANS if SHOW_SUBSCRIPTIONS else [],
-        "packs": ONE_OFF_PACKS,
+        "packs": packs,
         "costs": ANALYSIS_TOKEN_COST,
-        "currency": "INR",
+        "currency": currency,
         "show_subscriptions": SHOW_SUBSCRIPTIONS,
     }
 
