@@ -436,7 +436,7 @@ export default function ProgressPage() {
                       <div className="mt-3 flex items-center gap-2">
                         <Button size="sm" onClick={() => startProgressReview(a)}
                           className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full text-xs px-4 h-9">
-                          <Repeat className="w-3.5 h-3.5 mr-1.5" /> Re-analyze to compare
+                          <Repeat className="w-3.5 h-3.5 mr-1.5" /> Film again &amp; compare
                         </Button>
                         <Link to={`/analyze?view=${a.id}`} className="text-xs text-zinc-400 hover:text-lime-400 font-medium px-2 py-1.5">View</Link>
                       </div>

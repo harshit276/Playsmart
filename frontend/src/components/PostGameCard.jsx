@@ -63,7 +63,7 @@ export function AttendanceCard({ game, currentUserId, onDone }) {
         <Users className="w-3.5 h-3.5" /> Who turned up?
       </p>
       <p className="text-[11px] text-zinc-400 mb-3">
-        Players who showed up earn tokens for their next analysis.
+        Players who showed up earn credit toward their next analysis.
       </p>
       <div className="space-y-2">
         {others.map((id) => (

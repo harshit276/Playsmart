@@ -5,7 +5,8 @@ import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, Sparkles, Zap, Trophy, Crown, ArrowRight, Coins } from "lucide-react";
+import { Check, Sparkles, Zap, Trophy, Crown, ArrowRight, Video } from "lucide-react";
+import { analysesFrom, analysisWord } from "@/lib/analyses";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -111,8 +112,8 @@ export default function PricingPage() {
             Simple, transparent pricing
           </h1>
           <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto">
-            {analysisPriceLabel} per analysis. Buy tokens, use them whenever — they don't expire.
-            Start with 1 free analysis on signup.
+            {analysisPriceLabel} per analysis. Buy a pack, use it whenever — analyses don't expire.
+            Start with 3 free analyses on signup.
           </p>
         </motion.div>
 
@@ -127,7 +128,6 @@ export default function PricingPage() {
               <div className="flex items-baseline gap-2 flex-wrap">
                 <p className="text-4xl font-heading font-black text-white">{analysisPriceLabel}</p>
                 <span className="text-sm text-zinc-500">per analysis</span>
-                <Badge className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px]">{analysisCost} tokens</Badge>
               </div>
               <p className="text-[12px] text-zinc-400 mt-1">
                 Full AI breakdown — shot-by-shot analysis, posture, coach notes, PDF report. Usually done in under a minute.
@@ -136,22 +136,20 @@ export default function PricingPage() {
           </div>
         </motion.div>
 
-        {/* Token packs — primary CTA */}
+        {/* Analysis packs — primary CTA */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           className="mb-10">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div>
-              <p className="text-xs uppercase tracking-wider text-lime-400 font-bold">Token packs</p>
-              <h2 className="font-heading font-bold text-xl text-white">Buy tokens — bigger packs = bigger discount</h2>
+              <p className="text-xs uppercase tracking-wider text-lime-400 font-bold">Analysis packs</p>
+              <h2 className="font-heading font-bold text-xl text-white">Bigger packs = lower price per analysis</h2>
             </div>
-            <p className="text-[11px] text-zinc-500">Tokens never expire</p>
+            <p className="text-[11px] text-zinc-500">Analyses never expire</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {packs.map((pack) => {
               const isHighlight = pack.highlight;
-              const perAnalysis = pack.tokens > 0
-                ? Math.round(((pack.price != null ? pack.price : pack.price_inr) / pack.analyses_flash) || 0)
-                : 0;
+              const n = analysesFrom(pack.tokens);
               return (
                 <Link
                   key={pack.key}
@@ -170,11 +168,8 @@ export default function PricingPage() {
                   <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">{pack.label}</p>
                   <p className="text-3xl font-heading font-black text-white mb-0.5">{formatPackPrice(pack)}</p>
                   <p className="text-xs text-lime-400 font-semibold flex items-center gap-1 mb-2">
-                    <Coins className="w-3 h-3" /> {pack.tokens.toLocaleString()} tokens
+                    <Video className="w-3 h-3" /> {n.toLocaleString()} {analysisWord(n)}
                   </p>
-                  <div className="space-y-0.5 text-[11px] text-zinc-500">
-                    <p>≈ {pack.analyses_flash} full analyses</p>
-                  </div>
                   {pack.per_token_inr && pack.per_token_inr < 0.30 && (
                     <p className="mt-2 text-[10px] text-lime-400/80">
                       {Math.round((1 - pack.per_token_inr / 0.30) * 100)}% off vs Trial
@@ -255,14 +250,15 @@ export default function PricingPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
           className="bg-gradient-to-br from-lime-400/10 to-zinc-900 border border-lime-400/20 rounded-2xl p-6 text-center mb-10">
           <h2 className="font-heading font-black text-2xl text-white mb-2 uppercase tracking-tight">
-            1 free analysis on signup
+            3 free analyses on signup
           </h2>
           <p className="text-zinc-400 text-sm mb-4">
-            100 tokens credited automatically — try the AI Coach on your video before paying a rupee. Refer friends to earn more.
+            Analyse a clip, work on the fix, then film again and compare — before paying anything.
+            Invite a friend and you both get 2 more.
           </p>
           <Link to={user ? "/analyze" : "/auth"}>
             <Button className="bg-lime-400 hover:bg-lime-500 text-black font-bold px-6">
-              {user ? "Open analyzer" : "Sign up — 1 free analysis"} <ArrowRight className="w-4 h-4 ml-2" />
+              {user ? "Open analyzer" : "Sign up — 3 free analyses"} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
         </motion.div>
@@ -271,7 +267,7 @@ export default function PricingPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              q: "Do tokens expire?",
+              q: "Do analyses expire?",
               a: "No. Buy them once, use them whenever — there's no time limit.",
             },
             {
@@ -284,15 +280,19 @@ export default function PricingPage() {
             },
             {
               q: "What if my analysis fails?",
-              a: "Tokens are charged only on successful analyses. If the AI Coach can't read the video, no tokens are deducted.",
+              a: "You're only charged for successful analyses. If our AI can't read the video, nothing is deducted.",
+            },
+            {
+              q: "Can I analyse the same video again?",
+              a: "You can, but the same footage gives the same result. To see if you've improved, practise the fix, film a new clip and compare it with the old one — that uses 1 analysis.",
             },
             {
               q: "Refund policy?",
-              a: "Unused tokens are refundable within 7 days of purchase. Used tokens are non-refundable.",
+              a: "Unused analyses are refundable within 7 days of purchase. Used analyses are non-refundable.",
             },
             {
               q: "Do I need a subscription?",
-              a: "No. Buy tokens once, use them whenever. We may add monthly subscriptions later for heavy users.",
+              a: "No. Buy a pack once, use it whenever. We may add monthly subscriptions later for heavy users.",
             },
             {
               q: "Are there team / academy plans?",

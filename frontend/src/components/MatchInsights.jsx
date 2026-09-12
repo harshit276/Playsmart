@@ -595,9 +595,13 @@ export default function MatchInsights({
           Coaching Insights
         </h3>
         {(phase === "done" || phase === "error") && (
+          // Re-runs the on-device pose pass on THIS clip — free, and the same
+          // footage gives the same answer. Labelled "Refresh" so it isn't
+          // mistaken for the progress check (film a new clip and compare).
           <button onClick={run}
+            title="Re-run the pose check on this clip (free)"
             className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700">
-            Re-analyze
+            Refresh
           </button>
         )}
       </div>
@@ -911,7 +915,7 @@ export default function MatchInsights({
                     <p className="text-white font-bold text-base mb-1">Unlock your full shot-by-shot breakdown</p>
                     <p className="text-zinc-300 text-[13px] leading-snug mb-3">
                       See the priority fix on every shot, jump-to-video, and download your
-                      coach report — free with an account (100 tokens to start).
+                      coach report — free with an account (3 free analyses to start).
                     </p>
                     <button onClick={() => onUnlock?.()}
                       className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6 h-11 text-sm">
@@ -3385,7 +3389,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           already trust who is being tracked (same gate as the skeleton panel),
           because a corrected pose drawn on the wrong body is worse than none. */}
       {showPosture && heroPosture.status === "ready" && heroPosture.result?.keypoints && (
-        <div className="px-4 pb-4 pt-1">
+        <div id="analysis-section-form-compare" className="px-4 pb-4 pt-1 scroll-mt-24">
           <FormCompareView
             pose={heroPosture.result}
             shotLabel={heroPosture.result.shotLabel || headlineShot?._name || null}

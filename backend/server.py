@@ -755,8 +755,8 @@ def _verification_email_html(name: str, link: str) -> str:
     <div style="background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:32px;">
       <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#f8fafc;font-weight:700;">Verify your email</h1>
       <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#cbd5e1;">{hi}</p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#cbd5e1;">Confirm this is your email to activate your account and get your <strong style="color:#a3e635;">100 free tokens</strong> — enough for your first full AI analysis.</p>
-      <a href="{link}" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Verify &amp; claim 100 tokens</a>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#cbd5e1;">Confirm this is your email to activate your account and get your <strong style="color:#a3e635;">3 free analyses</strong>: film a clip, get coached, then film again and see what changed.</p>
+      <a href="{link}" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Verify &amp; claim 3 free analyses</a>
       <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">This link expires in 24 hours. If the button doesn't work, paste this into your browser:</p>
       <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:#475569;word-break:break-all;">{link}</p>
     </div>
@@ -774,26 +774,29 @@ def _token_grant_email_html(name: str, amount: int, balance, reason: str = "") -
     note. Sent from info@ so a reply reaches a person."""
     hi = f"Hi {name.split()[0]}," if (name or "").strip() else "Hi there,"
     analyses = max(1, int(amount) // 100)
+    a_word = "analysis" if analyses == 1 else "analyses"
+    bal_n = max(0, int(balance) // 100)
+    bal_word = "analysis" if bal_n == 1 else "analyses"
     return f"""\
 <div style="margin:0;padding:0;background:#0b0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <div style="max-width:520px;margin:0 auto;padding:40px 24px;">
     <div style="font-size:26px;font-weight:800;letter-spacing:-0.02em;color:#a3e635;margin-bottom:28px;">Formanti</div>
     <div style="background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:32px;">
       <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#f8fafc;font-weight:700;">
-        {amount} tokens added to your account
+        {analyses} {a_word} added to your account
       </h1>
       <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#cbd5e1;">{hi}</p>
       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#cbd5e1;">
-        We've credited <strong style="color:#a3e635;">{amount} tokens</strong> to your Formanti
-        account — that's about {analyses} more video {"analysis" if analyses == 1 else "analyses"}.
+        We've added <strong style="color:#a3e635;">{analyses} video {a_word}</strong> to your Formanti
+        account.
       </p>
       <div style="background:#0b0f14;border:1px solid #1f2933;border-radius:12px;padding:16px;margin-bottom:24px;">
-        <p style="margin:0;font-size:13px;color:#64748b;">Your balance</p>
-        <p style="margin:4px 0 0;font-size:28px;font-weight:800;color:#f8fafc;">{balance} tokens</p>
+        <p style="margin:0;font-size:13px;color:#64748b;">Analyses available</p>
+        <p style="margin:4px 0 0;font-size:28px;font-weight:800;color:#f8fafc;">{bal_n} {bal_word}</p>
       </div>
       <a href="{SHARE_SITE_URL}/analyze" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Analyse a video</a>
       <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">
-        Tokens never expire. Just reply to this email if you have any questions —
+        They never expire. Just reply to this email if you have any questions —
         a real person reads it.
       </p>
     </div>
@@ -2180,7 +2183,7 @@ async def admin_grant_tokens(
     if req.amount > 0 and (user.get("email") or "").strip():
         email_sent = await _send_user_email(
             user["email"].strip(),
-            f"We've added {req.amount} tokens to your Formanti account",
+            f"We've added {_analyses_phrase(req.amount).replace('free ', '')} to your Formanti account",
             _token_grant_email_html(user.get("name", ""), req.amount, new_balance,
                                     req.reason.strip()),
             from_addr=MAIL_FROM_INFO,
@@ -2511,11 +2514,24 @@ def _packs_for(request) -> list:
         out.append(q)
     return out
 
+def _analyses_phrase(tokens) -> str:
+    """User-facing copy never says "tokens" — the UI presents the balance as
+    analyses (100 tokens = 1). 200 -> "2 free analyses", 100 -> "1 free analysis"."""
+    try:
+        n = int(tokens) // 100
+    except Exception:
+        n = 0
+    return "{} free {}".format(n, "analysis" if n == 1 else "analyses")
+
+
 # Earn / spend amounts — change here, log everywhere (kind matches the
 # transaction "kind" field).
 TOKEN_RULES = {
-    "signup_grant":   100,   # once per user — exactly 1 free analysis
-    "referral_credit": 100,  # to both referrer and referred user, once per pair
+    # 3 free analyses, not 1: a single analysis rarely forms a habit, and three
+    # lets a player film again and compare against their first clip — the part
+    # of the product that brings people back.
+    "signup_grant":   300,
+    "referral_credit": 200,  # 2 analyses to both referrer and referred user, once per pair
     "host_game":       50,   # cap 5/day
     "training_day":    20,   # cap 1/day
     "daily_login":     25,   # cap 1/day, up to DAILY_LOGIN_LIFETIME_CAP total
@@ -2902,7 +2918,7 @@ async def razorpay_create_order(req: CreateOrderRequest, request: Request, autho
         logger.warning(f"razorpay create-order persist failed: {e}")
     return {"order_id": order_id, "amount": data.get("amount"), "currency": _currency,
             "key_id": RAZORPAY_KEY_ID, "provider": "razorpay", "name": "Formanti",
-            "description": f"{pack['tokens']} tokens",
+            "description": _analyses_phrase(pack["tokens"]).replace("free ", "").replace("analys", "video analys", 1),
             "prefill_email": user.get("email") or "", "prefill_contact": user.get("phone") or ""}
 
 
@@ -3041,7 +3057,7 @@ async def _settle_pending_referrals(user_id: str) -> None:
                     "Referrer: " + str(owner_id)[:12],
                     "New user: " + str(user_id)[:12],
                     "Code: " + str(ref.get("code")),
-                    "+" + str(TOKEN_RULES["referral_credit"]) + " tokens each",
+                    "+" + _analyses_phrase(TOKEN_RULES["referral_credit"]) + " each",
                 ]))
         except Exception:
             pass
@@ -6821,12 +6837,11 @@ def _feedback_email_html(name: str, sport: str, reward: int) -> tuple:
         bonus_html = (
             '<p style="margin:18px 0;padding:14px 16px;background:#1a2e05;'
             'border:1px solid #4d7c0f;border-radius:10px;color:#d9f99d;">'
-            '<strong>{} free tokens</strong> land in your account as soon as you '
-            'send it — that is another full analysis, on us. Honest criticism is '
-            'worth more to us than praise, and it pays the same.</p>'.format(reward))
-        bonus_text = ("\n{} free tokens are added as soon as you send it — "
-                      "another full analysis. Honest criticism pays the same as "
-                      "praise.\n".format(reward))
+            '<strong>{}</strong> land in your account as soon as you '
+            'send it, on us. Honest criticism is worth more to us than praise, '
+            'and it pays the same.</p>'.format(_analyses_phrase(reward)))
+        bonus_text = ("\n{} are added as soon as you send it. Honest criticism "
+                      "pays the same as praise.\n".format(_analyses_phrase(reward)))
     html = (
         '<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;'
         'max-width:520px;margin:0 auto;padding:24px;color:#e4e4e7;'
@@ -6920,8 +6935,8 @@ async def _process_feedback_nudges(limit: int = 20) -> dict:
             # registered; it only needs user_id in the job dict.
             await _notify_job_done({"user_id": uid}, {
                 "title": "How was your analysis?",
-                "body": ("Tell us in 30 seconds — {} free tokens for early "
-                         "feedback.".format(reward) if reward
+                "body": ("Tell us in 30 seconds: {} for early "
+                         "feedback.".format(_analyses_phrase(reward)) if reward
                         else "Tell us in 30 seconds what worked and what didn't."),
                 "url": "/analyze?feedback=1",
             })
@@ -7026,8 +7041,8 @@ def _campaign_email_html(name: str, reward: int, user_id: str) -> tuple:
         "<p style=\"line-height:1.6;\"><strong>Did the analysis find the right shots? "
         "Was the coaching actually useful, or generic?</strong> Thirty seconds is plenty.</p>"
         "<p style=\"margin:18px 0;padding:14px 16px;background:#1a2e05;border:1px solid "
-        "#4d7c0f;border-radius:10px;color:#d9f99d;\"><strong>{} free tokens</strong> are "
-        "added to your account the moment you send it — another full analysis, on us. "
+        "#4d7c0f;border-radius:10px;color:#d9f99d;\"><strong>{}</strong> are "
+        "added to your account the moment you send it, on us. "
         "We pay the same for criticism as for praise; criticism is worth more to us.</p>"
         "<p style=\"margin:24px 0;\"><a href=\"https://www.formanti.com/analyze?feedback=1\" "
         "style=\"background:#a3e635;color:#000;padding:12px 22px;border-radius:999px;"
@@ -7036,17 +7051,17 @@ def _campaign_email_html(name: str, reward: int, user_id: str) -> tuple:
         "padding-top:14px;\">You're getting this once because you have a Formanti account. "
         "<a href=\"{}\" style=\"color:#a1a1aa;\">Unsubscribe</a></p>"
         "</div>"
-    ).format(who, reward, unsub)
+    ).format(who, _analyses_phrase(reward), unsub)
     text = (
         "Can you tell us what was wrong with it?\n\nHi {},\n\nYou tried Formanti "
         "recently. We're a very small team and you're one of our first users, so "
         "your honest read matters more than our guessing.\n\n"
         "Did the analysis find the right shots? Was the coaching useful, or generic?\n\n"
-        "{} free tokens are added the moment you send it — another full analysis. "
+        "{} are added the moment you send it. "
         "We pay the same for criticism as for praise.\n\n"
         "https://www.formanti.com/analyze?feedback=1\n\n"
         "Unsubscribe: {}\n"
-    ).format(who, reward, unsub)
+    ).format(who, _analyses_phrase(reward), unsub)
     return html, text
 
 
@@ -7284,7 +7299,7 @@ async def generate_corrected_shot(
     if bal < GENERATION_COST:
         raise HTTPException(
             status_code=402,
-            detail=f"AI pose-corrected generation costs {GENERATION_COST} tokens. You have {bal}.",
+            detail=f"AI pose-corrected generation costs {GENERATION_COST // 100} analyses. You have {bal // 100}.",
         )
 
     if not req.reference_image_b64 and not req.video_b64:

@@ -4,6 +4,7 @@ import { Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { describeAnalysisAmount } from "@/lib/analyses";
 
 /**
  * Post-analysis feedback, asked as a bottom-sheet at a HIGH-INTENT moment
@@ -108,7 +109,7 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
       // early-adopter offer is open), so only celebrate what it actually paid.
       const credited = res?.data?.tokens_credited || 0;
       if (credited > 0) {
-        toast.success(`Thanks — ${credited} tokens added to your account.`, { duration: 6000 });
+        toast.success(`Thanks — ${describeAnalysisAmount(credited)} added to your account.`, { duration: 6000 });
         try { window.dispatchEvent(new CustomEvent("formanti:tokens-changed")); } catch { /* noop */ }
       } else {
         toast.success("Thanks — this genuinely helps us fix things.");
@@ -144,7 +145,7 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
                   </h2>
                   <p className="text-[12px] text-zinc-400 mt-1">
                     Takes 10 seconds. If something was wrong, this is how we find out —
-                    and early feedback earns bonus tokens whether you rate us high or low.
+                    and early feedback earns free analyses whether you rate us high or low.
                   </p>
                 </div>
                 <button onClick={() => close(false)} aria-label="Close"

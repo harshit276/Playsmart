@@ -39,6 +39,8 @@ import CourtMapCard from "@/components/CourtMapCard";
 import AnalysisScroller from "@/components/AnalysisScroller";
 import AnalysisQuickNav from "@/components/AnalysisQuickNav";
 import PlayerDetectionCard from "@/components/PlayerDetectionCard";
+import { analysesFrom, describeAnalysisAmount, formatAnalyses } from "@/lib/analyses";
+import NextStepCard from "@/components/NextStepCard";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -1291,7 +1293,11 @@ export default function AnalyzePage() {
           success: true,
           _universal: true,
           _accuracy_mode: "universal",
-          analysis_id: data.id,
+          // /analysis/{id} returns `analysis_id`, not `id` — reading data.id
+          // left historical results without an id, which silently disabled
+          // share, save-to-profile and film-again-&-compare on them.
+          analysis_id: data.analysis_id || data.id,
+          date: data.date || null,
           sport: data.sport || "unknown",
           skill_level: data.skill_level || "Intermediate",
           quick_summary: data.quick_summary || data.coach_feedback?.summary || "",
@@ -2493,7 +2499,7 @@ export default function AnalyzePage() {
           // legacy JSON path previously had no token gate, so users with
           // 0 tokens silently got free analyses instead of a top-up prompt).
           if (asyncErr?.response?.status === 402 || /insufficient_tokens/i.test(_aMsg)) {
-            setInsufficientBalance(tokens?.balance ?? 0);
+            setInsufficientBalance(typeof tokens === "number" ? tokens : 0);
             setShowInsufficientModal(true);
             throw new Error("insufficient_tokens");
           }
@@ -2798,7 +2804,7 @@ export default function AnalyzePage() {
           // message; the user just needs to wait a moment. Never auto-retry.
           msg = raw || "You're analyzing too quickly. Please wait a moment and try again.";
         } else if (/insufficient_tokens/i.test(raw)) {
-          msg = "You don't have enough tokens for this analysis — top up from your Wallet and try again.";
+          msg = "You're out of analyses — top up from your Wallet or invite a friend, then try again.";
         } else if (/at capacity|temporarily|resource_exhausted|quota|credits|high demand|overload/i.test(raw)) {
           // Capacity / quota / provider outage — a temporary technical issue on
           // OUR side, never the user's clip. Reassure and say try later; they
@@ -3136,7 +3142,7 @@ export default function AnalyzePage() {
             if (data.guest_mode || !user) {
               try { localStorage.setItem("guest_analysis_used", "true"); } catch {}
               setTimeout(() => setShowGuestUpgrade(true), 2500);
-              toast.success("Free analysis complete! Sign up for 100 free tokens to analyze more.");
+              toast.success("Free analysis complete! Sign up for 3 free analyses to keep going.");
             } else {
               refreshProfile();
               loadHistory();
@@ -3144,7 +3150,7 @@ export default function AnalyzePage() {
               updateTokens?.(data.token_balance);
               const spent = data.tokens_spent;
               toast.success(spent
-                ? `Analysis complete! 🪙 -${spent} tokens (balance: ${data.token_balance ?? "?"})`
+                ? `Analysis complete! ${typeof data.token_balance === "number" ? formatAnalyses(data.token_balance) + " left." : ""}`
                 : "Analysis complete!"
               );
               if (data.new_badges?.length > 0) {
@@ -3608,6 +3614,34 @@ export default function AnalyzePage() {
 
   const renderUpload = () => (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      {/* Compare mode, before upload: the only cue used to be a toast that
+          vanished, leaving people unsure whether they were comparing or
+          starting fresh. Keep it on screen until they upload or cancel. */}
+      {reanalyzeContext && !analyzing && (
+        <div className="mb-3 rounded-xl border border-sky-400/30 bg-sky-400/5 px-3 py-2.5">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-[13px] font-semibold text-white">
+              Comparing with your{" "}
+              <span className="text-sky-300">
+                {(reanalyzeContext.shot_analysis?.shot_name || reanalyzeContext.sport || "last clip").toString().replace(/_/g, " ")}
+              </span>
+              {reanalyzeContext.date && (
+                <> from {new Date(reanalyzeContext.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</>
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => setReanalyzeContext(null)}
+              className="shrink-0 text-[11px] text-zinc-500 hover:text-zinc-300"
+            >
+              Cancel
+            </button>
+          </div>
+          <p className="mt-0.5 text-[11px] text-zinc-400">
+            Upload a new clip of the same shot, from a similar camera angle. We'll show what changed.
+          </p>
+        </div>
+      )}
       {/* Cost + "you can leave" — ONE slim bar instead of two stacked cards.
           These were two separate bordered boxes that between them ate ~140px
           above the fold on a phone, pushing the actual upload control off
@@ -3627,14 +3661,14 @@ export default function AnalyzePage() {
           }`}>
             {/* Line 1 — the price. */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm shrink-0" aria-hidden="true">🪙</span>
+              <Video className="w-4 h-4 shrink-0 text-lime-400" aria-hidden="true" />
               <p className="text-[13px] font-semibold text-white min-w-0">
                 {short ? (
-                  <>Need <span className="text-amber-300">100 tokens</span> · you have {tokens}</>
+                  <>Uses <span className="text-amber-300">1 analysis</span> · you have {describeAnalysisAmount(tokens)} left</>
                 ) : !user ? (
-                  <>Costs <span className="text-lime-400">100 tokens</span> · 100 free on signup</>
+                  <>Uses <span className="text-lime-400">1 analysis</span> · 3 free on signup</>
                 ) : (
-                  <>Costs <span className="text-lime-400">100 tokens</span> · you have {tokens ?? "—"}</>
+                  <>Uses <span className="text-lime-400">1 analysis</span> · you have {tokens == null ? "—" : analysesFrom(tokens).toLocaleString("en-IN")} left</>
                 )}
               </p>
               {!user ? (
@@ -4130,7 +4164,7 @@ export default function AnalyzePage() {
         photo: fb.user.photoURL || "",
       });
       login(data.token, data.user, data.has_profile, data.tokens);
-      toast.success(`Signed in! 🪙 ${data.tokens || 300} tokens credited — coaching unlocked.`);
+      toast.success(`Signed in! You have ${formatAnalyses(data.tokens || 300)} — coaching unlocked.`);
       // The result we already have on screen will now show un-gated since
       // user is authenticated. The pending_analysis stash gets picked up
       // by the post-login useEffect below to save it to history server-side.
@@ -4148,10 +4182,10 @@ export default function AnalyzePage() {
       </div>
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="bg-zinc-900/95 border border-lime-400/30 rounded-2xl p-5 max-w-sm text-center shadow-2xl">
-          <div className="text-3xl mb-2">🪙</div>
-          <h3 className="font-bold text-white mb-1">Unlock Full Coaching · 100 free tokens</h3>
+          <div className="text-3xl mb-2">🎯</div>
+          <h3 className="font-bold text-white mb-1">Unlock Full Coaching · 3 free analyses</h3>
           <p className="text-xs text-zinc-400 mb-4">
-            Sign in to keep this analysis, get personalized training, equipment picks, and 100 free tokens for another analysis.
+            Sign in to keep this analysis, get personalized training, equipment picks, and 3 free analyses to film again and compare.
           </p>
           <Button
             onClick={handleInlineGoogleSignIn}
@@ -4273,6 +4307,14 @@ export default function AnalyzePage() {
       const counts = types.reduce((a, t) => { a[t] = (a[t] || 0) + 1; return a; }, {});
       return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
     })();
+
+    // This analysis as a compare baseline. startReanalyze/fetchComparison key
+    // off `.id` (history rows carry it); a fresh result carries `analysis_id`.
+    const compareId = result.analysis_id || result.id || null;
+    const canCompare = !!compareId && result.saved_to_history !== false;
+    const compareBaseline = canCompare
+      ? { ...result, id: compareId, date: result.date || result.created_at || new Date().toISOString() }
+      : null;
 
     // Section nav for the scroller. Mounts ONLY when there's an actual
     // result with shots (mirrors the existing result?.shots?.length > 0
@@ -4653,6 +4695,24 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
+        {/* The retention loop: practise → film again → compare. Sits right
+            after the drills because it is the answer to "I've read my
+            drills, now what?". */}
+        {result?.shots?.length > 0 && (
+          <NextStepCard
+            result={result}
+            tokens={tokens}
+            isGuest={isGuest}
+            // No id (e.g. a result restored from an older cached copy): send
+            // them to History to pick the baseline rather than a dead button.
+            onCompare={() => {
+              if (compareBaseline) startReanalyze(compareBaseline);
+              else { setActiveTab("history"); toast.info("Pick the analysis you want to compare against."); }
+            }}
+            onSignup={() => navigate("/auth")}
+          />
+        )}
+
         {/* Equipment Recommendations — promoted to its own prominent
             card (was buried inside Coaching Insights). Each rec links to
             our marketplace / equipment catalog so users have a one-tap
@@ -4980,7 +5040,7 @@ export default function AnalyzePage() {
                   Was this analysis right?
                 </span>
                 <span className="block text-zinc-400 text-[11px] leading-tight">
-                  Tell us what it got wrong — 30 seconds, and it earns you bonus tokens
+                  Tell us what it got wrong — 30 seconds, and it earns you free analyses
                 </span>
               </span>
             </span>
@@ -5701,11 +5761,20 @@ export default function AnalyzePage() {
           >
             📄 {isGuest ? "Coach Report (sign in)" : "Coach Report (PDF)"}
           </Button>
-          <Button onClick={() => { clearFile(); setActiveTab("upload"); setAnalysisMode(null); }}
-            className="flex-1 bg-zinc-900/80 border border-zinc-800 text-zinc-300 hover:border-lime-400/30 hover:text-lime-400 rounded-2xl h-12 min-h-[44px]"
-            variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" /> Analyze Again
-          </Button>
+          {user && compareBaseline ? (
+            <Button onClick={() => { clearFile(); setAnalysisMode(null); startReanalyze(compareBaseline); }}
+              title="Upload a new clip of the same shot and see what changed — uses 1 analysis"
+              className="flex-1 bg-zinc-900/80 border border-sky-400/40 text-sky-300 hover:bg-sky-400/10 rounded-2xl h-12 min-h-[44px]"
+              variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" /> Film again &amp; compare
+            </Button>
+          ) : (
+            <Button onClick={() => { clearFile(); setActiveTab("upload"); setAnalysisMode(null); }}
+              className="flex-1 bg-zinc-900/80 border border-zinc-800 text-zinc-300 hover:border-lime-400/30 hover:text-lime-400 rounded-2xl h-12 min-h-[44px]"
+              variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" /> Analyze another
+            </Button>
+          )}
         </div>
 
         {/* Save-to-profile CTA — every analysis result has the option to
@@ -5823,15 +5892,15 @@ export default function AnalyzePage() {
               critical caveat about using your own videos. */}
           <div className="bg-sky-400/5 border border-sky-400/20 rounded-2xl p-4">
             <p className="text-xs text-sky-300 font-semibold mb-1 flex items-center gap-1">
-              <Lightbulb className="w-3 h-3" /> How reanalysis works
+              <Lightbulb className="w-3 h-3" /> How "Film again &amp; compare" works
             </p>
             <p className="text-[11px] text-zinc-400 leading-relaxed">
-              Pick any past analysis, then upload a new clip of <span className="text-sky-300">yourself doing the same shot</span>.
-              We remember the technique metrics from the previous video and the AI Coach compares the two — telling you exactly
-              what improved, what regressed, and whether your drills paid off.
+              Pick any past analysis, then upload a <span className="text-sky-300">new clip of yourself doing the same shot</span>.
+              Our AI compares the two and tells you what improved, what got worse, and whether your drills paid off.
+              It uses 1 analysis. Re-running the same video gives the same result — progress only shows on a new clip.
             </p>
             <p className="text-[10px] text-amber-400/80 mt-1.5">
-              ⚠ For honest progress tracking, only reanalyze against your own videos. Comparing against someone else's clip won't reflect <em>your</em> growth.
+              ⚠ Compare against your own videos only. Someone else's clip won't reflect <em>your</em> progress.
             </p>
           </div>
 
@@ -6136,7 +6205,7 @@ export default function AnalyzePage() {
                         }}
                       >
                         <BarChart3 className="w-3 h-3 mr-1" />
-                        Reanalyze
+                        Film again &amp; compare
                       </Button>
                       {ageDays > 0 && (
                         <span className="text-[10px] text-zinc-600">{ageDays} day{ageDays === 1 ? "" : "s"} ago</span>
@@ -6395,13 +6464,13 @@ export default function AnalyzePage() {
           onClick={() => setShowGuestUpgrade(false)}>
           <div onClick={(e) => e.stopPropagation()}
             className="bg-gradient-to-br from-lime-500/10 via-zinc-900 to-zinc-950 border border-lime-400/30 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center relative">
-            <div className="text-5xl mb-3">🪙</div>
+            <div className="text-5xl mb-3">🎯</div>
             <h2 className="font-heading font-black text-2xl sm:text-3xl text-white uppercase tracking-tight mb-2">
-              Sign up — get 100 tokens free
+              Sign up — get 3 free analyses
             </h2>
             <p className="text-zinc-300 text-sm mb-5 leading-relaxed">
-              You've used your one free analysis. Sign up to unlock another free analysis
-              (100 tokens), plus history, training plan, and equipment recs. Refer friends to earn more.
+              You've used your one guest analysis. Sign up for 3 more free —
+              film again and see if the fix worked, plus history, a training plan and gear picks.
             </p>
             <div className="flex flex-col gap-2">
               <Button onClick={() => navigate("/auth")}

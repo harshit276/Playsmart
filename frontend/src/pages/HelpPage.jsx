@@ -28,7 +28,7 @@ const CATEGORIES = [
 const FAQS = [
   {
     q: "How do tokens work?",
-    a: "Each video analysis costs 100 tokens. You get 100 free on signup (1 free analysis). Earn more by referring friends (100 each side, unlimited), a daily login bonus (25/day up to 100 total), hosting community games (50/game), or completing training days (20/day up to 100 total). Tokens never expire.",
+    a: "Each video uses 1 analysis. You get 3 free on signup. Earn more by inviting friends (2 each for you and your friend, unlimited), a daily login bonus (up to 1 analysis in total), hosting community games (half an analysis per game), or completing training days (up to 1 analysis in total). Analyses never expire.",
   },
   {
     q: "Will I be charged tokens if my analysis fails?",
@@ -40,7 +40,7 @@ const FAQS = [
   },
   {
     q: "How do I cancel a token purchase?",
-    a: "Token purchases are non-refundable once consumed. If you bought tokens but haven't used them, contact us at the email below within 7 days for a refund.",
+    a: "Used analyses are non-refundable. If you bought a pack but haven't used it, contact us at the email below within 7 days for a refund.",
   },
   {
     q: "Why can't I find a real product image on the marketplace?",

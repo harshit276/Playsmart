@@ -10,6 +10,7 @@ import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, getRedirectResult } from "firebase/auth";
 import { trackSignupConversion } from "@/lib/adsConversion";
 import api from "@/lib/api";
+import { formatAnalyses } from "@/lib/analyses";
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,7 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   // Email + password flow. Signup does NOT log you in or grant tokens — it
-  // emails a magic verify link, and the 100 tokens land when that link is
+  // emails a magic verify link, and the signup grant lands when that link is
   // clicked (see /auth/verify-email). That's what stops throwaway addresses
   // from farming free analyses.
   const [mode, setMode] = useState("signup"); // signup | login
@@ -77,7 +78,7 @@ export default function AuthPage() {
     // conversion is gated on the server's is_new_user flag.
     if (data.is_new_user) trackSignupConversion(data.user?.id);
     if (typeof data.tokens === "number" && data.tokens >= 100) {
-      toast.success(`Welcome${name ? ", " + name : ""}! 🪙 ${data.tokens} tokens credited.`);
+      toast.success(`Welcome${name ? ", " + name : ""}! You have ${formatAnalyses(data.tokens)}.`);
     } else {
       toast.success(`Welcome${name ? ", " + name : ""}!`);
     }
@@ -102,7 +103,7 @@ export default function AuthPage() {
         // trackSignupConversion is idempotent per user, so a link clicked twice
         // still reports once.
         trackSignupConversion(data.user?.id);
-        toast.success(`Email verified! 🪙 ${data.tokens} tokens credited.`);
+        toast.success(`Email verified! You have ${formatAnalyses(data.tokens)}.`);
         navigate(data.has_profile ? "/dashboard" : "/analyze", { replace: true });
       } catch (err) {
         toast.error(err?.response?.data?.detail || "That verification link didn't work. Please sign up again.");
@@ -172,7 +173,7 @@ export default function AuthPage() {
     try {
       const { data } = await api.post("/auth/demo-login", {});
       login(data.token, data.user, data.has_profile, data.tokens);
-      toast.success(`Logged in as Demo Player · 🪙 ${data.tokens} tokens`);
+      toast.success(`Logged in as Demo Player · ${formatAnalyses(data.tokens)}`);
       navigate(data.has_profile ? "/dashboard" : "/analyze");
     } catch (err) {
       toast.error("Demo login failed: " + (err?.response?.data?.detail || err.message || "unknown"));
@@ -274,7 +275,7 @@ export default function AuthPage() {
                   We sent a verification link to{" "}
                   <span className="text-white font-medium break-all">{sentTo}</span>.
                   Click it to activate your account and get your{" "}
-                  <span className="text-lime-400 font-semibold">100 free tokens</span>.
+                  <span className="text-lime-400 font-semibold">3 free analyses</span>.
                 </p>
               </div>
               <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
@@ -385,7 +386,7 @@ export default function AuthPage() {
 
                 {mode === "signup" && (
                   <p className="text-[10px] text-zinc-600 leading-relaxed">
-                    We'll email you a link to verify your address. Your 100 free tokens are credited once you click it.
+                    We'll email you a link to verify your address. Your 3 free analyses are added once you click it.
                   </p>
                 )}
 

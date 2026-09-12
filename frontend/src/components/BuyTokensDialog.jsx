@@ -18,7 +18,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Loader2, ShieldCheck } from "lucide-react";
+import { Video, Loader2, ShieldCheck } from "lucide-react";
+import { analysesFrom, analysisWord, formatAnalyses } from "@/lib/analyses";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/App";
@@ -98,7 +99,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
           currency: data.currency || "INR",
           order_id: data.order_id,
           name: data.name || "Formanti",
-          description: data.description || `${pack.tokens} tokens`,
+          description: data.description || formatAnalyses(pack.tokens),
           prefill: { email: data.prefill_email || "", contact: data.prefill_contact || "" },
           theme: { color: "#bef264" },
           handler: async (resp) => {
@@ -143,7 +144,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
               (lastErr?.response?.data?.detail
                 || "We couldn't confirm your purchase automatically.")
               + ` Your payment went through (ref ${String(resp.razorpay_payment_id || "").slice(-8)}). `
-              + "Reload in a minute — if tokens still aren't there, contact support with that ref.",
+              + "Reload in a minute — if your analyses still aren't there, contact support with that ref.",
               { duration: 15000 },
             );
             console.error("[razorpay] verify failed after retries", {
@@ -169,22 +170,25 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
         <>
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Coins className="w-5 h-5 text-purple-400" /> Buy Formanti tokens
+              <Video className="w-5 h-5 text-purple-400" /> Buy analyses
             </DialogTitle>
             <DialogDescription className="text-zinc-400 text-sm">
-              Pick a pack — UPI, cards, netbanking. Tokens never expire.
+              Pick a pack — UPI, cards, netbanking. Analyses never expire.
             </DialogDescription>
           </DialogHeader>
 
           {isDemo && (
             <div className="bg-amber-400/10 border border-amber-400/30 rounded-lg px-3 py-2 text-[11px] text-amber-300">
-              Demo mode — no real charge. Tokens are credited so you can test the flow.
+              Demo mode — no real charge. Analyses are credited so you can test the flow.
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-3 mt-2">
             {packs.map((p) => {
-              const perToken = ((p.price != null ? p.price : p.price_inr) / p.tokens) * 100;
+              const n = analysesFrom(p.tokens);
+              const price = p.price != null ? p.price : p.price_inr;
+              const perAnalysis = n ? price / n : price;
+              const symbol = p.currency === "USD" ? "$" : "₹";
               const isSelected = selected?.key === p.key;
               return (
                 <button
@@ -201,10 +205,14 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
                     <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-lime-400 text-black text-[9px] px-2">BEST VALUE</Badge>
                   )}
                   <p className="text-[10px] uppercase tracking-wider font-bold text-zinc-500">{p.label}</p>
-                  <p className="font-heading font-black text-2xl text-white mt-1">{p.tokens.toLocaleString("en-IN")}</p>
-                  <p className="text-[10px] text-zinc-500 mb-2">tokens</p>
+                  <p className="font-heading font-black text-2xl text-white mt-1">{n.toLocaleString("en-IN")}</p>
+                  <p className="text-[10px] text-zinc-500 mb-2">{analysisWord(n)}</p>
                   <p className="text-base font-bold text-purple-300">{formatPackPrice(p)}</p>
-                  <p className="text-[9px] text-zinc-600 mt-0.5">~{perToken.toFixed(1)}p / token</p>
+                  {n > 1 && (
+                    <p className="text-[9px] text-zinc-600 mt-0.5">
+                      {symbol}{perAnalysis.toFixed(perAnalysis < 10 ? 2 : 0)} per analysis
+                    </p>
+                  )}
                   {isSelected && loading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80 rounded-xl">
                       <Loader2 className="w-5 h-5 animate-spin text-purple-400" />

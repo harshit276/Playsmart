@@ -10,8 +10,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Coins, ShoppingCart, UserPlus, Users, Dumbbell, Lock } from "lucide-react";
+import { Video, ShoppingCart, UserPlus, Users, Dumbbell } from "lucide-react";
 import BuyTokensDialog from "@/components/BuyTokensDialog";
+import { TOKENS_PER_ANALYSIS, describeAnalysisAmount } from "@/lib/analyses";
 
 export default function InsufficientTokensModal({ open, onOpenChange, balance = 0, required = 100 }) {
   const navigate = useNavigate();
@@ -25,12 +26,14 @@ export default function InsufficientTokensModal({ open, onOpenChange, balance = 
         <DialogContent className="bg-zinc-900 border-zinc-800 sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
-              <Coins className="w-5 h-5 text-purple-400" /> Need a few more tokens
+              <Video className="w-5 h-5 text-purple-400" /> You're out of analyses
             </DialogTitle>
             <DialogDescription className="text-zinc-400 text-sm">
-              This analysis costs <span className="text-white font-medium">{required} tokens</span>.
-              You have <span className="text-white font-medium">{balance}</span> right now —
-              earn <span className="text-lime-400 font-medium">{required - balance} more</span> for free, or top up.
+              {required > TOKENS_PER_ANALYSIS ? (
+                <>This analysis uses <span className="text-white font-medium">{describeAnalysisAmount(required)}</span>. </>
+              ) : null}
+              You have <span className="text-white font-medium">{describeAnalysisAmount(balance)}</span> left.
+              Get more free by inviting a friend, or top up.
             </DialogDescription>
           </DialogHeader>
 
@@ -43,25 +46,25 @@ export default function InsufficientTokensModal({ open, onOpenChange, balance = 
                 <ShoppingCart className="w-4 h-4 text-black" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-white">Buy tokens</p>
-                {/* ₹30 is the real floor — TOKEN_PACKS.pack_100 in server.py.
-                    This said "From ₹99", which no pack has ever matched. */}
-                <p className="text-[11px] text-zinc-400">From ₹30 · UPI / cards / netbanking</p>
+                <p className="text-sm font-bold text-white">Buy analyses</p>
+                {/* No hardcoded price: packs are priced by country, so the
+                    dialog this opens shows the right currency. */}
+                <p className="text-[11px] text-zinc-400">One-time packs · no subscription · never expire</p>
               </div>
             </button>
 
-            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold pt-2 pb-1">Or earn free tokens</p>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold pt-2 pb-1">Or earn free analyses</p>
 
             <EarnRow
-              icon={UserPlus} title="Refer a friend" detail="+100 each side · unlimited"
+              icon={UserPlus} title="Invite a friend" detail="+2 analyses for each of you · unlimited"
               onClick={() => { close(); navigate("/referral"); }}
             />
             <EarnRow
-              icon={Users} title="Host a community game" detail="+50 per game · 5/day"
+              icon={Users} title="Host a community game" detail="+½ analysis per game · 5/day"
               onClick={() => { close(); navigate("/community?host=1"); }}
             />
             <EarnRow
-              icon={Dumbbell} title="Complete a training day" detail="+20 per day · up to 100 total"
+              icon={Dumbbell} title="Complete a training day" detail="Adds up to 1 free analysis"
               onClick={() => { close(); navigate("/training"); }}
             />
           </div>

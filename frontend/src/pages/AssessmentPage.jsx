@@ -17,6 +17,7 @@ import {
   Brain, BookOpen, Crosshair, BarChart3, User
 } from "lucide-react";
 import api from "@/lib/api";
+import { formatAnalyses } from "@/lib/analyses";
 
 // Sport icons mapping - expanded for 6 sports
 const SPORT_ICONS = {
@@ -357,7 +358,7 @@ export default function AssessmentPage() {
       // Refresh balance + celebrate the signup grant on the way to dash
       try { await refreshTokens(); } catch {}
       if (typeof tokens === "number" && tokens >= 100) {
-        toast.success("🪙 +100 tokens credited! That's 1 free video analysis.", { duration: 4000 });
+        toast.success(`You have ${formatAnalyses(tokens)} to use.`, { duration: 4000 });
       }
       toast.success("Profile created! Let's see your recommendations.");
     } catch (err) {

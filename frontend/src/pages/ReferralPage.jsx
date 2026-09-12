@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { swrGet } from "@/lib/cachedFetch";
 import SEO from "@/components/SEO";
+import { describeAnalysisAmount } from "@/lib/analyses";
 
 export default function ReferralPage() {
   const { user, referralCode } = useAuth();
@@ -55,7 +56,7 @@ export default function ReferralPage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm text-center">
           <UserPlus className="w-10 h-10 text-lime-400 mx-auto mb-3" />
           <h2 className="text-xl font-bold text-white mb-2">Sign in to start referring</h2>
-          <p className="text-zinc-400 text-sm mb-4">Earn tokens for every friend who joins and runs their first analysis.</p>
+          <p className="text-zinc-400 text-sm mb-4">Get 2 free analyses for every friend who joins and runs their first one.</p>
           <Button onClick={() => navigate("/auth")} className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full">
             Sign in
           </Button>
@@ -72,7 +73,8 @@ export default function ReferralPage() {
   const shareWhatsApp = () => {
     const text =
       `🏸 Try Formanti — AI coach for your game.\n\n` +
-      `Get 200 free tokens (100 signup + 100 referral bonus) when you sign up via my link:\n${link}`;
+      `Film a rally, set or over and it shows exactly what to fix in your technique. ` +
+      `Sign up with my link and you get 5 free analyses (3 + 2 bonus):\n${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
@@ -80,7 +82,7 @@ export default function ReferralPage() {
     if (navigator.share) {
       navigator.share({
         title: "Formanti",
-        text: "AI coach for your game. Get 200 free tokens with my link:",
+        text: "AI coach for your game. Get 5 free analyses with my link:",
         url: link,
       }).catch(() => {});
     } else copyLink();
@@ -88,7 +90,7 @@ export default function ReferralPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO noindex title="Refer & Earn · Formanti" description="Invite friends and earn Formanti tokens." />
+      <SEO noindex title="Refer & Earn · Formanti" description="Invite friends and you both get free analyses." />
       <div className="container mx-auto px-4 max-w-3xl">
 
         {/* Hero */}
@@ -100,12 +102,12 @@ export default function ReferralPage() {
             <p className="text-[11px] uppercase tracking-wider text-lime-300/80 font-bold">Refer & Earn</p>
           </div>
           <h1 className="font-heading font-black text-3xl sm:text-4xl text-white uppercase tracking-tight mb-2">
-            Both of you get 100 tokens
+            You both get 2 free analyses
           </h1>
           <p className="text-zinc-300 text-sm max-w-md">
             Share your link. When a friend signs up and runs their first analysis,
-            <span className="text-lime-300 font-medium"> they get 100 bonus tokens</span> on top of the 100 signup grant —
-            and <span className="text-lime-300 font-medium">you get 100 too</span>.
+            <span className="text-lime-300 font-medium"> they get 2 bonus analyses</span> on top of their 3 free ones —
+            and <span className="text-lime-300 font-medium">you get 2 too</span>. No limit on friends.
           </p>
         </motion.div>
 
@@ -154,7 +156,7 @@ export default function ReferralPage() {
               <Users className="w-3 h-3 text-lime-400" /> Your referrals
             </p>
             <Badge className="bg-lime-400/10 text-lime-400 border-lime-400/20 text-[10px]">
-              <Sparkles className="w-2.5 h-2.5 mr-1" /> Earned: {totalEarned} tokens
+              <Sparkles className="w-2.5 h-2.5 mr-1" /> Earned: {describeAnalysisAmount(totalEarned)}
             </Badge>
           </div>
           {loading ? (
@@ -180,7 +182,7 @@ export default function ReferralPage() {
                       {new Date(t.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                     </p>
                   </div>
-                  <p className="text-sm font-bold font-mono text-lime-400 shrink-0">+{t.delta}</p>
+                  <p className="text-sm font-bold text-lime-400 shrink-0">+{describeAnalysisAmount(t.delta)}</p>
                 </div>
               ))}
             </div>

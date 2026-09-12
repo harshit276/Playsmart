@@ -11,6 +11,7 @@ import {
 import { FormantiIcon } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import { getSportEmoji, getSportLabel } from "@/lib/sportConfig";
+import { analysesFrom, analysisWord, formatAnalyses } from "@/lib/analyses";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Desktop nav items (shown in top bar). Equipment merged into Marketplace.
@@ -162,17 +163,20 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Right side: tokens + streak + user menu */}
+          {/* Right side: analyses left + streak + user menu */}
           <div className="flex items-center gap-2">
-            {/* Token balance chip — clickable → /wallet (visible on mobile too) */}
+            {/* Balance chip, shown as analyses left — clickable → /wallet (visible on mobile too) */}
             {isAuthenticated && tokens != null && (
               <Link
                 to="/wallet"
-                title={`${tokens} Formanti tokens`}
+                title={`${formatAnalyses(tokens)} left`}
                 className="flex items-center gap-1 px-2 sm:px-2.5 py-1 bg-purple-400/10 hover:bg-purple-400/20 rounded-full transition-colors"
               >
-                <span className="text-xs">🪙</span>
-                <span className="text-xs font-bold text-purple-300">{tokens.toLocaleString("en-IN")}</span>
+                <Video className="w-3.5 h-3.5 text-purple-300" />
+                <span className="text-xs font-bold text-purple-300">
+                  {analysesFrom(tokens).toLocaleString("en-IN")}
+                  <span className="hidden sm:inline font-medium"> {analysisWord(analysesFrom(tokens))} left</span>
+                </span>
               </Link>
             )}
             {/* Streak badge */}
@@ -183,7 +187,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Sign Up button for guests — leads with the free 300-token grant */}
+            {/* Sign Up button for guests — signing up grants 3 free analyses */}
             {isGuest && (
               <Button size="sm" onClick={() => {
                 localStorage.removeItem("guest_mode");
@@ -219,7 +223,7 @@ export default function Navbar() {
                     className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"
                     onClick={() => navigate("/wallet")}
                   >
-                    <span className="w-4 mr-2 text-center">🪙</span> Wallet
+                    <Video className="w-4 h-4 mr-2" /> Analyses & wallet
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-zinc-400 focus:bg-zinc-800 cursor-pointer"

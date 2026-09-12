@@ -91,7 +91,7 @@ const FAQS = [
   },
   {
     q: "Is the physiotherapy exercise tracker free?",
-    a: "You get free tokens on signup to track exercises, and browsing suggested home-rehab equipment is free. No credit card required to get started.",
+    a: "You get 3 free analyses on signup to track exercises, and browsing suggested home-rehab equipment is free. No credit card required to get started.",
   },
 ];
 

@@ -239,6 +239,13 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
   useEffect(() => { reanalyzeFiredRef.current = false; }, [result]);
 
   const [open, setOpen] = useState(false);
+  // Other parts of the results page (the "next step" card) open the coach
+  // with an event rather than holding a ref into this component.
+  useEffect(() => {
+    const openCoach = () => setOpen(true);
+    window.addEventListener("formanti:open-coach", openCoach);
+    return () => window.removeEventListener("formanti:open-coach", openCoach);
+  }, []);
   // True while a full-screen sheet/modal is showing — the pill hides so it
   // can't paint over the sheet's own buttons.
   const [modalUp, setModalUp] = useState(false);
@@ -611,7 +618,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
             /* noop */
           }
           if (res.status === 402) {
-            throw new Error("You need more tokens to chat with the voice coach.");
+            throw new Error("You're out of analyses — top up or invite a friend to keep chatting with the coach.");
           }
           throw new Error(detail || `Coach unavailable (HTTP ${res.status})`);
         }
@@ -1396,7 +1403,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
               </div>
             </div>
             <p className="mt-2 text-[10px] text-zinc-600 leading-relaxed">
-              Type or talk to your coach · 5 tokens per reply.
+              Type or talk to your coach · 20 replies use 1 analysis.
             </p>
           </div>
         </motion.div>

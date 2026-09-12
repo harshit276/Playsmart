@@ -4,6 +4,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Check, Sparkles, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { analysesFrom, analysisWord, formatAnalyses } from "@/lib/analyses";
 
 /**
  * Full-screen celebration shown after a successful token purchase.
@@ -97,7 +98,7 @@ export default function PaymentSuccessModal({
           >
             <p className="text-[11px] uppercase tracking-widest text-lime-300 font-bold mb-1">Payment successful</p>
             <h2 className="font-heading font-black text-3xl text-white mb-2 tracking-tight">
-              Tokens added! 🎉
+              Analyses added! 🎉
             </h2>
             {packLabel && (
               <p className="text-zinc-500 text-xs mb-5">
@@ -114,12 +115,12 @@ export default function PaymentSuccessModal({
                 transition={{ type: "spring", stiffness: 240, damping: 14, delay: 0.35 }}
                 className="font-heading font-black text-5xl text-lime-400 leading-none mb-1"
               >
-                +{(tokensCredited ?? 0).toLocaleString("en-IN")}
+                +{analysesFrom(tokensCredited)}
               </motion.p>
-              <p className="text-[11px] text-zinc-500">tokens</p>
+              <p className="text-[11px] text-zinc-500">{analysisWord(analysesFrom(tokensCredited))}</p>
               {typeof newBalance === "number" && (
                 <p className="text-xs text-zinc-400 mt-3 pt-3 border-t border-zinc-800/80">
-                  New balance: <span className="text-purple-300 font-bold">🪙 {newBalance.toLocaleString("en-IN")}</span>
+                  You now have <span className="text-purple-300 font-bold">{formatAnalyses(newBalance)}</span>
                 </p>
               )}
             </div>
@@ -143,7 +144,7 @@ export default function PaymentSuccessModal({
                 Done
               </Button>
             </div>
-            <p className="text-[11px] text-zinc-600 mt-4">Receipt sent to your email · Tokens never expire</p>
+            <p className="text-[11px] text-zinc-600 mt-4">Receipt sent to your email · Analyses never expire</p>
           </motion.div>
         </div>
       </DialogContent>

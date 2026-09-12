@@ -22,18 +22,33 @@ import { swrGet } from "@/lib/cachedFetch";
 import SEO from "@/components/SEO";
 import BuyTokensDialog from "@/components/BuyTokensDialog";
 import { AnimatedNumber } from "@/components/AnimatedStat";
+import {
+  TOKENS_PER_ANALYSIS, analysesFrom, analysisWord, describeAnalysisAmount, coachRepliesFromLeftover,
+} from "@/lib/analyses";
 
 const KIND_LABEL = {
-  signup_grant: "Signup grant",
+  signup_grant: "Welcome analyses",
   referral_credit: "Referral",
   host_game: "Hosted a game",
   training_day: "Training day complete",
   daily_login: "Daily login",
   analysis_spend: "Video analysis",
-  purchase: "Token purchase",
+  coach_voice_spend: "Live Coach reply",
+  game_attended: "Played a game",
+  feedback_reward: "Feedback reward",
+  purchase: "Purchase",
   refund: "Refund",
   manual_adjustment: "Adjustment",
 };
+
+// Ledger rows are stored in tokens; show them in analyses. Small rewards and
+// coach replies are fractions of an analysis, so keep up to 2 decimals
+// rather than rounding them to a misleading 0.
+function fmtDelta(delta) {
+  const n = (Number(delta) || 0) / TOKENS_PER_ANALYSIS;
+  const s = Number.isInteger(n) ? String(Math.abs(n)) : Math.abs(n).toFixed(2).replace(/0+$/, "");
+  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${s}`;
+}
 
 const KIND_ICON = {
   signup_grant: Sparkles,
@@ -76,7 +91,7 @@ export default function WalletPage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-sm text-center">
           <Coins className="w-10 h-10 text-purple-400 mx-auto mb-3" />
           <h2 className="text-xl font-bold text-white mb-2">Sign in to see your wallet</h2>
-          <p className="text-zinc-400 text-sm mb-4">Track your Formanti tokens — earn from referrals, hosting games, and training.</p>
+          <p className="text-zinc-400 text-sm mb-4">See how many analyses you have left, and earn more free by inviting friends.</p>
           <Button onClick={() => navigate("/auth")} className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full">
             Sign in
           </Button>
@@ -98,19 +113,22 @@ export default function WalletPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
-      <SEO noindex title="Wallet · Formanti Tokens" description="Track your Formanti token balance and earnings." />
+      <SEO noindex title="Wallet · Formanti" description="Your Formanti analyses and earnings." />
       <div className="container mx-auto px-4 max-w-3xl">
 
         {/* Hero balance */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="relative overflow-hidden bg-gradient-to-br from-purple-500/15 via-zinc-900 to-zinc-950 border border-purple-400/30 rounded-3xl p-6 sm:p-8 mb-6">
-          <div className="absolute -right-6 -bottom-6 text-[140px] opacity-10 select-none">🪙</div>
-          <p className="text-[11px] uppercase tracking-wider text-purple-300/70 font-bold">Formanti Tokens</p>
+          <Camera className="absolute -right-4 -bottom-4 w-36 h-36 text-purple-300 opacity-10 select-none" />
+          <p className="text-[11px] uppercase tracking-wider text-purple-300/70 font-bold">Analyses left</p>
           <p className="font-heading font-black text-5xl sm:text-6xl text-white mt-1">
-            <AnimatedNumber value={balance} duration={1.5} format={(n) => Math.round(n).toLocaleString("en-IN")} />
+            <AnimatedNumber value={analysesFrom(balance)} duration={1.2} format={(n) => Math.round(n).toLocaleString("en-IN")} />
           </p>
           <p className="text-zinc-400 text-sm mt-2">
-            Spend <span className="text-white font-medium">100 tokens</span> per video analysis. Tokens never expire.
+            One analysis per video. They never expire.
+            {coachRepliesFromLeftover(balance) > 0 && (
+              <> Plus <span className="text-white font-medium">{coachRepliesFromLeftover(balance)} Live Coach {coachRepliesFromLeftover(balance) === 1 ? "reply" : "replies"}</span>.</>
+            )}
           </p>
           <div className="flex flex-wrap gap-2 mt-5">
             <Button onClick={() => navigate("/analyze")}
@@ -130,7 +148,7 @@ export default function WalletPage() {
           className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 mb-6">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold flex items-center gap-1.5">
-              <ShoppingCart className="w-3 h-3 text-purple-400" /> Buy tokens
+              <ShoppingCart className="w-3 h-3 text-purple-400" /> Buy analyses
             </p>
             <Badge className="bg-purple-400/10 text-purple-300 border-purple-400/20 text-[10px]">UPI · cards · netbanking</Badge>
           </div>
@@ -146,8 +164,8 @@ export default function WalletPage() {
                   <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-lime-400 text-black text-[9px] px-2">BEST VALUE</Badge>
                 )}
                 <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">{p.label}</p>
-                <p className="font-heading font-black text-xl text-white mt-1">{p.tokens.toLocaleString("en-IN")}</p>
-                <p className="text-[10px] text-zinc-500">tokens</p>
+                <p className="font-heading font-black text-xl text-white mt-1">{analysesFrom(p.tokens).toLocaleString("en-IN")}</p>
+                <p className="text-[10px] text-zinc-500">{analysisWord(analysesFrom(p.tokens))}</p>
                 <p className="text-sm font-bold text-purple-300 mt-2">{formatPackPrice(p)}</p>
                 <p className="text-[9px] text-zinc-500 mt-1">Buy →</p>
               </button>
@@ -163,27 +181,27 @@ export default function WalletPage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-5 mb-6">
           <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold mb-3 flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-lime-400" /> Earn more tokens
+            <Sparkles className="w-3 h-3 text-lime-400" /> Earn free analyses
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <EarnAction
-              icon={UserPlus} label="Refer a friend"
-              detail={`+${rules.referral_credit || 200} when they finish their first analysis (you both get it)`}
+              icon={UserPlus} label="Invite a friend"
+              detail={`+${describeAnalysisAmount(rules.referral_credit || 200)} for each of you when they finish their first analysis`}
               onClick={() => navigate("/referral")}
             />
             <EarnAction
               icon={Users} label="Host a community game"
-              detail={`+${rules.host_game || 50} per game · up to 5/day`}
+              detail={`+${describeAnalysisAmount(rules.host_game || 50)} per game · up to 5/day`}
               onClick={() => navigate("/community?host=1")}
             />
             <EarnAction
               icon={Dumbbell} label="Complete a training day"
-              detail={`+${rules.training_day || 20} per day · up to 100 total`}
+              detail="Adds up to 1 free analysis in total"
               onClick={() => navigate("/training")}
             />
             <EarnAction
               icon={Sparkles} label="Daily login bonus"
-              detail={`+${rules.daily_login || 25} per day · up to 100 total`}
+              detail="Adds up to 1 free analysis in total"
             />
           </div>
         </motion.div>
@@ -214,7 +232,7 @@ export default function WalletPage() {
             </p>
           ) : transactions.length === 0 ? (
             <p className="text-zinc-600 text-xs text-center py-8">
-              No transactions yet — earn your first tokens from a referral or by hosting a game.
+              Nothing yet — invite a friend and you both get 2 free analyses.
             </p>
           ) : (
             <div className="space-y-1.5">
@@ -235,7 +253,7 @@ export default function WalletPage() {
                     <p className={`text-sm font-bold font-mono shrink-0 ${
                       positive ? "text-lime-400" : "text-amber-400"
                     }`}>
-                      {positive ? "+" : ""}{t.delta}
+                      {fmtDelta(t.delta)}
                     </p>
                   </div>
                 );
