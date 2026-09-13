@@ -1,5 +1,7 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { track } from "@/lib/analytics";
 import { Repeat, Dumbbell, Camera, TrendingUp, Mic, Crosshair, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { analysesFrom, analysisWord } from "@/lib/analyses";
@@ -24,6 +26,23 @@ import { analysesFrom, analysisWord } from "@/lib/analyses";
  * @param {Function} onSignup
  */
 export default function NextStepCard({ result, tokens, isGuest, onCompare, onSignup }) {
+  // "Read to the end" signal for the funnel: this card closes the results
+  // page, so seeing it means they scrolled through the analysis.
+  const cardRef = useRef(null);
+  const analysisKey = result?.analysis_id || result?.id || null;
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        track("results_end_reached", { sport: result?.sport || "unknown", guest: !!isGuest });
+        io.disconnect();
+      }
+    }, { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [analysisKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const topFix = [
     ...(result?.vlm_coaching?.key_focus_areas || []),
     ...(result?.shot_analysis?.weaknesses || []),
@@ -56,6 +75,7 @@ export default function NextStepCard({ result, tokens, isGuest, onCompare, onSig
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       id="analysis-section-next-step"
       className="scroll-mt-24 rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-400/[0.07] via-zinc-900/80 to-zinc-900/80 p-5"
@@ -110,14 +130,14 @@ export default function NextStepCard({ result, tokens, isGuest, onCompare, onSig
       <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-800 pt-4">
         <button
           type="button"
-          onClick={() => scrollTo("analysis-section-form-compare", "analysis-section-shot-analysis")}
+          onClick={() => { track("pose_corrected_opened", { source: "next_step_card" }); scrollTo("analysis-section-form-compare", "analysis-section-shot-analysis"); }}
           className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-lime-400/40 hover:text-lime-400"
         >
           <Crosshair className="h-3.5 w-3.5" /> See your pose corrected
         </button>
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("formanti:open-coach"))}
+          onClick={() => window.dispatchEvent(new CustomEvent("formanti:open-coach", { detail: { source: "next_step_card" } }))}
           className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:border-lime-400/40 hover:text-lime-400"
         >
           <Mic className="h-3.5 w-3.5" /> Ask the coach about this clip

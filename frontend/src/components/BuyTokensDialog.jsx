@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Video, Loader2, ShieldCheck } from "lucide-react";
 import { analysesFrom, analysisWord, formatAnalyses } from "@/lib/analyses";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuth } from "@/App";
@@ -43,6 +44,16 @@ function loadRazorpaySdk() {
   return razorpaySdkPromise;
 }
 
+// Pack identity for the funnel — no card, UPI or contact data, ever.
+function packProps(p) {
+  return {
+    pack: p?.key || null,
+    analyses: analysesFrom(p?.tokens),
+    price: p?.price != null ? p.price : p?.price_inr,
+    currency: p?.currency || "INR",
+  };
+}
+
 export default function BuyTokensDialog({ open, onOpenChange }) {
   const { user, refreshTokens, updateTokens } = useAuth();
   const [packs, setPacks] = useState([]);
@@ -53,6 +64,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
 
   useEffect(() => {
     if (!open) return;
+    track("buy_dialog_opened");
     api.get("/tokens/packs").then((r) => setPacks(r.data?.packs || [])).catch(() => {});
   }, [open]);
 
@@ -62,6 +74,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
 
   const onVerified = useCallback((verify, pack) => {
     if (verify?.data?.ok) {
+      track("purchase_completed", packProps(pack));
       updateTokens?.(verify.data.balance);
       refreshTokens?.();
       setSuccess({ tokens: verify.data.tokens_credited, balance: verify.data.balance, pack });
@@ -74,6 +87,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
   const startCheckout = useCallback(async (pack) => {
     setSelected(pack);
     setLoading(true);
+    track("checkout_started", packProps(pack));
     try {
       // 1. Server creates the Razorpay order
       const { data } = await api.post("/payments/razorpay/create-order", { pack_key: pack.key }, { timeout: 30000 });
@@ -151,13 +165,18 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
               payment_id: resp.razorpay_payment_id, err: lastErr?.message });
             resolve();
           },
-          modal: { ondismiss: () => { toast.error("Payment cancelled"); resolve(); } },
+          modal: { ondismiss: () => { track("checkout_cancelled", packProps(pack)); toast.error("Payment cancelled"); resolve(); } },
         });
-        rzp.on("payment.failed", (r) => toast.error(r?.error?.description || "Payment failed"));
+        rzp.on("payment.failed", (r) => {
+          // Razorpay's reason code (e.g. international card declined), not card data.
+          track("checkout_failed", { ...packProps(pack), reason: r?.error?.reason || r?.error?.code || "unknown" });
+          toast.error(r?.error?.description || "Payment failed");
+        });
         rzp.open();
       });
     } catch (err) {
       console.error("Checkout failed:", err);
+      track("checkout_failed", { ...packProps(pack), reason: "order_or_sdk_error" });
       toast.error(err?.response?.data?.detail || err.message || "Payment failed");
     }
     setLoading(false);

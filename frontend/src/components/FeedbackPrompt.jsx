@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { describeAnalysisAmount } from "@/lib/analyses";
+import { track } from "@/lib/analytics";
 
 /**
  * Post-analysis feedback, asked as a bottom-sheet at a HIGH-INTENT moment
@@ -103,8 +104,13 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
 
   const close = useCallback((answered) => {
     markAsked(analysisId);          // never re-ask, answered or not
+    if (!answered) track("feedback_dismissed", { trigger: trigger || "unknown" });
     onClose?.(answered);
-  }, [analysisId, onClose]);
+  }, [analysisId, onClose, trigger]);
+
+  useEffect(() => {
+    if (open) track("feedback_prompt_shown", { trigger: trigger || "unknown" });
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
     if (!ratings.rating && !comment.trim()) {
@@ -124,6 +130,14 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
       // The server owns the reward decision (once per user, and only while the
       // early-adopter offer is open), so only celebrate what it actually paid.
       const credited = res?.data?.tokens_credited || 0;
+      // Ratings only — the free-text comment is never sent to analytics.
+      track("feedback_sent", {
+        trigger: trigger || "unknown",
+        rating: ratings.rating || null,
+        rating_shots: ratings.rating_shots || null,
+        has_comment: !!comment.trim(),
+        rewarded: credited > 0,
+      });
       if (credited > 0) {
         toast.success(`Thanks — ${describeAnalysisAmount(credited)} added to your account.`, { duration: 6000 });
         try { window.dispatchEvent(new CustomEvent("formanti:tokens-changed")); } catch { /* noop */ }

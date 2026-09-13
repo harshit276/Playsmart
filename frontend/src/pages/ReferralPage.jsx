@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { swrGet } from "@/lib/cachedFetch";
 import SEO from "@/components/SEO";
 import { describeAnalysisAmount } from "@/lib/analyses";
+import { track } from "@/lib/analytics";
 
 export default function ReferralPage() {
   const { user, referralCode } = useAuth();
@@ -66,11 +67,13 @@ export default function ReferralPage() {
   }
 
   const copyLink = () => {
+    track("referral_shared", { channel: "copy" });
     navigator.clipboard.writeText(link);
     toast.success("Link copied — share it!");
   };
 
   const shareWhatsApp = () => {
+    track("referral_shared", { channel: "whatsapp" });
     const text =
       `🏸 Try Formanti — AI coach for your game.\n\n` +
       `Film a rally, set or over and it shows exactly what to fix in your technique. ` +
@@ -80,6 +83,7 @@ export default function ReferralPage() {
 
   const shareNative = () => {
     if (navigator.share) {
+      track("referral_shared", { channel: "native" });
       navigator.share({
         title: "Formanti",
         text: "AI coach for your game. Get 4 free analyses with my link:",

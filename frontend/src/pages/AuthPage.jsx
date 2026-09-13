@@ -9,6 +9,7 @@ import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
 import { auth, googleProvider } from "@/lib/firebase";
 import { signInWithPopup, getRedirectResult } from "firebase/auth";
 import { trackSignupConversion } from "@/lib/adsConversion";
+import { trackSignup } from "@/lib/analytics";
 import api from "@/lib/api";
 import { formatAnalyses } from "@/lib/analyses";
 
@@ -76,7 +77,10 @@ export default function AuthPage() {
     login(data.token, data.user, data.has_profile, data.tokens);
     // This endpoint also serves every returning Google login, so the signup
     // conversion is gated on the server's is_new_user flag.
-    if (data.is_new_user) trackSignupConversion(data.user?.id);
+    if (data.is_new_user) {
+      trackSignupConversion(data.user?.id);
+      trackSignup(data.user?.id, "google");
+    }
     if (typeof data.tokens === "number" && data.tokens >= 100) {
       toast.success(`Welcome${name ? ", " + name : ""}! You have ${formatAnalyses(data.tokens)}.`);
     } else {
@@ -103,6 +107,7 @@ export default function AuthPage() {
         // trackSignupConversion is idempotent per user, so a link clicked twice
         // still reports once.
         trackSignupConversion(data.user?.id);
+        trackSignup(data.user?.id, "email");
         toast.success(`Email verified! You have ${formatAnalyses(data.tokens)}.`);
         navigate(data.has_profile ? "/dashboard" : "/analyze", { replace: true });
       } catch (err) {

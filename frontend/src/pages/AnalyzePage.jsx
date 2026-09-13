@@ -41,6 +41,8 @@ import AnalysisQuickNav from "@/components/AnalysisQuickNav";
 import PlayerDetectionCard from "@/components/PlayerDetectionCard";
 import { analysesFrom, describeAnalysisAmount, formatAnalyses } from "@/lib/analyses";
 import NextStepCard from "@/components/NextStepCard";
+import { trackSignupConversion } from "@/lib/adsConversion";
+import { track, trackSignup, failureReason } from "@/lib/analytics";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -527,6 +529,8 @@ export default function AnalyzePage() {
   // Lets the user cancel an in-flight upload/analysis (and lets us abort a
   // stalled upload). Recreated at the start of every analysis run.
   const analysisAbortRef = useRef(null);
+  // When the current run started — analysis_completed/failed report duration.
+  const analysisStartedAtRef = useRef(0);
 
   // "Background-ish" upload protection while an analysis run is in flight:
   //   • Screen Wake Lock — on a phone the screen going to sleep suspends the
@@ -900,6 +904,7 @@ export default function AnalyzePage() {
       const ok = m.openCoachReport(result, { playerName: user?.name || profile?.name || "Player" });
       if (!ok) toast.error("Allow pop-ups to download the Coach Report.");
       else {
+        track("pdf_downloaded", { sport: result?.sport || "unknown" });
         setReportPromptOpen(false);
         // Downloading the report is the strongest signal the user values the
         // output — the best moment to ask what was good or wrong. Delayed so
@@ -1177,6 +1182,9 @@ export default function AnalyzePage() {
         if (!(result?.events || []).length) {
           const _capacity = result?._meta?.error_kind === "capacity"
             || /resource_exhausted|quota|credits|503|high demand|overload/i.test(String(result?._meta?.error || ""));
+          // track() directly (not the reportAnalysis* helpers declared further
+          // down) — this effect sits above them in the component body.
+          track("analysis_failed", { path: "resumed", reason: _capacity ? "service_unavailable" : "no_shots_found" });
           setError(_capacity
             ? "Analysis is temporarily at capacity — please try again in a few minutes. You were not charged."
             : "We couldn't detect any shots in that clip — please check your connection and try again.");
@@ -1186,6 +1194,11 @@ export default function AnalyzePage() {
         setResult(universalResult);
         setActiveTab("results");
         setProgress(100);
+        track("analysis_completed", {
+          path: "resumed",
+          sport: universalResult.sport || "unknown",
+          shots: (universalResult.shots || []).length,
+        });
         notifyAnalysisReady(universalResult.sport, universalResult.total_shots_detected);
         // Save to history too — the inline completion was skipped because the
         // page was unmounted (user navigated away), so without this the
@@ -1399,13 +1412,19 @@ export default function AnalyzePage() {
     e.preventDefault();
     dropRef.current?.classList.remove("border-lime-400", "bg-lime-400/5");
     const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith("video/")) setFile(f);
+    if (f && f.type.startsWith("video/")) {
+      setFile(f);
+      track("video_selected", { via: "drop", size_mb: Math.round(f.size / 1048576), signed_in: !!user });
+    }
     else toast.error("Please drop a video file.");
   };
 
   const handleFileSelect = (e) => {
     const f = e.target.files[0];
-    if (f) setFile(f);
+    if (f) {
+      setFile(f);
+      track("video_selected", { via: "picker", size_mb: Math.round(f.size / 1048576), signed_in: !!user });
+    }
   };
 
   const clearFile = () => {
@@ -1428,7 +1447,8 @@ export default function AnalyzePage() {
 
   // Reanalyze flow: stash the old analysis and prompt the user to upload a
   // new video. After it analyzes, we automatically call /compare-analyses.
-  const startReanalyze = (oldAnalysis) => {
+  const startReanalyze = (oldAnalysis, source = "unknown") => {
+    track("compare_started", { source, sport: oldAnalysis?.sport || "unknown" });
     setReanalyzeContext(oldAnalysis);
     setComparisonResult(null);
     setActiveTab("upload");
@@ -1456,7 +1476,7 @@ export default function AnalyzePage() {
         sessionStorage.removeItem("playsmart_progress_baseline");
       }
     } catch { /* ignore */ }
-    if (baseline?.id) startReanalyze(baseline);
+    if (baseline?.id) startReanalyze(baseline, "progress_page");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1470,6 +1490,10 @@ export default function AnalyzePage() {
       );
       if (data?.success && data.comparison) {
         setComparisonResult(data.comparison);
+        track("compare_completed", {
+          score_delta: data.comparison?.deltas?.score?.delta ?? null,
+          days_between: data.comparison?.days_between ?? null,
+        });
         toast.success("Progress comparison ready!");
       }
     } catch (err) {
@@ -1484,6 +1508,10 @@ export default function AnalyzePage() {
   // Aborting the controller makes the stalled/streaming upload reject with
   // code "abort", which the analyze() catch swallows silently.
   const cancelAnalysis = () => {
+    track("analysis_cancelled", {
+      seconds: analysisStartedAtRef.current
+        ? Math.round((Date.now() - analysisStartedAtRef.current) / 1000) : null,
+    });
     try { analysisAbortRef.current?.abort(); } catch { /* noop */ }
     setAnalyzing(false);
     setProgress(0);
@@ -1496,6 +1524,24 @@ export default function AnalyzePage() {
     try { clearPickerSession(); } catch { /* noop */ }
     toast("Analysis cancelled.");
   };
+
+  // Funnel events for the end of a run (see lib/analytics). Duration is from
+  // analysis_started, so slow paths show up as well as failing ones.
+  const runSeconds = () => (analysisStartedAtRef.current
+    ? Math.round((Date.now() - analysisStartedAtRef.current) / 1000) : null);
+  const reportAnalysisDone = (res, path) => track("analysis_completed", {
+    path,
+    sport: res?.sport || "unknown",
+    shots: Array.isArray(res?.shots) ? res.shots.length : 0,
+    seconds: runSeconds(),
+    is_compare: !!reanalyzeContext,
+  });
+  const reportAnalysisFailed = (raw, status, path) => track("analysis_failed", {
+    path,
+    reason: failureReason(raw, status),
+    status: status || 0,
+    seconds: runSeconds(),
+  });
 
   const analyze = async () => {
     if (!file) return;
@@ -1522,6 +1568,7 @@ export default function AnalyzePage() {
     // unreliable, and asking for a trim is the honest answer.
     const forceLocalCompress = shouldForceLocalCompress(file);
     if (_isMobile && _fileMb > REFUSE_CLIP_MB) {
+      track("analysis_blocked", { reason: "file_too_large", size_mb: Math.round(_fileMb) });
       toast.error(
         `This video is ${Math.round(_fileMb)} MB — too large to process on a phone. ` +
         `Trim it to your key 10–30 seconds and try again.`,
@@ -1539,6 +1586,7 @@ export default function AnalyzePage() {
     // hit a 402 later. Guests/missing-balance get through (server gates).
     const ANALYSIS_COST = 100;
     if (user && tokens != null && tokens < ANALYSIS_COST) {
+      track("out_of_analyses_shown", { where: "before_upload" });
       setInsufficientBalance(tokens);
       setShowInsufficientModal(true);
       return;
@@ -1557,6 +1605,7 @@ export default function AnalyzePage() {
     // The free analysis still exists — it's just the 100 tokens you get for
     // verifying your email, so a guest is sent to sign up first.
     if (!user) {
+      track("signup_wall_shown", { size_mb: Math.round(_fileMb) });
       // Keep their clip. They get it back automatically after signing up.
       if (file) {
         try {
@@ -1572,6 +1621,14 @@ export default function AnalyzePage() {
     // watchdog) can tear down an in-flight upload.
     try { analysisAbortRef.current?.abort(); } catch { /* noop */ }
     analysisAbortRef.current = new AbortController();
+
+    analysisStartedAtRef.current = Date.now();
+    track("analysis_started", {
+      sport: selectedSport || "auto",
+      size_mb: Math.round(_fileMb),
+      is_compare: !!reanalyzeContext,
+      mobile: _isMobile,
+    });
 
     setAnalyzing(true);
     setResult(null);
@@ -2501,6 +2558,7 @@ export default function AnalyzePage() {
           if (asyncErr?.response?.status === 402 || /insufficient_tokens/i.test(_aMsg)) {
             setInsufficientBalance(typeof tokens === "number" ? tokens : 0);
             setShowInsufficientModal(true);
+            track("out_of_analyses_shown", { where: "server_402" });
             throw new Error("insufficient_tokens");
           }
           console.warn("[universal] async submit/poll failed, falling back:", _aMsg);
@@ -2779,6 +2837,7 @@ export default function AnalyzePage() {
           // (the job runner already charged tokens for this analysis).
           try { refreshTokens?.(); } catch {}
         }
+        reportAnalysisDone(universalResult, "universal");
         toast.success(`Detected: ${universalResult.sport} — ${events.length} events analyzed`);
         setActiveTab("results");
         // Clear cached upload data so a follow-up run starts fresh.
@@ -2820,6 +2879,7 @@ export default function AnalyzePage() {
           msg = "Something went wrong analyzing this clip. Please try again.";
         }
         console.error("[universal] failed:", raw || msg);
+        reportAnalysisFailed(raw, status, "universal");
         setError(msg);
         toast.error(msg.length > 100 ? msg.slice(0, 100) + "…" : msg);
         try { localStorage.removeItem(ACTIVE_JOB_KEY); } catch {}
@@ -3137,6 +3197,7 @@ export default function AnalyzePage() {
             setResult(data);
             setViewingHistorical(false);
             setActiveTab("results");
+            reportAnalysisDone(data, "client");
             // Guest path: mark the free analysis used + auto-show the
             // sign-up prompt so the next analyze attempt converts.
             if (data.guest_mode || !user) {
@@ -3181,6 +3242,7 @@ export default function AnalyzePage() {
             setProgress(0);
             setInsufficientBalance(detail.balance ?? 0);
             setShowInsufficientModal(true);
+            track("out_of_analyses_shown", { where: "server_402" });
             // Sync the navbar chip with the server's actual balance so the
             // user doesn't see "🪙 300" up top while the modal says "0".
             try { refreshTokens?.(); } catch {}
@@ -3196,6 +3258,7 @@ export default function AnalyzePage() {
           setResult(clientResult);
           setViewingHistorical(false);
           setActiveTab("results");
+          reportAnalysisDone(clientResult, "client_offline");
           toast.info("Analysis complete! Coaching feedback will be available when connected.");
         }
       }
@@ -3214,6 +3277,7 @@ export default function AnalyzePage() {
         setAnalyzing(false);
         return runClientAnalysis(sportToAnalyze, customCropBox, { ...options, _isRetry: true });
       }
+      reportAnalysisFailed(msg, err?.response?.status, "client");
       setError(msg);
       toast.error(msg);
     }
@@ -3272,6 +3336,7 @@ export default function AnalyzePage() {
         setResult(data);
         setViewingHistorical(false);
         setActiveTab("results");
+        reportAnalysisDone(data, "server");
         refreshProfile();
         loadHistory();
         toast.success("Analysis complete!");
@@ -3284,6 +3349,7 @@ export default function AnalyzePage() {
     } catch (err) {
       clearInterval(interval);
       const msg = err.response?.data?.detail || err.message || "Analysis failed";
+      reportAnalysisFailed(msg, err?.response?.status, "server");
       setError(msg);
       toast.error(msg);
     }
@@ -4164,6 +4230,12 @@ export default function AnalyzePage() {
         photo: fb.user.photoURL || "",
       });
       login(data.token, data.user, data.has_profile, data.tokens);
+      // This inline sign-in is a real signup path too — it used to report to
+      // neither Google Ads nor PostHog.
+      if (data.is_new_user) {
+        trackSignupConversion(data.user?.id);
+        trackSignup(data.user?.id, "google_inline");
+      }
       toast.success(`Signed in! You have ${formatAnalyses(data.tokens || 200)} — coaching unlocked.`);
       // The result we already have on screen will now show un-gated since
       // user is authenticated. The pending_analysis stash gets picked up
@@ -5724,7 +5796,7 @@ export default function AnalyzePage() {
             // No id (e.g. a result restored from an older cached copy): send
             // them to History to pick the baseline rather than a dead button.
             onCompare={() => {
-              if (compareBaseline) startReanalyze(compareBaseline);
+              if (compareBaseline) startReanalyze(compareBaseline, "next_step_card");
               else { setActiveTab("history"); toast.info("Pick the analysis you want to compare against."); }
             }}
             onSignup={() => navigate("/auth")}
@@ -5768,7 +5840,7 @@ export default function AnalyzePage() {
             📄 {isGuest ? "Coach Report (sign in)" : "Coach Report (PDF)"}
           </Button>
           {user && compareBaseline ? (
-            <Button onClick={() => { clearFile(); setAnalysisMode(null); startReanalyze(compareBaseline); }}
+            <Button onClick={() => { clearFile(); setAnalysisMode(null); startReanalyze(compareBaseline, "results_bottom"); }}
               title="Upload a new clip of the same shot and see what changed — uses 1 analysis"
               className="flex-1 bg-zinc-900/80 border border-sky-400/40 text-sky-300 hover:bg-sky-400/10 rounded-2xl h-12 min-h-[44px]"
               variant="outline">
@@ -6207,7 +6279,7 @@ export default function AnalyzePage() {
                         className="border-sky-400/30 text-sky-300 hover:bg-sky-400/10 text-[11px] h-7 px-2"
                         onClick={(e) => {
                           e.stopPropagation();
-                          startReanalyze(a);
+                          startReanalyze(a, "history");
                         }}
                       >
                         <BarChart3 className="w-3 h-3 mr-1" />

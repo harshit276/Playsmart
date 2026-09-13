@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Video, ShoppingCart, UserPlus, Users, Dumbbell } from "lucide-react";
 import BuyTokensDialog from "@/components/BuyTokensDialog";
 import { TOKENS_PER_ANALYSIS, describeAnalysisAmount } from "@/lib/analyses";
+import { track } from "@/lib/analytics";
 
 export default function InsufficientTokensModal({ open, onOpenChange, balance = 0, required = 100 }) {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export default function InsufficientTokensModal({ open, onOpenChange, balance = 
 
           <div className="space-y-2 mt-2">
             <button
-              onClick={() => { close(); setBuyOpen(true); }}
+              onClick={() => { track("out_of_analyses_choice", { choice: "buy" }); close(); setBuyOpen(true); }}
               className="w-full flex items-center gap-3 p-3 rounded-xl bg-lime-400/10 border border-lime-400/30 hover:bg-lime-400/20 transition-colors text-left"
             >
               <div className="w-9 h-9 rounded-lg bg-lime-400 flex items-center justify-center shrink-0">
@@ -57,7 +58,7 @@ export default function InsufficientTokensModal({ open, onOpenChange, balance = 
 
             <EarnRow
               icon={UserPlus} title="Invite a friend" detail="+2 analyses for each of you · unlimited"
-              onClick={() => { close(); navigate("/referral"); }}
+              onClick={() => { track("out_of_analyses_choice", { choice: "refer" }); close(); navigate("/referral"); }}
             />
             <EarnRow
               icon={Users} title="Host a community game" detail="+½ analysis per game · 5/day"

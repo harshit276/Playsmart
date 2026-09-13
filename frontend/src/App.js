@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/sonner";
 import api from "@/lib/api";
+import { identifyUser, resetAnalytics } from "@/lib/analytics";
 import { invalidateMatching } from "@/lib/cachedFetch";
 import Navbar from "@/components/Navbar";
 import LandingPage from "@/pages/LandingPage"; // Eager — first paint
@@ -174,6 +175,10 @@ function AuthProvider({ children }) {
   // Hydrate auth in the background — never block initial render
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
+  // Tie PostHog events/replays to the account (opaque id only — see
+  // lib/analytics). Runs for cached sessions on load as well as fresh logins.
+  useEffect(() => { if (user?.id) identifyUser(user); }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Capture a referral code from ?ref=CODE on ANY landing (the referral link
   // now points at /auth?ref=CODE, but this also catches /?ref= etc.) and
   // stash it so it survives the navigation to sign-in. It's redeemed right
@@ -230,6 +235,7 @@ function AuthProvider({ children }) {
     // saved analysis reappeared under a brand-new account's Results, and the
     // URL-keyed SWR cache served their history/progress/balance too.
     clearUserScopedData();
+    resetAnalytics();
     setUser(null);
     setProfile(null);
     setTokens(null);

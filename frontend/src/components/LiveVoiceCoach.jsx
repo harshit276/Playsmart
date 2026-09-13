@@ -4,6 +4,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import api, { API_ORIGIN } from "@/lib/api";
 import { subscribeModalPresence } from "@/lib/modalPresence";
+import { track } from "@/lib/analytics";
 import {
   Mic, MicOff, X, ChevronDown, Sparkles, StopCircle,
   Download, RefreshCw, Trash2, Radio, Volume2, History, Headphones,
@@ -242,7 +243,10 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
   // Other parts of the results page (the "next step" card) open the coach
   // with an event rather than holding a ref into this component.
   useEffect(() => {
-    const openCoach = () => setOpen(true);
+    const openCoach = (e) => {
+      setOpen(true);
+      track("coach_opened", { source: e?.detail?.source || "event" });
+    };
     window.addEventListener("formanti:open-coach", openCoach);
     return () => window.removeEventListener("formanti:open-coach", openCoach);
   }, []);
@@ -568,6 +572,8 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
 
       setMessages((prev) => [...prev, userMsg, placeholder]);
       setStreaming(true);
+      // Count only — never the question text (it can be personal).
+      track("coach_message_sent", { turn: historyForApi.length + 1 });
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -939,7 +945,7 @@ export default function LiveVoiceCoach({ result, onRequestReanalyze }) {
             button's hover animation. */}
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => { setOpen(true); track("coach_opened", { source: "floating_pill" }); }}
           aria-label="Talk to your coach"
           // Mobile: anchor well above the safe-area / browser chrome
           // (iOS Safari URL bar + home indicator combined eat ~80-120px
