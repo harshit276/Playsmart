@@ -915,7 +915,7 @@ export default function MatchInsights({
                     <p className="text-white font-bold text-base mb-1">Unlock your full shot-by-shot breakdown</p>
                     <p className="text-zinc-300 text-[13px] leading-snug mb-3">
                       See the priority fix on every shot, jump-to-video, and download your
-                      coach report — free with an account (3 free analyses to start).
+                      coach report — free with an account (2 free analyses to start).
                     </p>
                     <button onClick={() => onUnlock?.()}
                       className="bg-lime-400 text-black hover:bg-lime-500 font-bold rounded-full px-6 h-11 text-sm">

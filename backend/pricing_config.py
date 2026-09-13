@@ -43,7 +43,7 @@ SUBSCRIPTION_PLANS = [
         "annual_price_inr": 0,
         "tagline": "Try it — no card needed",
         "tokens_per_month": 0,
-        "signup_grant": 300,          # 3 Flash analyses on signup, lifetime
+        "signup_grant": 200,          # 2 analyses on signup, lifetime
         "max_analyses_per_month": 3,
         "premium_unlocked": False,
         "features": [

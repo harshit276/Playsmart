@@ -31,7 +31,7 @@ import SEO from "@/components/SEO";
 import PostAnalysisProfilePrompt from "@/components/PostAnalysisProfilePrompt";
 import ProgressTrendPanel from "@/components/ProgressTrendPanel";
 import VoiceCoachButton from "@/components/VoiceCoachButton";
-import FeedbackPrompt, { useScrollDepthTrigger, hasBeenAsked } from "@/components/FeedbackPrompt";
+import FeedbackPrompt, { useScrollDepthTrigger, hasBeenAsked, hasBeenAnswered } from "@/components/FeedbackPrompt";
 import LiveVoiceCoach from "@/components/LiveVoiceCoach";
 import SessionSummaryHero from "@/components/SessionSummaryHero";
 import CoachNarrativeCard from "@/components/CoachNarrativeCard";
@@ -3142,7 +3142,7 @@ export default function AnalyzePage() {
             if (data.guest_mode || !user) {
               try { localStorage.setItem("guest_analysis_used", "true"); } catch {}
               setTimeout(() => setShowGuestUpgrade(true), 2500);
-              toast.success("Free analysis complete! Sign up for 3 free analyses to keep going.");
+              toast.success("Free analysis complete! Sign up for 2 free analyses to keep going.");
             } else {
               refreshProfile();
               loadHistory();
@@ -3666,7 +3666,7 @@ export default function AnalyzePage() {
                 {short ? (
                   <>Uses <span className="text-amber-300">1 analysis</span> · you have {describeAnalysisAmount(tokens)} left</>
                 ) : !user ? (
-                  <>Uses <span className="text-lime-400">1 analysis</span> · 3 free on signup</>
+                  <>Uses <span className="text-lime-400">1 analysis</span> · 2 free on signup</>
                 ) : (
                   <>Uses <span className="text-lime-400">1 analysis</span> · you have {tokens == null ? "—" : analysesFrom(tokens).toLocaleString("en-IN")} left</>
                 )}
@@ -4164,7 +4164,7 @@ export default function AnalyzePage() {
         photo: fb.user.photoURL || "",
       });
       login(data.token, data.user, data.has_profile, data.tokens);
-      toast.success(`Signed in! You have ${formatAnalyses(data.tokens || 300)} — coaching unlocked.`);
+      toast.success(`Signed in! You have ${formatAnalyses(data.tokens || 200)} — coaching unlocked.`);
       // The result we already have on screen will now show un-gated since
       // user is authenticated. The pending_analysis stash gets picked up
       // by the post-login useEffect below to save it to history server-side.
@@ -4183,9 +4183,9 @@ export default function AnalyzePage() {
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="bg-zinc-900/95 border border-lime-400/30 rounded-2xl p-5 max-w-sm text-center shadow-2xl">
           <div className="text-3xl mb-2">🎯</div>
-          <h3 className="font-bold text-white mb-1">Unlock Full Coaching · 3 free analyses</h3>
+          <h3 className="font-bold text-white mb-1">Unlock Full Coaching · 2 free analyses</h3>
           <p className="text-xs text-zinc-400 mb-4">
-            Sign in to keep this analysis, get personalized training, equipment picks, and 3 free analyses to film again and compare.
+            Sign in to keep this analysis, get personalized training, equipment picks, and 2 free analyses to film again and compare.
           </p>
           <Button
             onClick={handleInlineGoogleSignIn}
@@ -4333,6 +4333,8 @@ export default function AnalyzePage() {
       { id: "analysis-section-pro-comparison", label: "Pro Comparison", icon: GitCompare },
       { id: "analysis-section-audio-coaching", label: "Audio Coaching", icon: Volume2 },
       { id: "analysis-section-metrics-dashboard", label: "Metrics Dashboard", icon: BarChart2 },
+      { id: "analysis-section-feedback", label: "Rate It", icon: MessageSquare },
+      { id: "analysis-section-next-step", label: "Next Step", icon: RefreshCw },
     ] : [];
 
     return (
@@ -4695,24 +4697,6 @@ export default function AnalyzePage() {
           </motion.div>
         )}
 
-        {/* The retention loop: practise → film again → compare. Sits right
-            after the drills because it is the answer to "I've read my
-            drills, now what?". */}
-        {result?.shots?.length > 0 && (
-          <NextStepCard
-            result={result}
-            tokens={tokens}
-            isGuest={isGuest}
-            // No id (e.g. a result restored from an older cached copy): send
-            // them to History to pick the baseline rather than a dead button.
-            onCompare={() => {
-              if (compareBaseline) startReanalyze(compareBaseline);
-              else { setActiveTab("history"); toast.info("Pick the analysis you want to compare against."); }
-            }}
-            onSignup={() => navigate("/auth")}
-          />
-        )}
-
         {/* Equipment Recommendations — promoted to its own prominent
             card (was buried inside Coaching Insights). Each rec links to
             our marketplace / equipment catalog so users have a one-tap
@@ -5022,32 +5006,6 @@ export default function AnalyzePage() {
               </div>
             )}
           </motion.div>
-        )}
-
-        {/* Always-available feedback entry point. The automatic prompt only
-            catches someone still on the page at the right moment, which is why
-            almost nobody was rating anything — this gives them a control they
-            can reach whenever they've formed an opinion. */}
-        {result?.shots?.length > 0 && !hasBeenAsked(result?.analysis_id || result?._analysis_id) && (
-          <button
-            onClick={() => { setFeedbackTrigger("manual_button"); setFeedbackOpen(true); }}
-            className="mb-4 w-full flex items-center justify-between gap-3 rounded-2xl border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-left hover:border-lime-400/40 transition-colors"
-          >
-            <span className="flex items-center gap-3 min-w-0">
-              <MessageSquare className="w-4 h-4 text-lime-400 shrink-0" />
-              <span className="min-w-0">
-                <span className="block text-white font-semibold text-sm leading-tight">
-                  Was this analysis right?
-                </span>
-                <span className="block text-zinc-400 text-[11px] leading-tight">
-                  Tell us what it got wrong — 30 seconds, and it earns you free analyses
-                </span>
-              </span>
-            </span>
-            <span className="shrink-0 text-[11px] font-bold text-black bg-lime-400 rounded-full px-3 py-1.5">
-              Rate it
-            </span>
-          </button>
         )}
 
         {/* Picker-skipped notice. When no player was explicitly chosen the
@@ -5724,6 +5682,54 @@ export default function AnalyzePage() {
             prompt fired at a high-intent moment (deep scroll or PDF
             download). See FeedbackPrompt: as a static card it was scrolled
             past, and feedback is our earliest signal that analysis is wrong. */}
+
+        {/* ── End of the results: rate it, then the next step. ──
+            Both used to sit near the top, where "what next?" pushed the actual
+            analysis down before anyone had read it. Here they are the answer
+            to "I've finished reading — now what?". */}
+
+        {/* Always-available feedback entry point, at a place the popup can
+            point to ("the Rate it button at the end of your analysis"). Stays
+            until feedback is actually SENT — dismissing the popup ("Not now,
+            still reading") must not take away the way back. */}
+        {result?.shots?.length > 0 && !hasBeenAnswered(result?.analysis_id || result?._analysis_id) && (
+          <button
+            id="analysis-section-feedback"
+            onClick={() => { setFeedbackTrigger("manual_button"); setFeedbackOpen(true); }}
+            className="scroll-mt-24 w-full flex items-center justify-between gap-3 rounded-2xl border border-lime-400/30 bg-lime-400/5 px-4 py-3 text-left hover:border-lime-400/60 transition-colors"
+          >
+            <span className="flex items-center gap-3 min-w-0">
+              <MessageSquare className="w-4 h-4 text-lime-400 shrink-0" />
+              <span className="min-w-0">
+                <span className="block text-white font-semibold text-sm leading-tight">
+                  Was this analysis right?
+                </span>
+                <span className="block text-zinc-400 text-[11px] leading-tight">
+                  Tell us in 30 seconds — your first feedback gets you 2 free analyses
+                </span>
+              </span>
+            </span>
+            <span className="shrink-0 text-[11px] font-bold text-black bg-lime-400 rounded-full px-3 py-1.5">
+              Rate it
+            </span>
+          </button>
+        )}
+
+        {/* The retention loop: practise → film again → compare. */}
+        {result?.shots?.length > 0 && (
+          <NextStepCard
+            result={result}
+            tokens={tokens}
+            isGuest={isGuest}
+            // No id (e.g. a result restored from an older cached copy): send
+            // them to History to pick the baseline rather than a dead button.
+            onCompare={() => {
+              if (compareBaseline) startReanalyze(compareBaseline);
+              else { setActiveTab("history"); toast.info("Pick the analysis you want to compare against."); }
+            }}
+            onSignup={() => navigate("/auth")}
+          />
+        )}
 
         {/* Share + Analyze another */}
         <div className="flex gap-3">
@@ -6466,10 +6472,10 @@ export default function AnalyzePage() {
             className="bg-gradient-to-br from-lime-500/10 via-zinc-900 to-zinc-950 border border-lime-400/30 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center relative">
             <div className="text-5xl mb-3">🎯</div>
             <h2 className="font-heading font-black text-2xl sm:text-3xl text-white uppercase tracking-tight mb-2">
-              Sign up — get 3 free analyses
+              Sign up — get 2 free analyses
             </h2>
             <p className="text-zinc-300 text-sm mb-5 leading-relaxed">
-              You've used your one guest analysis. Sign up for 3 more free —
+              You've used your one guest analysis. Sign up for 2 more free —
               film again and see if the fix worked, plus history, a training plan and gear picks.
             </p>
             <div className="flex flex-col gap-2">

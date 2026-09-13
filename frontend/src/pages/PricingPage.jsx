@@ -113,7 +113,7 @@ export default function PricingPage() {
           </h1>
           <p className="text-zinc-400 text-base sm:text-lg max-w-2xl mx-auto">
             {analysisPriceLabel} per analysis. Buy a pack, use it whenever — analyses don't expire.
-            Start with 3 free analyses on signup.
+            Start with 2 free analyses on signup.
           </p>
         </motion.div>
 
@@ -250,7 +250,7 @@ export default function PricingPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
           className="bg-gradient-to-br from-lime-400/10 to-zinc-900 border border-lime-400/20 rounded-2xl p-6 text-center mb-10">
           <h2 className="font-heading font-black text-2xl text-white mb-2 uppercase tracking-tight">
-            3 free analyses on signup
+            2 free analyses on signup
           </h2>
           <p className="text-zinc-400 text-sm mb-4">
             Analyse a clip, work on the fix, then film again and compare — before paying anything.
@@ -258,7 +258,7 @@ export default function PricingPage() {
           </p>
           <Link to={user ? "/analyze" : "/auth"}>
             <Button className="bg-lime-400 hover:bg-lime-500 text-black font-bold px-6">
-              {user ? "Open analyzer" : "Sign up — 3 free analyses"} <ArrowRight className="w-4 h-4 ml-2" />
+              {user ? "Open analyzer" : "Sign up — 2 free analyses"} <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
         </motion.div>

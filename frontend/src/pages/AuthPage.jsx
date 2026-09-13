@@ -275,7 +275,7 @@ export default function AuthPage() {
                   We sent a verification link to{" "}
                   <span className="text-white font-medium break-all">{sentTo}</span>.
                   Click it to activate your account and get your{" "}
-                  <span className="text-lime-400 font-semibold">3 free analyses</span>.
+                  <span className="text-lime-400 font-semibold">2 free analyses</span>.
                 </p>
               </div>
               <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
@@ -386,7 +386,7 @@ export default function AuthPage() {
 
                 {mode === "signup" && (
                   <p className="text-[10px] text-zinc-600 leading-relaxed">
-                    We'll email you a link to verify your address. Your 3 free analyses are added once you click it.
+                    We'll email you a link to verify your address. Your 2 free analyses are added once you click it.
                   </p>
                 )}
 

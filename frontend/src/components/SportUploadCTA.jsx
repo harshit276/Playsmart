@@ -86,7 +86,7 @@ export default function SportUploadCTA({ sport = "", label = "", compact = false
               sprung on someone who has already waited through an upload reads
               as a bait-and-switch. */}
           <p className={`text-[11px] text-zinc-500 ${compact ? "mt-3" : "mt-4"}`}>
-            3 free analyses · free account needed to see results
+            2 free analyses · free account needed to see results
           </p>
           <input
             ref={inputRef}

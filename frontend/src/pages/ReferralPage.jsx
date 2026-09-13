@@ -74,7 +74,7 @@ export default function ReferralPage() {
     const text =
       `🏸 Try Formanti — AI coach for your game.\n\n` +
       `Film a rally, set or over and it shows exactly what to fix in your technique. ` +
-      `Sign up with my link and you get 5 free analyses (3 + 2 bonus):\n${link}`;
+      `Sign up with my link and you get 4 free analyses (2 + 2 bonus):\n${link}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   };
 
@@ -82,7 +82,7 @@ export default function ReferralPage() {
     if (navigator.share) {
       navigator.share({
         title: "Formanti",
-        text: "AI coach for your game. Get 5 free analyses with my link:",
+        text: "AI coach for your game. Get 4 free analyses with my link:",
         url: link,
       }).catch(() => {});
     } else copyLink();
@@ -106,7 +106,7 @@ export default function ReferralPage() {
           </h1>
           <p className="text-zinc-300 text-sm max-w-md">
             Share your link. When a friend signs up and runs their first analysis,
-            <span className="text-lime-300 font-medium"> they get 2 bonus analyses</span> on top of their 3 free ones —
+            <span className="text-lime-300 font-medium"> they get 2 bonus analyses</span> on top of their 2 free ones —
             and <span className="text-lime-300 font-medium">you get 2 too</span>. No limit on friends.
           </p>
         </motion.div>

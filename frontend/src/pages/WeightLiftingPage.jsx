@@ -91,7 +91,7 @@ const FAQS = [
   },
   {
     q: "Is the AI weightlifting analyzer free to use?",
-    a: "You get 3 free analyses on signup to check your lifts, and training plans and equipment recommendations are free to browse. No credit card required to get started.",
+    a: "You get 2 free analyses on signup to check your lifts, and training plans and equipment recommendations are free to browse. No credit card required to get started.",
   },
 ];
 

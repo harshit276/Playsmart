@@ -234,12 +234,12 @@ export default function DashboardPage() {
                   </h2>
                   <p className="text-zinc-300 text-sm sm:text-base mb-5">
                     Our AI breaks down your technique: shot detection, posture, form, and drills
-                    tuned to what it finds. <span className="text-lime-300 font-semibold">Sign up free and get 3 analyses on us — film, fix, film again and compare.</span>
+                    tuned to what it finds. <span className="text-lime-300 font-semibold">Sign up free and get 2 analyses on us — film, fix, film again and compare.</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Link to="/auth"
                       className="inline-flex items-center gap-1.5 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-5 py-2.5 text-sm shadow-[0_0_20px_rgba(190,242,100,0.25)] transition-colors">
-                      <Video className="w-4 h-4" /> Sign up — 3 free analyses
+                      <Video className="w-4 h-4" /> Sign up — 2 free analyses
                     </Link>
                     <Link to="/assessment"
                       className="inline-flex items-center gap-1.5 bg-zinc-800/80 hover:bg-zinc-700 text-white font-bold rounded-full px-5 py-2.5 text-sm border border-zinc-700 transition-colors">
@@ -247,7 +247,7 @@ export default function DashboardPage() {
                     </Link>
                   </div>
                   <p className="text-[11px] text-zinc-500 mt-3">
-                    Verify your email and your 3 free analyses are added automatically — no card required.
+                    Verify your email and your 2 free analyses are added automatically — no card required.
                   </p>
                 </div>
               </div>

@@ -98,7 +98,7 @@ export default function NextStepCard({ result, tokens, isGuest, onCompare, onSig
         )}
         <p className="text-xs text-zinc-500">
           {isGuest
-            ? "3 free analyses on signup."
+            ? "2 free analyses on signup."
             : `Uses 1 analysis${left != null ? ` · you have ${left.toLocaleString("en-IN")} ${analysisWord(left)} left` : ""}.`}
         </p>
       </div>

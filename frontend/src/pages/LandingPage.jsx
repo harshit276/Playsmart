@@ -95,7 +95,7 @@ const FAQS = [
   },
   {
     q: "Is Formanti free?",
-    a: "You can get started for free — new users get 3 free video analyses. After that, analyses come in affordable one-time packs that never expire. Browsing equipment recommendations and training content is free. See our Pricing page for details.",
+    a: "You can get started for free — new users get 2 free video analyses. After that, analyses come in affordable one-time packs that never expire. Browsing equipment recommendations and training content is free. See our Pricing page for details.",
   },
   {
     q: "What happens to the video I upload?",
@@ -291,7 +291,7 @@ export default function LandingPage() {
 
               <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
                 className="text-xs sm:text-sm text-lime-400/90 font-medium mt-3 lg:mt-4">
-                3 free analyses when you sign up · no card needed
+                2 free analyses when you sign up · no card needed
               </motion.p>
             </div>
           </div>
@@ -586,7 +586,7 @@ export default function LandingPage() {
                 inventing one is how you earn a 1-star. */}
             <p className="text-zinc-400 text-base md:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
               Film 10–30 seconds today and see what our AI finds. No credit card, no app store —
-              your first 3 analyses are on us.
+              your first 2 analyses are on us.
             </p>
             <Button onClick={handleCTA} size="lg" data-testid="cta-bottom-btn"
               className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] hover:scale-[1.03] transition-all active:scale-95">

@@ -234,7 +234,7 @@ export default function DemoAnalysisPage() {
             Now do it with <span className="text-lime-400">your</span> clip
           </h2>
           <p className="text-zinc-300 text-sm mb-5 max-w-md mx-auto">
-            Sign up free and get 3 analyses of your
+            Sign up free and get 2 analyses of your
             own game. No card required.
           </p>
           <SignupCTA label="Analyse your own video — first one free" />

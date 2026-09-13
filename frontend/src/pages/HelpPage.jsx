@@ -28,7 +28,7 @@ const CATEGORIES = [
 const FAQS = [
   {
     q: "How do tokens work?",
-    a: "Each video uses 1 analysis. You get 3 free on signup. Earn more by inviting friends (2 each for you and your friend, unlimited), a daily login bonus (up to 1 analysis in total), hosting community games (half an analysis per game), or completing training days (up to 1 analysis in total). Analyses never expire.",
+    a: "Each video uses 1 analysis. You get 2 free on signup. Earn more by inviting friends (2 each for you and your friend, unlimited), a daily login bonus (up to 1 analysis in total), hosting community games (half an analysis per game), or completing training days (up to 1 analysis in total). Analyses never expire.",
   },
   {
     q: "Will I be charged tokens if my analysis fails?",

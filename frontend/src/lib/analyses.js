@@ -27,7 +27,7 @@ export function analysisWord(n) {
   return n === 1 ? "analysis" : "analyses";
 }
 
-/** 300 → "3 analyses", 100 → "1 analysis", 450 → "4 analyses". */
+/** 200 → "2 analyses", 100 → "1 analysis", 450 → "4 analyses". */
 export function formatAnalyses(tokens) {
   const n = analysesFrom(tokens);
   return `${n.toLocaleString("en-IN")} ${analysisWord(n)}`;

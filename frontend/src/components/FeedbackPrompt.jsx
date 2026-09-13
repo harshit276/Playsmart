@@ -43,6 +43,21 @@ export function hasBeenAsked(id) {
   return !!askedMap()[id || "_last"];
 }
 
+// Separate from "asked": the popup is shown at most once, but someone who
+// closed it to keep reading must still be able to send feedback later from
+// the Rate-it button. That button hides only once feedback was actually sent.
+const ANSWERED_KEY = "formanti_feedback_answered"; // { [analysisId]: true }
+function markAnswered(id) {
+  try {
+    const m = JSON.parse(localStorage.getItem(ANSWERED_KEY) || "{}");
+    m[id || "_last"] = true;
+    localStorage.setItem(ANSWERED_KEY, JSON.stringify(m));
+  } catch { /* storage disabled — the button just stays visible */ }
+}
+export function hasBeenAnswered(id) {
+  try { return !!JSON.parse(localStorage.getItem(ANSWERED_KEY) || "{}")[id || "_last"]; } catch { return false; }
+}
+
 const ASPECTS = [
   { key: "rating", label: "Overall analysis", hint: "Was the read on your game useful?" },
   { key: "rating_shots", label: "Shot breakdown", hint: "Were the shots named + timed correctly?" },
@@ -105,6 +120,7 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
         comment: comment.trim(),
         ...ratings,
       }, { timeout: 15000 });
+      markAnswered(analysisId);
       // The server owns the reward decision (once per user, and only while the
       // early-adopter offer is open), so only celebrate what it actually paid.
       const credited = res?.data?.tokens_credited || 0;
@@ -144,14 +160,24 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
                     How was this analysis?
                   </h2>
                   <p className="text-[12px] text-zinc-400 mt-1">
-                    Takes 10 seconds. If something was wrong, this is how we find out —
-                    and early feedback earns free analyses whether you rate us high or low.
+                    Takes 30 seconds. Your first feedback gets you{" "}
+                    <span className="text-lime-400 font-semibold">2 free analyses</span> — honest
+                    criticism counts the same as praise.
                   </p>
                 </div>
                 <button onClick={() => close(false)} aria-label="Close"
                   className="p-1.5 text-zinc-500 hover:text-white shrink-0">
                   <X className="w-5 h-5" />
                 </button>
+              </div>
+
+              {/* People were being asked before they'd finished reading. Tell
+                  them it can wait, and exactly where to find it again. */}
+              <div className="mb-3 rounded-xl border border-zinc-800 bg-zinc-900/70 px-3 py-2.5 text-[12px] leading-relaxed text-zinc-400">
+                <span className="font-semibold text-zinc-200">Still reading?</span> Close this and finish
+                your analysis first. When you're done, tap{" "}
+                <span className="font-semibold text-lime-400">Rate it</span> at the end of your
+                analysis — you'll still get the 2 free analyses.
               </div>
 
               <div className="divide-y divide-zinc-800/70 mb-3">
@@ -181,7 +207,7 @@ export default function FeedbackPrompt({ analysisId, sport, trigger, open, onClo
                 </Button>
                 <Button variant="ghost" onClick={() => close(false)}
                   className="text-zinc-500 hover:text-white rounded-xl px-4">
-                  Not now
+                  Later
                 </Button>
               </div>
             </div>

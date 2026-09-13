@@ -187,7 +187,7 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Sign Up button for guests — signing up grants 3 free analyses */}
+            {/* Sign Up button for guests — signing up grants 2 free analyses */}
             {isGuest && (
               <Button size="sm" onClick={() => {
                 localStorage.removeItem("guest_mode");

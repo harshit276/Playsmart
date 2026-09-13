@@ -20,8 +20,8 @@ const EARN_WAYS = [
   {
     icon: Sparkles,
     title: "Sign up",
-    amount: "+3",
-    desc: "3 free analyses: film a clip, get coached, then film again and compare.",
+    amount: "+2",
+    desc: "2 free analyses: film a clip, get coached, then film again and compare.",
   },
   {
     icon: UserPlus,

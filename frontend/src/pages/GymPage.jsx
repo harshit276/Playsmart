@@ -92,7 +92,7 @@ const FAQS = [
   },
   {
     q: "Is the Formanti gym form checker free?",
-    a: "You get 3 free analyses on signup to check your lifts, and training plans and gear recommendations are free to browse. No credit card required to get started.",
+    a: "You get 2 free analyses on signup to check your lifts, and training plans and gear recommendations are free to browse. No credit card required to get started.",
   },
 ];
 

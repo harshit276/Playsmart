@@ -755,8 +755,8 @@ def _verification_email_html(name: str, link: str) -> str:
     <div style="background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:32px;">
       <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#f8fafc;font-weight:700;">Verify your email</h1>
       <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#cbd5e1;">{hi}</p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#cbd5e1;">Confirm this is your email to activate your account and get your <strong style="color:#a3e635;">3 free analyses</strong>: film a clip, get coached, then film again and see what changed.</p>
-      <a href="{link}" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Verify &amp; claim 3 free analyses</a>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#cbd5e1;">Confirm this is your email to activate your account and get your <strong style="color:#a3e635;">2 free analyses</strong>: film a clip, get coached, then film again and see what changed.</p>
+      <a href="{link}" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Verify &amp; claim 2 free analyses</a>
       <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">This link expires in 24 hours. If the button doesn't work, paste this into your browser:</p>
       <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:#475569;word-break:break-all;">{link}</p>
     </div>
@@ -2527,10 +2527,10 @@ def _analyses_phrase(tokens) -> str:
 # Earn / spend amounts — change here, log everywhere (kind matches the
 # transaction "kind" field).
 TOKEN_RULES = {
-    # 3 free analyses, not 1: a single analysis rarely forms a habit, and three
+    # 2 free analyses, not 1: a single analysis rarely forms a habit, and two
     # lets a player film again and compare against their first clip — the part
     # of the product that brings people back.
-    "signup_grant":   300,
+    "signup_grant":   200,
     "referral_credit": 200,  # 2 analyses to both referrer and referred user, once per pair
     "host_game":       50,   # cap 5/day
     "training_day":    20,   # cap 1/day
