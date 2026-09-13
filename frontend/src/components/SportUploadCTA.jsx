@@ -15,6 +15,7 @@ import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { UploadCloud, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import QuickSignupCTA from "@/components/QuickSignupCTA";
 
 // Must match AnalyzePage's PENDING_SIGNUP_VIDEO_KEY — that page looks here for
 // a clip chosen elsewhere.
@@ -95,6 +96,12 @@ export default function SportUploadCTA({ sport = "", label = "", compact = false
             className="hidden"
             onChange={(e) => handOff(e.target.files?.[0])}
           />
+        </div>
+        {/* The other half of the choice: visitors with no clip on hand (most
+            ad and search traffic on a phone) can still claim the free
+            analyses now. Renders nothing for signed-in users. */}
+        <div className={compact ? "mt-5" : "mt-6"}>
+          <QuickSignupCTA source={sport || "sport_page"} sport={sport} />
         </div>
       </div>
     </section>

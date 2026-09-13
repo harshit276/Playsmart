@@ -20,11 +20,44 @@ import { formatAnalyses } from "@/lib/analyses";
  * the full /auth page (which handles redirect sign-in itself) rather than
  * failing silently.
  *
- * @param {string} source   where it is shown ("gym", …) — analytics only.
- * @param {string} sport    sport slug for the upload page after sign-in.
- * @param {string} [what]   what to film, e.g. "set" / "rally".
+ * @param {string} source   where it is shown ("gym", "home", …) — analytics only.
+ * @param {string} [sport]  sport slug: picks the wording and the upload page.
+ * @param {"center"|"start-lg"} [align]  "start-lg" left-aligns from lg up
+ *                          (for left-aligned heroes like the home page).
  */
-export default function QuickSignupCTA({ source, sport, what = "set" }) {
+
+// What to film, and where, per sport — "film your next rally on court".
+const FILM_COPY = {
+  gym: { what: "set", where: "at the gym" },
+  weight_lifting: { what: "lift", where: "at the gym" },
+  physiotherapy: { what: "exercise", where: "at home" },
+  badminton: { what: "rally", where: "on court" },
+  tennis: { what: "rally", where: "on court" },
+  table_tennis: { what: "rally", where: "at the table" },
+  pickleball: { what: "rally", where: "on court" },
+  cricket: { what: "over", where: "at the nets" },
+  football: { what: "drill", where: "on the pitch" },
+  basketball: { what: "shot", where: "on court" },
+  swimming: { what: "length", where: "in the pool" },
+};
+function filmCopy(sport) {
+  const c = FILM_COPY[sport];
+  if (!c) {
+    // Home page / unknown sport: not tied to one activity.
+    return {
+      offer: "film your next game or workout",
+      next: "Next time you play or train, film 10–30 seconds",
+    };
+  }
+  return {
+    offer: `film your next ${c.what} ${c.where}`,
+    next: `Next time you're ${c.where}, film one ${c.what}`,
+  };
+}
+
+export default function QuickSignupCTA({ source, sport, align = "center" }) {
+  const copy = filmCopy(sport);
+  const startLg = align === "start-lg";
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -75,7 +108,7 @@ export default function QuickSignupCTA({ source, sport, what = "set" }) {
           <Check className="h-4 w-4 text-lime-400" /> You're in — {formatAnalyses(done)} ready
         </p>
         <p className="mt-1 text-sm text-zinc-400">
-          Next session, film one {what}: side-on, whole body in frame, 10–30 seconds. Then upload it here.
+          {copy.next} — side-on, whole body in frame. Then upload it here.
         </p>
         <button
           type="button"
@@ -89,19 +122,19 @@ export default function QuickSignupCTA({ source, sport, what = "set" }) {
   }
 
   return (
-    <div className="text-center">
+    <div className={startLg ? "text-center lg:text-left" : "text-center"}>
       <div className="mb-3 flex items-center gap-3 text-[11px] uppercase tracking-widest text-zinc-600">
         <span className="h-px flex-1 bg-zinc-800" /> or <span className="h-px flex-1 bg-zinc-800" />
       </div>
       <p className="font-semibold text-white">No clip yet?</p>
       <p className="mt-0.5 text-sm text-zinc-400">
-        Get your 2 free analyses now and film your next {what} at the gym.
+        Get your 2 free analyses now and {copy.offer}.
       </p>
       <button
         type="button"
         onClick={signIn}
         disabled={busy}
-        className="mx-auto mt-3 flex h-12 w-full max-w-xs items-center justify-center gap-3 rounded-xl bg-white text-base font-medium text-black shadow-lg transition-all hover:bg-zinc-100 disabled:opacity-70"
+        className={`${startLg ? "mx-auto lg:mx-0" : "mx-auto"} mt-3 flex h-12 w-full max-w-xs items-center justify-center gap-3 rounded-xl bg-white text-base font-medium text-black shadow-lg transition-all hover:bg-zinc-100 disabled:opacity-70`}
       >
         {busy ? (
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />

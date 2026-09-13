@@ -121,11 +121,11 @@ export default function BasketballPage() {
       />
 
       {/* Hero */}
-      <section className="relative py-24 px-4 text-center overflow-hidden">
+      <section className="relative pt-10 pb-14 md:py-24 px-4 text-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-orange-400/5 via-zinc-950 to-zinc-950" />
         <div className="relative z-10 max-w-4xl mx-auto">
           <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-            <Badge className="bg-orange-400/10 text-orange-400 border border-orange-400/30 mb-6">
+            <Badge className="bg-orange-400/10 text-orange-400 border border-orange-400/30 mb-4 md:mb-6">
               🏀 Basketball Specialist
             </Badge>
           </motion.div>
@@ -134,7 +134,7 @@ export default function BasketballPage() {
             animate="visible"
             custom={1}
             variants={fadeUp}
-            className="font-heading font-black text-5xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-6"
+            className="font-heading font-black text-4xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-4 md:mb-6"
           >
             AI <span className="text-orange-400">Basketball</span> Coach<br />Analyze Your Game
           </motion.h1>
@@ -143,14 +143,14 @@ export default function BasketballPage() {
             animate="visible"
             custom={2}
             variants={fadeUp}
-            className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-8"
+            className="text-base md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 md:mb-8"
           >
             Improve your game with AI-powered analysis of your shooting form, ball handling, and
             vertical, plus personalized training plans and smart shoe recommendations — built for ballers.
           </motion.p>
           {/* The one action this page exists for, in the hero itself so it is
               the first thing an organic visitor sees. */}
-          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-8">
             <SportUploadCTA sport="basketball" label="basketball" compact />
           </motion.div>
 

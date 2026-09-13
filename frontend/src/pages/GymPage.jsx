@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import SEO from "@/components/SEO";
 import SportUploadCTA from "@/components/SportUploadCTA";
-import QuickSignupCTA from "@/components/QuickSignupCTA";
 import EquipmentFinderCTA from "@/components/EquipmentFinderCTA";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -152,13 +151,9 @@ export default function GymPage() {
           </motion.p>
           {/* The one action this page exists for, in the hero itself so it is
               the first thing an organic visitor sees. */}
-          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+          {/* Upload box + "No clip yet?" one-tap signup (inside SportUploadCTA). */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-8">
             <SportUploadCTA sport="gym" label="gym" compact />
-          </motion.div>
-          {/* Ad visitors rarely have a clip on hand — let them claim the free
-              analyses now instead of leaving (see QuickSignupCTA). */}
-          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="max-w-xl mx-auto mb-8">
-            <QuickSignupCTA source="gym" sport="gym" what="set" />
           </motion.div>
 
           <motion.div

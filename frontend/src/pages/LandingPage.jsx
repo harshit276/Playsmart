@@ -6,6 +6,7 @@ import SEO from "@/components/SEO";
 import DemoPhone from "@/components/DemoPhone";
 import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
+import QuickSignupCTA from "@/components/QuickSignupCTA";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import {
   Zap, Play, ChevronRight, Sparkles, TrendingUp, Upload,
@@ -305,6 +306,13 @@ export default function LandingPage() {
                   See a real analysis first
                 </Link>
               </motion.p>
+
+              {/* No clip on hand? Claim the free analyses now (one-tap Google).
+                  Hidden for signed-in visitors. */}
+              <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
+                className="mt-6 max-w-sm mx-auto lg:mx-0">
+                <QuickSignupCTA source="home" align="start-lg" />
+              </motion.div>
 
               {/* Sport pills — quieter than the headline, below the CTA on mobile. */}
               <motion.div initial="hidden" animate="visible" custom={0.4} variants={rise}

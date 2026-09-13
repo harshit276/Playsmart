@@ -122,11 +122,11 @@ export default function TennisPage() {
       />
 
       {/* Hero */}
-      <section className="relative py-24 px-4 text-center overflow-hidden">
+      <section className="relative pt-10 pb-14 md:py-24 px-4 text-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-amber-400/5 via-zinc-950 to-zinc-950" />
         <div className="relative z-10 max-w-4xl mx-auto">
           <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-            <Badge className="bg-amber-400/10 text-amber-400 border border-amber-400/30 mb-6">
+            <Badge className="bg-amber-400/10 text-amber-400 border border-amber-400/30 mb-4 md:mb-6">
               🎾 Tennis Specialist
             </Badge>
           </motion.div>
@@ -135,7 +135,7 @@ export default function TennisPage() {
             animate="visible"
             custom={1}
             variants={fadeUp}
-            className="font-heading font-black text-5xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-6"
+            className="font-heading font-black text-4xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-4 md:mb-6"
           >
             AI <span className="text-amber-400">Tennis</span> Coach<br />Improve Your Game
           </motion.h1>
@@ -144,14 +144,14 @@ export default function TennisPage() {
             animate="visible"
             custom={2}
             variants={fadeUp}
-            className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-8"
+            className="text-base md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 md:mb-8"
           >
             Upload any match or practice video. Get serve speed, forehand and backhand analysis,
             personalized training plans, and racquet recommendations — powered by computer vision.
           </motion.p>
           {/* The one action this page exists for, in the hero itself so it is
               the first thing an organic visitor sees. */}
-          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-8">
             <SportUploadCTA sport="tennis" label="tennis" compact />
           </motion.div>
 

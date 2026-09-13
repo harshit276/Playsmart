@@ -121,11 +121,11 @@ export default function PhysiotherapyPage() {
       />
 
       {/* Hero */}
-      <section className="relative py-24 px-4 text-center overflow-hidden">
+      <section className="relative pt-10 pb-14 md:py-24 px-4 text-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-lime-400/5 via-zinc-950 to-zinc-950" />
         <div className="relative z-10 max-w-4xl mx-auto">
           <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-            <Badge className="bg-lime-400/10 text-lime-400 border border-lime-400/30 mb-6">
+            <Badge className="bg-lime-400/10 text-lime-400 border border-lime-400/30 mb-4 md:mb-6">
               🩺 Physiotherapy &amp; Rehab
             </Badge>
           </motion.div>
@@ -134,7 +134,7 @@ export default function PhysiotherapyPage() {
             animate="visible"
             custom={1}
             variants={fadeUp}
-            className="font-heading font-black text-5xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-6"
+            className="font-heading font-black text-4xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-4 md:mb-6"
           >
             AI <span className="text-lime-400">Physiotherapy</span> Exercise Tracker
           </motion.h1>
@@ -143,7 +143,7 @@ export default function PhysiotherapyPage() {
             animate="visible"
             custom={2}
             variants={fadeUp}
-            className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-8"
+            className="text-base md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 md:mb-8"
           >
             Track your home rehab exercises between physiotherapy sessions — form, range of motion, and
             reps — and share your progress with your physiotherapist.
@@ -159,7 +159,7 @@ export default function PhysiotherapyPage() {
           </motion.p>
           {/* The one action this page exists for, in the hero itself so it is
               the first thing an organic visitor sees. */}
-          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-8">
             <SportUploadCTA sport="physiotherapy" label="movement" compact />
           </motion.div>
 
