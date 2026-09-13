@@ -28,6 +28,12 @@ if (isPrerendered) {
 
 // Register PWA service worker + show "new version available" prompt
 if ('serviceWorker' in navigator) {
+  // Was this page already controlled by a service worker when it loaded?
+  // Read BEFORE registering. On a first visit it is null, and the fresh SW's
+  // clients.claim() then fires `controllerchange` even though nothing was
+  // updated — which reloaded the page 1–3 s after every first-time visitor
+  // landed (PostHog showed ad clicks as pageview → pageleave → pageview).
+  const hadController = !!navigator.serviceWorker.controller;
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
       .then((reg) => {
@@ -64,12 +70,14 @@ if ('serviceWorker' in navigator) {
       });
 
     // When the active SW changes (after SKIP_WAITING + claim), reload once.
+    // Only for a genuine UPDATE (a previous SW controlled this page) — never
+    // for the first install, see hadController above.
     // NEVER while an analysis/upload is in flight (window.__analysisInFlight
     // is set by AnalyzePage) — a mid-analysis reload silently kills the run,
     // which users saw as "analysis fails" right after every deploy.
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing || window.__analysisInFlight) return;
+      if (!hadController || refreshing || window.__analysisInFlight) return;
       refreshing = true;
       window.location.reload();
     });
