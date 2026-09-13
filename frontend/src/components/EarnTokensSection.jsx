@@ -53,10 +53,10 @@ const EARN_WAYS = [
 
 export default function EarnTokensSection() {
   return (
-    <section className="py-20 sm:py-24 px-4 bg-zinc-900/50 border-y border-zinc-800/50" data-testid="earn-tokens-section">
+    <section className="py-14 sm:py-24 px-4 bg-zinc-900/50 border-y border-zinc-800/50" data-testid="earn-tokens-section">
       <div className="max-w-6xl mx-auto">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center mb-12">
+          className="text-center mb-8 sm:mb-12">
           <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Free analyses</span>
           <h2 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight uppercase text-white mb-4">
             How to Get Free Analyses
@@ -67,7 +67,27 @@ export default function EarnTokensSection() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        {/* Phones: one compact list (five full cards stacked was a wall);
+            sm and up: the card grid as before. */}
+        <div className="sm:hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 divide-y divide-zinc-800/80 mb-4">
+          {EARN_WAYS.map((w) => {
+            const Row = w.link ? Link : "div";
+            return (
+              <Row key={w.title} {...(w.link ? { to: w.link.to } : {})} className="flex items-center gap-3 px-4 py-3">
+                <div className="w-8 h-8 rounded-lg bg-lime-400/10 flex items-center justify-center shrink-0">
+                  <w.icon className="w-4 h-4 text-lime-400" strokeWidth={1.6} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-white leading-tight">{w.title}</p>
+                  <p className="text-[11px] text-zinc-500 leading-snug mt-0.5">{w.desc}</p>
+                </div>
+                <span className="font-mono font-bold text-lime-400 text-sm shrink-0">{w.amount}</span>
+              </Row>
+            );
+          })}
+        </div>
+
+        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {EARN_WAYS.map((w, i) => (
             <motion.div key={w.title} initial="hidden" whileInView="visible" custom={i}
               viewport={{ once: true }} variants={fadeUp}
@@ -91,7 +111,7 @@ export default function EarnTokensSection() {
 
         {/* Spend + never-expire note */}
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+          className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 rounded-lg bg-purple-400/10 flex items-center justify-center shrink-0">
               <Camera className="w-5 h-5 text-purple-300" strokeWidth={1.5} />

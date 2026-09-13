@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Video, Activity, MessageSquare, GitCompareArrows, LineChart,
-  FileText, ListChecks, ShoppingBag, Users, Mic, Check, MapPin, ArrowRight,
+  FileText, ListChecks, ShoppingBag, Users, Mic, Check, MapPin, ArrowRight, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 const MotionLink = motion.create(Link);
@@ -84,7 +84,10 @@ function PostureMock() {
         {[[78, 28], [78, 44], [54, 60], [44, 84], [104, 34], [118, 16], [78, 74], [60, 106], [58, 134], [98, 104], [104, 134]].map(([cx, cy]) => (
           <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="3.2" fill="#0a0a0a" stroke="#a3e635" strokeWidth="1.6" />
         ))}
-        <circle cx="104" cy="34" r="10" fill="none" stroke="#a3e635" strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
+        {/* corrected position for the hitting arm — dashed, like the in-app view */}
+        <path d="M78 44 L98 22 L106 4" stroke="#fbbf24" strokeWidth="2" strokeDasharray="4 3" strokeLinecap="round" fill="none" />
+        <circle cx="98" cy="22" r="2.6" fill="#fbbf24" />
+        <text x="110" y="24" fill="#fbbf24" fontSize="8" fontFamily="ui-sans-serif, system-ui">target</text>
       </svg>
       <div className="space-y-1.5 mt-1">
         {[
@@ -300,6 +303,7 @@ function GameMock() {
 const CARDS = [
   {
     key: "analysis",
+    short: "Analysis",
     icon: Video,
     tone: "lime",
     title: "Shot-by-shot video analysis",
@@ -315,21 +319,23 @@ const CARDS = [
   },
   {
     key: "posture",
+    short: "Pose fix",
     icon: Activity,
     tone: "lime",
-    title: "Posture tracker",
-    desc: "A skeleton overlay on the contact frame, with your joint angles measured against ideal ranges.",
+    title: "Posture tracker & pose fix",
+    desc: "A skeleton on the contact frame, your joint angles against ideal ranges — and your own pose redrawn in the corrected position.",
     note: "Racket & ball sports only — not claimed for gym lifting.",
     mock: <PostureMock />,
     route: "/analyze",
     bullets: [
       "Skeleton overlay on the contact frame",
-      "Joint angles vs ideal ranges",
+      "Your pose next to the corrected pose",
       "Racket & ball sports only",
     ],
   },
   {
     key: "coach",
+    short: "Coach",
     icon: MessageSquare,
     tone: "sky",
     title: "Ask Coach & Live Voice Coach",
@@ -344,6 +350,7 @@ const CARDS = [
   },
   {
     key: "compare",
+    short: "Compare",
     icon: GitCompareArrows,
     tone: "purple",
     title: "Film again & compare",
@@ -358,6 +365,7 @@ const CARDS = [
   },
   {
     key: "progress",
+    short: "Progress",
     icon: LineChart,
     tone: "emerald",
     title: "Progress & history",
@@ -372,6 +380,7 @@ const CARDS = [
   },
   {
     key: "report",
+    short: "PDF report",
     icon: FileText,
     tone: "amber",
     title: "PDF coach report",
@@ -386,6 +395,7 @@ const CARDS = [
   },
   {
     key: "plans",
+    short: "Training",
     icon: ListChecks,
     tone: "sky",
     title: "Training plans",
@@ -400,6 +410,7 @@ const CARDS = [
   },
   {
     key: "gear",
+    short: "Gear",
     icon: ShoppingBag,
     tone: "purple",
     title: "Gear recommendations",
@@ -414,6 +425,7 @@ const CARDS = [
   },
   {
     key: "games",
+    short: "Games",
     icon: Users,
     tone: "emerald",
     title: "Host & join games",
@@ -529,6 +541,125 @@ function FeatureCard({ card, index, reduce, rise }) {
   );
 }
 
+/**
+ * Phones: one feature at a time behind a swipeable tab row.
+ *
+ * WHY: on desktop the nine cards sit in a 3-column grid and read as one
+ * picture. On a phone the same grid became a single column nine cards tall —
+ * every card with its own mockup — which is what made the page feel cluttered.
+ * Tabs keep every feature one tap (or swipe) away without the scroll.
+ */
+function MobileFeatureTabs({ reduce }) {
+  const [idx, setIdx] = useState(0);
+  const railRef = useRef(null);
+  const touchX = useRef(null);
+  const card = CARDS[idx];
+  const tone = TONES[card.tone];
+
+  // Keep the active chip visible. Scroll the rail itself — scrollIntoView
+  // would also yank the whole page vertically.
+  useEffect(() => {
+    const rail = railRef.current;
+    const chip = rail?.children?.[idx];
+    if (!rail || !chip) return;
+    const target = chip.offsetLeft - (rail.clientWidth - chip.offsetWidth) / 2;
+    rail.scrollTo({ left: Math.max(0, target), behavior: reduce ? "auto" : "smooth" });
+  }, [idx, reduce]);
+
+  const go = (d) => setIdx((i) => (i + d + CARDS.length) % CARDS.length);
+
+  return (
+    <div className="md:hidden">
+      <div
+        ref={railRef}
+        role="tablist"
+        aria-label="Features"
+        className="-mx-4 px-4 flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {CARDS.map((c, i) => {
+          const on = i === idx;
+          const t = TONES[c.tone];
+          return (
+            <button
+              key={c.key}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => setIdx(i)}
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${
+                on ? `${t.chip} text-white` : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
+              }`}
+            >
+              <c.icon className={`w-3.5 h-3.5 ${on ? t.text : "text-zinc-500"}`} strokeWidth={1.8} />
+              {c.short}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        className="mt-3"
+        onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (touchX.current == null) return;
+          const dx = e.changedTouches[0].clientX - touchX.current;
+          touchX.current = null;
+          if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+        }}
+      >
+        {/* Swap instantly and fade the new one in. An exit-then-enter
+            sequence made every tap wait on the outgoing card first. */}
+          <motion.div
+            key={card.key}
+            role="tabpanel"
+            initial={reduce ? false : { opacity: 0.4, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="relative rounded-3xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5"
+          >
+            <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${tone.chip}`}>
+                <card.icon className={`w-5 h-5 ${tone.text}`} strokeWidth={1.6} />
+              </div>
+              <h3 className="font-heading font-bold text-lg text-white tracking-tight leading-tight">{card.title}</h3>
+            </div>
+            <p className="text-zinc-400 text-sm leading-relaxed">{card.desc}</p>
+            {card.mock && <div className="mt-4">{card.mock}</div>}
+            <ul className="mt-4 space-y-1.5">
+              {card.bullets.map((b) => (
+                <li key={b} className="flex items-start gap-2 text-xs text-zinc-300">
+                  <Check className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${tone.text}`} strokeWidth={2.5} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+            <Link to={card.route} className={`mt-4 inline-flex items-center gap-1 text-xs font-semibold ${tone.text}`}>
+              See it <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </motion.div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <button type="button" onClick={() => go(-1)} aria-label="Previous feature"
+          className="w-9 h-9 rounded-full border border-zinc-800 bg-zinc-900/60 flex items-center justify-center text-zinc-400">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div className="flex items-center gap-1.5">
+          {CARDS.map((c, i) => (
+            <span key={c.key} className={`h-1.5 rounded-full transition-all ${i === idx ? "w-5 bg-lime-400" : "w-1.5 bg-zinc-700"}`} />
+          ))}
+        </div>
+        <button type="button" onClick={() => go(1)} aria-label="Next feature"
+          className="w-9 h-9 rounded-full border border-zinc-800 bg-zinc-900/60 flex items-center justify-center text-zinc-400">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function FeatureShowcase() {
   const reduce = useReducedMotion();
   // Match the landing page's premium scroll-in: ease-out-expo curve + a subtle
@@ -545,14 +676,14 @@ export default function FeatureShowcase() {
       };
 
   return (
-    <section id="what-you-get" className="relative py-20 md:py-28 overflow-hidden bg-zinc-950">
+    <section id="what-you-get" className="relative py-14 md:py-28 overflow-hidden bg-zinc-950">
       {/* layered depth */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-zinc-950 via-zinc-900/30 to-zinc-950" />
       <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[46rem] h-[46rem] max-w-full bg-lime-400/5 rounded-full blur-3xl" />
 
       <div className="relative container mx-auto px-4 max-w-6xl">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={rise}
-          className="max-w-2xl mb-12 md:mb-16">
+          className="max-w-2xl mb-6 md:mb-16">
           <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
             <span className="w-8 h-px bg-lime-400/60" /> What you get
           </span>
@@ -566,7 +697,10 @@ export default function FeatureShowcase() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+        <MobileFeatureTabs reduce={reduce} />
+
+        {/* Tablet and desktop: the full grid, unchanged. */}
+        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {CARDS.map((c, i) => (
             <FeatureCard key={c.key} card={c} index={i} reduce={reduce} rise={rise} />
           ))}

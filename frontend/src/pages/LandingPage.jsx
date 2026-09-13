@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { motion, useReducedMotion } from "framer-motion";
 import SEO from "@/components/SEO";
 import DemoPhone from "@/components/DemoPhone";
+import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
+import FeatureShowcase from "@/components/FeatureShowcase";
 import {
-  Play, ChevronRight, Sparkles, TrendingUp, Upload, ArrowRight,
-  Crosshair, Repeat, Mic
+  Zap, Play, ChevronRight, Sparkles, TrendingUp, Upload,
+  ArrowRight, Clock, Timer, Smartphone, Activity, Shield
 } from "lucide-react";
 import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
 import demo from "@/data/demoAnalysis.json";
 import samplePoster from "@/assets/demo/sample-badminton-poster.jpg";
 
@@ -55,31 +58,9 @@ const MORE_ACTIVITIES = [
 // /analyze — there is no intake quiz before the first analysis any more, so
 // don't describe one.
 const HOW_IT_WORKS = [
-  { step: "01", icon: Upload, title: "Film 10–30 seconds", desc: "Any phone, any angle where your body is clearly in frame. A rally or a couple of reps is plenty." },
-  { step: "02", icon: Sparkles, title: "Get your one fix", desc: "Our AI breaks the clip down shot by shot and tells you what's working, what isn't, and what to fix first." },
-  { step: "03", icon: TrendingUp, title: "Practise, then film again", desc: "Work the drills, film the same shot again, and see both sessions side by side." },
-];
-
-// The three features a player uses again after the first analysis. Each maps
-// to shipped code: FormCompareView (pose correction), the compare-analyses
-// flow (NextStepCard → /compare-analyses) and LiveVoiceCoach.
-const KEY_FEATURES = [
-  {
-    icon: Crosshair,
-    title: "Your pose, corrected",
-    desc: "Your own body drawn next to the corrected position, joint by joint — not a pro video you can't copy.",
-    note: "Racket and ball sports.",
-  },
-  {
-    icon: Repeat,
-    title: "Film again & compare",
-    desc: "Practise the fix, film the same shot again, and see what actually changed: score, level, and each fix.",
-  },
-  {
-    icon: Mic,
-    title: "Ask the coach",
-    desc: "Type or talk to a coach that has watched your clip. Ask why, ask how, ask what to drill next.",
-  },
+  { step: "01", icon: Upload, title: "Film 10–30 seconds", desc: "Any phone, any angle where your body is clearly in frame. A single rally or a couple of reps is plenty — you don't need a tripod or a full match." },
+  { step: "02", icon: Sparkles, title: "Our AI breaks it down", desc: "Shot by shot with timestamps, posture on the contact frame, and a coach's read on what's working and what isn't. Analysis runs on our servers, so you can lock your phone and walk away." },
+  { step: "03", icon: TrendingUp, title: "Practise, then film again", desc: "Work the drills and weekly plan it gives you, then film the same shot again and see both sessions side by side." },
 ];
 
 const FAQS = [
@@ -95,7 +76,7 @@ const FAQS = [
   },
   {
     q: "Is Formanti free?",
-    a: "You can get started for free — new users get 2 free video analyses. After that, analyses come in affordable one-time packs that never expire. Browsing equipment recommendations and training content is free. See our Pricing page for details.",
+    a: "You can get started for free — new users receive free tokens to try video analysis. Beyond that, analyses use tokens, which you can top up in affordable packs. Browsing equipment recommendations and training content is free. See our Pricing page for token pack details.",
   },
   {
     q: "What happens to the video I upload?",
@@ -146,6 +127,26 @@ const PLACEHOLDER_TESTIMONIALS = [
   // { name: "<name>", quote: "<real user quote here>", rating: 5, sport: "<sport>" },
 ];
 
+// Facts bar — same rule as PLACEHOLDER_TESTIMONIALS and APP_STRUCTURED_DATA
+// below: nothing goes on this page that we cannot point at in the code or in a
+// real user's account. This band previously shipped invented metrics ("10K+
+// Analyses Performed", "500+ Training Drills", "98% User Satisfaction"); none
+// were backed by anything, and the only real rating the product has received
+// so far is a 1-star. They are gone. Every entry here is checkable:
+//   sports count ...... SPORTS.length, derived so it cannot drift
+//   2 analyses ........ backend server.py TOKEN_RULES "signup_grant": 200
+//                       (100 tokens = 1 analysis)
+//   10–30s ............ the clip-length guidance AnalyzePage gives on oversize
+//                       uploads ("Trim it to your key 10–30 seconds")
+//   ~5MB .............. DownloadPage's stated PWA install size
+// Do NOT re-add user counts, satisfaction percentages, or star ratings.
+const FACTS = [
+  { icon: Activity, value: String(SPORTS.length), label: "Sports with sport-tuned analysis", short: "Sports" },
+  { icon: Zap, value: "2", label: "Free analyses when you sign up", short: "Free analyses" },
+  { icon: Timer, value: "10–30s", label: "That's all the clip we need", short: "Clip needed" },
+  { icon: Smartphone, value: "~5MB", label: "Installs as an app, no store", short: "App, no store" },
+];
+
 // Premium scroll-in: a little more travel, a subtle scale-settle, and an
 // ease-out-expo curve (fast in, soft landing) instead of the default. No blur
 // filter on purpose — animating blur across the 8 sport tiles at once janks on
@@ -167,11 +168,15 @@ const fadeUpStill = {
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, profile } = useAuth();
+  const [blogPosts, setBlogPosts] = useState([]);
   // Respect prefers-reduced-motion: same layout, no travel/fade.
   const reduceMotion = useReducedMotion();
   const rise = reduceMotion ? fadeUpStill : fadeUp;
 
   useEffect(() => {
+    api.get("/blog", { timeout: 5000 })
+      .then(r => setBlogPosts((r.data || []).slice(0, 3)))
+      .catch(() => {});
     // Preload Firebase auth chunk + the AuthPage bundle so the Google
     // sign-in popup is INSTANT on first click. Without this, the user
     // sees a ~1-2s chunk download after clicking before the popup opens.
@@ -246,6 +251,13 @@ export default function LandingPage() {
                   textClassName="font-heading font-bold text-xl sm:text-2xl lg:text-3xl uppercase tracking-tight text-white" />
               </motion.div>
 
+              <motion.div initial="hidden" animate="visible" custom={0.05} variants={rise}>
+                <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-lime-400/10 border border-lime-400/25 mb-4 lg:mb-5 backdrop-blur-sm" data-testid="hero-badge">
+                  <Zap className="w-3.5 h-3.5 text-lime-400" />
+                  <span className="text-[11px] sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI Sports Coaching</span>
+                </div>
+              </motion.div>
+
               <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={rise}
                 className="font-heading font-black text-[2.5rem] leading-[0.85] sm:text-6xl lg:text-7xl tracking-tighter uppercase" data-testid="hero-heading">
                 <span className="block text-zinc-500 text-xl sm:text-3xl tracking-tight mb-1.5 sm:mb-3">Film one rally.</span>
@@ -262,18 +274,15 @@ export default function LandingPage() {
 
             {/* 3 — pitch + CTA */}
             <div className="order-3 w-full text-center lg:text-left lg:col-start-1 lg:row-start-2 lg:self-start">
-              {/* One sentence, visible on every screen size. The hero used to
-                  stack a badge, sport pills, an install link and a four-stat
-                  strip around the CTA; visitors couldn't tell what the product
-                  does. Now it's: what you do, what you get, one button. */}
               <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
-                className="text-[15px] sm:text-lg text-zinc-300 max-w-xl mx-auto lg:mx-0 mb-4 sm:mb-6 mt-0 lg:mt-6 leading-snug sm:leading-relaxed" data-testid="hero-subtitle">
-                {/* Phones get the short version so the button stays above the fold. */}
-                <span className="sm:hidden">See your pose corrected and the one thing to fix first.</span>
-                <span className="hidden sm:inline">
-                  Film 10–30 seconds on your phone. Our AI finds every shot, shows your pose next to
-                  the corrected one, and tells you the one thing to fix first.
-                </span>
+                className="hidden lg:block text-base sm:text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0 mb-6 mt-6 leading-relaxed" data-testid="hero-subtitle">
+                Our AI breaks your clip down shot by shot, shows you the posture behind each one,
+                and turns it into drills, a plan and a written report.
+              </motion.p>
+              {/* Phones: one short line so the button stays above the fold. */}
+              <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
+                className="sm:hidden text-[15px] text-zinc-300 leading-snug mb-4 px-2">
+                See your pose corrected and the one thing to fix first.
               </motion.p>
 
               <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
@@ -284,19 +293,63 @@ export default function LandingPage() {
                 </Button>
                 <Button onClick={() => navigate("/demo")}
                   variant="ghost" size="lg"
-                  className="w-full sm:w-auto max-w-[320px] text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
-                  <Play className="w-5 h-5 mr-1.5" /> See a real analysis
+                  className="hidden sm:inline-flex w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
+                  <Play className="w-5 h-5 mr-1.5" /> See a sample analysis
                 </Button>
               </motion.div>
 
               <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
                 className="text-xs sm:text-sm text-lime-400/90 font-medium mt-3 lg:mt-4">
                 2 free analyses when you sign up · no card needed
+                <Link to="/demo" className="sm:hidden block mt-2 text-zinc-400 underline underline-offset-4 decoration-zinc-600">
+                  See a real analysis first
+                </Link>
               </motion.p>
+
+              {/* Sport pills — quieter than the headline, below the CTA on mobile. */}
+              <motion.div initial="hidden" animate="visible" custom={0.4} variants={rise}
+                className="hidden sm:flex flex-wrap justify-center lg:justify-start gap-1.5 sm:gap-2 mt-5 max-w-xl mx-auto lg:mx-0">
+                {SPORTS.map(s => (
+                  <span key={s.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm text-[11px] sm:text-xs text-zinc-300">
+                    <span>{s.emoji}</span> {s.label}
+                  </span>
+                ))}
+              </motion.div>
+
+              <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
+                className="mt-5 hidden sm:flex flex-col items-center lg:items-start">
+                <Link
+                  to="/download"
+                  className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900/70 border border-zinc-800 hover:border-lime-400/40 text-zinc-300 hover:text-white text-sm transition-all"
+                  data-testid="hero-get-app"
+                >
+                  <Sparkles className="w-4 h-4 text-lime-400" />
+                  <span>Install as an app — ~5MB, no store</span>
+                  <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              </motion.div>
             </div>
           </div>
+
+          {/* FACTS — folded into the hero so the proof sits with the pitch and
+              the demo, seen at once (was a separate strip below). */}
+          <motion.div initial="hidden" animate="visible" custom={0.7} variants={rise}
+            className="mt-8 lg:mt-14 grid grid-cols-4 gap-x-2 sm:gap-x-4 border-t border-zinc-800/60 pt-6 sm:pt-8">
+            {FACTS.map((s) => (
+              <div key={s.label} className="flex flex-col items-center text-center px-0.5 sm:px-2">
+                <s.icon className="hidden sm:block w-4 h-4 text-lime-400/70 mb-2" strokeWidth={1.75} />
+                <div className="font-heading font-black text-lg sm:text-2xl md:text-3xl text-white tracking-tight mb-0.5 sm:mb-1">{s.value}</div>
+                <div className="text-zinc-500 text-[10px] sm:text-[11px] leading-tight sm:leading-snug max-w-[10rem]">
+                  <span className="sm:hidden">{s.short}</span>
+                  <span className="hidden sm:inline">{s.label}</span>
+                </div>
+              </div>
+            ))}
+          </motion.div>
         </div>
       </section>
+
+      {/* (Facts bar folded into the hero above — no longer a separate strip.) */}
 
       {/* ============ RESULT PREVIEW — a real result, right on the home page ==
           Cold ad traffic bounced off /analyze without ever seeing what the app
@@ -403,11 +456,20 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ============ FEATURE SHOWCASE — SECTION 2: what you get ============ */}
+      {/* Moved to be the SECOND thing a visitor sees. The whole point of the
+          page is that the product is far more than analysis, and this was
+          getting buried five sections down. Everything here maps to shipped
+          code — see the header comment in that file. */}
+      <div id="features" data-testid="features-section">
+        <FeatureShowcase />
+      </div>
+
       {/* ============ HOW IT WORKS — SECTION 3: how to run an analysis ======= */}
       {/* Vertical numbered rail rather than a third three-across grid — the
           page needs a change of shape here, and a sequence reads better as a
           sequence than as parallel columns. */}
-      <section className="relative py-20 md:py-28 bg-zinc-950 overflow-hidden">
+      <section className="relative py-14 md:py-28 bg-zinc-950 overflow-hidden">
         <div className="pointer-events-none absolute -left-40 top-1/4 w-[30rem] h-[30rem] bg-lime-400/[0.04] rounded-full blur-3xl" />
         <div className="relative container mx-auto px-4 max-w-3xl">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
@@ -445,48 +507,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ KEY FEATURES — the three things people come back for ==
-          Replaces a ten-feature showcase. Listing everything made the page
-          read as a pile of features with no point; these three are what a
-          player uses again after the first analysis. The rest is one line. */}
-      <section id="features" data-testid="features-section" className="relative py-16 md:py-24 bg-zinc-900/40 border-y border-zinc-800/50">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="max-w-2xl mb-10">
-            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
-              <span className="w-8 h-px bg-lime-400/60" /> Why players come back
-            </span>
-            <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tighter uppercase text-white leading-[0.95]">
-              See it. Fix it.<br />Prove it.
-            </h2>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {KEY_FEATURES.map((f, i) => (
-              <motion.div key={f.title} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={rise}
-                className="rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-6">
-                <div className="w-11 h-11 rounded-xl bg-lime-400/10 border border-lime-400/25 flex items-center justify-center mb-4">
-                  <f.icon className="w-5 h-5 text-lime-400" strokeWidth={1.75} />
-                </div>
-                <h3 className="font-heading font-bold text-xl text-white tracking-tight mb-2">{f.title}</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed">{f.desc}</p>
-                {f.note && <p className="text-zinc-600 text-[11px] mt-3">{f.note}</p>}
-              </motion.div>
-            ))}
-          </div>
-
-          <p className="text-zinc-500 text-sm mt-6">
-            Every analysis also includes drills for your weak points, a PDF coach report, and gear
-            matched to your level and budget.
-          </p>
-        </div>
-      </section>
-
       {/* (Walkthrough demo now lives in the hero — see DemoPhone in the hero.) */}
 
       {/* ============ SPORTS SECTION ============ */}
-      <section className="relative py-20 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
+      <section className="relative py-14 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
         <div className="pointer-events-none absolute -right-40 top-1/3 w-[32rem] h-[32rem] bg-sky-500/5 rounded-full blur-3xl" />
         <div className="relative container mx-auto px-4 max-w-5xl">
           {/* Left-aligned header — the page was every-section-centred, which
@@ -497,8 +521,59 @@ export default function LandingPage() {
               <span className="w-8 h-px bg-lime-400/60" /> Multi-sport
             </span>
             <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95] mb-4">
-              Pick your sport
+              One app.<br />Every session.
             </h2>
+            <p className="text-zinc-400 text-base md:text-lg leading-relaxed">
+              Eight sports get purpose-built AI models, drills and coaching — and anything
+              else you film, from a squat rack to a swim lane, gets a coach's read on your form.
+            </p>
+          </motion.div>
+
+          {/* Gym / lifting leads the section — it's the strongest pitch on the
+              page (a trainer is ~₹10,000/month, a phone is free), so it sits
+              ABOVE the sport grid rather than under it. Copy promises FORM
+              FEEDBACK, not joint-angle measurement — the angle tracker is off
+              for lifting until the bilateral-load work lands, and over-claiming
+              here is exactly what earns a 1-star. */}
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="mb-10 md:mb-14">
+            <div className="relative overflow-hidden rounded-3xl border border-lime-400/25 bg-gradient-to-br from-lime-400/[0.12] via-zinc-900 to-zinc-900 p-5 md:p-10">
+              <div className="pointer-events-none absolute -top-20 -right-16 w-72 h-72 bg-lime-400/10 rounded-full blur-3xl" />
+              <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/50 to-transparent" />
+              <div className="relative flex flex-col md:flex-row md:items-center gap-3 md:gap-8">
+                <div className="hidden md:block text-7xl shrink-0 leading-none">🏋️</div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-heading font-black text-2xl md:text-4xl uppercase tracking-tighter text-white leading-[0.95] mb-3">
+                    <span className="md:hidden mr-2">🏋️</span>Lifting? Skip the<br className="hidden sm:block" /> <span className="text-lime-400">₹10,000</span> trainer.
+                  </h3>
+                  <p className="text-zinc-300 text-sm md:text-base leading-relaxed mb-4 md:mb-5 max-w-xl">
+                    Film a set on your phone and get honest feedback on your form — what looked
+                    solid, what broke down, and what to fix before your next session. Squats,
+                    deadlifts, presses, and the rest.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {MORE_ACTIVITIES.map((a) => (
+                      <Link key={a.key} to={a.path}
+                        className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-zinc-950/60 border border-zinc-700 hover:border-lime-400/50 hover:bg-zinc-900 text-zinc-200 hover:text-white text-xs md:text-sm font-medium transition-all">
+                        <span>{a.emoji}</span> {a.label}
+                        <ArrowRight className="w-3.5 h-3.5 opacity-50" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Scope note stays. This is the exact spot where over-claiming
+                would cost us: lifting gets FORM FEEDBACK, not joint angles. */}
+            <div className="mt-5 flex items-start gap-2.5 max-w-2xl text-zinc-500 text-xs leading-relaxed">
+              <Shield className="w-4 h-4 shrink-0 mt-px text-zinc-600" strokeWidth={1.75} />
+              <p>
+                Analysis works on any activity where the movement is clearly visible in frame.
+                The eight sports below additionally get sport-tuned shot detection, drills, and
+                the joint-angle posture tracker — for gym and lifting you get overall form
+                feedback, not measured angles.
+              </p>
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -506,45 +581,98 @@ export default function LandingPage() {
               <motion.div key={s.key} initial="hidden" whileInView="visible" custom={i}
                 viewport={{ once: true }} variants={rise}>
                 <Link to={s.path}
-                  className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl p-5 sm:p-6 text-center hover:-translate-y-1.5 hover:border-zinc-600 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 ease-out will-change-transform`}>
+                  className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl p-4 sm:p-6 text-center hover:-translate-y-1.5 hover:border-zinc-600 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 ease-out will-change-transform`}>
                   {/* Sport-tinted wash on hover. Note: every colour class used
                       here comes verbatim from the SPORTS table above, so
                       Tailwind's source scan can see it — never build a class
                       name by string concatenation or it gets purged. */}
                   <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${s.bg}`} />
                   <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-                  <div className="relative text-3xl sm:text-4xl mb-3 transition-transform duration-300 group-hover:scale-110">{s.emoji}</div>
+                  <div className="relative text-2xl sm:text-4xl mb-2 sm:mb-3 transition-transform duration-300 group-hover:scale-110">{s.emoji}</div>
                   <h3 className={`relative font-heading font-semibold text-sm sm:text-lg ${s.color}`}>{s.label}</h3>
                 </Link>
               </motion.div>
             ))}
+            {/* "More coming" card */}
+            <motion.div initial="hidden" whileInView="visible" custom={SPORTS.length}
+              viewport={{ once: true }} variants={rise}
+              className="hidden sm:flex bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl p-5 sm:p-6 text-center flex-col items-center justify-center">
+              <div className="text-3xl sm:text-4xl mb-3 opacity-50">🎯</div>
+              <h3 className="font-heading font-semibold text-sm sm:text-lg text-zinc-600">More Coming</h3>
+            </motion.div>
           </div>
-
-          {/* Gym, lifting and physio: linked, with the scope stated in one
-              line. Lifting gets form feedback, not measured joint angles —
-              over-claiming here is exactly what earns a 1-star. */}
-          <div className="mt-6 flex flex-wrap items-center gap-2">
-            <span className="text-zinc-500 text-sm mr-1">Also:</span>
-            {MORE_ACTIVITIES.map((a) => (
-              <Link key={a.key} to={a.path}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-950/60 border border-zinc-700 hover:border-lime-400/50 text-zinc-200 hover:text-white text-sm font-medium transition-all">
-                <span>{a.emoji}</span> {a.label}
-              </Link>
-            ))}
-          </div>
-          <p className="mt-3 text-zinc-600 text-xs leading-relaxed max-w-2xl">
-            Gym and lifting get overall form feedback; the pose tracker with measured angles is for the sports above.
-          </p>
         </div>
       </section>
+
+      {/* ============ TOKEN ECONOMY — moved below the sports grid ========== */}
+      <EarnTokensSection />
 
       {/* ============ TESTIMONIALS ============ */}
       {/* Renders nothing until PLACEHOLDER_TESTIMONIALS has real, approved
           user quotes — see the constant definition above for why. */}
       <TestimonialsSection testimonials={PLACEHOLDER_TESTIMONIALS} />
 
+      {/* ============ BLOG PREVIEW ============ */}
+      {blogPosts.length > 0 && (
+        <section className="py-14 md:py-24 bg-zinc-950">
+          <div className="container mx-auto px-4 max-w-7xl">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+              className="text-center mb-8 md:mb-16">
+              <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Blog</span>
+              <h2 className="font-heading font-bold text-3xl md:text-5xl tracking-tight uppercase text-white mb-4">
+                Latest from Our Blog
+              </h2>
+              <p className="text-zinc-400 text-lg max-w-xl mx-auto">
+                Tips, guides, and insights to help you play smarter.
+              </p>
+            </motion.div>
+
+            {/* Phones: swipe sideways through the three posts instead of
+                three full-width image cards stacked down the page. */}
+            <div className="-mx-4 px-4 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:pb-0"
+              style={{ scrollbarWidth: "none" }}>
+              {blogPosts.slice(0, 3).map((post, i) => (
+                <motion.div key={post.slug} initial="hidden" whileInView="visible" custom={i}
+                  viewport={{ once: true }} variants={rise}
+                  className="snap-start shrink-0 w-[80%] sm:w-[60%] md:w-auto">
+                  <Link to={`/blog/${post.slug}`}
+                    className="group block bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-lime-400/30 transition-all duration-300">
+                    {post.cover_image && (
+                      <div className="aspect-video overflow-hidden">
+                        <img src={post.cover_image} alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      </div>
+                    )}
+                    <div className="p-5">
+                      <div className="flex items-center gap-2 text-xs text-zinc-500 mb-2">
+                        {post.sport && <span className="text-lime-400 uppercase font-semibold">{post.sport}</span>}
+                        {post.category && <span>· {post.category}</span>}
+                        {post.read_time && (
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {post.read_time}</span>
+                        )}
+                      </div>
+                      <h3 className="font-heading font-semibold text-white text-lg mb-2 group-hover:text-lime-400 transition-colors line-clamp-2">
+                        {post.title}
+                      </h3>
+                      <p className="text-zinc-400 text-sm line-clamp-2">{post.excerpt}</p>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="text-center mt-6 md:mt-10">
+              <Link to="/blog"
+                className="inline-flex items-center gap-2 text-lime-400 hover:text-lime-300 font-semibold transition-colors">
+                View All Posts <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ============ FAQ ============ */}
-      <section className="py-20 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50">
+      <section className="py-14 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50">
         <div className="container mx-auto px-4 max-w-3xl">
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }} />
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
@@ -597,11 +725,13 @@ export default function LandingPage() {
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer className="py-16 border-t border-zinc-800/50 bg-zinc-950">
+      <footer className="py-10 md:py-16 border-t border-zinc-800/50 bg-zinc-950">
         <div className="container mx-auto px-4 max-w-6xl">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+          {/* Two link columns side by side on phones (one column made the
+              footer a screen and a half tall); four across from md. */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 md:gap-10 mb-10 md:mb-12">
             {/* Brand */}
-            <div className="md:col-span-1">
+            <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <FormantiIcon className="h-5" />
                 <span className="font-heading font-bold text-lg uppercase tracking-wide text-white">Formanti</span>
