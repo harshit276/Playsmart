@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import SEO from "@/components/SEO";
 import SportUploadCTA from "@/components/SportUploadCTA";
+import QuickSignupCTA from "@/components/QuickSignupCTA";
 import EquipmentFinderCTA from "@/components/EquipmentFinderCTA";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -122,11 +123,11 @@ export default function GymPage() {
       />
 
       {/* Hero */}
-      <section className="relative py-24 px-4 text-center overflow-hidden">
+      <section className="relative pt-10 pb-14 md:py-24 px-4 text-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-lime-400/5 via-zinc-950 to-zinc-950" />
         <div className="relative z-10 max-w-4xl mx-auto">
           <motion.div initial="hidden" animate="visible" variants={fadeUp}>
-            <Badge className="bg-lime-400/10 text-lime-400 border border-lime-400/30 mb-6">
+            <Badge className="bg-lime-400/10 text-lime-400 border border-lime-400/30 mb-4 md:mb-6">
               💪 Gym &amp; Strength Training
             </Badge>
           </motion.div>
@@ -135,7 +136,7 @@ export default function GymPage() {
             animate="visible"
             custom={1}
             variants={fadeUp}
-            className="font-heading font-black text-5xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-6"
+            className="font-heading font-black text-4xl md:text-6xl lg:text-7xl uppercase tracking-tighter text-white mb-4 md:mb-6"
           >
             AI <span className="text-lime-400">Gym</span> Form Checker<br />Fix Every Lift
           </motion.h1>
@@ -144,7 +145,7 @@ export default function GymPage() {
             animate="visible"
             custom={2}
             variants={fadeUp}
-            className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-8"
+            className="text-base md:text-xl text-zinc-400 max-w-2xl mx-auto mb-6 md:mb-8"
           >
             Upload a set of your squat, deadlift, or bench press and get instant AI feedback on your
             form, injury-risk flags, and a training plan built around what you need to fix.
@@ -153,6 +154,11 @@ export default function GymPage() {
               the first thing an organic visitor sees. */}
           <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="mb-5">
             <SportUploadCTA sport="gym" label="gym" compact />
+          </motion.div>
+          {/* Ad visitors rarely have a clip on hand — let them claim the free
+              analyses now instead of leaving (see QuickSignupCTA). */}
+          <motion.div initial="hidden" animate="visible" custom={3} variants={fadeUp} className="max-w-xl mx-auto mb-8">
+            <QuickSignupCTA source="gym" sport="gym" what="set" />
           </motion.div>
 
           <motion.div
