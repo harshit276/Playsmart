@@ -462,6 +462,16 @@ function UsersTab({ headers }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-white truncate">{u.name || "—"}</p>
                 <p className="text-xs text-zinc-400 truncate font-mono">{u.email || u.phone || "—"}</p>
+                {u.email && u.phone && (
+                  u.phone_whatsapp_ok === false ? (
+                    <p className="text-xs text-zinc-500 font-mono">{u.phone} · no WhatsApp</p>
+                  ) : (
+                    <a href={`https://wa.me/${u.phone.replace(/[^\d]/g, "")}`} target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-emerald-400 hover:text-emerald-300 font-mono">
+                      {u.phone} · WhatsApp
+                    </a>
+                  )
+                )}
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-[10px] text-zinc-500 font-mono">id: {(u.id || "").slice(0, 12)}…</span>
                   <span className="text-[10px] text-zinc-500">· {fmtDate(u.created_at)}</span>

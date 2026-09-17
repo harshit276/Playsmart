@@ -10,6 +10,7 @@ import { invalidateMatching } from "@/lib/cachedFetch";
 import Navbar from "@/components/Navbar";
 import LandingPage from "@/pages/LandingPage"; // Eager — first paint
 import InstallPrompt from "@/components/InstallPrompt";
+import PhonePrompt from "@/components/PhonePrompt";
 import VirtualCoach from "@/components/VirtualCoach";
 
 // Code-split — each page loads on demand
@@ -357,6 +358,7 @@ function App() {
             <AppRoutes />
             <Toaster position="bottom-right" />
             <InstallPrompt />
+            <PhonePrompt />
             <VirtualCoach />
           </div>
         </AuthProvider>

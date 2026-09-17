@@ -40,7 +40,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="2. Information We Collect">
-          <p><strong className="text-white">Account Information:</strong> When you sign up, we collect your phone number (for OTP login) and/or your email address and basic profile details from Google Sign-In, depending on how you choose to authenticate. You may also provide your name, age, and sport preferences during the assessment process.</p>
+          <p><strong className="text-white">Account Information:</strong> When you sign up, we collect your email address and basic profile details from Google Sign-In, or your phone number if you sign in with OTP, depending on how you choose to authenticate. After signing in you may optionally give us your phone number; we use it only to contact you about your account and your analyses (for example, asking for feedback on WhatsApp if you allowed that). We do not share it or use it for advertising, and you can ask us to remove it at any time. You may also provide your name, age, and sport preferences during the assessment process.</p>
           <p><strong className="text-white">Sport & Profile Data:</strong> Your selected sports, skill level, playing style, goals, equipment preferences, and any assessment responses you provide.</p>
           <p><strong className="text-white">Video Content:</strong> The sports videos you upload for analysis (see the section below on how these are processed and retained).</p>
           <p><strong className="text-white">Analysis Results:</strong> When you use our AI analysis features, the results (technique scores, feedback, improvement suggestions) are stored to track your progress over time.</p>

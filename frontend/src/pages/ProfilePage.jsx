@@ -66,6 +66,19 @@ export default function ProfilePage() {
               {user.name || "Player"}
             </h1>
             <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+            {/* Phone is optional; PhonePrompt (App shell) owns the form. */}
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {user.phone ? (
+                <>{user.phone} · </>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("formanti:ask-phone"))}
+                className="text-lime-400 hover:text-lime-300 underline underline-offset-2"
+              >
+                {user.phone ? "Change phone" : "Add phone number (optional)"}
+              </button>
+            </p>
           </div>
           {tokens != null && (
             <Link to="/wallet"

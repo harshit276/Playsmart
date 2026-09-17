@@ -1156,7 +1156,98 @@ async def get_me(authorization: str = Header(None)):
     except (Exception, asyncio.TimeoutError):
         pass
 
-    return {"user": user, "profile": profile}
+    return {"user": _public_user(user), "profile": profile}
+
+
+def _public_user(user: dict) -> dict:
+    """The user doc as it may be sent to the browser.
+
+    get_current_user returns the whole Mongo document, and /auth/me used to
+    pass it straight through — including password_hash for email/password
+    accounts. Drop anything secret-shaped so a new sensitive field is
+    excluded by default rather than leaked by default.
+    """
+    out = {}
+    for k, v in (user or {}).items():
+        lk = k.lower()
+        if ("password" in lk or "secret" in lk or lk.endswith("_hash")
+                or (lk.endswith("token") and lk != "tokens")
+                or lk.endswith("_token_expires") or lk == "push_subscriptions"):
+            continue
+        out[k] = v
+    return out
+
+
+# ─── Optional phone number (asked once after sign-in) ───
+# So we can reach users on WhatsApp for feedback instead of email, which
+# early users mostly ignore. Optional and skippable; a skip is remembered so
+# the prompt never nags. Stored E.164 ("+919876543210"), same as phone-OTP
+# accounts, so the partial-unique users.phone index keeps one number per
+# account.
+class PhoneUpdateRequest(BaseModel):
+    phone: str = Field("", max_length=24)
+    whatsapp_ok: bool = True
+    skip: bool = False
+
+
+def _normalize_phone(raw: str) -> Optional[str]:
+    import re as _re
+    s = _re.sub(r"[\s\-().]", "", raw or "")
+    if s.startswith("00"):
+        s = "+" + s[2:]
+    if s.startswith("+"):
+        digits = s[1:]
+        if digits.isdigit() and 8 <= len(digits) <= 15:
+            return "+" + digits
+        return None
+    digits = _re.sub(r"\D", "", s)
+    # No country code: this is an India-first product, so read the common
+    # Indian forms (98765 43210, 098765 43210, 919876543210).
+    if len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    if len(digits) == 10 and digits[0] in "6789":
+        return "+91" + digits
+    if len(digits) == 12 and digits.startswith("91") and digits[2] in "6789":
+        return "+" + digits
+    return None
+
+
+@api_router.post("/auth/phone")
+async def set_phone(req: PhoneUpdateRequest, authorization: str = Header(None)):
+    user = await get_current_user(authorization)
+    now = datetime.now(timezone.utc).isoformat()
+    if req.skip:
+        try:
+            await asyncio.wait_for(db.users.update_one(
+                {"id": user["id"]}, {"$set": {"phone_prompt_skipped_at": now}}), timeout=5.0)
+        except Exception as e:
+            logger.warning(f"phone skip save failed for {user['id'][:8]}: {e}")
+        return {"ok": True, "skipped": True}
+
+    phone = _normalize_phone(req.phone)
+    if not phone:
+        raise HTTPException(status_code=400,
+                            detail="Enter a valid mobile number, e.g. +91 98765 43210")
+    try:
+        await asyncio.wait_for(db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"phone": phone, "phone_whatsapp_ok": bool(req.whatsapp_ok),
+                      "phone_added_at": now}}), timeout=5.0)
+    except Exception as e:
+        if "E11000" in str(e) or "duplicate key" in str(e).lower():
+            raise HTTPException(status_code=409,
+                                detail="This number is already linked to another Formanti account.")
+        logger.warning(f"phone save failed for {user['id'][:8]}: {e}")
+        raise HTTPException(status_code=503, detail="Couldn't save your number — please try again.")
+
+    try:
+        await _notify_admin_now(
+            "📱 Phone added",
+            f"Name: {user.get('name') or '—'}\nEmail: {user.get('email') or '—'}\n"
+            f"Phone: {phone}\nWhatsApp OK: {'yes' if req.whatsapp_ok else 'no'}")
+    except Exception:
+        pass
+    return {"ok": True, "phone": phone, "whatsapp_ok": bool(req.whatsapp_ok)}
 
 
 # ─── Demo login (instant 5000-token test account) ───────────────

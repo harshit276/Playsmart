@@ -3428,6 +3428,12 @@ export default function AnalyzePage() {
       refreshProfile();
       loadHistory();
       const okCount = results.filter((r) => r.data?.success).length;
+      // The one completion path that wasn't reporting (multi-player fan-out).
+      if (okCount > 0) {
+        track("analysis_completed", { path: "multi_player", sport: sportToAnalyze || "unknown", players: okCount });
+      } else {
+        track("analysis_failed", { path: "multi_player", reason: "all_players_failed" });
+      }
       toast.success(`Analyzed ${okCount}/${boxes.length} players`);
     } catch (err) {
       const msg = err.message || "Multi-player analysis failed";
