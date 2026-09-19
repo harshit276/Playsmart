@@ -702,6 +702,7 @@ class RegisterRequest(BaseModel):
     name: str = Field("", max_length=80)
     email: str = Field(..., max_length=120)
     password: str = Field(..., min_length=6, max_length=200)
+    phone: str = Field("", max_length=24)   # optional; kept pending until verify
 
 
 class PasswordLoginRequest(BaseModel):
@@ -861,12 +862,16 @@ async def register_email(req: RegisterRequest):
         raise HTTPException(status_code=409,
                             detail="An account with this email already exists. Please log in instead.")
     pw_hash = _hash_password(req.password)
+    _reg_set = {"name": req.name, "email": email, "password_hash": pw_hash}
+    _pending_phone = _normalize_phone(req.phone) if req.phone else None
+    if _pending_phone:
+        _reg_set["signup_phone"] = _pending_phone
     try:
         await asyncio.wait_for(db.users.update_one(
             {"id": user_id},
             {"$setOnInsert": {"id": user_id, "tokens": 0, "email_verified": False,
                               "created_at": datetime.now(timezone.utc).isoformat()},
-             "$set": {"name": req.name, "email": email, "password_hash": pw_hash}},
+             "$set": _reg_set},
             upsert=True,
         ), timeout=5.0)
     except Exception as e:
@@ -876,7 +881,7 @@ async def register_email(req: RegisterRequest):
     link = f"{SHARE_SITE_URL}/auth?verify={_make_email_token(email)}"
     sent = await _send_user_email(
         email,
-        "Verify your email to claim 100 free Formanti tokens",
+        "Verify your email to claim your 2 free Formanti analyses",
         _verification_email_html(req.name, link),
     )
     await _notify_admin_now("📝 Email signup (pending verify)", f"Name: {req.name or '—'}\nEmail: {email}")
@@ -911,6 +916,19 @@ async def verify_email(req: VerifyEmailRequest):
             {"id": user_id}, {"$set": {"email_verified": True}}), timeout=5.0)
     except Exception as e:
         logger.warning(f"verify-email: mark verified failed for {user_id[:8]}: {e}")
+    # A phone typed at signup is only attached once the email is proven, so an
+    # unverified signup can't squat someone else's number on the unique index.
+    if user.get("signup_phone") and not user.get("phone"):
+        try:
+            await asyncio.wait_for(db.users.update_one(
+                {"id": user_id},
+                {"$set": {"phone": user["signup_phone"], "phone_whatsapp_ok": True,
+                          "phone_added_at": datetime.now(timezone.utc).isoformat()},
+                 "$unset": {"signup_phone": ""}}), timeout=5.0)
+        except Exception as e:
+            # Duplicate (number already on another account) or a DB blip —
+            # the account still works; the phone prompt can ask again.
+            logger.warning(f"verify-email: phone promote skipped for {user_id[:8]}: {e}")
     # Grant signup tokens once (idempotent on the signup_grant transaction).
     try:
         grant = await asyncio.wait_for(db.token_transactions.find_one(
@@ -939,6 +957,92 @@ async def verify_email(req: VerifyEmailRequest):
     }
 
 
+class EmailLinkRequest(BaseModel):
+    email: str = Field(..., max_length=120)
+    name: str = Field("", max_length=80)
+    phone: str = Field("", max_length=24)
+    source: str = Field("", max_length=40)
+
+
+def _login_link_email_html(link: str) -> str:
+    return f"""\
+<div style="margin:0;padding:0;background:#0b0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <div style="max-width:520px;margin:0 auto;padding:40px 24px;">
+    <div style="font-size:26px;font-weight:800;letter-spacing:-0.02em;color:#a3e635;margin-bottom:28px;">Formanti</div>
+    <div style="background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:32px;">
+      <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#f8fafc;font-weight:700;">Your sign-in link</h1>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#cbd5e1;">Tap the button to sign in to Formanti. No password needed.</p>
+      <a href="{link}" style="display:inline-block;background:#a3e635;color:#0b0f14;font-weight:700;font-size:15px;text-decoration:none;padding:14px 28px;border-radius:12px;">Sign in to Formanti</a>
+      <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748b;">This link expires in 24 hours. If the button doesn't work, paste this into your browser:</p>
+      <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:#475569;word-break:break-all;">{link}</p>
+    </div>
+    <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#475569;text-align:center;">If you didn't ask to sign in, you can safely ignore this email.</p>
+  </div>
+</div>"""
+
+
+@api_router.post("/auth/email-link")
+async def email_link(req: EmailLinkRequest):
+    """Sign up or sign in with only an email: we mail a magic link.
+
+    WHY: the one-tap Google button is a popup, and in-app browsers (the
+    YouTube / Instagram app opening an ad) often block Google sign-in, so ad
+    visitors had no way in. A mailed link works in any browser.
+
+    Same verify flow as password signup: the link lands on /auth?verify=…,
+    which proves the email and grants the signup analyses once (idempotent on
+    the signup_grant transaction), so this opens no free-analysis farming
+    hole. Always answers ok — never reveals whether an email has an account.
+    """
+    email = req.email.strip().lower()
+    if "@" not in email or "." not in email.split("@")[-1] or " " in email:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address")
+    user_id = _user_id_for_email(email)
+    now = datetime.now(timezone.utc)
+    try:
+        existing = await asyncio.wait_for(db.users.find_one(
+            {"id": user_id}, {"_id": 0, "email_verified": 1, "last_link_sent_at": 1, "name": 1}),
+            timeout=4.0)
+    except Exception:
+        existing = None
+    # One mail a minute per address — the endpoint is unauthenticated.
+    try:
+        last = (existing or {}).get("last_link_sent_at")
+        if last and (now - datetime.fromisoformat(last)).total_seconds() < 60:
+            return {"ok": True, "email": email, "throttled": True}
+    except Exception:
+        pass
+
+    _set = {"email": email, "last_link_sent_at": now.isoformat()}
+    if req.name.strip() and not (existing or {}).get("name"):
+        _set["name"] = req.name.strip()
+    _pending_phone = _normalize_phone(req.phone) if req.phone else None
+    if _pending_phone:
+        _set["signup_phone"] = _pending_phone
+    try:
+        await asyncio.wait_for(db.users.update_one(
+            {"id": user_id},
+            {"$setOnInsert": {"id": user_id, "tokens": 0, "email_verified": False,
+                              "created_at": now.isoformat()},
+             "$set": _set},
+            upsert=True), timeout=5.0)
+    except Exception as e:
+        logger.error(f"email-link: upsert failed for {email}: {e}")
+        raise HTTPException(status_code=503, detail="Couldn't send your link — please try again.")
+
+    link = f"{SHARE_SITE_URL}/auth?verify={_make_email_token(email)}"
+    if existing and existing.get("email_verified"):
+        sent = await _send_user_email(email, "Your Formanti sign-in link", _login_link_email_html(link))
+    else:
+        sent = await _send_user_email(
+            email, "Verify your email to claim your 2 free Formanti analyses",
+            _verification_email_html(req.name or (existing or {}).get("name", ""), link))
+        await _notify_admin_now(
+            "📧 Email-link signup (pending verify)",
+            f"Email: {email}\nPhone: {_pending_phone or '—'}\nFrom: {req.source or '—'}")
+    return {"ok": True, "email": email, "email_sent": sent}
+
+
 class ResendVerificationRequest(BaseModel):
     email: str = Field(..., max_length=120)
 
@@ -957,7 +1061,7 @@ async def resend_verification(req: ResendVerificationRequest):
     if user and user.get("password_hash") and not user.get("email_verified"):
         link = f"{SHARE_SITE_URL}/auth?verify={_make_email_token(email)}"
         await _send_user_email(
-            email, "Verify your email to claim 100 free Formanti tokens",
+            email, "Verify your email to claim your 2 free Formanti analyses",
             _verification_email_html(user.get("name", ""), link))
     return {"ok": True}
 
@@ -1002,7 +1106,7 @@ async def login_password(req: PasswordLoginRequest):
         try:
             link = f"{SHARE_SITE_URL}/auth?verify={_make_email_token(email)}"
             await _send_user_email(
-                email, "Verify your email to claim 100 free Formanti tokens",
+                email, "Verify your email to claim your 2 free Formanti analyses",
                 _verification_email_html(user.get("name", ""), link))
         except Exception:
             pass
@@ -7080,7 +7184,10 @@ async def cron_feedback_nudges(request: Request):
 # Sending is ADMIN-TRIGGERED and defaults to a dry run. Bulk mail is not
 # something to fire automatically: a mistake here reaches real inboxes, cannot
 # be recalled, and burns the sending domain's reputation.
-CAMPAIGN_ID = "feedback_200_2026_08"
+# New id = everyone (not opted out) gets this version once, even if they got
+# the August one. Users who already left feedback are skipped in the query.
+CAMPAIGN_ID = "feedback_2026_09_v2"
+CAMPAIGN_SUBJECT = "Was our AI right about your game?"
 
 
 def _unsub_token(user_id: str) -> str:
@@ -7121,38 +7228,57 @@ async def unsubscribe(u: str = "", t: str = ""):
 def _campaign_email_html(name: str, reward: int, user_id: str) -> tuple:
     who = (name or "there").split(" ")[0][:40]
     unsub = "https://www.formanti.com/api/unsubscribe?u={}&t={}".format(user_id, _unsub_token(user_id))
+    link = "https://www.formanti.com/analyze?feedback=1&utm_source=email&utm_campaign=" + CAMPAIGN_ID
+    reward_txt = _analyses_phrase(reward)
     html = (
-        "<div style=\"font-family:system-ui,-apple-system,Segoe UI,sans-serif;"
-        "max-width:520px;margin:0 auto;padding:24px;color:#e4e4e7;background:#09090b;\">"
-        "<h2 style=\"color:#a3e635;margin:0 0 12px;\">Can you tell us what was wrong with it?</h2>"
-        "<p style=\"line-height:1.6;\">Hi {},</p>"
-        "<p style=\"line-height:1.6;\">You tried Formanti recently — thank you. We're a "
-        "very small team and you're one of our first users, so your honest read "
-        "matters more than any amount of guessing on our side.</p>"
-        "<p style=\"line-height:1.6;\"><strong>Did the analysis find the right shots? "
-        "Was the coaching actually useful, or generic?</strong> Thirty seconds is plenty.</p>"
-        "<p style=\"margin:18px 0;padding:14px 16px;background:#1a2e05;border:1px solid "
-        "#4d7c0f;border-radius:10px;color:#d9f99d;\"><strong>{}</strong> are "
-        "added to your account the moment you send it, on us. "
-        "We pay the same for criticism as for praise; criticism is worth more to us.</p>"
-        "<p style=\"margin:24px 0;\"><a href=\"https://www.formanti.com/analyze?feedback=1\" "
-        "style=\"background:#a3e635;color:#000;padding:12px 22px;border-radius:999px;"
-        "text-decoration:none;font-weight:700;\">Tell us in 30 seconds</a></p>"
-        "<p style=\"color:#71717a;font-size:12px;line-height:1.5;border-top:1px solid #27272a;"
-        "padding-top:14px;\">You're getting this once because you have a Formanti account. "
-        "<a href=\"{}\" style=\"color:#a1a1aa;\">Unsubscribe</a></p>"
+        # Preheader: the grey line inboxes show after the subject.
+        "<div style=\"display:none;max-height:0;overflow:hidden;opacity:0;\">"
+        "30 seconds of honest feedback = {reward}. Criticism counts the same as praise.</div>"
+        "<div style=\"margin:0;padding:0;background:#0b0f14;font-family:-apple-system,BlinkMacSystemFont,"
+        "'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">"
+        "<div style=\"max-width:520px;margin:0 auto;padding:36px 24px;\">"
+        "<div style=\"font-size:24px;font-weight:800;color:#a3e635;margin-bottom:24px;\">Formanti</div>"
+        "<div style=\"background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:28px;\">"
+        "<h1 style=\"margin:0 0 14px;font-size:22px;line-height:1.3;color:#f8fafc;\">"
+        "Was our AI right about your game?</h1>"
+        "<p style=\"margin:0 0 12px;font-size:15px;line-height:1.6;color:#cbd5e1;\">Hi {who},</p>"
+        "<p style=\"margin:0 0 16px;font-size:15px;line-height:1.6;color:#cbd5e1;\">"
+        "You recently put one of your sessions through Formanti. Now we want your verdict "
+        "on <em>us</em> &mdash; three quick questions:</p>"
+        "<ol style=\"margin:0 0 18px;padding-left:20px;font-size:15px;line-height:1.8;color:#e2e8f0;\">"
+        "<li>Did it spot the right shots or reps?</li>"
+        "<li>Was the one thing to fix actually useful?</li>"
+        "<li>What was missing, or plain wrong?</li></ol>"
+        "<div style=\"margin:0 0 22px;padding:14px 16px;background:#1a2e05;border:1px solid #4d7c0f;"
+        "border-radius:12px;color:#d9f99d;font-size:14px;line-height:1.55;\">"
+        "<strong>Your feedback earns you {reward}.</strong> Use them to film the same shot again "
+        "and see exactly what changed. Criticism earns the same as praise.</div>"
+        "<a href=\"{link}\" style=\"display:inline-block;background:#a3e635;color:#0b0f14;"
+        "font-weight:700;font-size:15px;text-decoration:none;padding:14px 26px;border-radius:12px;\">"
+        "Rate my analysis &middot; 30 sec</a>"
+        "<p style=\"margin:22px 0 0;font-size:14px;line-height:1.6;color:#94a3b8;\">"
+        "Every answer is read by our team and goes straight into what we fix next.</p>"
+        "<p style=\"margin:14px 0 0;font-size:14px;color:#cbd5e1;\">&mdash; Team Formanti</p>"
         "</div>"
-    ).format(who, _analyses_phrase(reward), unsub)
+        "<p style=\"margin:20px 0 0;font-size:12px;line-height:1.5;color:#64748b;text-align:center;\">"
+        "You're getting this once because you have a Formanti account. "
+        "<a href=\"{unsub}\" style=\"color:#94a3b8;\">Unsubscribe</a></p>"
+        "</div></div>"
+    ).format(who=who, reward=reward_txt, link=link, unsub=unsub)
     text = (
-        "Can you tell us what was wrong with it?\n\nHi {},\n\nYou tried Formanti "
-        "recently. We're a very small team and you're one of our first users, so "
-        "your honest read matters more than our guessing.\n\n"
-        "Did the analysis find the right shots? Was the coaching useful, or generic?\n\n"
-        "{} are added the moment you send it. "
-        "We pay the same for criticism as for praise.\n\n"
-        "https://www.formanti.com/analyze?feedback=1\n\n"
-        "Unsubscribe: {}\n"
-    ).format(who, _analyses_phrase(reward), unsub)
+        "Was our AI right about your game?\n\n"
+        "Hi {who},\n\n"
+        "You recently put one of your sessions through Formanti. Now we want your verdict on us:\n\n"
+        "1. Did it spot the right shots or reps?\n"
+        "2. Was the one thing to fix actually useful?\n"
+        "3. What was missing, or plain wrong?\n\n"
+        "Your feedback earns you {reward}. Use them to film the same shot again and see "
+        "exactly what changed. Criticism earns the same as praise.\n\n"
+        "Rate my analysis (30 sec): {link}\n\n"
+        "Every answer is read by our team and goes straight into what we fix next.\n\n"
+        "- Team Formanti\n\n"
+        "Unsubscribe: {unsub}\n"
+    ).format(who=who, reward=reward_txt, link=link, unsub=unsub)
     return html, text
 
 
@@ -7195,6 +7321,14 @@ async def admin_feedback_campaign(
                 continue
             if not n:
                 continue
+        # Already gave feedback (and got the reward) — asking again, with a
+        # reward they can no longer earn, would be misleading.
+        try:
+            if await asyncio.wait_for(db.token_transactions.find_one(
+                    {"user_id": u["id"], "kind": "feedback_reward"}, {"_id": 1}), timeout=4.0):
+                continue
+        except Exception:
+            continue
         targets.append(u)
 
     def _mask(e):
@@ -7221,7 +7355,7 @@ async def admin_feedback_campaign(
             html, text = _campaign_email_html(
                 u.get("name"), FEEDBACK_REWARD_TOKENS, u["id"])
             ok = await _send_user_email(
-                u["email"], "Can you tell us what was wrong with it?",
+                u["email"], CAMPAIGN_SUBJECT,
                 html, text, from_addr=MAIL_FROM_INFO)
             sent += 1 if ok else 0
             failed += 0 if ok else 1

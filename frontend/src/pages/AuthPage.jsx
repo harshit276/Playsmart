@@ -26,6 +26,7 @@ export default function AuthPage() {
   const [name, setName] = useState("");
   const [emailAddr, setEmailAddr] = useState("");
   const [emailPass, setEmailPass] = useState("");
+  const [signupPhone, setSignupPhone] = useState(""); // optional, WhatsApp follow-up
   const [emailBusy, setEmailBusy] = useState(false);
   const [sentTo, setSentTo] = useState("");   // set once the verify link is emailed
   const [resending, setResending] = useState(false);
@@ -128,7 +129,7 @@ export default function AuthPage() {
     try {
       if (mode === "signup") {
         const { data } = await api.post("/auth/register", {
-          name: name.trim(), email, password: emailPass,
+          name: name.trim(), email, password: emailPass, phone: signupPhone.trim(),
         });
         // No session yet — the account stays unverified (and token-less)
         // until the emailed link is clicked.
@@ -368,6 +369,19 @@ export default function AuthPage() {
                   disabled={emailBusy}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
                 />
+                {mode === "signup" && (
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="Mobile (optional, for WhatsApp tips)"
+                    value={signupPhone}
+                    maxLength={24}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    disabled={emailBusy}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-lime-400 focus:outline-none"
+                  />
+                )}
                 <input
                   type="password"
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
