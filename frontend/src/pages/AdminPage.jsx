@@ -337,6 +337,8 @@ function StatsTab({ headers }) {
           </div>
         ))}
       </div>
+
+      <ReengagementCard headers={headers} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
         <div className="bg-gradient-to-br from-purple-500/10 to-zinc-900 border border-purple-400/30 rounded-2xl p-5">
           <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-2">Token Economy</p>
@@ -1184,6 +1186,95 @@ function SupportTab({ headers }) {
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+// Did the "film again & compare" nudges bring anyone back? Sends are easy to
+// count; taps and (the only number that matters) a NEW analysis afterwards
+// are what tell us whether the retention loop works.
+function ReengagementCard({ headers }) {
+  const { data, loading, refresh } = useFetch("/admin/reengagement-stats?days=30", headers);
+  const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : "—");
+  const [busy, setBusy] = useState(false);
+
+  // Catch-up send: the scheduled nudges only fire 3/7/14/30 days after an
+  // analysis, so users whose last session is older were never reachable.
+  const catchUp = async () => {
+    setBusy(true);
+    try {
+      const dry = await api.post("/admin/reengage-now", { dry_run: true, limit: 200 },
+        { headers, timeout: 60000 });
+      const n = dry.data?.would_send || 0;
+      if (!n) { toast.info("Nobody due — everyone was nudged recently or is active."); setBusy(false); return; }
+      if (!window.confirm(`Send the "film it again" nudge to ${n} user(s)?\nPush where possible, email otherwise.`)) {
+        setBusy(false);
+        return;
+      }
+      const r = await api.post("/admin/reengage-now", { dry_run: false, limit: 200 },
+        { headers, timeout: 120000 });
+      const st = r.data?.sent || {};
+      toast.success(`Sent — push: ${st.push || 0}, email: ${st.email || 0}, unreachable: ${st.none || 0}`);
+      refresh();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Couldn't send");
+    }
+    setBusy(false);
+  };
+  const rows = data?.by_milestone || [];
+  const total = data?.total || {};
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mt-6">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <p className="text-xs text-zinc-500 uppercase tracking-wider font-bold">
+          Come-back nudges · 30 days
+        </p>
+        <div className="flex gap-2">
+          <Button onClick={catchUp} disabled={busy} size="sm" variant="outline"
+            className="border-lime-400/30 text-lime-300 hover:bg-lime-400/10 text-xs h-7">
+            {busy ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔔"} Send catch-up nudges
+          </Button>
+          <Button onClick={refresh} size="sm" variant="ghost" className="text-zinc-400 text-xs h-7">
+            <RefreshCw className="w-3 h-3 mr-1" /> Refresh
+          </Button>
+        </div>
+      </div>
+      {loading ? <Spinner /> : !rows.length ? (
+        <p className="text-xs text-zinc-500">
+          Nothing sent yet. The daily cron sends these 3, 7, 14 and 30 days after an
+          analysis the user never followed up on.
+        </p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-zinc-500">
+                <tr>
+                  <th className="py-1 pr-3 font-medium">After</th>
+                  <th className="py-1 pr-3 font-medium">Sent</th>
+                  <th className="py-1 pr-3 font-medium">Push / Email</th>
+                  <th className="py-1 pr-3 font-medium">Tapped</th>
+                  <th className="py-1 font-medium">Analysed after</th>
+                </tr>
+              </thead>
+              <tbody className="text-zinc-300">
+                {rows.map((r) => (
+                  <tr key={r.milestone} className="border-t border-zinc-800/70">
+                    <td className="py-1.5 pr-3">{r.milestone} days</td>
+                    <td className="py-1.5 pr-3 font-mono">{r.sent}</td>
+                    <td className="py-1.5 pr-3 font-mono text-zinc-500">{r.push} / {r.email}</td>
+                    <td className="py-1.5 pr-3 font-mono">{r.clicked} <span className="text-zinc-600">({pct(r.clicked, r.sent)})</span></td>
+                    <td className="py-1.5 font-mono text-lime-400">{r.returned} <span className="text-zinc-600">({pct(r.returned, r.sent)})</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-[11px] text-zinc-500">
+            Total: {total.sent} sent · {total.clicked} tapped · {total.returned} came back and analysed.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function useFetch(url, headers) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);

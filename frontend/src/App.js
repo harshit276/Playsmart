@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar";
 import LandingPage from "@/pages/LandingPage"; // Eager — first paint
 import InstallPrompt from "@/components/InstallPrompt";
 import PhonePrompt from "@/components/PhonePrompt";
+import NudgeTracker from "@/components/NudgeTracker";
 import VirtualCoach from "@/components/VirtualCoach";
 
 // Code-split — each page loads on demand
@@ -359,6 +360,7 @@ function App() {
             <Toaster position="bottom-right" />
             <InstallPrompt />
             <PhonePrompt />
+            <NudgeTracker />
             <VirtualCoach />
           </div>
         </AuthProvider>

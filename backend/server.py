@@ -6731,7 +6731,7 @@ async def _notify_job_done(job: dict, payload: dict):
 _REENGAGE_MILESTONES = [3, 7, 14, 30]
 
 
-def _reengage_copy(analysis: dict, milestone_days: int) -> dict:
+def _reengage_copy(analysis: dict, milestone_days: int, nudge_id: str = "") -> dict:
     sport = (analysis.get("sport") or "").replace("_", " ").strip()
     sport_title = sport.title() if sport else "your sport"
     shot = _primary_shot_type(analysis)
@@ -6745,12 +6745,38 @@ def _reengage_copy(analysis: dict, milestone_days: int) -> dict:
     else:
         body = (f"It's been a few days — upload a new {sport_title} clip and "
                 f"we'll measure how much you've improved since last time.")
+    # The URL carries the nudge id so a tap can be attributed (see
+    # POST /push/clicked) — without it we could only count sends.
+    url = "/analyze?src=push&n={}".format(nudge_id) if nudge_id else "/analyze"
     return {
         "title": title,
         "body": body[:180],
-        "url": "/analyze",
+        "url": url,
         "job_id": f"reengage-{analysis.get('id')}-{milestone_days}",
     }
+
+
+def _reengage_email_html(payload: dict, nudge_id: str) -> tuple:
+    """Same nudge for users with no push subscription — most people never
+    granted notifications, so push alone reaches only a fraction of them."""
+    link = "{}/analyze?src=email&n={}".format(SHARE_SITE_URL, nudge_id)
+    html = (
+        "<div style=\"margin:0;padding:0;background:#0b0f14;font-family:-apple-system,"
+        "BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">"
+        "<div style=\"max-width:520px;margin:0 auto;padding:36px 24px;\">"
+        "<div style=\"font-size:24px;font-weight:800;color:#a3e635;margin-bottom:24px;\">Formanti</div>"
+        "<div style=\"background:#131a22;border:1px solid #1f2933;border-radius:16px;padding:28px;\">"
+        "<h1 style=\"margin:0 0 14px;font-size:22px;line-height:1.3;color:#f8fafc;\">{title}</h1>"
+        "<p style=\"margin:0 0 20px;font-size:15px;line-height:1.6;color:#cbd5e1;\">{body}</p>"
+        "<a href=\"{link}\" style=\"display:inline-block;background:#a3e635;color:#0b0f14;"
+        "font-weight:700;font-size:15px;text-decoration:none;padding:14px 26px;border-radius:12px;\">"
+        "Film again &amp; compare</a>"
+        "<p style=\"margin:20px 0 0;font-size:13px;line-height:1.6;color:#64748b;\">"
+        "Same shot, same camera angle, 10&ndash;30 seconds. We put both sessions side by side.</p>"
+        "</div></div></div>"
+    ).format(title=payload.get("title", ""), body=payload.get("body", ""), link=link)
+    text = "{}\n\n{}\n\n{}\n".format(payload.get("title", ""), payload.get("body", ""), link)
+    return html, text
 
 
 async def _send_reengage_to_user(user_id: str, payload: dict) -> bool:
@@ -6813,11 +6839,28 @@ async def _scan_and_send_reengagement():
                     continue
             except Exception:
                 continue
-            ok = await _send_reengage_to_user(uid, _reengage_copy(a, d))
+            nudge_id = str(uuid.uuid4())
+            payload = _reengage_copy(a, d, nudge_id)
+            ok = await _send_reengage_to_user(uid, payload)
+            channel = "push" if ok else ""
+            # No push subscription (most users never granted notifications) —
+            # fall back to email so the loop actually reaches them.
+            if not ok:
+                try:
+                    u = await asyncio.wait_for(db.users.find_one(
+                        {"id": uid}, {"_id": 0, "email": 1, "email_opt_out": 1}), timeout=4.0)
+                except Exception:
+                    u = None
+                addr = (u or {}).get("email")
+                if addr and not (u or {}).get("email_opt_out"):
+                    html, text = _reengage_email_html(payload, nudge_id)
+                    if await _send_user_email(addr, payload["title"], html, text):
+                        ok, channel = True, "email"
             if ok:
                 try:
                     await db.reengagement_log.insert_one(
-                        {"analysis_id": aid, "user_id": uid, "milestone": d, "sent_at": now})
+                        {"id": nudge_id, "analysis_id": aid, "user_id": uid, "milestone": d,
+                         "channel": channel, "sport": a.get("sport"), "sent_at": now})
                 except Exception:
                     pass
                 sent += 1
@@ -6826,6 +6869,166 @@ async def _scan_and_send_reengagement():
             logger.info(f"[reengage] sent {sent} re-engagement push(es)")
         except Exception:
             pass
+
+
+class NudgeClickRequest(BaseModel):
+    id: str = Field(..., max_length=64)
+
+
+@api_router.post("/push/clicked")
+async def push_clicked(req: NudgeClickRequest):
+    """Mark a re-engagement nudge as tapped (the id rides in the link).
+
+    Unauthenticated on purpose: the tap may land in a browser where the
+    session has expired, and an un-counted click is worse than a stray one.
+    Only the first tap counts.
+    """
+    try:
+        await asyncio.wait_for(db.reengagement_log.update_one(
+            {"id": req.id, "clicked_at": {"$exists": False}},
+            {"$set": {"clicked_at": datetime.now(timezone.utc)}}), timeout=4.0)
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+class ReengageNowRequest(BaseModel):
+    dry_run: bool = True
+    limit: int = 100
+    min_days_since: int = 5          # left alone for at least this long
+    cooldown_days: int = 14          # never two nudges inside this window
+
+
+@api_router.post("/admin/reengage-now")
+async def admin_reengage_now(
+    req: ReengageNowRequest, x_admin_key: str = Header(None, alias="X-Admin-Key"),
+):
+    """Catch-up nudge for users the scheduled milestones missed.
+
+    The automatic loop only fires 3/7/14/30 days after an analysis, so anyone
+    whose last session is older than that never gets one. This walks every
+    user with a saved analysis, takes their most recent one, and sends the
+    same "film it again and compare" nudge (push, email fallback). Dry run by
+    default; deduped by cooldown_days so nobody is nudged twice.
+    """
+    _require_admin(x_admin_key)
+    limit = max(1, min(500, int(req.limit or 100)))
+    now = datetime.now(timezone.utc)
+    cutoff = (now - timedelta(days=max(1, int(req.min_days_since or 5)))).isoformat()
+    cooldown = now - timedelta(days=max(1, int(req.cooldown_days or 14)))
+
+    try:
+        uids = await asyncio.wait_for(
+            db.video_analyses.distinct("user_id"), timeout=15.0)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="DB error: {}".format(str(exc)[:120]))
+
+    targets = []
+    for uid in [u for u in (uids or []) if u]:
+        if len(targets) >= limit:
+            break
+        try:
+            latest = await asyncio.wait_for(db.video_analyses.find(
+                {"user_id": uid}, {"_id": 0, "id": 1, "user_id": 1, "sport": 1, "date": 1,
+                                   "shot_analysis": 1, "shots": 1}
+            ).sort("date", -1).to_list(1), timeout=6.0)
+        except Exception:
+            continue
+        if not latest:
+            continue
+        a = latest[0]
+        if not a.get("date") or a["date"] > cutoff:
+            continue        # analysed recently — they're active, leave them be
+        try:
+            if await db.reengagement_log.find_one({"user_id": uid, "sent_at": {"$gte": cooldown}}):
+                continue
+        except Exception:
+            continue
+        targets.append(a)
+
+    if req.dry_run:
+        return {"dry_run": True, "would_send": len(targets),
+                "users": [str(a.get("user_id"))[:8] for a in targets]}
+
+    sent = {"push": 0, "email": 0, "none": 0}
+    for a in targets:
+        uid = a["user_id"]
+        nudge_id = str(uuid.uuid4())
+        days_since = 0
+        try:
+            days_since = max(0, (now - datetime.fromisoformat(a["date"])).days)
+        except Exception:
+            pass
+        payload = _reengage_copy(a, days_since, nudge_id)
+        ok = await _send_reengage_to_user(uid, payload)
+        channel = "push" if ok else ""
+        if not ok:
+            try:
+                u = await asyncio.wait_for(db.users.find_one(
+                    {"id": uid}, {"_id": 0, "email": 1, "email_opt_out": 1}), timeout=4.0)
+            except Exception:
+                u = None
+            addr = (u or {}).get("email")
+            if addr and not (u or {}).get("email_opt_out"):
+                html, text = _reengage_email_html(payload, nudge_id)
+                if await _send_user_email(addr, payload["title"], html, text):
+                    ok, channel = True, "email"
+        sent[channel or "none"] += 1
+        if ok:
+            try:
+                await db.reengagement_log.insert_one(
+                    {"id": nudge_id, "analysis_id": a.get("id"), "user_id": uid,
+                     "milestone": days_since, "channel": channel, "sport": a.get("sport"),
+                     "source": "catch_up", "sent_at": now})
+            except Exception:
+                pass
+    return {"dry_run": False, "sent": sent, "targets": len(targets)}
+
+
+@api_router.get("/admin/reengagement-stats")
+async def admin_reengagement_stats(
+    x_admin_key: str = Header(None, alias="X-Admin-Key"), days: int = 30,
+):
+    """Did the nudges bring anyone back? Sent / tapped / analysed after.
+
+    "Returned" counts a NEW analysis by that user after the nudge went out —
+    the only outcome that matters, since a tap that doesn't end in an upload
+    is just a visit.
+    """
+    _require_admin(x_admin_key)
+    since = datetime.now(timezone.utc) - timedelta(days=max(1, min(180, int(days or 30))))
+    try:
+        rows = await asyncio.wait_for(db.reengagement_log.find(
+            {"sent_at": {"$gte": since}}, {"_id": 0}).to_list(2000), timeout=10.0)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="DB error: {}".format(str(exc)[:120]))
+
+    buckets: dict = {}
+    for r in rows:
+        key = "{}d".format(r.get("milestone"))
+        b = buckets.setdefault(key, {"milestone": r.get("milestone"), "sent": 0,
+                                     "push": 0, "email": 0, "clicked": 0, "returned": 0})
+        b["sent"] += 1
+        ch = r.get("channel") or "push"
+        if ch in ("push", "email"):
+            b[ch] += 1
+        if r.get("clicked_at"):
+            b["clicked"] += 1
+        sent_at = r.get("sent_at")
+        uid = r.get("user_id")
+        if uid and sent_at:
+            try:
+                iso = sent_at.isoformat() if hasattr(sent_at, "isoformat") else str(sent_at)
+                if await asyncio.wait_for(db.video_analyses.find_one(
+                        {"user_id": uid, "date": {"$gt": iso}}, {"_id": 1}), timeout=3.0):
+                    b["returned"] += 1
+            except Exception:
+                pass
+    out = sorted(buckets.values(), key=lambda x: (x["milestone"] or 0))
+    total = {"sent": sum(b["sent"] for b in out), "clicked": sum(b["clicked"] for b in out),
+             "returned": sum(b["returned"] for b in out),
+             "push": sum(b["push"] for b in out), "email": sum(b["email"] for b in out)}
+    return {"days": days, "total": total, "by_milestone": out}
 
 
 async def _scan_and_send_attendance_reminders() -> int:
@@ -6897,6 +7100,13 @@ async def cron_attendance_reminders(authorization: str = Header(None)):
     if secret and authorization != f"Bearer {secret}":
         raise HTTPException(status_code=403, detail="forbidden")
     reminders = await _scan_and_send_attendance_reminders()
+    # The retention loop. It used to run ONLY from the in-process 6-hourly
+    # task, which on serverless dies with the frozen instance — so these
+    # nudges were effectively never sent. The cron is the reliable trigger.
+    try:
+        await asyncio.wait_for(_scan_and_send_reengagement(), timeout=120.0)
+    except Exception as exc:
+        logger.warning("[reengage] cron scan failed: {}".format(str(exc)[:140]))
     # Guaranteed backstop for the feedback nudge. The opportunistic sweep off
     # /warm handles the ~10-minute case, but if nobody visits the site all day
     # this daily run still catches every analysis that never got asked.
