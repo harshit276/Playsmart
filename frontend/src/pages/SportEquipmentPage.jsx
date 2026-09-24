@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
+import { useParams, useLocation, Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ShoppingBag, ArrowRight, Check, X, ExternalLink, Sparkles, ChevronRight } from "lucide-react";
 import SEO from "@/components/SEO";
@@ -105,7 +105,12 @@ function ProductCard({ item }) {
 }
 
 export default function SportEquipmentPage() {
-  const { sport } = useParams();
+  // Each sport has its own literal route ("/badminton/equipment"), so there is
+  // no :sport param to read — take the slug from the path itself. Without this
+  // every gear page bounced to /marketplace and Google refused to index them.
+  const { pathname } = useLocation();
+  const params = useParams();
+  const sport = params.sport || pathname.split("/").filter(Boolean)[0];
   const meta = equipmentSeo.sports[sport];
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);

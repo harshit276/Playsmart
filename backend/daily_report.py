@@ -254,5 +254,6 @@ async def build_daily_report(db) -> str:
     alerts = alerts_section(product)
     if alerts:
         parts.append(alerts)
-    day = datetime.now(timezone.utc).strftime("%d %b")
+    # Stamp the report in IST — the day it reads as to whoever gets it.
+    day = (datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)).strftime("%d %b")
     return f"Formanti daily · {day}\n\n" + "\n\n".join(p for p in parts if p)
