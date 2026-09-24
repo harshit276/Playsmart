@@ -7091,6 +7091,41 @@ async def _scan_and_send_attendance_reminders() -> int:
     return sent
 
 
+async def _send_daily_report() -> bool:
+    """Build the daily report and push it to Telegram. Never raises."""
+    try:
+        from daily_report import build_daily_report
+    except Exception:
+        try:
+            from backend.daily_report import build_daily_report   # local/dev layout
+        except Exception as exc:
+            logger.warning("[daily-report] import failed: {}".format(str(exc)[:120]))
+            return False
+    try:
+        text = await build_daily_report(db)
+    except Exception as exc:
+        logger.warning("[daily-report] build failed: {}".format(str(exc)[:140]))
+        return False
+    # Telegram caps a message at 4096 chars; the report is far shorter, but
+    # split rather than lose the tail if a section grows.
+    for chunk in [text[i:i + 3500] for i in range(0, len(text), 3500)] or [text]:
+        await _notify_admin_now("Daily report", chunk, timeout=15.0)
+    return True
+
+
+@api_router.post("/admin/daily-report")
+async def admin_daily_report(x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """Run the daily report now (same content the cron sends)."""
+    _require_admin(x_admin_key)
+    try:
+        from daily_report import build_daily_report
+    except Exception:
+        from backend.daily_report import build_daily_report
+    text = await build_daily_report(db)
+    sent = await _send_daily_report()
+    return {"ok": True, "sent_to_telegram": sent, "report": text}
+
+
 @api_router.get("/cron/attendance-reminders")
 async def cron_attendance_reminders(authorization: str = Header(None)):
     """Cron entry point (see vercel.json). The in-process loop below also calls
@@ -7099,6 +7134,13 @@ async def cron_attendance_reminders(authorization: str = Header(None)):
     secret = os.environ.get("CRON_SECRET", "").strip()
     if secret and authorization != f"Bearer {secret}":
         raise HTTPException(status_code=403, detail="forbidden")
+    # One message a day with signups, analyses, revenue, traffic and whether
+    # Google has indexed the key pages — so none of it has to be checked by
+    # hand across three dashboards.
+    try:
+        await asyncio.wait_for(_send_daily_report(), timeout=90.0)
+    except Exception as exc:
+        logger.warning("[daily-report] failed: {}".format(str(exc)[:140]))
     reminders = await _scan_and_send_attendance_reminders()
     # The retention loop. It used to run ONLY from the in-process 6-hourly
     # task, which on serverless dies with the frozen instance — so these

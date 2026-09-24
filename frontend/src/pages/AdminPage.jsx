@@ -274,6 +274,21 @@ function StatsTab({ headers }) {
     }
     setTesting(false);
   };
+  // The same report the daily cron sends — runnable on demand.
+  const [reporting, setReporting] = useState(false);
+  const [report, setReport] = useState("");
+  const runDailyReport = async () => {
+    setReporting(true);
+    try {
+      const r = await api.post("/admin/daily-report", {}, { headers, timeout: 120000 });
+      setReport(r.data?.report || "");
+      toast.success(r.data?.sent_to_telegram ? "Sent to Telegram" : "Built, but Telegram isn't configured");
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Report failed");
+    }
+    setReporting(false);
+  };
+
   const [fixing, setFixing] = useState(false);
   const fixPhoneIndex = async () => {
     if (!confirm("Drop + recreate the users.phone index as partial-unique?\n(One-shot fix. Safe.)")) return;
@@ -318,6 +333,10 @@ function StatsTab({ headers }) {
             className="border-amber-400/30 text-amber-300 hover:bg-amber-400/10 text-xs h-7">
             {testing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔔"} Test notify
           </Button>
+          <Button onClick={runDailyReport} disabled={reporting} size="sm" variant="outline"
+            className="border-sky-400/30 text-sky-300 hover:bg-sky-400/10 text-xs h-7">
+            {reporting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "📊"} Daily report now
+          </Button>
           <Button onClick={fixPhoneIndex} disabled={fixing} size="sm" variant="outline"
             className="border-rose-400/30 text-rose-300 hover:bg-rose-400/10 text-xs h-7">
             {fixing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : "🔧"} Fix phone index
@@ -337,6 +356,12 @@ function StatsTab({ headers }) {
           </div>
         ))}
       </div>
+
+      {report && (
+        <pre className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mt-4 text-[11px] leading-relaxed text-zinc-300 whitespace-pre-wrap">
+          {report}
+        </pre>
+      )}
 
       <ReengagementCard headers={headers} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
