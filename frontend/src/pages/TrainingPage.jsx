@@ -223,7 +223,6 @@ export default function TrainingPage() {
   const [toggling, setToggling] = useState(null);
 
   // Set page title
-  useEffect(() => { document.title = "Training | Formanti"; }, []);
   const [activeWeek, setActiveWeek] = useState(0);
   const [difficultyFilter, setDifficultyFilter] = useState("All");
   const [focusFilter, setFocusFilter] = useState("All");
@@ -363,9 +362,22 @@ export default function TrainingPage() {
     return ["All", ...Array.from(set)];
   }, [drills]);
 
+  // Rendered in EVERY state, not just the signed-in plan view. Google crawls
+  // as a guest, so it only ever saw the loading / guest views — which had no
+  // title or canonical — and filed /training as a duplicate of another page.
+  const seoTag = (
+    <SEO
+      title="Personalized Sports Training Plans - Drills & Workouts"
+      description="Get a personalized training plan with drills, exercises, and video tutorials. Improve your badminton smash, tennis serve, table tennis spin, or pickleball dink with structured weekly workouts."
+      keywords="badminton training plan, tennis drills, table tennis exercises, sports workout plan, badminton footwork drills"
+      url="https://www.formanti.com/training"
+    />
+  );
+
   /* ─── Loading skeleton ─── */
   if (loading) return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8">
+      {seoTag}
       <div className="container mx-auto px-4 max-w-5xl">
         {/* Header skeleton */}
         <div className="mb-6">
@@ -409,6 +421,7 @@ export default function TrainingPage() {
 
   if (fetchError) return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      {seoTag}
       <div className="text-center">
         <Dumbbell className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
         <p className="text-zinc-400 text-lg font-medium mb-1">Could not load training plan</p>
@@ -424,6 +437,7 @@ export default function TrainingPage() {
 
   if (!plan) return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="training-page">
+      {seoTag}
       <div className="container mx-auto px-4 max-w-5xl">
 
         {/* Header */}
@@ -432,6 +446,11 @@ export default function TrainingPage() {
             <span className="mr-2">{SPORT_EMOJI[sport] || "\u{1F3AF}"}</span>
             {sport.replace("_", " ")} Training
           </h1>
+          <p className="text-sm text-zinc-400 mb-3 max-w-2xl">
+            Weekly training plans with drills and video tutorials for badminton, tennis, table tennis,
+            pickleball, cricket and more. Pick your sport and level below — or analyze a clip and the
+            plan adapts to what our AI sees in your game.
+          </p>
           {!user && (
             <div className="bg-lime-400/5 border border-lime-400/20 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
@@ -639,12 +658,7 @@ export default function TrainingPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 py-6 sm:py-8" data-testid="training-page">
-      <SEO
-        title="Personalized Sports Training Plans - Drills & Workouts"
-        description="Get a personalized training plan with drills, exercises, and video tutorials. Improve your badminton smash, tennis serve, table tennis spin, or pickleball dink with structured weekly workouts."
-        keywords="badminton training plan, tennis drills, table tennis exercises, sports workout plan, badminton footwork drills"
-        url="https://www.formanti.com/training"
-      />
+      {seoTag}
       <div className="container mx-auto px-4 max-w-5xl">
 
         {/* ═══ COMPACT HEADER ═══ */}
@@ -662,6 +676,13 @@ export default function TrainingPage() {
               </div>
             </div>
           </div>
+          {!user && (
+            <p className="text-sm text-zinc-400 mb-3 max-w-2xl">
+              A free weekly training plan with drills and video tutorials for badminton, tennis, table tennis,
+              pickleball, cricket and more. Sign in to track your days — or analyze a clip and the plan adapts
+              to what our AI sees in your game.
+            </p>
+          )}
 
           {/* Overall progress — animated completion gauge + day checklist bar */}
           <div className="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 flex items-center gap-4 sm:gap-6">

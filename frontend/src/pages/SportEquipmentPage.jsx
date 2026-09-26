@@ -14,7 +14,7 @@ import { useParams, useLocation, Link, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Search, Filter, ArrowUpDown, CheckCircle2, ShoppingBag, ArrowRight,
-  Sparkles, ChevronRight, ChevronDown,
+  Sparkles, ChevronRight, ChevronDown, BookOpen,
 } from "lucide-react";
 import SEO from "@/components/SEO";
 import { Badge } from "@/components/ui/badge";
@@ -206,7 +206,9 @@ export default function SportEquipmentPage() {
       "@context": "https://schema.org",
       "@type": "ItemList",
       name: `Best ${meta.sportName} Equipment`,
-      itemListElement: items.slice(0, 40).map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name })),
+      itemListElement: items.slice(0, 40).map((it, i) => ({
+        "@type": "ListItem", position: i + 1, item: productSchema(it),
+      })),
     },
     {
       "@context": "https://schema.org",
@@ -218,6 +220,9 @@ export default function SportEquipmentPage() {
   ];
 
   const otherGuides = Object.entries(equipmentSeo.sports).filter(([k]) => k !== slug);
+  // Every guide linked anywhere on this page, once each, buying guides first.
+  const allGuides = [...Object.values(meta.guides || {}).flat(), ...(meta.moreGuides || [])]
+    .filter(([s], i, arr) => arr.findIndex(([x]) => x === s) === i);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-40 md:pb-24">
@@ -334,6 +339,7 @@ export default function SportEquipmentPage() {
                     </button>
                   )}
                 </div>
+                <GuideLinks guides={meta.guides?.[c.key]} />
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   {inCat.slice(0, PREVIEW_COUNT).map((it, i) => (
                     <ProductCard key={`${c.key}-${it.id || it.name}`} item={it} delay={Math.min(i * 0.02, 0.2)} showBlurb />
@@ -346,6 +352,7 @@ export default function SportEquipmentPage() {
           })
         ) : (
           <>
+            {category !== "all" && <GuideLinks guides={meta.guides?.[category]} />}
             <p className="text-xs text-zinc-500 mb-3">
               {recommendActive && picksLoading
                 ? "Ranking your best matches…"
@@ -395,6 +402,25 @@ export default function SportEquipmentPage() {
                   </summary>
                   <p className="text-[13px] text-zinc-400 leading-relaxed mt-2">{a}</p>
                 </details>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Our own coaching and buying guides for this sport. Most of these
+            posts sat in Google's "discovered, not crawled" pile with no
+            internal links pointing at them. */}
+        {allGuides.length > 0 && (
+          <section className="mt-10">
+            <h2 className="text-lg sm:text-xl font-heading font-bold mb-3">{meta.sportName} guides from our coaches</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {allGuides.map(([s, title]) => (
+                <Link key={s} to={`/blog/${s}`}
+                  className="group flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-3 hover:border-lime-400/40 transition-colors">
+                  <BookOpen className="w-4 h-4 text-lime-400 shrink-0" />
+                  <span className="flex-1 text-[13px] text-zinc-200 leading-snug">{title}</span>
+                  <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-lime-400 shrink-0" />
+                </Link>
               ))}
             </div>
           </section>
@@ -504,6 +530,26 @@ export default function SportEquipmentPage() {
   );
 }
 
+// schema.org Product with the price band across stores. Kept in step with
+// productSchema() in scripts/seoFallbacks.mjs (the crawler's static copy).
+function productSchema(it) {
+  const prices = (it.marketplace_prices || []).map((p) => p.price).filter((n) => typeof n === "number" && n > 0);
+  const inr = it.price_ranges?.INR || {};
+  const low = prices.length ? Math.min(...prices) : inr.min;
+  const high = prices.length ? Math.max(...prices) : (inr.max || inr.min);
+  const out = { "@type": "Product", name: it.name };
+  if (it.brand) out.brand = { "@type": "Brand", name: it.brand };
+  if (it.description) out.description = it.description;
+  if (typeof it.image === "string" && it.image.startsWith("http")) out.image = it.image;
+  if (low) {
+    out.offers = {
+      "@type": "AggregateOffer", priceCurrency: "INR", lowPrice: low, highPrice: high || low,
+      offerCount: Math.max(prices.length, 1),
+    };
+  }
+  return out;
+}
+
 // Server-ranked picks first (in the server's order), then everything else.
 function orderWithPicks(list, serverPicks) {
   if (!serverPicks?.items?.length) return list.map((item) => ({ item, pick: undefined }));
@@ -511,6 +557,23 @@ function orderWithPicks(list, serverPicks) {
   const first = serverPicks.items.map((p) => list.find((it) => it.id === p.item_id)).filter(Boolean);
   const rest = list.filter((it) => !picks.has(it.id));
   return [...first, ...rest].map((item) => ({ item, pick: picks.get(item.id) }));
+}
+
+// Our buying guides for one gear category, e.g. "Best badminton racket under
+// ₹2000" above the rackets grid.
+function GuideLinks({ guides }) {
+  if (!guides?.length) return null;
+  return (
+    <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1 mb-3 scrollbar-hide">
+      {guides.map(([s, title]) => (
+        <Link key={s} to={`/blog/${s}`}
+          className="shrink-0 max-w-[16rem] sm:max-w-xs inline-flex items-center gap-1.5 rounded-full border border-lime-400/25 bg-lime-400/5 px-3 py-1.5 text-[11px] text-lime-200 hover:bg-lime-400/15 transition-colors">
+          <BookOpen className="w-3 h-3 shrink-0" />
+          <span className="truncate">{title}</span>
+        </Link>
+      ))}
+    </div>
+  );
 }
 
 function AnalyzeBanner() {

@@ -1,9 +1,21 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, Clock, Share2, Copy, Check, ArrowRight, Zap } from "lucide-react";
+import { ArrowLeft, Calendar, Clock, Share2, Copy, Check, ArrowRight, Zap, ShoppingBag } from "lucide-react";
 import api from "@/lib/api";
 import SEO from "@/components/SEO";
+
+// Post sport -> its gear guide (posts use both spellings for table tennis).
+const GEAR_GUIDE_FOR = {
+  badminton: { slug: "badminton", name: "badminton" },
+  tennis: { slug: "tennis", name: "tennis" },
+  "table-tennis": { slug: "table-tennis", name: "table tennis" },
+  table_tennis: { slug: "table-tennis", name: "table tennis" },
+  pickleball: { slug: "pickleball", name: "pickleball" },
+  cricket: { slug: "cricket", name: "cricket" },
+  football: { slug: "football", name: "football" },
+  swimming: { slug: "swimming", name: "swimming" },
+};
 
 const CATEGORY_COLOR = {
   guides: "bg-blue-500/20 text-blue-400",
@@ -207,6 +219,20 @@ export default function BlogPostPage() {
             className="blog-content max-w-none"
             dangerouslySetInnerHTML={{ __html: post.content }}
           />
+
+          {/* Link to the sport's gear guide — shoppers reading a buying
+              guide want the products, and the link helps Google reach it. */}
+          {GEAR_GUIDE_FOR[post.sport] && (
+            <Link to={`/${GEAR_GUIDE_FOR[post.sport].slug}/equipment`}
+              className="mt-8 flex items-center gap-3 rounded-2xl border border-lime-400/25 bg-lime-400/5 px-4 py-3 hover:bg-lime-400/10 transition-colors">
+              <ShoppingBag className="w-5 h-5 text-lime-400 shrink-0" />
+              <span className="flex-1 text-sm text-zinc-200">
+                <span className="font-semibold text-white">Best {GEAR_GUIDE_FOR[post.sport].name} equipment</span>
+                {" "}— compare prices across stores, by level and budget
+              </span>
+              <ArrowRight className="w-4 h-4 text-lime-400 shrink-0" />
+            </Link>
+          )}
 
           {/* Tags */}
           <div className="mt-10 pt-6 border-t border-zinc-800/50">

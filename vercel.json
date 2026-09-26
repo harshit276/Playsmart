@@ -196,6 +196,42 @@
       "dest": "/frontend/swimming/equipment/index.html"
     },
     {
+      "src": "/pricing",
+      "dest": "/frontend/pricing/index.html"
+    },
+    {
+      "src": "/demo",
+      "dest": "/frontend/demo/index.html"
+    },
+    {
+      "src": "/download",
+      "dest": "/frontend/download/index.html"
+    },
+    {
+      "src": "/help",
+      "dest": "/frontend/help/index.html"
+    },
+    {
+      "src": "/contact",
+      "dest": "/frontend/contact/index.html"
+    },
+    {
+      "src": "/terms",
+      "dest": "/frontend/terms/index.html"
+    },
+    {
+      "src": "/refund",
+      "dest": "/frontend/refund/index.html"
+    },
+    {
+      "src": "/cancellation",
+      "dest": "/frontend/cancellation/index.html"
+    },
+    {
+      "src": "/shipping",
+      "dest": "/frontend/shipping/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/frontend/index.html"
     }

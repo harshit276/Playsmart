@@ -214,6 +214,81 @@ const ROUTES = {
   },
 };
 
+/* ------------------------------------------------------------------ *
+ * Info & policy pages.
+ *
+ * WHY: these had no static file, so they were served the homepage shell -
+ * whose canonical points at "/". Google read that as "this page is a copy
+ * of the homepage" and dropped /refund and /cancellation from the index
+ * ("Alternate page with proper canonical tag"). A light page with its own
+ * title, description and canonical is enough; the React page mounts over it.
+ * ------------------------------------------------------------------ */
+const INFO_ROUTES = {
+  "/pricing": {
+    title: "Pricing - AI Video Analysis for Badminton, Tennis, Cricket",
+    description: "Pay-as-you-go AI sports video analysis with no subscription. Buy analysis packs when you need them; new accounts get free analyses to start.",
+    h1: "Pricing",
+    blurb: "Pay only for the analyses you run - no subscription. Each analysis gives a shot-by-shot breakdown, technique feedback, coach notes and a report.",
+  },
+  "/demo": {
+    title: "See a Sample AI Sports Analysis",
+    description: "See exactly what Formanti's AI produces from a single clip: shot-by-shot breakdown, technique feedback, coach's read, and a downloadable report. Then analyse your own - free.",
+    h1: "What Formanti Sees in Your Game",
+    blurb: "A real sample analysis: every shot classified, technique feedback on each, the coach's read of the rally, and the drills that follow from it.",
+  },
+  "/download": {
+    title: "Get the Formanti App - Android, iPhone & Desktop",
+    description: "Install Formanti on your phone in seconds. Works on Android, iPhone, and Desktop. No app store needed. AI sports coaching at your fingertips.",
+    h1: "Get the Formanti App",
+    blurb: "Install Formanti straight from your browser on Android, iPhone or desktop - no app store needed - and get reminders to film again and track your progress.",
+  },
+  "/help": {
+    title: "Help & Customer Support",
+    description: "Contact Formanti customer care. Get help with sign-in, analyses, video uploads, payments, equipment orders, or report a bug.",
+    h1: "Help & Support",
+    blurb: "Answers to common questions about signing in, uploading videos, analyses and payments - and how to reach our support team.",
+  },
+  "/contact": {
+    title: "Contact Us",
+    description: "Get in touch with the Formanti team for support, partnerships, coaching academies or press.",
+    h1: "Contact Us",
+    blurb: "We're here to help. Reach out and we'll get back to you as soon as we can.",
+  },
+  "/terms": {
+    title: "Terms & Conditions",
+    description: "The terms that govern your use of Formanti, the AI sports coaching platform at formanti.com and its mobile app.",
+    h1: "Terms & Conditions",
+    blurb: "These terms govern your access to and use of Formanti, an AI-powered sports coaching platform, and its associated mobile application.",
+  },
+  "/refund": {
+    title: "Refund Policy",
+    description: "Formanti's refund policy for analysis packs: when you are eligible for a refund and how to request one.",
+    h1: "Refund Policy",
+    blurb: "When a payment was charged but analyses were not credited, or a purchase went wrong, this is how refunds work and how to ask for one.",
+  },
+  "/cancellation": {
+    title: "Cancellation Policy",
+    description: "Formanti's cancellation policy for analysis packs and orders.",
+    h1: "Cancellation Policy",
+    blurb: "How cancellations work for analysis packs bought on Formanti.",
+  },
+  "/shipping": {
+    title: "Shipping & Delivery Policy",
+    description: "How Formanti delivers what you buy: analysis packs are credited to your account instantly - there is no physical shipment.",
+    h1: "Shipping & Delivery Policy",
+    blurb: "Analysis packs are digital and appear in your account wallet as soon as payment completes. There is no physical or emailed shipment.",
+  },
+};
+
+function buildInfoMain(data) {
+  return `<main style="max-width:760px;margin:0 auto;padding:48px 20px;font-family:Inter,system-ui,sans-serif;color:#e5e5e5;background:#0a0a0a;min-height:100vh">
+                <h1 style="font-size:2rem;line-height:1.2;color:#fff">${esc(data.h1)}</h1>
+                <p style="font-size:1.05rem;color:#cfcfcf">${esc(data.blurb)}</p>
+                <p style="line-height:1.9"><a href="/" style="color:#a3e635">Home</a> &middot; <a href="/analyze" style="color:#a3e635">Analyze a video</a> &middot; <a href="/pricing" style="color:#a3e635">Pricing</a> &middot; <a href="/help" style="color:#a3e635">Help</a> &middot; <a href="/contact" style="color:#a3e635">Contact</a></p>
+                <noscript><p style="color:#fbbf24">Enable JavaScript for the full interactive Formanti experience.</p></noscript>
+            </main>`;
+}
+
 const esc = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -318,8 +393,18 @@ async function getJSON(url, tries = 3) {
 // Strip tags for the meta description fallback / word count.
 const stripTags = (html) => String(html || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 
+// Blog post sport -> its gear guide slug (posts use both spellings for TT).
+const GEAR_GUIDE_FOR = {
+  badminton: "badminton", tennis: "tennis", "table-tennis": "table-tennis", table_tennis: "table-tennis",
+  pickleball: "pickleball", cricket: "cricket", football: "football", swimming: "swimming",
+};
+
 function buildArticleMain(post) {
   const date = post.published_date || "";
+  const gear = GEAR_GUIDE_FOR[post.sport];
+  const gearLink = gear
+    ? ` &middot; <a href="/${gear}/equipment" style="color:#a3e635">Best ${esc(gear.replace("-", " "))} equipment</a>`
+    : "";
   const meta = [date, post.read_time, post.sport].filter(Boolean).map(esc).join(" · ");
   // post.content is our own authored HTML — rendered as-is so the crawler
   // gets the real article, not a summary of it.
@@ -329,7 +414,7 @@ function buildArticleMain(post) {
                 <p style="font-size:.85rem;color:#9a9a9a">${meta}</p>
                 <p style="font-size:1.05rem;color:#cfcfcf">${esc(post.description || "")}</p>
                 <article style="line-height:1.8">${post.content || ""}</article>
-                <p style="line-height:1.9;margin-top:32px"><a href="/analyze" style="color:#a3e635">Analyze your technique free</a> &middot; <a href="/training" style="color:#a3e635">Training plans</a> &middot; <a href="/marketplace" style="color:#a3e635">Equipment finder</a></p>
+                <p style="line-height:1.9;margin-top:32px"><a href="/analyze" style="color:#a3e635">Analyze your technique free</a> &middot; <a href="/training" style="color:#a3e635">Training plans</a> &middot; <a href="/marketplace" style="color:#a3e635">Equipment finder</a>${gearLink}</p>
                 <noscript><p style="color:#fbbf24">Enable JavaScript for the full interactive Formanti experience.</p></noscript>
             </main>`;
 }
@@ -466,7 +551,7 @@ async function buildBlog(template) {
  * ------------------------------------------------------------------ */
 
 // Last material change to the generated HTML these URLs serve.
-const TEMPLATE_REVISION = "2026-08-30";
+const TEMPLATE_REVISION = "2026-09-27";
 
 // Static routes: [path, changefreq, priority, content date]
 const SITEMAP_STATIC = [
@@ -601,13 +686,18 @@ function equipItemHtml(item) {
                 </div>`;
 }
 
+const guideLinksHtml = (guides) =>
+  (guides || []).map(([slug, title]) => `<a href="/blog/${esc(slug)}" style="color:#a3e635">${esc(title)}</a>`).join(" &middot; ");
+
 function buildEquipmentMain(meta, cats, labels) {
   const label = (c) => labels[c] || c.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
   const sections = cats
     .map((c) => {
       const items = (c.items || []).map(equipItemHtml).join("");
+      const guides = guideLinksHtml((meta.guides || {})[c.category]);
       return `<section id="${esc(c.category)}">
                 <h2 style="color:#fff;margin-top:28px">${esc(label(c.category).toLowerCase().includes(meta.sportName.toLowerCase()) ? `Best ${label(c.category)}` : `Best ${meta.sportName} ${label(c.category)}`)}</h2>
+                ${guides ? `<p style="font-size:.9rem">Buying guides: ${guides}</p>` : ""}
                 ${items}
               </section>`;
     })
@@ -621,9 +711,30 @@ function buildEquipmentMain(meta, cats, labels) {
                 <p style="font-size:1.05rem;color:#cfcfcf">${esc(meta.intro)}</p>
                 <p style="line-height:1.9"><a href="/analyze" style="color:#a3e635">Analyze your game free</a> &middot; <a href="/${esc(meta.sport)}" style="color:#a3e635">${esc(meta.sportName)} coaching</a> &middot; <a href="/blog" style="color:#a3e635">Guides</a> &middot; <a href="/marketplace" style="color:#a3e635">All gear</a></p>
                 ${sections}
+                ${(meta.moreGuides || []).length ? `<h2 style="color:#fff;margin-top:32px">${esc(meta.sportName)} guides from our coaches</h2><p style="line-height:1.9">${guideLinksHtml(meta.moreGuides)}</p>` : ""}
                 ${faqs ? `<h2 style="color:#fff;margin-top:32px">Frequently asked questions</h2>${faqs}` : ""}
                 <noscript><p style="color:#fbbf24">Enable JavaScript for the full interactive Formanti experience.</p></noscript>
             </main>`;
+}
+
+// schema.org Product with the price band across stores. Kept in step with
+// productSchema() in src/pages/SportEquipmentPage.jsx.
+function productSchema(it) {
+  const prices = (it.marketplace_prices || []).map((p) => p.price).filter((n) => typeof n === "number" && n > 0);
+  const inr = (it.price_ranges && it.price_ranges.INR) || {};
+  const low = prices.length ? Math.min(...prices) : inr.min;
+  const high = prices.length ? Math.max(...prices) : (inr.max || inr.min);
+  const out = { "@type": "Product", name: it.name };
+  if (it.brand) out.brand = { "@type": "Brand", name: it.brand };
+  if (it.description) out.description = it.description;
+  if (typeof it.image === "string" && it.image.startsWith("http")) out.image = it.image;
+  if (low) {
+    out.offers = {
+      "@type": "AggregateOffer", priceCurrency: "INR", lowPrice: low, highPrice: high || low,
+      offerCount: Math.max(prices.length, 1),
+    };
+  }
+  return out;
 }
 
 function equipSchema(meta, cats, url) {
@@ -634,7 +745,7 @@ function equipSchema(meta, cats, url) {
       "@type": "ItemList",
       name: `Best ${meta.sportName} Equipment`,
       url,
-      itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, name: it.name })),
+      itemListElement: items.map((it, i) => ({ "@type": "ListItem", position: i + 1, item: productSchema(it) })),
     },
     {
       "@context": "https://schema.org",
@@ -711,6 +822,14 @@ async function run() {
         fs.writeFileSync(path.join(outDir, "index.html"), template, "utf8");
       } catch { /* ignore */ }
     }
+  }
+  for (const [route, data] of Object.entries(INFO_ROUTES)) {
+    const outDir = path.join(BUILD_DIR, route);
+    fs.mkdirSync(outDir, { recursive: true });
+    let html = renderMeta(template, { url: `${ORIGIN}${route}`, fullTitle: `${data.title} | Formanti`, description: data.description });
+    html = replaceOnce(html, /<main[\s\S]*?<\/main>/, buildInfoMain(data));
+    fs.writeFileSync(path.join(outDir, "index.html"), html, "utf8");
+    console.log(`[seo-fallbacks] ok ${route} (info)`);
   }
   const posts = await buildBlog(template);
   const equipSlugs = buildEquipment(template);
