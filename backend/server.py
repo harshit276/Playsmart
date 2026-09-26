@@ -2438,6 +2438,7 @@ async def admin_transactions(
         )
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    await _attach_user_labels(rows)
     return {"transactions": rows, "count": len(rows)}
 
 
@@ -2451,6 +2452,7 @@ async def admin_payments(x_admin_key: str = Header(None, alias="X-Admin-Key"), l
         )
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"DB error: {e}")
+    await _attach_user_labels(rows)
     return {"payments": rows, "count": len(rows)}
 
 
@@ -2501,6 +2503,65 @@ MAIL_FROM_INFO = os.environ.get("MAIL_FROM_INFO", "Formanti <info@formanti.com>"
 # link here: the frontend has no public route that renders someone else's
 # card, so a /card/{id} or /share/{id} link would just bounce to the homepage.
 SHARE_SITE_URL = os.environ.get("SHARE_SITE_URL", "https://www.formanti.com").strip()
+
+
+# Who a user is, for the admin's eyes. Alerts and admin tables used to show
+# bare UUIDs ("User: 2d62a3e8-b0b…"), which made it impossible to tell who
+# bought, who failed, or who left feedback without a manual lookup.
+_USER_LABEL_CACHE: dict = {}
+
+
+def _format_user_label(u: Optional[dict], user_id=None) -> str:
+    if not user_id and not u:
+        return "guest"
+    u = u or {}
+    name = (u.get("name") or "").strip()
+    email = (u.get("email") or "").strip()
+    phone = (u.get("phone") or "").strip()
+    if name and email:
+        return f"{name} <{email}>"
+    return email or (f"{name} ({phone})" if name and phone else name or phone) \
+        or f"user {str(user_id)[:8]}"
+
+
+async def _user_label(user_id) -> str:
+    """'Name <email>' (or whichever of email / name / phone exists) for one
+    user. Never raises; falls back to a short id if the lookup fails."""
+    if not user_id:
+        return "guest"
+    if user_id in _USER_LABEL_CACHE:
+        return _USER_LABEL_CACHE[user_id]
+    u = None
+    try:
+        u = await asyncio.wait_for(db.users.find_one(
+            {"id": user_id}, {"_id": 0, "name": 1, "email": 1, "phone": 1}), timeout=3.0)
+    except Exception:
+        pass
+    label = _format_user_label(u, user_id)
+    if u:
+        _USER_LABEL_CACHE[user_id] = label
+    return label
+
+
+async def _attach_user_labels(rows: list, key: str = "user_id") -> list:
+    """Batch-add user_email / user_name / user_label to admin table rows."""
+    uids = list({r.get(key) for r in rows if r.get(key)})
+    umap = {}
+    if uids:
+        try:
+            for u in await asyncio.wait_for(db.users.find(
+                    {"id": {"$in": uids}},
+                    {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1}).to_list(len(uids)),
+                    timeout=5.0):
+                umap[u["id"]] = u
+        except Exception:
+            pass
+    for r in rows:
+        u = umap.get(r.get(key))
+        r["user_email"] = (u or {}).get("email", "")
+        r["user_name"] = (u or {}).get("name", "")
+        r["user_label"] = _format_user_label(u, r.get(key))
+    return rows
 
 
 async def _notify_admin(subject: str, body: str) -> None:
@@ -3069,7 +3130,7 @@ async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> 
     try:
         await _notify_admin_now(
             f"\U0001f4b0 Purchase · ₹{pack['price_inr']} (Razorpay)",
-            f"User: {user_id[:12]}…\nPack: {pack['key']} (+{pack['tokens']} tokens)\nNew balance: {new_balance}")
+            f"User: {await _user_label(user_id)}\nPack: {pack['key']} (+{pack['tokens']} tokens)\nNew balance: {new_balance}")
     except Exception:
         pass
     return new_balance
@@ -3276,8 +3337,8 @@ async def _settle_pending_referrals(user_id: str) -> None:
             await _notify_admin_now(
                 "🤝 Referral completed",
                 chr(10).join([
-                    "Referrer: " + str(owner_id)[:12],
-                    "New user: " + str(user_id)[:12],
+                    "Referrer: " + await _user_label(owner_id),
+                    "New user: " + await _user_label(user_id),
                     "Code: " + str(ref.get("code")),
                     "+" + _analyses_phrase(TOKEN_RULES["referral_credit"]) + " each",
                 ]))
@@ -5815,7 +5876,7 @@ async def _process_job(job: dict, claimed: bool = False):
         try:
             await _notify_admin_now(
                 "❌ Analysis FAILED (timeout, not charged)",
-                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nReason: timed out >200s")
+                f"User: {await _user_label(job.get('user_id'))}\nTier: {job.get('tier')}\nReason: timed out >200s")
             await _notify_job_done(job, {
                 "title": "Analysis didn't complete",
                 "body": "It took too long — usually a network issue. You weren't charged. Tap to retry.",
@@ -5833,7 +5894,7 @@ async def _process_job(job: dict, claimed: bool = False):
         try:
             await _notify_admin_now(
                 "❌ Analysis FAILED (not charged)",
-                f"User: {job.get('user_id', 'guest')}\nTier: {job.get('tier')}\nError: {str(exc)[:200]}")
+                f"User: {await _user_label(job.get('user_id'))}\nTier: {job.get('tier')}\nError: {str(exc)[:200]}")
             await _notify_job_done(job, {
                 "title": "Analysis failed",
                 "body": "Something went wrong — usually a network issue. You weren't charged. Tap to retry.",
@@ -5931,7 +5992,7 @@ async def _process_job(job: dict, claimed: bool = False):
 
     # Admin (Telegram) notification — every analysis event.
     try:
-        who = job.get("user_id") or "guest"
+        who = await _user_label(job.get("user_id"))
         if n_events > 0:
             await _notify_admin_now(
                 "✅ Analysis completed",
@@ -7678,7 +7739,7 @@ async def analysis_feedback(req: AnalysisFeedbackRequest, authorization: str = H
                  if record[k]]
         await _notify_admin_now(
             f"{flag}📝 Analysis feedback: {stars} ({rating}/5)",
-            f"User: {record['user_id'] or 'guest'}\nSport: {req.sport or '—'}\n"
+            f"User: {await _user_label(record['user_id'])}\nSport: {req.sport or '—'}\n"
             + (f"Breakdown: {' · '.join(parts)}\n" if parts else "")
             + (f"Shown at: {record['trigger']}\n" if record.get("trigger") else "")
             + f"Comment: {record['comment'] or '—'}")
@@ -7742,7 +7803,7 @@ async def support_request(req: SupportRequestPayload, authorization: str = Heade
     try:
         await _notify_admin_now(
             "🆘 Support / help request",
-            f"From: {email} ({record['user_id'] or 'guest'})\n\n{msg}\n\n"
+            f"From: {await _user_label(record['user_id']) if record['user_id'] else email}\n\n{msg}\n\n"
             f"Context: {record['context'] or '—'}")
     except Exception:
         pass
