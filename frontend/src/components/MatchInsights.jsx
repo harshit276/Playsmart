@@ -299,6 +299,8 @@ export default function MatchInsights({
           reasoning: s.reasoning || null,
           formFeedback: s.formFeedback || s.form_feedback || null,
           confidence: s.confidence ?? null,
+          technique_score: typeof s.technique_score === "number" ? s.technique_score : null,
+          technique_checks: Array.isArray(s.technique_checks) ? s.technique_checks : [],
           speed: s.speed ?? (s.speed_kmh != null ? s.speed_kmh : null),
           speedSource: s.speedSource || s.speed_source || null,
           powerLevel: s.powerLevel || s.power_level || null,
@@ -476,6 +478,8 @@ export default function MatchInsights({
           reasoning: shot.reasoning || null,
           formFeedback: shot.formFeedback || null,
           confidence: shot.confidence ?? null,
+          technique_score: typeof shot.technique_score === "number" ? shot.technique_score : null,
+          technique_checks: Array.isArray(shot.technique_checks) ? shot.technique_checks : [],
           speed: shot.speed ?? null,
           speedSource: shot.speedSource || null,
           powerLevel: shot.powerLevel || null,
@@ -1171,6 +1175,10 @@ function _seekToShot(timestamp) {
 // ────────────────────────────────────────────────────────────────────
 function _shotScore(s) {
   if (s == null) return 0;
+  // Technique score when present (0-10 → 0-100); confidence only for older
+  // results — ranking best/worst by "how sure the AI was that a shot
+  // happened" is why best and worst both read 90.
+  if (typeof s.technique_score === "number") return Math.round(s.technique_score * 10);
   const c = typeof s.confidence === "number" ? s.confidence : 0;
   return Math.round(c * 100);
 }
@@ -2183,6 +2191,9 @@ function InlineShotVsPro({ shot, sport, shotType }) {
 function IndividualShotCard({ shot, label, sport, shotId = null }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
+  // Real shot score (technique checks in the level band), 0-100. Older
+  // results only have confidence, which is what "Shot quality" used to show.
+  const techPct = typeof shot.technique_score === "number" ? Math.round(shot.technique_score * 10) : null;
   const [proRef, setProRef] = useState(null);
   const [compareOpen, setCompareOpen] = useState(false);
   // Legacy modals kept for back-compat (anywhere external code opens
@@ -2327,7 +2338,7 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
   const strengths = Array.isArray(ff.strengths) ? ff.strengths.slice(0, 3) : [];
   const weaknesses = Array.isArray(ff.weaknesses) ? ff.weaknesses.slice(0, 3) : [];
   const headlineFix = ff.tip || weaknesses[0] || null;
-  const scorePct = conf != null ? conf : 0;
+  const scorePct = techPct != null ? techPct : (conf != null ? conf : 0);
   const scoreTone = scorePct >= 80 ? "text-lime-400"
     : scorePct >= 60 ? "text-sky-300"
     : scorePct >= 40 ? "text-amber-300"
@@ -2428,6 +2439,8 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
             </div>
           </div>
         )}
+
+        <TechniqueChecks checks={shot.technique_checks} />
 
         {strengths.length > 0 && (
           <div>
@@ -2530,6 +2543,58 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
   );
 }
 
+// The technique checks behind a shot's score — "why 58?" answered on the
+// card: ✓ good, ~ ok, ✗ needs work. For a group, each check shows its most
+// common result across the group's shots.
+const _CHECK_ICON = { good: "✓", ok: "~", needs_work: "✗" };
+const _CHECK_TONE = {
+  good: "text-lime-300 border-lime-400/30",
+  ok: "text-sky-300 border-sky-400/30",
+  needs_work: "text-amber-300 border-amber-400/30",
+};
+
+function aggregateTechniqueChecks(shots) {
+  const byName = new Map();
+  for (const s of shots || []) {
+    for (const c of s?.technique_checks || []) {
+      const key = String(c?.check || "").trim().toLowerCase();
+      if (!key || !(c.result in _CHECK_ICON)) continue;
+      const e = byName.get(key) || { check: c.check, good: 0, ok: 0, needs_work: 0, n: 0 };
+      e[c.result] += 1;
+      e.n += 1;
+      byName.set(key, e);
+    }
+  }
+  return [...byName.values()]
+    .map((e) => ({
+      check: e.check,
+      result: e.needs_work * 2 >= e.n ? "needs_work" : e.good * 2 > e.n ? "good" : "ok",
+      count: e.n,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
+}
+
+function TechniqueChecks({ checks, showCount = false }) {
+  if (!Array.isArray(checks) || checks.length === 0) return null;
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold mb-1.5">Technique checks</p>
+      <div className="flex flex-wrap gap-1.5">
+        {checks.map((c, i) => (
+          <span
+            key={`${c.check}-${i}`}
+            className={`text-[11px] px-2 py-0.5 rounded-full border ${_CHECK_TONE[c.result] || "text-zinc-400 border-zinc-700"}`}
+          >
+            {_CHECK_ICON[c.result] || "·"} {c.check}
+            {showCount && c.count > 1 && <span className="text-zinc-500"> ×{c.count}</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   // Per-shot timestamps + counts were removed: Gemini's shot count was
   // often wrong (over-segmenting one swing into multiple events) and the
@@ -2550,6 +2615,10 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   const peakSpeed = speeds.length ? Math.max(...speeds) : 0;
   const count = groupShots.length;
   const avgConf = groupShots.reduce((a, s) => a + (s.confidence || 0), 0) / count;
+  const techShots = groupShots.filter((s) => typeof s.technique_score === "number");
+  const avgTech = techShots.length
+    ? techShots.reduce((a, s) => a + s.technique_score, 0) / techShots.length
+    : null;
 
   // Dedup strengths / weaknesses across the group, pick top 3 of each
   const allStrengths = new Set();
@@ -2708,7 +2777,7 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
   };
 
   const headlineFix = tips[0] || weaknesses[0] || null;
-  const scorePct = Math.round(avgConf * 100);
+  const scorePct = avgTech != null ? Math.round(avgTech * 10) : Math.round(avgConf * 100);
   const scoreTone = scorePct >= 80 ? "text-lime-400"
     : scorePct >= 60 ? "text-sky-300"
     : scorePct >= 40 ? "text-amber-300"
@@ -2799,6 +2868,8 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
             </div>
           </div>
         )}
+
+        <TechniqueChecks checks={aggregateTechniqueChecks(groupShots)} showCount />
 
         {strengths.length > 0 && (
           <div>

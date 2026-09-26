@@ -1824,7 +1824,15 @@ def _build_universal_prompt(
         "saw. BAD: 'Player executes a forehand drive' (that's just "
         "restating the category). GOOD: 'Contact slightly late, ball "
         "floated above net height' or 'Hips fully rotated, clean punch "
-        "through the line.'\n\n"
+        "through the line.'\n"
+        "   • technique_checks: 3-5 key technique points for THIS movement "
+        "(e.g. overhead: preparation turn, contact height, arm extension, "
+        "body rotation, recovery; squat: depth, knee tracking, back angle, "
+        "bar path; jump shot: set point, elbow alignment, follow-through). "
+        "Rate each one 'good', 'ok' or 'needs_work' from what you SEE in this "
+        "rep. Leave a point out if the camera can't show it — never guess. "
+        "These ratings set the player's score, so be honest in both "
+        "directions: a clean rep earns 'good'.\n\n"
         "CRITICAL — ONE TECHNIQUE = ONE EVENT (but DO NOT UNDER-COUNT):\n"
         "A single physical motion (windup/contact/follow-through, or one "
         "full stroke cycle in swimming) is ONE event at the moment of "
@@ -2069,6 +2077,8 @@ def _build_universal_prompt(
         '      "strengths": ["<bullet>", "..."],\n'
         '      "weaknesses": ["<bullet>", "..."],\n'
         '      "tip": "<one actionable improvement>",\n'
+        '      "technique_checks": [{"check": "<2-5 word technique point>", '
+        '"result": "<good|ok|needs_work>"}],\n'
         '      "confidence": <0-1 — how sure are you about this event>,\n'
         '      "skill_level": "<Beginner|Intermediate|Advanced|Pro>",\n'
         '      "contact_box": [<ymin>, <xmin>, <ymax>, <xmax>],\n'
@@ -2444,6 +2454,75 @@ def _sanitize_movement(data: dict) -> dict | None:
     return out or None
 
 
+# ─── Dynamic score ────────────────────────────────────────────────────
+# The /10 used to be a lookup on the level word (Beginner 3, Intermediate
+# 5.5, Advanced 7.5, Pro 9) and each shot's "quality 90" was really the
+# detection confidence. Now the level sets the band and the rep's technique
+# checks place the score inside it — so two Intermediate players read 4.4
+# and 6.1, not both 5.5, and a clean rep scores higher than a sloppy one.
+# The session score is a (confidence-weighted) average, so filming more reps
+# never lowers it (the old bullet-count formula did).
+_LEVEL_BANDS = {
+    "Beginner": (1.0, 4.0),
+    "Intermediate": (4.0, 6.5),
+    "Advanced": (6.5, 8.5),
+    "Pro": (8.5, 10.0),
+}
+_CHECK_POINTS = {"good": 2, "ok": 1, "needs_work": 0}
+
+
+def _parse_technique_checks(e: dict) -> list:
+    out = []
+    for c in (e.get("technique_checks") or [])[:6]:
+        if not isinstance(c, dict):
+            continue
+        result = str(c.get("result", "")).strip().lower().replace(" ", "_").replace("-", "_")
+        name = str(c.get("check", "")).strip()[:60]
+        if result in _CHECK_POINTS and name:
+            out.append({"check": name, "result": result})
+    return out
+
+
+def _technique_fraction(checks: list) -> float | None:
+    """0..1 — share of technique points done well (good=2, ok=1, needs_work=0)."""
+    if not checks:
+        return None
+    return sum(_CHECK_POINTS[c["result"]] for c in checks) / (2.0 * len(checks))
+
+
+def score_in_level_band(level: str, fraction: float | None) -> float | None:
+    """Place a 0..1 technique fraction inside the level's /10 band."""
+    if fraction is None:
+        return None
+    lo, hi = _LEVEL_BANDS.get(str(level or "").strip().title(), _LEVEL_BANDS["Intermediate"])
+    return round(lo + (hi - lo) * max(0.0, min(1.0, fraction)), 1)
+
+
+def session_technique_score(level: str, events: list) -> float | None:
+    """Session /10: confidence-weighted mean of the reps' technique fractions,
+    placed in the session level's band. None when no rep had checks (older
+    cached results) — callers then fall back to the level lookup."""
+    num = den = 0.0
+    for ev in events or []:
+        frac = ev.get("technique_fraction")
+        if frac is None:
+            continue
+        w = max(0.1, float(ev.get("confidence") or 0.7))
+        num += frac * w
+        den += w
+    return score_in_level_band(level, num / den) if den else None
+
+
+def _technique_fields(e: dict, skill: str) -> dict:
+    checks = _parse_technique_checks(e)
+    frac = _technique_fraction(checks)
+    return {
+        "technique_checks": checks,
+        "technique_fraction": None if frac is None else round(frac, 3),
+        "technique_score": score_in_level_band(skill, frac),
+    }
+
+
 def _normalize_universal_event(
     e: dict, sport_vocab: list, target_player_description: str | None = None,
     target_player_id: str | None = None, roster_ids: set | None = None,
@@ -2532,6 +2611,7 @@ def _normalize_universal_event(
         "tip": str(e.get("tip", ""))[:300],
         "confidence": conf,
         "skill_level": skill,
+        **_technique_fields(e, skill),
         # Doubles tag. Default "you" in singles mode (the strict target
         # filter above already guarantees we kept only target events).
         "player_role": (
@@ -2839,6 +2919,7 @@ def analyze_video_universal(
             "tip": str(e.get("tip", ""))[:300],
             "confidence": conf,
             "skill_level": skill,
+            **_technique_fields(e, skill),
             "player_role": role_raw,
         })
     raw_events_total = len(data.get("events") or [])
@@ -2901,6 +2982,10 @@ def analyze_video_universal(
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
+        # Dynamic /10 (level band + technique checks). None on old-shape
+        # responses; the frontend then falls back to the level lookup.
+        "technique_score": session_technique_score(
+            str(data.get("overall_skill_level", "Intermediate")).strip().title(), events_out),
         "coach_narrative": coach_narrative,
         "target_mismatch_warning": target_mismatch_warning,
         # Elite overlays: visible playing-area geometry + whole-clip
@@ -3267,6 +3352,10 @@ def stream_analyze_video_universal(
         "sport_detected": str(data.get("sport_detected", "unknown"))[:60],
         "summary": str(data.get("summary", ""))[:600],
         "overall_skill_level": str(data.get("overall_skill_level", "Intermediate")).strip().title(),
+        # Dynamic /10 (level band + technique checks). None on old-shape
+        # responses; the frontend then falls back to the level lookup.
+        "technique_score": session_technique_score(
+            str(data.get("overall_skill_level", "Intermediate")).strip().title(), events_out),
         "coach_narrative": coach_narrative_stream,
         "target_mismatch_warning": target_mismatch_warning_stream,
         "court_map": _sanitize_court_map(data),

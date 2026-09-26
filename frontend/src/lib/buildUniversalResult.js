@@ -5,6 +5,9 @@
 // (AnalyzePage) AND the no-signup demo page produce a byte-identical
 // result shape. Do NOT change this logic without checking AnalyzePage —
 // the live analyze flow depends on it verbatim.
+// Same bands as the backend's _grade_from_score (0-100 scale).
+const gradeFromScore = (s) => (s >= 80 ? "A" : s >= 65 ? "B" : s >= 50 ? "C" : "D");
+
 export function buildUniversalResult(data, targetDesc, pickedPlayer) {
   const events = data?.events || [];
   return {
@@ -25,6 +28,9 @@ export function buildUniversalResult(data, targetDesc, pickedPlayer) {
     player_legend: data?.player_legend || null,
     sport: data?.sport_detected || "unknown",
     skill_level: data?.overall_skill_level || "Intermediate",
+    // Dynamic /10 from the reps' technique checks (null on older results —
+    // the score gauge then falls back to the level lookup).
+    technique_score: typeof data?.technique_score === "number" ? data.technique_score : null,
     quick_summary: data?.summary || "",
     coach_feedback: { summary: data?.summary || "", encouragement: "" },
     shots: events.map((e) => ({
@@ -37,8 +43,17 @@ export function buildUniversalResult(data, targetDesc, pickedPlayer) {
       quality_observation: e.quality_observation || null,
       confidence: e.confidence ?? 0.7,
       timestamp: Math.round((e.timestamp_sec || 0) * 10) / 10,
-      grade: (e.confidence ?? 0.7) >= 0.7 ? "A" : (e.confidence ?? 0) >= 0.5 ? "B" : "C",
-      score: Math.round((e.confidence ?? 0.7) * 100),
+      // Shot score = the rep's technique checks placed in its level band.
+      // Older results have no checks, and their "score" was the detection
+      // confidence (why every shot read ~90/A) — kept only as a fallback.
+      ...(typeof e.technique_score === "number"
+        ? { score: Math.round(e.technique_score * 10), grade: gradeFromScore(Math.round(e.technique_score * 10)) }
+        : {
+          grade: (e.confidence ?? 0.7) >= 0.7 ? "A" : (e.confidence ?? 0) >= 0.5 ? "B" : "C",
+          score: Math.round((e.confidence ?? 0.7) * 100),
+        }),
+      technique_checks: Array.isArray(e.technique_checks) ? e.technique_checks : [],
+      technique_score: typeof e.technique_score === "number" ? e.technique_score : null,
       reasoning: e.description || "",
       formFeedback: { strengths: e.strengths || [], weaknesses: e.weaknesses || [], tip: e.tip || "" },
       vlmSkill: e.skill_level || "Intermediate",

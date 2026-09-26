@@ -1221,6 +1221,7 @@ export default function AnalyzePage() {
             court_map: universalResult.court_map || null,
             movement: universalResult.movement || null,
             video_hash: file ? await computeVideoHash(file) : null,
+            technique_score: universalResult.technique_score ?? null,
             shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
           }, { timeout: 20000 });
           if (saved?.analysis_id && mountedRef.current) {
@@ -2708,6 +2709,7 @@ export default function AnalyzePage() {
               sport_detected: final.sport_detected,
               summary: final.summary,
               overall_skill_level: final.overall_skill_level,
+              technique_score: final.technique_score ?? null,
               // The multi-paragraph coach voice — rendered prominently at
               // the top of the analyze result so users see the same
               // Gemini-grade narrative they would in Gemini Studio.
@@ -2853,6 +2855,7 @@ export default function AnalyzePage() {
               court_map: universalResult.court_map || null,
               movement: universalResult.movement || null,
               video_hash: file ? await computeVideoHash(file) : null,
+              technique_score: universalResult.technique_score ?? null,
               shots: (universalResult.shots || []).map(({ thumbnail, ...r }) => r),
             }, { timeout: 20000 });
             if (saved?.analysis_id && mountedRef.current) {

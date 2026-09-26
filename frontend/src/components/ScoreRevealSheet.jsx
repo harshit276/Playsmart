@@ -118,6 +118,11 @@ function deriveMetrics(result) {
   const rawScore = result.shot_analysis?.score ?? result.pro_comparison?.overall_score ?? null;
   let level = typeof ps.overall_score === "number" && ps.overall_score > 0 ? ps.overall_score : null;
   if (level == null && rawScore != null && rawScore > 0) level = rawScore > 10 ? rawScore / 10 : rawScore;
+  // Dynamic /10: the level sets the band, the reps' technique checks place
+  // the score inside it (4.4 vs 6.1 for two Intermediates, not both 5.5).
+  if (level == null && typeof result.technique_score === "number" && result.technique_score > 0) {
+    level = result.technique_score;
+  }
   if (level == null && Array.isArray(ps.dimension_list) && ps.dimension_list.length) {
     const avg = ps.dimension_list.reduce((a, d) => a + (d.score || 0), 0) / ps.dimension_list.length;
     if (avg > 0) level = avg;

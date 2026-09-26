@@ -74,8 +74,11 @@ Legend: **Keep**, **Fix first**, or **Hide** (until the data behind it is real).
 | Session metrics | tempo, variety ok; aggression, recovery, FH/BH shaky | "attempts: 1" ok | reps / pace / per-rep good | not rendered | **Keep** gym reps/pace and racquet tempo/variety; hide the rest |
 | Shot / rep timeline (video + markers) | works on a fresh result only | empty | empty | not rendered | **Fix first**: persist clip + timestamps for all sports |
 | Per-shot / per-rep feedback text | useful | useful | useful | useful | **Keep the text; drop the per-shot 90/A grade**; sport vocabulary (rep n; made/missed) |
-| Overall score /100, level /10 gauge | derived | derived | derived, falls with rep count | 40 with all-A shots | **Hide the number**, or relabel as an "AI level estimate" |
-| Best / worst shot, "% sure" | all ~90 | 90 | 98 | 90 | **Hide** |
+| Level /10 gauge | was a lookup: B 3 / I 5.5 / A 7.5 / P 9 | same | same | same | **Keep /10; made dynamic** (§5b): level band + per-rep technique checks |
+| Per-shot "Shot quality 90 / A" | was detection confidence ×100 | same | same | same | **Now the rep's technique score**; confidence only for old results |
+| History score /100 | skill base + 3 × (strengths − improvements) | same | falls with rep count | 40 with all-A shots | **Now /10 × 10** so both scales agree; old formula only as a fallback |
+| Best / worst shot | ranked by confidence (all ~90) | | | | **Now ranked by technique score** |
+| "% sure" | confidence | | | | **Hide** (it isn't quality) |
 | Consistency % | contradicts itself (100% vs 66%) | "need 3+" ok | 96%, basis unclear | — | **Hide** until computed from pose |
 | Court map & movement | positions wrong; same numbers on 2 clips | irrelevant | irrelevant | estimated | **Hidden for non-court sports (done)**; racquet/basketball: hide until court calibration, or label "estimate" |
 | Pro comparison | usually empty | empty | empty | empty | **Hide** until a reference library exists (removed from nav, done) |
@@ -122,6 +125,32 @@ The **written "Since last session" paragraph was accurate**. The badges and numb
 | `frontend/src/pages/AnalyzePage.jsx` | Compare verdict comes from the per-fix checks. Score/level deltas are hidden when derived, with a one-line explanation. Speed tile only when measured. Exact-text Resolved/New lists removed. "same day / 1 day / N days". `?compare=<id>` deep link loads the baseline and enters compare mode after sign-in. Court map + movement only for court sports. |
 | `frontend/src/components/AnalysisScroller.jsx` | The rail and jump bar list only sections that exist **and have content**. |
 
+## 5b. Dynamic /10 score (second commit)
+
+Before, there were three "scores" and none of them looked at technique:
+- **Gauge /10:** a lookup on the level word (Beginner 3, Intermediate 5.5, Advanced 7.5, Pro 9).
+- **Per-shot "quality 90 / A":** the detection confidence.
+- **History /100:** the level plus the bullet count.
+
+Now:
+- **Per rep:** the prompt asks for 3–5 `technique_checks`, each rated good / ok / needs_work, and only for
+  what the camera shows.
+  - Points: good = 2, ok = 1, needs_work = 0. The share of points earned is the rep's fraction (0–1).
+  - The rep score places that fraction inside the rep's level band:
+    Beginner 1.0–4.0, Intermediate 4.0–6.5, Advanced 6.5–8.5, Pro 8.5–10.0.
+  - Example: Intermediate with checks good / ok / needs_work → 5.2.
+- **Session:** the confidence-weighted average of the reps' fractions, placed in the session level's band.
+  Filming more reps of the same quality leaves it unchanged.
+- **One scale everywhere:** gauge = session score; card = rep score × 10; history = session score × 10.
+- **Explainable:** each shot card shows its checks (✓ / ~ / ✗). Group cards show each check's usual result.
+- **Backward compatible:** results without checks (old cache, old history) keep the old behaviour.
+- `PROMPT_VERSION` bumped (`v2026-09-27-technique-checks`). Re-analysing a clip within the 7-day cache
+  window re-runs Gemini once.
+
+Still true: the level word is the AI's call, and it can differ between two clips of the same player.
+The checks make the number move with technique inside a level, but they are not a measurement.
+Pose-measured metrics (the prototype) are what eventually make it one.
+
 ## 6. Plan: make people come back to re-check
 
 **Trust first.** A comparison that tells someone who practised "you regressed −21" makes them quit.
@@ -154,8 +183,8 @@ The **written "Since last session" paragraph was accurate**. The badges and numb
 
 ## 7. Decisions for the founder
 
-1. **Hide the /100 score and /10 level everywhere**, not only in compare, until something measured replaces
-   them? Recommended: yes. Keep a plain "level estimate" word.
+1. ~~Hide the /10~~ **Decided: keep /10, make it dynamic** (done, §5b). Compare still hides score deltas
+   between two AI-estimated sessions and judges the fixes instead.
 2. **Racquet court map:** hide until court-line calibration exists, or keep it labelled "estimate"?
 3. **Canonical sport IDs on the server** at save time, plus a one-time migration. `ProgressPage`'s
    `canonicalSport()` only merges on the client.

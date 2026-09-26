@@ -5147,7 +5147,8 @@ async def analyze_video_universal_endpoint(
     # OUTPUT is not worth that spend spike — it once drained the prepaid Gemini
     # credits to zero and took analysis down for everyone. Only bump when the
     # produced result genuinely changes, and watch billing after you do.
-    PROMPT_VERSION = "v2026-08-17-stroke-side-and-fps"
+    # 2026-09-27: per-rep technique_checks → dynamic /10 (output shape changed).
+    PROMPT_VERSION = "v2026-09-27-technique-checks"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
@@ -5230,6 +5231,7 @@ async def analyze_video_universal_endpoint(
         "sport_detected": result.get("sport_detected", "unknown"),
         "summary": result.get("summary", ""),
         "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
+        "technique_score": result.get("technique_score"),
         # Forward the rich coach narrative paragraphs straight through.
         # This is the field that gives the user the Gemini-Studio-grade
         # coach voice they expect on the analyze result page.
@@ -5546,6 +5548,7 @@ async def analyze_video_stream_endpoint(
                     "sport_detected": final_payload.get("sport_detected"),
                     "summary": final_payload.get("summary"),
                     "overall_skill_level": final_payload.get("overall_skill_level"),
+                    "technique_score": final_payload.get("technique_score"),
                     "coach_narrative": final_payload.get("coach_narrative") or {},
                     "target_mismatch_warning": final_payload.get("target_mismatch_warning") or None,
                     "court_map": final_payload.get("court_map") or None,
@@ -5836,6 +5839,7 @@ async def _process_job(job: dict, claimed: bool = False):
         "sport_detected": result.get("sport_detected", "unknown"),
         "summary": result.get("summary", ""),
         "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
+        "technique_score": result.get("technique_score"),
         "coach_narrative": result.get("coach_narrative") or {},
         "target_mismatch_warning": result.get("target_mismatch_warning") or None,
         "court_map": result.get("court_map") or None,
@@ -8864,6 +8868,9 @@ class SaveUniversalAnalysisRequest(BaseModel):
     # Content fingerprint of the analyzed clip — lets the trend endpoint
     # detect "same video re-analyzed" and suppress fake progress deltas.
     video_hash: str | None = None
+    # Dynamic /10 from the reps' technique checks (see
+    # session_technique_score). Saved ×10 so history's /100 matches the /10.
+    technique_score: float | None = None
 
 
 def _grade_from_score(s: float) -> str:
@@ -8901,7 +8908,11 @@ async def save_universal_analysis(req: SaveUniversalAnalysisRequest, authorizati
     dom = cats.most_common(1)[0][0] if cats else "shot"
     shot_name = (dom.replace("_", " ").title() if dom != "shot"
                  else (req.sport or "Analysis").replace("_", " ").title())
-    score = _derive_universal_score(req.skill_level, len(strengths), len(improvements))
+    if isinstance(req.technique_score, (int, float)) and 0 < req.technique_score <= 10:
+        score = int(round(float(req.technique_score) * 10))
+    else:
+        # Older clients / cached results without technique checks.
+        score = _derive_universal_score(req.skill_level, len(strengths), len(improvements))
 
     file_id = str(uuid.uuid4())
     analysis_record = {
