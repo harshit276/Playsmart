@@ -137,6 +137,11 @@ export default function SportEquipmentPage() {
 
   const labels = equipmentSeo.categoryLabels || {};
   const catLabel = (c) => labels[c] || c.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  // "Best Football Footballs" reads badly — drop the sport when the label already says it.
+  const sectionTitle = (c) => {
+    const l = catLabel(c);
+    return l.toLowerCase().includes(meta.sportName.toLowerCase()) ? `Best ${l}` : `Best ${meta.sportName} ${l}`;
+  };
   const sportEmoji = (SPORTS.find((s) => s.key === sportKey) || {}).emoji || "🎯";
 
   const activeFilterCount = (category !== "all" ? 1 : 0) + (bucket !== "all" ? 1 : 0) + (brands.length ? 1 : 0);
@@ -318,7 +323,7 @@ export default function SportEquipmentPage() {
                 <div className="flex items-end justify-between gap-3 mb-3">
                   <div>
                     <h2 className="text-lg sm:text-2xl font-heading font-bold leading-tight">
-                      Best {meta.sportName} {catLabel(c.key)}
+                      {sectionTitle(c.key)}
                     </h2>
                     <p className="text-[12px] text-zinc-500">{c.count} options across levels and budgets</p>
                   </div>

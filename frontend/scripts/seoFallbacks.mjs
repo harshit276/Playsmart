@@ -607,7 +607,7 @@ function buildEquipmentMain(meta, cats, labels) {
     .map((c) => {
       const items = (c.items || []).map(equipItemHtml).join("");
       return `<section id="${esc(c.category)}">
-                <h2 style="color:#fff;margin-top:28px">Best ${esc(meta.sportName)} ${esc(label(c.category))}</h2>
+                <h2 style="color:#fff;margin-top:28px">${esc(label(c.category).toLowerCase().includes(meta.sportName.toLowerCase()) ? `Best ${label(c.category)}` : `Best ${meta.sportName} ${label(c.category)}`)}</h2>
                 ${items}
               </section>`;
     })
