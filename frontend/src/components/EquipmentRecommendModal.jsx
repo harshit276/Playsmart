@@ -13,6 +13,7 @@ const SPORTS = [
   { key: "pickleball", label: "Pickleball", emoji: "⚡" },
   { key: "cricket", label: "Cricket", emoji: "🏏" },
   { key: "football", label: "Football", emoji: "⚽" },
+  { key: "swimming", label: "Swimming", emoji: "🏊" },
 ];
 
 const LEVELS = [
@@ -38,13 +39,17 @@ const GOALS = [
   { key: "casual",     label: "Casual fun",         desc: "Just play occasionally — keep it light", icon: Smile,    color: "text-purple-400",  bg: "bg-purple-400/10",  border: "border-purple-400/50" },
 ];
 
+// Must be the category keys the catalogue JSON actually uses. Tennis and
+// football used to say "rackets"/"balls", which matched nothing, so "Get my
+// picks" for those sports landed on "No products match those filters".
 const CATEGORY_PICKS = {
   badminton: ["rackets", "shoes", "strings"],
-  tennis: ["rackets", "shoes", "strings"],
+  tennis: ["tennis_rackets", "tennis_shoes", "tennis_strings"],
   table_tennis: ["blades", "rubbers", "ready_made_rackets"],
   pickleball: ["paddles", "balls"],
   cricket: ["bats", "pads", "helmets"],
-  football: ["boots", "balls"],
+  football: ["boots", "footballs"],
+  swimming: ["goggles", "swimsuits"],
 };
 
 /**
