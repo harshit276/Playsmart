@@ -128,20 +128,20 @@ async def traffic_section() -> str:
         return ("*Traffic*\n• PostHog not connected — set POSTHOG_API_KEY and "
                 "POSTHOG_PROJECT_ID to see visitors here.")
     try:
-        totals = await _posthog_query(
-            "SELECT count(), count(distinct person_id) FROM events "
-            "WHERE event = '$pageview' AND timestamp > now() - INTERVAL 1 DAY")
+        totals, pages, funnel = await asyncio.gather(
+            _posthog_query(
+                "SELECT count(), count(distinct person_id) FROM events "
+                "WHERE event = '$pageview' AND timestamp > now() - INTERVAL 1 DAY"),
+            _posthog_query(
+                "SELECT properties.$pathname AS path, count() AS c FROM events "
+                "WHERE event = '$pageview' AND timestamp > now() - INTERVAL 1 DAY "
+                "GROUP BY path ORDER BY c DESC LIMIT 5"),
+            _posthog_query(
+                "SELECT event, count() AS c FROM events WHERE timestamp > now() - INTERVAL 1 DAY "
+                "AND event IN ('signup_completed','video_selected','analysis_started',"
+                "'analysis_completed','quick_signup_clicked','nudge_clicked','purchase_completed') "
+                "GROUP BY event ORDER BY c DESC"))
         pv, visitors = (totals[0][0], totals[0][1]) if totals else (0, 0)
-
-        pages = await _posthog_query(
-            "SELECT properties.$pathname AS path, count() AS c FROM events "
-            "WHERE event = '$pageview' AND timestamp > now() - INTERVAL 1 DAY "
-            "GROUP BY path ORDER BY c DESC LIMIT 5")
-        funnel = await _posthog_query(
-            "SELECT event, count() AS c FROM events WHERE timestamp > now() - INTERVAL 1 DAY "
-            "AND event IN ('signup_completed','video_selected','analysis_started',"
-            "'analysis_completed','quick_signup_clicked','nudge_clicked','purchase_completed') "
-            "GROUP BY event ORDER BY c DESC")
     except Exception as exc:
         return f"*Traffic*\n• PostHog query failed: {str(exc)[:110]}"
 
@@ -207,23 +207,31 @@ async def search_section() -> str:
                     f"{x['keys'][0]} ({int(x.get('clicks', 0))}c/{int(x.get('impressions', 0))}i)"
                     for x in qrows))
 
-            # Indexing: ask Google directly, page by page.
-            not_indexed = []
-            for url in INDEX_CHECK_URLS:
+            # Indexing: ask Google directly, all pages at once — one at a time
+            # took longer than the cron was willing to wait.
+            async def _verdict(url):
                 try:
                     ins = await c.post(
                         "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect",
                         headers=headers,
                         json={"inspectionUrl": url, "siteUrl": GSC_SITE})
                     if ins.status_code >= 400:
-                        not_indexed.append(f"{url.split('formanti.com')[-1] or '/'}?")
-                        continue
-                    verdict = (((ins.json() or {}).get("inspectionResult") or {})
-                               .get("indexStatusResult") or {}).get("coverageState", "")
-                    if "indexed" not in (verdict or "").lower() or "not indexed" in (verdict or "").lower():
-                        not_indexed.append(f"{url.split('formanti.com')[-1] or '/'} — {verdict or 'unknown'}")
+                        return "?"
+                    return (((ins.json() or {}).get("inspectionResult") or {})
+                            .get("indexStatusResult") or {}).get("coverageState", "")
                 except Exception:
+                    return None
+
+            verdicts = await asyncio.gather(*[_verdict(u) for u in INDEX_CHECK_URLS])
+            not_indexed = []
+            for url, verdict in zip(INDEX_CHECK_URLS, verdicts):
+                if verdict is None:
                     continue
+                path = url.split("formanti.com")[-1] or "/"
+                if verdict == "?":
+                    not_indexed.append(f"{path}?")
+                elif "indexed" not in verdict.lower() or "not indexed" in verdict.lower():
+                    not_indexed.append(f"{path} — {verdict or 'unknown'}")
             if not_indexed:
                 out.append("• NOT indexed: " + "; ".join(not_indexed[:6]))
             else:

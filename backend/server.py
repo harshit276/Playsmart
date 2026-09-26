@@ -7138,7 +7138,7 @@ async def cron_attendance_reminders(authorization: str = Header(None)):
     # Google has indexed the key pages — so none of it has to be checked by
     # hand across three dashboards.
     try:
-        await asyncio.wait_for(_send_daily_report(), timeout=90.0)
+        await asyncio.wait_for(_send_daily_report(), timeout=240.0)
     except Exception as exc:
         logger.warning("[daily-report] failed: {}".format(str(exc)[:140]))
     reminders = await _scan_and_send_attendance_reminders()

@@ -280,7 +280,7 @@ function StatsTab({ headers }) {
   const runDailyReport = async () => {
     setReporting(true);
     try {
-      const r = await api.post("/admin/daily-report", {}, { headers, timeout: 120000 });
+      const r = await api.post("/admin/daily-report", {}, { headers, timeout: 260000 });
       setReport(r.data?.report || "");
       toast.success(r.data?.sent_to_telegram ? "Sent to Telegram" : "Built, but Telegram isn't configured");
     } catch (e) {
