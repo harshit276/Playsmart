@@ -43,6 +43,7 @@ import { analysesFrom, describeAnalysisAmount, formatAnalyses } from "@/lib/anal
 import NextStepCard from "@/components/NextStepCard";
 import { trackSignupConversion } from "@/lib/adsConversion";
 import { track, trackSignup, failureReason } from "@/lib/analytics";
+import { ensureReadable, isUnreadableError, UNREADABLE_MESSAGE } from "@/lib/readableFile";
 
 const CLIENT_LOADING_STEPS = [
   { pct: 10, text: "Loading AI model..." },
@@ -1547,6 +1548,29 @@ export default function AnalyzePage() {
     if (!file) return;
     // mode selector removed — always run full analysis
 
+    // Can we read the clip at all? Android clips picked from Google Photos /
+    // Drive are often still downloading, and every read fails until they
+    // land. Wait for it here (usually seconds) instead of failing every step
+    // below and telling the user it was their network. See lib/readableFile.
+    let _waitToast = null;
+    try {
+      await ensureReadable(file, {
+        onWait: () => {
+          if (!_waitToast) {
+            _waitToast = toast.loading("Getting your video from your phone's gallery…");
+          }
+        },
+      });
+    } catch (readErr) {
+      if (!isUnreadableError(readErr) && readErr?.code !== "file_unreadable") throw readErr;
+      track("analysis_blocked", { reason: "file_unreadable", size_mb: Math.round(file.size / (1024 * 1024)) });
+      setError(UNREADABLE_MESSAGE);
+      toast.error(UNREADABLE_MESSAGE, { duration: 10000 });
+      return;
+    } finally {
+      if (_waitToast) toast.dismiss(_waitToast);
+    }
+
     // Very large clips on a phone: the on-device 720p transcode can't keep up
     // (memory + frame count) and gets stuck in "Optimizing…", and uploading the
     // raw file over a mobile uplink is impractical. Rather than hang, ask the
@@ -2512,6 +2536,7 @@ export default function AnalyzePage() {
         // them to a spinner for 1-3 min. Only if the SUBMIT itself fails
         // (network / older backend without the endpoint) do we fall through
         // to the streaming + JSON paths below.
+        let jobSubmitted = false;
         try {
           let pushEndpoint = null;
           try { pushEndpoint = localStorage.getItem("playsmart_push_endpoint"); } catch {}
@@ -2541,6 +2566,7 @@ export default function AnalyzePage() {
             requestAnalysisNotifyPermission();
             // Execute the job inside its own server request (survives the
             // user leaving the PWA) — polling below just watches progress.
+            jobSubmitted = true;
             kickAnalysisJob(jobId);
             // Upload + submit are done — the phone no longer needs to stay
             // awake; the analysis lives server-side now.
@@ -2561,6 +2587,10 @@ export default function AnalyzePage() {
             track("out_of_analyses_shown", { where: "server_402" });
             throw new Error("insufficient_tokens");
           }
+          // The job ran server-side and reported a failure → surface it. The
+          // fallbacks would re-run the same (possibly deleted) upload and
+          // fail again minutes later.
+          if (jobSubmitted && !/job_not_found/.test(_aMsg)) throw asyncErr;
           console.warn("[universal] async submit/poll failed, falling back:", _aMsg);
           // data stays null → streaming/JSON fallback runs below.
         }
@@ -2780,7 +2810,15 @@ export default function AnalyzePage() {
               "Try a clip where the player you want analyzed is actively playing shots."
             );
           }
-          // (c) genuine failure / interrupted upload.
+          // (c) the AI service rejected the clip itself (seen on long,
+          //     100MB+ recordings). Not a network problem — say what helps.
+          if (_gemErr && /\b400\b|invalid argument/i.test(String(_gemErr))) {
+            throw new Error(
+              "Our AI couldn't process this clip — this usually happens with long recordings. " +
+              "Trim it to the rally you want analysed (under a minute) and try again. You weren't charged."
+            );
+          }
+          // (d) genuine failure / interrupted upload.
           throw new Error(
             "We couldn't detect any shots in this clip. This usually means the upload was interrupted or the connection dropped — please check your network and try again."
           );
@@ -2869,9 +2907,13 @@ export default function AnalyzePage() {
           // OUR side, never the user's clip. Reassure and say try later; they
           // were not charged (tokens debit only on success).
           msg = "Analysis is temporarily unavailable due to a technical issue on our side. Please try again in a few minutes — you were not charged.";
-        } else if (/couldn't detect any shots|no shots in this clip/i.test(raw)) {
+        } else if (isUnreadableError(raw)) {
+          msg = UNREADABLE_MESSAGE;
+        } else if (/analysis_timeout/i.test(raw)) {
+          msg = "This clip took too long to analyse — usually because it's long or very large. Trim it to under a minute and try again. You weren't charged.";
+        } else if (/couldn't detect any shots|no shots in this clip|couldn't process this clip/i.test(raw)) {
           msg = raw; // already friendly (the 0-event case)
-        } else if (status === 413 || status === 403 || /too large|413|compress.*large|overshoot/i.test(raw)) {
+        } else if (status === 413 || status === 403 || /too large|413|compress.*large|overshoot|even after compression/i.test(raw)) {
           msg = "That video was too large to upload. Record a shorter clip (~10–15s) or at a lower resolution (720p), then try again.";
         } else if (!status || /timeout|network|aborted|failed to fetch|50[234]|stream_idle|ping_failed/i.test(raw)) {
           msg = "Your analysis didn't go through — this is usually a network issue. Please check your connection and try again.";

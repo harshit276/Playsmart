@@ -2016,6 +2016,22 @@ async def _enforce_analysis_rate_limit(authorization, request) -> None:
             headers={"Retry-After": str(max(1, retry))})
 
 
+def _job_context(job: dict, file_name=None) -> str:
+    """Short, non-personal description of what a failed job was working on."""
+    bits = [
+        f"tier={job.get('tier') or '?'}",
+        f"mime={job.get('mime_type') or '?'}",
+        "files_api" if file_name else "inline",
+    ]
+    if job.get("fast_mode"):
+        bits.append("fast")
+    if job.get("doubles_mode"):
+        bits.append("doubles")
+    if job.get("player_roster"):
+        bits.append(f"roster={len(job.get('player_roster') or [])}")
+    return "[" + " ".join(bits) + "]"
+
+
 async def _log_analysis_failure(user_id, kind: str, error: str, sport=None) -> None:
     """Record an analysis failure for the admin panel. Best-effort and never
     raises — logging a failure must not itself break the (already failing)
@@ -2493,20 +2509,31 @@ async def _notify_admin(subject: str, body: str) -> None:
     stay as paid/extra options. Always logs to stdout as a baseline."""
     logger.info(f"ADMIN NOTIFY: {subject} — {body[:200]}")
 
-    # Telegram via Bot API — free, no rate limits for a single chat
+    # Telegram via Bot API — free, no rate limits for a single chat.
+    #
+    # Markdown mode rejects the WHOLE message (HTTP 400 "can't parse
+    # entities") on any unpaired _ * ` [ — and purchase alerts carry pack keys
+    # like "pack_1500". httpx doesn't raise on a 400, so those alerts vanished
+    # without a trace: a real ₹350 sale on 25 Sep never reached the admin.
+    # Check the response and resend as plain text when formatting is refused.
     if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
         try:
-            text = f"*{subject}*\n\n{body}"
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             async with httpx.AsyncClient(timeout=10.0) as c:
-                await c.post(
-                    f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-                    json={
+                r = await c.post(url, json={
+                    "chat_id": TELEGRAM_CHAT_ID,
+                    "text": f"*{subject}*\n\n{body}",
+                    "parse_mode": "Markdown",
+                    "disable_web_page_preview": True,
+                })
+                if r.status_code >= 400:
+                    r = await c.post(url, json={
                         "chat_id": TELEGRAM_CHAT_ID,
-                        "text": text,
-                        "parse_mode": "Markdown",
+                        "text": f"{subject}\n\n{body}",
                         "disable_web_page_preview": True,
-                    },
-                )
+                    })
+                if r.status_code >= 400:
+                    logger.warning(f"Telegram notify rejected {r.status_code}: {r.text[:160]}")
         except Exception as e:
             logger.warning(f"Telegram notify failed: {e}")
 
@@ -5783,7 +5810,8 @@ async def _process_job(job: dict, claimed: bool = False):
         )
     except asyncio.TimeoutError:
         await _update_job(job_id, status="error", error="analysis_timeout")
-        await _log_analysis_failure(job.get("user_id"), "timeout", "analysis timed out >200s")
+        await _log_analysis_failure(job.get("user_id"), "timeout",
+                                    "analysis timed out >200s " + _job_context(job, file_name))
         try:
             await _notify_admin_now(
                 "❌ Analysis FAILED (timeout, not charged)",
@@ -5801,7 +5829,7 @@ async def _process_job(job: dict, claimed: bool = False):
         await _log_analysis_failure(
             job.get("user_id"),
             "capacity" if _is_quota_exhausted_str(str(exc)) else "error",
-            str(exc))
+            f"{str(exc)[:280]} {_job_context(job, file_name)}")
         try:
             await _notify_admin_now(
                 "❌ Analysis FAILED (not charged)",

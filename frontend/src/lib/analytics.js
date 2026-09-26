@@ -80,7 +80,12 @@ export function failureReason(err, status) {
   const s = String(err?.response?.data?.detail || err?.message || err || "").toLowerCase();
   if (code === 429 || /too quickly|analysis limit|too many/.test(s)) return "rate_limited";
   if (code === 402 || /insufficient_tokens|out of analyses/.test(s)) return "out_of_analyses";
-  if (code === 413 || /too large|413|overshoot|trim it/.test(s)) return "file_too_large";
+  // Before "network": the phone refusing to hand over the file used to be
+  // bucketed as a network failure (15 of 18 failures in one week).
+  if (/could not be read|notreadable|permission problems/.test(s)) return "file_unreadable";
+  if (code === 413 || /too large|413|overshoot|trim it|even after compression/.test(s)) return "file_too_large";
+  if (/analysis_timeout|took too long/.test(s)) return "timeout";
+  if (/couldn't process this clip|invalid argument/.test(s)) return "ai_rejected";
   if (/at capacity|temporarily|resource_exhausted|quota|credits|high demand|overload/.test(s)) return "service_unavailable";
   if (/didn't detect any strokes/.test(s)) return "no_strokes_for_player";
   if (/couldn't detect any shots|no shots/.test(s)) return "no_shots_found";
