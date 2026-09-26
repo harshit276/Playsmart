@@ -376,6 +376,15 @@ function shouldForceLocalCompress(file) {
   return isMobile && (file.size / 1024 / 1024) > HUGE_CLIP_MB;
 }
 
+// Sports played on a court where "where you stood" and "court coverage"
+// mean something. Gym lifts and a bowler in the nets were getting a court
+// map with "court coverage 0-15%", which reads as broken, not as insight.
+const COURT_SPORT_KEYS = ["badminton", "tennis", "table_tennis", "pickleball", "squash", "padel", "basketball"];
+function isCourtSport(sport) {
+  const k = (sport || "").toLowerCase().replace(/\s+/g, "_");
+  return COURT_SPORT_KEYS.some((s) => k.includes(s));
+}
+
 export default function AnalyzePage() {
   const { user, profile, refreshProfile, login, tokens, refreshTokens, updateTokens } = useAuth();
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
@@ -1479,6 +1488,34 @@ export default function AnalyzePage() {
     if (baseline?.id) startReanalyze(baseline, "progress_page");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Deep link from a "film again & compare" nudge (push/email):
+  // /analyze?compare=<analysis_id>. Load that session and enter compare mode
+  // so the next upload is measured against it — the nudge used to land on a
+  // plain upload page, and the new clip was analysed with nothing to compare.
+  // Waits for sign-in; the param is kept until then so it survives a login.
+  useEffect(() => {
+    if (!user) return undefined;
+    let id = null;
+    try { id = new URLSearchParams(window.location.search).get("compare"); } catch { /* ignore */ }
+    if (!id) return undefined;
+    let cancelled = false;
+    api.get(`/analysis/${encodeURIComponent(id)}`, { timeout: 15000 })
+      .then(({ data }) => {
+        if (cancelled || !data?.analysis_id) return;
+        startReanalyze({ ...data, id: data.analysis_id }, "nudge_link");
+      })
+      .catch(() => { /* fall back to the plain upload page */ })
+      .finally(() => {
+        try {
+          const u = new URL(window.location.href);
+          u.searchParams.delete("compare");
+          window.history.replaceState({}, "", u.pathname + u.search + u.hash);
+        } catch { /* URL stays as-is */ }
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // Trigger backend comparison and show the result. Called after the new
   // analysis completes when reanalyzeContext is set.
@@ -4465,16 +4502,26 @@ export default function AnalyzePage() {
           const d = c.deltas || {};
           const score = d.score || {};
           const speed = d.speed_kmh || {};
-          const w = d.weaknesses || {};
-          // Verdict derived from score + weakness deltas (no visual call now)
+          // Universal-mode scores/levels are AI estimates (skill label + count
+          // of bullet points), not measurements: the same player on the same
+          // rally re-read as 79 -> 58 and Advanced -> Intermediate in testing.
+          // So when either side is derived we don't show score/level deltas or
+          // let them drive the verdict — we judge the fixes instead.
+          const derived = c.score_is_derived === true;
+          const fixes = Array.isArray(c.drill_attribution) ? c.drill_attribution : [];
+          const nResolved = fixes.filter((f) => f.outcome === "resolved").length;
+          const nStill = fixes.filter((f) => f.outcome === "still working").length;
+          const fixJudged = fixes.some((f) => f.source === "coach") && (nResolved + nStill) > 0;
           const scoreUp = (score.delta || 0) > 2;
           const scoreDown = (score.delta || 0) < -2;
-          const hasResolved = (w.resolved?.length || 0) > 0;
-          const hasEmerged = (w.emerged?.length || 0) > 0;
-          const verdict = scoreUp || (hasResolved && !hasEmerged) ? "improved"
-            : scoreDown || (hasEmerged && !hasResolved) ? "regressed"
-            : (hasResolved && hasEmerged) || (Math.abs(score.delta || 0) > 0.5) ? "mixed"
-            : "same";
+          const verdict = fixJudged
+            ? (nResolved > 0 && nStill === 0 ? "improved" : nResolved > 0 ? "mixed" : "still working")
+            : !derived
+              ? (scoreUp ? "improved" : scoreDown ? "regressed" : "same")
+              : "can't tell yet";
+          const showSpeed = (speed.old || 0) > 0 && (speed.new || 0) > 0;
+          const daysLabel = !c.days_between ? "same day"
+            : `${c.days_between} ${c.days_between === 1 ? "day" : "days"}`;
           const verdictTone = verdict === "improved" ? "border-lime-400/40 bg-lime-400/5"
             : verdict === "regressed" ? "border-red-400/40 bg-red-400/5"
             : verdict === "mixed" ? "border-amber-400/40 bg-amber-400/5"
@@ -4493,7 +4540,7 @@ export default function AnalyzePage() {
                     {verdict}
                   </Badge>
                   <p className="text-[10px] uppercase tracking-wide text-zinc-400 font-semibold">
-                    Progress on your {c.shot_type?.replace(/_/g, " ") || "shot"} · {c.days_between} days
+                    Progress on your {c.shot_type?.replace(/_/g, " ") || "shot"} · {daysLabel}
                   </p>
                 </div>
                 <button
@@ -4523,33 +4570,46 @@ export default function AnalyzePage() {
                 </div>
               )}
 
-              {/* Hero deltas */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-                <div className="bg-zinc-900/60 rounded-lg p-3">
-                  <p className="text-[10px] uppercase text-zinc-500">Score</p>
-                  <p className="text-lg font-bold text-white">
-                    {Math.round(score.old)} → {Math.round(score.new)}
-                    <span className={`ml-2 text-sm ${score.delta > 0 ? "text-lime-400" : score.delta < 0 ? "text-red-400" : "text-zinc-500"}`}>
-                      ({score.delta > 0 ? "+" : ""}{score.delta})
-                    </span>
-                  </p>
+              {/* Hero deltas — only numbers that were actually measured. */}
+              {(!derived || showSpeed) && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                  {!derived && (
+                    <div className="bg-zinc-900/60 rounded-lg p-3">
+                      <p className="text-[10px] uppercase text-zinc-500">Score</p>
+                      <p className="text-lg font-bold text-white">
+                        {Math.round(score.old)} → {Math.round(score.new)}
+                        <span className={`ml-2 text-sm ${score.delta > 0 ? "text-lime-400" : score.delta < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                          ({score.delta > 0 ? "+" : ""}{score.delta})
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  {showSpeed && (
+                    <div className="bg-zinc-900/60 rounded-lg p-3">
+                      <p className="text-[10px] uppercase text-zinc-500">Speed (km/h)</p>
+                      <p className="text-lg font-bold text-white">
+                        {Math.round(speed.old)} → {Math.round(speed.new)}
+                        <span className={`ml-2 text-sm ${speed.delta > 0 ? "text-lime-400" : speed.delta < 0 ? "text-red-400" : "text-zinc-500"}`}>
+                          ({speed.delta > 0 ? "+" : ""}{speed.delta})
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                  {!derived && d.skill_level?.changed && (
+                    <div className="bg-zinc-900/60 rounded-lg p-3">
+                      <p className="text-[10px] uppercase text-zinc-500">Level</p>
+                      <p className="text-lg font-bold text-lime-400">{d.skill_level.old} → {d.skill_level.new}</p>
+                    </div>
+                  )}
                 </div>
-                <div className="bg-zinc-900/60 rounded-lg p-3">
-                  <p className="text-[10px] uppercase text-zinc-500">Speed (km/h)</p>
-                  <p className="text-lg font-bold text-white">
-                    {Math.round(speed.old)} → {Math.round(speed.new)}
-                    <span className={`ml-2 text-sm ${speed.delta > 0 ? "text-lime-400" : speed.delta < 0 ? "text-red-400" : "text-zinc-500"}`}>
-                      ({speed.delta > 0 ? "+" : ""}{speed.delta})
-                    </span>
-                  </p>
-                </div>
-                {d.skill_level?.changed && (
-                  <div className="bg-zinc-900/60 rounded-lg p-3">
-                    <p className="text-[10px] uppercase text-zinc-500">Level</p>
-                    <p className="text-lg font-bold text-lime-400">{d.skill_level.old} → {d.skill_level.new}</p>
-                  </div>
-                )}
-              </div>
+              )}
+              {derived && (
+                <p className="mb-4 text-[11px] text-zinc-500 leading-relaxed">
+                  We don't compare the overall score here: it's an AI estimate that shifts between
+                  clips even when your technique hasn't changed. Each fix you were given is checked
+                  against the new clip instead.
+                </p>
+              )}
 
               {/* AI Coach verdict — derived from per-shot reasoning text
                   (no images; the coach compares the textual descriptions
@@ -4592,12 +4652,17 @@ export default function AnalyzePage() {
                     {c.drill_attribution.map((da, i) => {
                       const tone = da.outcome === "resolved" ? "border-lime-400/40 text-lime-300"
                         : da.outcome === "improving" ? "border-amber-400/40 text-amber-300"
-                        : da.outcome === "still working" ? "border-zinc-700 text-zinc-400"
+                        : da.outcome === "still working" ? "border-amber-400/30 text-amber-200"
                         : "border-zinc-800 text-zinc-500";
+                      const label = da.outcome === "still working" ? "still there"
+                        : da.outcome === "no signal" ? "not checked" : da.outcome;
                       return (
                         <div key={i} className={`border rounded-lg p-2 ${tone}`}>
                           <span className="text-xs">{da.focus_area} · </span>
-                          <span className="text-[11px] uppercase font-semibold">{da.outcome}</span>
+                          <span className="text-[11px] uppercase font-semibold">{label}</span>
+                          {da.evidence && (
+                            <p className="text-[11px] text-zinc-400 mt-1">{da.evidence}</p>
+                          )}
                         </div>
                       );
                     })}
@@ -4605,27 +4670,10 @@ export default function AnalyzePage() {
                 </div>
               )}
 
-              {/* Weakness diff */}
-              {(w.resolved?.length || w.emerged?.length) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-                  {w.resolved?.length > 0 && (
-                    <div className="bg-lime-400/5 border border-lime-400/20 rounded-lg p-2">
-                      <p className="text-[10px] text-lime-400 font-semibold mb-1">✓ Resolved</p>
-                      <ul className="text-[11px] text-zinc-300 space-y-0.5">
-                        {w.resolved.map((x, i) => <li key={i}>• {x}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                  {w.emerged?.length > 0 && (
-                    <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg p-2">
-                      <p className="text-[10px] text-amber-400 font-semibold mb-1">⚠ New</p>
-                      <ul className="text-[11px] text-zinc-300 space-y-0.5">
-                        {w.emerged.map((x, i) => <li key={i}>• {x}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* (The exact-text "Resolved / New" weakness diff was removed:
+                  the same issue is worded differently every run, so it listed
+                  one problem as both resolved and new. The per-fix check above
+                  and the coach verdict replace it.) */}
 
               {/* Narrative summary + next focus */}
               {c.narrative?.summary && (
@@ -4998,7 +5046,7 @@ export default function AnalyzePage() {
             stats, built from Gemini's tracked court corners, per-shot player
             positions, and ball trajectories. Renders nothing for clips where
             no court/positions were detected (graceful no-op for old data). */}
-        {(result?.court_map || result?.movement) && (
+        {(result?.court_map || result?.movement) && isCourtSport(result?.sport || selectedSport) && (
           <CourtMapCard
             courtMap={result.court_map}
             movement={result.movement}

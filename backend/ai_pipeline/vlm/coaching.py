@@ -679,14 +679,35 @@ def _summarize_analysis(a: dict) -> dict:
 
 def compare_analyses(
     old_analysis: dict, new_analysis: dict, days_between: int,
-    backend: str = "auto",
+    backend: str = "auto", focus_areas: list | None = None,
 ) -> dict:
     """Ask the VLM to produce a coach-quality comparison narrative.
-    Returns: {improved, regressed, next_focus, summary, score_delta, _meta}.
+    Returns: {improved, regressed, next_focus, summary, score_delta,
+    focus_status, _meta}.
+
+    focus_areas: the fixes the player was told to work on last time. The
+    model judges each one against the NEW session only — resolved, still
+    there, or not observable (the new clip doesn't contain that shot).
+    Word-matching the two sessions' free text can't do this: the same issue
+    is phrased differently every run, so it read as "resolved" and "new" at
+    the same time.
     """
     old = _summarize_analysis(old_analysis)
     new = _summarize_analysis(new_analysis)
     sport = new.get("sport") or old.get("sport") or "badminton"
+    focus_areas = [str(f).strip() for f in (focus_areas or []) if str(f).strip()][:3]
+    focus_block = ""
+    if focus_areas:
+        focus_block = (
+            "\n\nFOCUS AREAS the player was told to work on after the OLD session:\n"
+            + "\n".join(f"{i + 1}. {f}" for i, f in enumerate(focus_areas))
+            + "\nFor EACH one, judge it against the NEW session only:\n"
+            "- \"resolved\": the NEW session shows the relevant movement and the issue is no longer described.\n"
+            "- \"still_there\": the NEW session describes the same issue, even in different words.\n"
+            "- \"not_observable\": the NEW session doesn't contain that shot or movement, so it can't be judged.\n"
+            "Quote or cite the NEW-session evidence (a timestamp or a short phrase). "
+            "When unsure, prefer not_observable over resolved.\n"
+        )
 
     sys_prompt = (
         f"You are an expert {sport} coach reviewing a player's progress between two practice "
@@ -708,8 +729,11 @@ def compare_analyses(
         '  "persistent_issues": ["<weakness present in both sessions>", "..."],\n'
         '  "next_focus": "<the ONE thing they should focus on for the next session>",\n'
         '  "summary": "<2-3 sentence motivational coach-voice summary>",\n'
-        '  "score_delta_explanation": "<why the score changed (or didn\'t)>"\n'
+        '  "score_delta_explanation": "<why the score changed (or didn\'t)>",\n'
+        '  "focus_status": [{"focus": "<focus area text, copied exactly>", '
+        '"status": "resolved|still_there|not_observable", "evidence": "<NEW-session evidence>"}]\n'
         '}\n'
+        + focus_block
     )
     user_msg = (
         f"OLD SESSION ({old.get('date')}):\n{json.dumps(old, indent=2, default=str)}\n\n"
@@ -722,6 +746,25 @@ def compare_analyses(
 
     score_old = old.get("overall_score") or 0
     score_new = new.get("overall_score") or 0
+    focus_status = []
+    valid = {"resolved", "still_there", "not_observable"}
+    for i, fs in enumerate(data.get("focus_status") or []):
+        if not isinstance(fs, dict):
+            continue
+        status = str(fs.get("status", "")).strip().lower()
+        if status not in valid:
+            continue
+        # Keep our own wording of the focus area so the UI shows exactly what
+        # the player was told, even if the model paraphrased it: match on the
+        # text first, fall back to position.
+        said = str(fs.get("focus", "")).strip().lower()
+        focus = next((f for f in focus_areas if f.lower() == said), None)
+        if focus is None:
+            focus = focus_areas[i] if i < len(focus_areas) else str(fs.get("focus", ""))
+        if any(x["focus"] == focus for x in focus_status):
+            continue
+        focus_status.append({"focus": focus, "status": status,
+                             "evidence": str(fs.get("evidence", ""))[:200]})
     return {
         "improved": [str(x) for x in (data.get("improved") or [])][:5],
         "regressed": [str(x) for x in (data.get("regressed") or [])][:5],
@@ -729,6 +772,7 @@ def compare_analyses(
         "next_focus": str(data.get("next_focus", "")),
         "summary": str(data.get("summary", "")),
         "score_delta_explanation": str(data.get("score_delta_explanation", "")),
+        "focus_status": focus_status,
         "score_old": float(score_old) if score_old else 0.0,
         "score_new": float(score_new) if score_new else 0.0,
         "score_delta": round(float(score_new) - float(score_old), 1) if (score_old and score_new) else 0.0,

@@ -44,6 +44,7 @@ export default function AnalysisScroller({ sections = [] }) {
   // setTimeout/MutationObserver combo keeps the rail in sync without
   // ever polling scroll events.
   const [presentIds, setPresentIds] = useState(() => new Set());
+  const [checked, setChecked] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const observerRef = useRef(null);
@@ -63,8 +64,13 @@ export default function AnalysisScroller({ sections = [] }) {
     const recompute = () => {
       const next = new Set();
       for (const id of wantedIds) {
-        if (document.getElementById(id)) next.add(id);
+        // A wrapper can mount with nothing inside it (e.g. no pro reference
+        // for this shot type, or no voice support) — listing it sends the
+        // user to an empty spot, so require rendered content.
+        const el = document.getElementById(id);
+        if (el && el.offsetHeight > 0 && el.childElementCount > 0) next.add(id);
       }
+      setChecked(true);
       setPresentIds((prev) => {
         if (prev.size === next.size) {
           let same = true;
@@ -164,10 +170,15 @@ export default function AnalysisScroller({ sections = [] }) {
     smoothScrollTo(id);
   }, []);
 
-  // Hard guard — only hide if literally zero sections were passed in.
-  if (items.length === 0) return null;
+  // Until the first presence check runs, show everything so the rail
+  // appears on slow renders; after it, show only sections that exist
+  // and have content — never a label that leads nowhere.
+  const visibleItems = checked && itemsPresent.length > 0 ? itemsPresent : items;
 
-  const activeItem = items.find((s) => s.id === activeId) || items[0];
+  // Hard guard — only hide if literally zero sections were passed in.
+  if (visibleItems.length === 0) return null;
+
+  const activeItem = visibleItems.find((s) => s.id === activeId) || visibleItems[0];
 
   return (
     <>
@@ -179,7 +190,7 @@ export default function AnalysisScroller({ sections = [] }) {
         className="hidden sm:flex fixed right-2 md:right-3 lg:right-5 top-[18%] z-40 max-h-[78vh] overflow-y-auto pr-1"
       >
         <ul className="flex flex-col gap-1 bg-zinc-900/85 backdrop-blur-md border border-zinc-800 rounded-2xl p-1.5 shadow-xl">
-          {items.map((s) => {
+          {visibleItems.map((s) => {
             const Icon = s.icon;
             const isActive = s.id === activeId;
             return (
@@ -287,7 +298,7 @@ export default function AnalysisScroller({ sections = [] }) {
                 </button>
               </div>
               <ul className="flex flex-col gap-1">
-                {items.map((s) => {
+                {visibleItems.map((s) => {
                   const Icon = s.icon;
                   const isActive = s.id === activeId;
                   return (
