@@ -83,6 +83,7 @@ export function failureReason(err, status) {
   // Before "network": the phone refusing to hand over the file used to be
   // bucketed as a network failure (15 of 18 failures in one week).
   if (/could not be read|notreadable|permission problems/.test(s)) return "file_unreadable";
+  if (/prepare this video in your browser|capture_incomplete/.test(s)) return "capture_failed";
   if (code === 413 || /too large|413|overshoot|trim it|even after compression/.test(s)) return "file_too_large";
   if (/analysis_timeout|took too long/.test(s)) return "timeout";
   if (/couldn't process this clip|invalid argument/.test(s)) return "ai_rejected";

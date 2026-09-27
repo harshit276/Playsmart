@@ -47,6 +47,9 @@ async function compressIfNeeded(file, onProgress) {
   }
 }
 
+// Largest single file our Cloudinary plan accepts.
+const CLOUDINARY_MAX_BYTES = 100 * 1024 * 1024;
+
 // ── Upload resilience knobs ──────────────────────────────────────────
 // A *stall* (no bytes for a while) is not an `onerror` — a naked XHR will
 // hang forever if the connection silently drops. We treat "no upload
@@ -302,6 +305,17 @@ export async function uploadToCloudinary(videoFile, options = {}) {
   // Step 1: compress in-browser if STILL large (ffmpeg path; rarely hit now
   // that big clips are transcoded/downscaled above).
   const fileToUpload = await compressIfNeeded(workFile, onProgress);
+
+  // Cloudinary rejects single files over 100 MB on our plan, and the reply
+  // carries no CORS headers, so the browser only sees a bare network error.
+  // A 128 MB desktop clip (25 Sep) spent ~90s uploading before failing that
+  // way and was pushed onto the in-browser fallback. Fail fast instead, so
+  // the caller goes straight to preparing the busiest stretch locally.
+  if (fileToUpload.size > CLOUDINARY_MAX_BYTES) {
+    const e = new Error(`over_upload_cap: ${(fileToUpload.size / 1048576).toFixed(0)} MB`);
+    e.code = "over_upload_cap";
+    throw e;
+  }
 
   // Step 2: signed upload params — requested up-front (before the transcode),
   // so by now the response is usually already here.

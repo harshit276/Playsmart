@@ -1824,6 +1824,9 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     // it only corrupted time. Real-time capture is slightly slower to
     // encode but keeps timestamps and frame coverage truthful.
     playbackRate = 1.0,
+    // strict: throw (code "capture_incomplete") instead of returning a clip
+    // that covers only part of the window. See the coverage check below.
+    strict = false,
   } = options;
 
   // Fast exit: file is already small enough — Vercel accepts up to 25 MB.
@@ -1926,6 +1929,17 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     fastPathOk = false;
   }
 
+  // The fast path redraws the playing video on every animation frame. When
+  // the tab goes to the background Chrome pauses muted video and stops
+  // animation frames, so the capture freezes; the stall watchdog then ends
+  // it with almost nothing recorded. On 25 Sep that turned an 88s window of
+  // a paying user's clip into a 30 KB file, which the AI rejected. Track how
+  // much of the window was actually drawn, and whether the tab was hidden.
+  let maxDrawnTime = clampedStart;
+  let hiddenDuringCapture = typeof document !== "undefined" && document.hidden;
+  const onVisibility = () => { if (document.hidden) hiddenDuringCapture = true; };
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisibility);
+
   if (fastPathOk) {
     recorder.start(200);
     let rafId = null;
@@ -1936,6 +1950,7 @@ export async function compressVideoForUpload(videoFile, options = {}) {
       if (t !== lastDrawnTime) {
         try { ctx.drawImage(video, 0, 0, outW, outH); } catch {}
         lastDrawnTime = t;
+        if (t > maxDrawnTime) maxDrawnTime = t;
         if (onProgress) onProgress(Math.min(99, Math.round(((t - clampedStart) / duration) * 100)));
       }
       rafId = requestAnimationFrame(drawLoop);
@@ -2011,6 +2026,7 @@ export async function compressVideoForUpload(videoFile, options = {}) {
         video.currentTime = t;
         await _waitForEvent(video, "seeked", 1500);
         ctx.drawImage(video, 0, 0, outW, outH);
+        if (t > maxDrawnTime) maxDrawnTime = t;
         if (requestFrame) requestFrame();
         if (onProgress) onProgress(Math.round(((t - clampedStart) / duration) * 100));
       } catch { /* skip undecodable frames */ }
@@ -2032,6 +2048,17 @@ export async function compressVideoForUpload(videoFile, options = {}) {
   await stopped;
   try { stream.getTracks().forEach((t) => t.stop()); } catch {}
   URL.revokeObjectURL(objectUrl);
+  if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility);
+
+  const coverage = Math.min(1, Math.max(0, (maxDrawnTime - clampedStart) / duration));
+  if (strict && coverage < 0.85) {
+    console.warn(`[compress] capture covered ${(coverage * 100).toFixed(0)}% of the window (hidden tab: ${hiddenDuringCapture})`);
+    const e = new Error("capture_incomplete");
+    e.code = "capture_incomplete";
+    e.hidden = hiddenDuringCapture;
+    e.coverage = coverage;
+    throw e;
+  }
 
   const outBlob = new Blob(chunks, { type: mimeType });
   if (outBlob.size === 0 || outBlob.size >= videoFile.size) {
@@ -2133,6 +2160,20 @@ export async function findBusiestWindow(videoFile, windowSec = 88) {
 }
 
 
+export const CAPTURE_FAILED_MESSAGE =
+  "We couldn't prepare this video in your browser. Keep this tab open while it's being prepared, " +
+  "or trim the clip to the part you want analysed (under 2 minutes) and try again. You weren't charged.";
+
+function waitForVisible() {
+  return new Promise((resolve) => {
+    if (typeof document === "undefined" || !document.hidden) { resolve(); return; }
+    const on = () => {
+      if (!document.hidden) { document.removeEventListener("visibilitychange", on); resolve(); }
+    };
+    document.addEventListener("visibilitychange", on);
+  });
+}
+
 export async function compressUnderSize(videoFile, targetBytes, options = {}) {
   const {
     maxDim = 480,
@@ -2147,6 +2188,7 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
     onProgress,
     playbackRate,  // optional override; auto-picked below when undefined
     startSec = 0,  // capture-window start (rally-window selection)
+    onPaused,      // called when preparation waits for the tab to be visible
   } = options;
 
   // playbackRate is forced to 1.0 (real-time capture). The old size-based
@@ -2173,16 +2215,39 @@ export async function compressUnderSize(videoFile, targetBytes, options = {}) {
   // scales ~ with pixel count, so scale maxDim by sqrt(target/actual) with a
   // safety margin. Converges in ~2 attempts; only trims duration once the
   // resolution is already small (i.e. the clip is genuinely too long).
-  const attempt = (dim, br, dur, withProgress) =>
-    compressVideoForUpload(videoFile, {
-      maxDim: Math.max(180, Math.round(dim)),
-      bitrate: Math.max(220_000, Math.round(br)),
-      maxDurationSec: dur,
-      playbackRate: effectiveRate,
-      skipBelowBytes: startSec > 0 ? 0 : targetBytes,
-      startSec,
-      onProgress: withProgress ? onProgress : undefined,
-    });
+  // Each encode needs the tab in the foreground (see compressVideoForUpload).
+  // Wait for it rather than capture a frozen frame, and retry an encode that
+  // came back incomplete. If it still can't be captured, say so plainly —
+  // never hand the AI a near-empty file.
+  const attempt = async (dim, br, dur, withProgress) => {
+    for (let tries = 0; ; tries++) {
+      if (typeof document !== "undefined" && document.hidden) {
+        onPaused?.();
+        await waitForVisible();
+      }
+      try {
+        return await compressVideoForUpload(videoFile, {
+          maxDim: Math.max(180, Math.round(dim)),
+          bitrate: Math.max(220_000, Math.round(br)),
+          maxDurationSec: dur,
+          playbackRate: effectiveRate,
+          skipBelowBytes: startSec > 0 ? 0 : targetBytes,
+          startSec,
+          onProgress: withProgress ? onProgress : undefined,
+          strict: true,
+        });
+      } catch (err) {
+        if (err?.code !== "capture_incomplete") throw err;
+        // Hidden-tab freezes get more retries (the loop waits for the user
+        // to come back); a genuinely stuck decoder gets one more go.
+        if (tries >= (err.hidden ? 3 : 1)) {
+          const e = new Error(CAPTURE_FAILED_MESSAGE);
+          e.code = "capture_incomplete";
+          throw e;
+        }
+      }
+    }
+  };
 
   let best = null;
   let dim = maxDim;

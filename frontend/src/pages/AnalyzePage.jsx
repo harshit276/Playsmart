@@ -2109,8 +2109,17 @@ export default function AnalyzePage() {
               const prepared = await vp.compressUnderSize(file, 16 * 1024 * 1024, {
                 maxDim: 1280, bitrate: 3_500_000, playbackRate: 1.5,
                 startSec: windowApplied ? windowStartSec : 0,
-                onProgress: (pct) => { setLoadingText(`Optimizing video... ${pct}%`); setProgress(15 + Math.round(pct * 0.15)); },
+                onProgress: (pct) => { setLoadingText(`Preparing your video... ${pct}% — keep this tab open`); setProgress(15 + Math.round(pct * 0.15)); },
+                onPaused: () => setLoadingText("Paused — preparing your video needs this tab open. It carries on when you come back."),
               });
+              // Last line of defence: a real clip of this window is never
+              // this small. Sending it anyway is what produced the AI's
+              // "400 invalid argument" on 25 Sep.
+              if (!prepared || prepared.size < 150 * 1024) {
+                const e = new Error(vp.CAPTURE_FAILED_MESSAGE);
+                e.code = "capture_incomplete";
+                throw e;
+              }
               // Measure original vs compressed duration — robust even if the
               // browser capped playbackRate (then the ratio is ~1 and we don't
               // mis-scale). Defaults to the requested 1.5x if measurement fails.
@@ -2164,6 +2173,10 @@ export default function AnalyzePage() {
                 }
               }
             } catch (upErr) {
+              // The browser couldn't capture the clip. The small-file path
+              // below uses the same capture and would fail the same way,
+              // minutes later — stop here with the clear message.
+              if (upErr?.code === "capture_incomplete") throw upErr;
               console.warn("[universal] 720p/cloudinary path failed, compressing instead:",
                            upErr?.response?.data?.detail || upErr?.message);
               fileName = null;
@@ -2909,6 +2922,8 @@ export default function AnalyzePage() {
           msg = "Analysis is temporarily unavailable due to a technical issue on our side. Please try again in a few minutes — you were not charged.";
         } else if (isUnreadableError(raw)) {
           msg = UNREADABLE_MESSAGE;
+        } else if (err?.code === "capture_incomplete" || /prepare this video in your browser/i.test(raw)) {
+          msg = raw;
         } else if (/analysis_timeout/i.test(raw)) {
           msg = "This clip took too long to analyse — usually because it's long or very large. Trim it to under a minute and try again. You weren't charged.";
         } else if (/couldn't detect any shots|no shots in this clip|couldn't process this clip/i.test(raw)) {
