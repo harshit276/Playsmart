@@ -15,8 +15,12 @@
  * WHAT IT DOES:
  *   1. Samples the clip from ~1 s before contact to ~0.6 s after, runs the
  *      pose landmarker on each frame (in the browser — no server, no upload).
- *   2. Picks the player: the person inside Gemini's contact box at contact,
- *      then follows them frame to frame.
+ *   2. Picks the player: the person inside Gemini's contact box, or under
+ *      the player's own tap, at contact. It never guesses between several
+ *      people. It then follows them frame to frame by re-running the model
+ *      on a crop around where they just were. A tournament frame has four
+ *      players and a crowd, and on the full frame a far player is a few
+ *      pixels high, so they drop out of detection.
  *   3. Measures elbow + shoulder in 3D at contact and compares them with the
  *      curated ideal ranges (idealAngles — the same targets the posture
  *      tracker uses).
@@ -50,7 +54,19 @@ const WINDOW_BEFORE_S = 1.0;
 const WINDOW_AFTER_S = 0.6;
 const SAMPLE_FPS = 30;
 const DETECT_MAX_DIM = 720;
-const MIN_COVERAGE = 0.7;
+// Tracking crops: the region around the player's last box, scaled so the
+// model sees them large.
+const CROP_DIM = 512;
+const CROP_SCALE = 1.9;
+// Frames the tracker may miss in a row (motion blur, a body half out of
+// frame) before that end of the swing counts as lost.
+const MAX_GAP = 4;
+// The overlay needs the player followed at least this far either side of
+// contact: the correction ramps in over the last 0.3 s and out over 0.25 s.
+// Past that, whatever stretch we followed is what plays; losing the player
+// at the edge of a 1.6 s window no longer sinks the whole shot.
+const NEED_BEFORE_S = 0.3; // = RAMP_IN_S
+const NEED_AFTER_S = 0.25; // = RAMP_OUT_S
 // Correction weight ramps: fully applied at contact, faded out around it so
 // the rest of the swing stays the player's own motion.
 const RAMP_IN_S = 0.3;
@@ -63,11 +79,10 @@ let _landmarkerPromise = null;
 // WebGL looked available but isn't usable (blocked GPU, some Android
 // WebViews, background tabs).
 let _delegate = "GPU";
-// VIDEO mode requires strictly increasing timestamps for the lifetime of the
-// landmarker — across every clip it ever sees — so keep one counter.
-let _tsMs = 0;
-const _nextTs = () => (_tsMs += 34);
 
+// IMAGE mode, not VIDEO: every call is an independent detection, which is what
+// crop tracking needs. VIDEO mode carries its own tracking state between calls
+// and gets confused when the crop window moves under it.
 export function loadLandmarker() {
   if (!_landmarkerPromise) {
     _landmarkerPromise = (async () => {
@@ -75,8 +90,8 @@ export function loadLandmarker() {
       const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
       const make = (delegate) => PoseLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: MODEL_URL, delegate },
-        runningMode: "VIDEO",
-        numPoses: 4,
+        runningMode: "IMAGE",
+        numPoses: 6,
         minPoseDetectionConfidence: 0.4,
         minPosePresenceConfidence: 0.4,
         minTrackingConfidence: 0.4,
@@ -94,6 +109,9 @@ export function loadLandmarker() {
   }
   return _landmarkerPromise;
 }
+
+/** "GPU" or "CPU" — which path the model ended up on (for diagnostics). */
+export const ghostDelegate = () => _delegate;
 
 export function hasWebGL() {
   try {
@@ -196,33 +214,19 @@ function torsoCentre(lm) {
   const p = [lm[L_SH], lm[R_SH], lm[L_HIP], lm[R_HIP]];
   return [p.reduce((a, q) => a + q.x, 0) / 4, p.reduce((a, q) => a + q.y, 0) / 4];
 }
-function torsoLen(lm) {
-  const sh = [(lm[L_SH].x + lm[R_SH].x) / 2, (lm[L_SH].y + lm[R_SH].y) / 2];
-  const hp = [(lm[L_HIP].x + lm[R_HIP].x) / 2, (lm[L_HIP].y + lm[R_HIP].y) / 2];
-  return Math.hypot(sh[0] - hp[0], sh[1] - hp[1]);
+/** Gemini's contact box ([ymin,xmin,ymax,xmax], 0-1000) as 0-1 edges, or null. */
+function normBox(box) {
+  if (!Array.isArray(box) || box.length !== 4) return null;
+  const [ymin, xmin, ymax, xmax] = box.map((n) => Number(n) / 1000);
+  if (![ymin, xmin, ymax, xmax].every(Number.isFinite) || ymax <= ymin || xmax <= xmin) return null;
+  return { ymin, xmin, ymax, xmax };
 }
 
-/** The person inside Gemini's contact box ([ymin,xmin,ymax,xmax], 0-1000), else the biggest. */
-function pickAtContact(people, contactBox) {
-  if (!people.length) return -1;
-  if (Array.isArray(contactBox) && contactBox.length === 4) {
-    const [ymin, xmin, ymax, xmax] = contactBox.map((n) => Number(n) / 1000);
-    if (ymax > ymin && xmax > xmin) {
-      const cx = (xmin + xmax) / 2, cy = (ymin + ymax) / 2;
-      const padX = (xmax - xmin) * 0.15, padY = (ymax - ymin) * 0.15;
-      let best = -1, bestD = Infinity;
-      people.forEach((p, i) => {
-        const [tx, ty] = torsoCentre(p.img);
-        const inside = tx >= xmin - padX && tx <= xmax + padX && ty >= ymin - padY && ty <= ymax + padY;
-        const d = Math.hypot(tx - cx, ty - cy);
-        if (inside && d < bestD) { best = i; bestD = d; }
-      });
-      if (best >= 0) return best;
-    }
-  }
-  let best = -1, bestLen = 0;
-  people.forEach((p, i) => { const l = torsoLen(p.img); if (l > bestLen) { bestLen = l; best = i; } });
-  return best;
+/** A tap on the frame ({x, y} in 0-1), or null. */
+function normTap(tap) {
+  if (!tap || !Number.isFinite(tap.x) || !Number.isFinite(tap.y)) return null;
+  if (tap.x < 0 || tap.x > 1 || tap.y < 0 || tap.y > 1) return null;
+  return { x: tap.x, y: tap.y };
 }
 
 // ─── camera fit: world (x,y,z,1) → pixels, least squares ───────────────
@@ -300,11 +304,12 @@ function fillAndSmooth(series, width = 5) {
  * @param {string} args.sport
  * @param {string} args.shotType          free-text shot category (idealAngles resolves it)
  * @param {number[]|null} args.contactBox [ymin,xmin,ymax,xmax] 0-1000, optional
+ * @param {{x:number,y:number}|null} args.tapPoint where the player tapped themselves (0-1), optional
  * @param {(p:{phase:string, done:number, total:number})=>void} [args.onProgress]
  * @param {AbortSignal} [args.signal]
  * @returns {Promise<object>} { ok:true, ... } or { ok:false, reason }
  */
-export async function buildGhostTrack({ video, contactSec, sport, shotType, contactBox = null, onProgress, signal }) {
+export async function buildGhostTrack({ video, contactSec, sport, shotType, contactBox = null, tapPoint = null, onProgress, signal }) {
   if (typeof contactSec !== "number" || !Number.isFinite(contactSec)) return { ok: false, reason: "no-contact-time" };
   // MediaPipe's web runtime needs WebGL for image handling even on its CPU
   // path, so without it there's nothing to try — say so plainly.
@@ -324,95 +329,222 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
     const dur = v.duration || contactSec + WINDOW_AFTER_S;
     const t0 = Math.max(0, contactSec - WINDOW_BEFORE_S);
     const t1 = Math.min(dur - 0.02, contactSec + WINDOW_AFTER_S);
-    const times = [];
+    let times = [];
     for (let t = t0; t <= t1 + 1e-6; t += 1 / SAMPLE_FPS) times.push(+t.toFixed(4));
     const W = v.videoWidth, H = v.videoHeight;
     if (!W || !H || times.length < 8) return { ok: false, reason: "clip-too-short" };
 
-    const s = Math.min(1, DETECT_MAX_DIM / Math.max(W, H));
+    const minWH = Math.min(W, H);
+    const box = normBox(contactBox);
+    const tap = normTap(tapPoint);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.round(W * s);
-    canvas.height = Math.round(H * s);
     const ctx = canvas.getContext("2d");
 
-    // 1. detect everyone on every sampled frame
-    const frames = [];
-    for (let i = 0; i < times.length; i++) {
-      if (signal?.aborted) return { ok: false, reason: "aborted" };
+    const goTo = async (t) => {
       await waitVisible();
-      if (!(await seek(v, times[i])) && document.hidden) {
+      if (!(await seek(v, t)) && document.hidden) {
         await waitVisible();
-        await seek(v, times[i]);
+        await seek(v, t);
       }
-      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+    };
+    // Run the model on one region of the current frame. Landmarks come back
+    // in full-frame 0-1 coordinates whatever the region was.
+    const detectRegion = async (r) => {
+      const s = r.full ? Math.min(1, DETECT_MAX_DIM / Math.max(r.w, r.h)) : Math.min(2, CROP_DIM / Math.max(r.w, r.h));
+      canvas.width = Math.max(16, Math.round(r.w * s));
+      canvas.height = Math.max(16, Math.round(r.h * s));
+      ctx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, canvas.width, canvas.height);
       let res;
       try {
-        res = landmarker.detectForVideo(canvas, _nextTs());
+        res = landmarker.detect(canvas);
       } catch (err) {
         if (_delegate !== "GPU") throw err;
         landmarker = await _fallBackToCpu();
-        res = landmarker.detectForVideo(canvas, _nextTs());
+        res = landmarker.detect(canvas);
       }
-      const people = (res.landmarks || []).map((img, k) => ({ img, world: res.worldLandmarks?.[k] || null }))
-        .filter((p) => p.world && p.img?.length === 33);
-      frames.push({ t: times[i], people });
-      onProgress?.({ phase: "track", done: i + 1, total: times.length });
-    }
+      return (res.landmarks || []).map((img, k) => ({
+        img: img.map((l) => ({ x: (r.x + l.x * r.w) / W, y: (r.y + l.y * r.h) / H, z: l.z, visibility: l.visibility })),
+        world: res.worldLandmarks?.[k] || null,
+      })).filter((p) => p.world && p.img.length === 33);
+    };
+    const FULL = { x: 0, y: 0, w: W, h: H, full: true };
+    const regionAround = (cx, cy, side) => {
+      const w = Math.min(W, side), h = Math.min(H, side);
+      return { x: Math.max(0, Math.min(W - w, cx - w / 2)), y: Math.max(0, Math.min(H - h, cy - h / 2)), w, h };
+    };
+    // The player's extent in pixels, from the joints the model could see.
+    const bodyBox = (p) => {
+      let pts = p.img.filter((l) => (l.visibility ?? 1) >= 0.2);
+      if (pts.length < 6) pts = p.img;
+      const xs = pts.map((l) => l.x * W), ys = pts.map((l) => l.y * H);
+      return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+    };
+    const regionFor = (p, grow = 1) => {
+      const b = bodyBox(p);
+      const side = Math.max(0.2 * minWH, CROP_SCALE * grow * Math.max(b.x1 - b.x0, b.y1 - b.y0));
+      return regionAround((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, side);
+    };
+    const torsoPx = (p) => { const [x, y] = torsoCentre(p.img); return [x * W, y * H]; };
+    const torsoLenPx = (p) => {
+      const lm = p.img;
+      const sh = [((lm[L_SH].x + lm[R_SH].x) / 2) * W, ((lm[L_SH].y + lm[R_SH].y) / 2) * H];
+      const hp = [((lm[L_HIP].x + lm[R_HIP].x) / 2) * W, ((lm[L_HIP].y + lm[R_HIP].y) / 2) * H];
+      return Math.hypot(sh[0] - hp[0], sh[1] - hp[1]);
+    };
+    // Who is the player? Gemini's box, else their tap, else the only person
+    // in view. -2 means several people and nothing to choose between them.
+    const pickTarget = (people) => {
+      if (!people.length) return -1;
+      if (box) {
+        const padX = (box.xmax - box.xmin) * 0.3, padY = (box.ymax - box.ymin) * 0.3;
+        const cx = (box.xmin + box.xmax) / 2, cy = (box.ymin + box.ymax) / 2;
+        let best = -1, bestD = Infinity;
+        people.forEach((p, i) => {
+          const [tx, ty] = torsoCentre(p.img);
+          const inside = tx >= box.xmin - padX && tx <= box.xmax + padX && ty >= box.ymin - padY && ty <= box.ymax + padY;
+          const d = Math.hypot((tx - cx) * W, (ty - cy) * H);
+          if (inside && d < bestD) { best = i; bestD = d; }
+        });
+        return best;
+      }
+      if (tap) {
+        const tx = tap.x * W, ty = tap.y * H;
+        let best = -1, bestScore = Infinity, bestOut = Infinity;
+        people.forEach((p, i) => {
+          const b = bodyBox(p);
+          const out = Math.hypot(Math.max(b.x0 - tx, 0, tx - b.x1), Math.max(b.y0 - ty, 0, ty - b.y1));
+          const [cx, cy] = torsoPx(p);
+          // Inside the body beats near it; among overlapping bodies, the torso nearest the tap.
+          const score = out * 10 + Math.hypot(cx - tx, cy - ty);
+          if (score < bestScore) { best = i; bestScore = score; bestOut = out; }
+        });
+        return bestOut < 0.06 * minWH ? best : -1;
+      }
+      return people.length === 1 ? 0 : -2;
+    };
 
-    // 2. follow the player out from the contact frame. A fast arm blurs the
-    // contact frame itself, so anchor on the nearest frame (±0.2 s) where the
-    // model actually found people rather than failing on one bad frame.
+    // 1. find the player at contact. A fast arm blurs the contact frame
+    // itself, so try the nearest frames (±0.2 s) too. A box is sized to the
+    // player, so look in a crop around it first. A tap isn't: a small crop
+    // round a near player cuts them in half and the half-body poisons the
+    // tracking, so try the full frame first and crops only for a far player
+    // too small to find on it.
     const kContact = times.reduce((best, t, i) => (Math.abs(t - contactSec) < Math.abs(times[best] - contactSec) ? i : best), 0);
     const maxShift = Math.round(0.2 * SAMPLE_FPS);
-    let kc = -1;
-    for (let d = 0; d <= maxShift && kc < 0; d++) {
-      for (const k of [kContact - d, kContact + d]) {
-        if (k >= 0 && k < frames.length && frames[k].people.length && pickAtContact(frames[k].people, contactBox) >= 0) { kc = k; break; }
+    const anchorRegions = [];
+    if (box) {
+      const side = Math.max(0.25 * minWH, 1.7 * Math.max((box.xmax - box.xmin) * W, (box.ymax - box.ymin) * H));
+      anchorRegions.push(regionAround(((box.xmin + box.xmax) / 2) * W, ((box.ymin + box.ymax) / 2) * H, side), FULL);
+    } else if (tap) {
+      anchorRegions.push(FULL, regionAround(tap.x * W, tap.y * H, 0.8 * minWH), regionAround(tap.x * W, tap.y * H, 0.45 * minWH));
+    } else {
+      anchorRegions.push(FULL);
+    }
+    let kc = -1, anchor = null, ambiguous = false;
+    search:
+    for (let d = 0; d <= maxShift; d++) {
+      for (const k of d === 0 ? [kContact] : [kContact - d, kContact + d]) {
+        if (k < 0 || k >= times.length) continue;
+        if (signal?.aborted) return { ok: false, reason: "aborted" };
+        await goTo(times[k]);
+        for (const r of anchorRegions) {
+          const people = await detectRegion(r);
+          const i = pickTarget(people);
+          if (i === -2) { ambiguous = true; break search; }
+          if (i >= 0) { kc = k; anchor = people[i]; break search; }
+        }
       }
     }
-    const pick = new Array(frames.length).fill(-1);
-    if (kc < 0) {
-      return { ok: false, reason: "no-player-at-contact", peoplePerFrame: frames.map((f) => f.people.length) };
-    }
-    pick[kc] = pickAtContact(frames[kc].people, contactBox);
+    if (ambiguous) return { ok: false, reason: "need-player-pick" };
+    if (kc < 0) return { ok: false, reason: "no-player-at-contact" };
+
+    // 2. follow them out from contact, both ways, looking only in a crop
+    // around where they just were. After a miss the search widens (they kept
+    // moving while the model blinked); a body far smaller or larger than the
+    // one we're following is a partial or wrong detection, not them.
+    const tracked = new Array(times.length).fill(null);
+    tracked[kc] = anchor;
+    let refLen = torsoLenPx(anchor);
+    let done = 1;
+    onProgress?.({ phase: "track", done, total: times.length });
     for (const dir of [1, -1]) {
-      let prev = frames[kc].people[pick[kc]];
-      for (let i = kc + dir; i >= 0 && i < frames.length; i += dir) {
-        const [px, py] = torsoCentre(prev.img);
-        const lim = 0.9 * Math.max(0.02, torsoLen(prev.img));
-        let best = -1, bestD = Infinity;
-        frames[i].people.forEach((p, k) => {
-          const [tx, ty] = torsoCentre(p.img);
-          const d = Math.hypot(tx - px, ty - py);
-          if (d < bestD) { bestD = d; best = k; }
-        });
-        if (best >= 0 && bestD < lim) { pick[i] = best; prev = frames[i].people[best]; }
+      let prev = anchor, misses = 0;
+      for (let i = kc + dir; i >= 0 && i < times.length && misses <= MAX_GAP; i += dir) {
+        if (signal?.aborted) return { ok: false, reason: "aborted" };
+        await goTo(times[i]);
+        const grow = 1 + 0.35 * misses;
+        const [px, py] = torsoPx(prev);
+        const lim = 0.9 * grow * Math.max(0.02 * minWH, torsoLenPx(prev));
+        const nearest = (people) => {
+          let best = null, bestD = Infinity;
+          for (const p of people) {
+            const len = torsoLenPx(p);
+            if (len < 0.55 * refLen || len > 1.8 * refLen) continue;
+            const [tx, ty] = torsoPx(p);
+            const d = Math.hypot(tx - px, ty - py);
+            if (d < bestD) { bestD = d; best = p; }
+          }
+          return best && bestD < lim ? best : null;
+        };
+        // The crop usually finds them; when it doesn't, look at the whole
+        // frame before calling it a miss (a crop can clip a lunging body).
+        let found = nearest(await detectRegion(regionFor(prev, grow)));
+        if (!found) found = nearest(await detectRegion(FULL));
+        if (found) {
+          tracked[i] = found;
+          prev = found;
+          misses = 0;
+          refLen = 0.8 * refLen + 0.2 * torsoLenPx(prev);
+        } else {
+          misses++;
+        }
+        onProgress?.({ phase: "track", done: ++done, total: times.length });
       }
     }
-    const coverage = pick.filter((k) => k >= 0).length / pick.length;
-    if (coverage < MIN_COVERAGE) return { ok: false, reason: "lost-player", coverage };
+
+    // Keep the stretch around contact we actually followed (short gaps are
+    // filled below). It has to reach far enough either side of contact for
+    // the correction to ramp in and out; clips that start or end sooner than
+    // that just need to be followed to their edge.
+    let lo = kc, hi = kc;
+    for (let i = kc - 1, gap = 0; i >= 0; i--) {
+      if (tracked[i]) { lo = i; gap = 0; } else if (++gap > MAX_GAP) break;
+    }
+    for (let i = kc + 1, gap = 0; i < times.length; i++) {
+      if (tracked[i]) { hi = i; gap = 0; } else if (++gap > MAX_GAP) break;
+    }
+    const needBefore = Math.min(NEED_BEFORE_S, contactSec - times[0]);
+    const needAfter = Math.min(NEED_AFTER_S, times[times.length - 1] - contactSec);
+    const coverage = tracked.filter(Boolean).length / tracked.length;
+    if (contactSec - times[lo] < needBefore - 0.02 || times[hi] - contactSec < needAfter - 0.02) {
+      return { ok: false, reason: "lost-player", coverage: Math.round(coverage * 100) / 100 };
+    }
+    times = times.slice(lo, hi + 1);
+    const tracked2 = tracked.slice(lo, hi + 1);
+    kc -= lo;
+    tracked.length = 0;
+    tracked.push(...tracked2);
+    // Share of the kept stretch the model actually saw (the rest is gap-filled).
+    const followed = tracked.filter(Boolean).length / tracked.length;
 
     // 3. arrays in video pixels / metres, gap-filled + lightly smoothed
-    const pxSeries = frames.map((f, i) => (pick[i] < 0 ? null
-      : f.people[pick[i]].img.map((l) => [l.x * W, l.y * H])));
-    const worldSeries = frames.map((f, i) => (pick[i] < 0 ? null
-      : f.people[pick[i]].world.map((l) => [l.x, l.y, l.z])));
-    const visSeries = frames.map((f, i) => (pick[i] < 0 ? null
-      : f.people[pick[i]].img.map((l) => l.visibility ?? 0)));
+    const pxSeries = tracked.map((p) => (p ? p.img.map((l) => [l.x * W, l.y * H]) : null));
+    const worldSeries = tracked.map((p) => (p ? p.world.map((l) => [l.x, l.y, l.z]) : null));
+    const visSeries = tracked.map((p) => (p ? p.img.map((l) => l.visibility ?? 0) : null));
     const PX = fillAndSmooth(pxSeries, 3);
     const WL = fillAndSmooth(worldSeries, 5);
-    const VIS = visSeries.map((f, i) => f || visSeries[kc]);
+    const VIS = visSeries.map((f) => f || visSeries[kc]);
 
     // 4. racket side = the wrist highest in the image around contact
     let lUp = 0, rUp = 0;
-    for (let i = Math.max(0, kc - 3); i <= Math.min(frames.length - 1, kc + 3); i++) {
+    for (let i = Math.max(0, kc - 3); i <= Math.min(times.length - 1, kc + 3); i++) {
       if (PX[i][L_WR][1] < PX[i][R_WR][1]) lUp++; else rUp++;
     }
     const side = lUp > rUp ? "left" : "right";
     const [SH, EL, WR, HIP] = side === "left" ? [L_SH, L_EL, L_WR, L_HIP] : [R_SH, R_EL, R_WR, R_HIP];
 
     const armVis = Math.min(VIS[kc][SH], VIS[kc][EL], VIS[kc][WR]);
-    if (armVis < 0.5) return { ok: false, reason: "arm-not-visible", coverage };
+    if (armVis < 0.5) return { ok: false, reason: "arm-not-visible", coverage: Math.round(followed * 100) / 100 };
 
     // 5. measure at contact (3D) and decide the correction
     const wc = WL[kc];
@@ -442,9 +574,9 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
       return x * x * (3 - 2 * x);
     };
     let fitErr = 0, fitN = 0;
-    const out = frames.map((f, i) => {
-      const w = applied.length ? weightAt(f.t) : 0;
-      const frame = { t: f.t, pts: PX[i], w, corrected: null, tracked: pick[i] >= 0 };
+    const out = times.map((t, i) => {
+      const w = applied.length ? weightAt(t) : 0;
+      const frame = { t, pts: PX[i], w, corrected: null, tracked: !!tracked[i] };
       if (w < 0.02) return frame;
       const wl = WL[i];
       const project = fitCamera(wl, PX[i], VIS[i]);
@@ -509,7 +641,7 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
       applied,
       hasIdeal: !!ideal,
       idealLabel: ideal?.label || null,
-      quality: { coverage: Math.round(coverage * 100) / 100, fitErrorPx: fitN ? Math.round(fitErr / fitN) : null },
+      quality: { coverage: Math.round(followed * 100) / 100, fitErrorPx: fitN ? Math.round(fitErr / fitN) : null },
     };
   } finally {
     try { v?.removeAttribute("src"); v?.load?.(); } catch { /* noop */ }

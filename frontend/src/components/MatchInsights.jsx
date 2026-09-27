@@ -30,18 +30,20 @@ import CoachNoteOverlay from "@/components/CoachNoteOverlay";
 // "is this supported?" would defeat the point of asking.
 import { isPostureSupported } from "@/ai/posturePolicy";
 import FormCompareView from "@/components/FormCompareView";
+import PlayerTapPicker from "@/components/PlayerTapPicker";
 
 // 3D corrected-motion ghost. Lazy: MediaPipe's model + WASM only download when
 // a player taps "Watch the fix in motion".
 const GhostPlayback = lazy(() => import("@/components/GhostPlayback"));
 
-function GhostLauncher({ videoFile, contactSec, sport, shotType, contactBox, shotLabel }) {
-  const [open, setOpen] = useState(false);
+// Controlled by the parent: when the clip has several people and no box, the
+// parent asks "which one are you?" first and opens this after the tap.
+function GhostLauncher({ open, onOpen, onRepick, videoFile, contactSec, sport, shotType, contactBox, tapPoint, shotLabel }) {
   if (!open) {
     return (
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        onClick={(e) => { e.stopPropagation(); onOpen(); }}
         className="w-full flex items-center justify-between gap-3 rounded-2xl border border-lime-400/40 bg-lime-400/5 hover:bg-lime-400/10 px-4 py-3 text-left transition-colors"
       >
         <span>
@@ -64,7 +66,9 @@ function GhostLauncher({ videoFile, contactSec, sport, shotType, contactBox, sho
         sport={sport}
         shotType={shotType}
         contactBox={contactBox}
+        tapPoint={tapPoint}
         shotLabel={shotLabel}
+        onRepick={onRepick}
       />
     </Suspense>
   );
@@ -3290,6 +3294,43 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     return () => { cancelled = true; };
   }, [sport, perShot]);
 
+  // "Which one are you?" When Gemini didn't box the player and several people
+  // are in the shot, the player taps themselves once on the contact frame.
+  // Both the posture check and the 3D ghost then follow that person instead
+  // of guessing. Keyed to the shot's timestamp so it can't leak onto another shot.
+  const [picked, setPicked] = useState(null); // { ts, box, tap }
+  const [picker, setPicker] = useState(null); // { forGhost, frameUrl, busy, error }
+  const [ghostOpen, setGhostOpen] = useState(false);
+  const pickFor = picked && headlineShot && picked.ts === headlineShot.timestamp ? picked : null;
+  // The player's own tap beats Gemini's box (which can sit on the wrong
+  // person). A tap with no box found still steers the 3D ghost on its own.
+  const effectiveBox = pickFor ? pickFor.box : (headlineShot?.contactBox || null);
+  const tapPoint = pickFor?.tap || null;
+
+  const openPicker = useCallback(async (forGhost) => {
+    if (!videoFile || typeof headlineShot?.timestamp !== "number") return;
+    setGhostOpen(false);
+    setPicker({ forGhost, frameUrl: null, busy: false, error: null });
+    const url = await _captureFrameAt(videoFile, Math.max(0.05, headlineShot.timestamp), 960, null);
+    setPicker((p) => (p ? { ...p, frameUrl: url, error: url ? null : "We couldn't grab a frame from this clip." } : p));
+  }, [videoFile, headlineShot]);
+
+  const confirmPick = useCallback(async (tap) => {
+    if (!picker?.frameUrl || typeof headlineShot?.timestamp !== "number") return;
+    const { forGhost, frameUrl } = picker;
+    setPicker((p) => (p ? { ...p, busy: true, error: null } : p));
+    let box = null;
+    try {
+      const mod = await import("@/ai/poseOverlay");
+      box = await mod.findPlayerBoxAt(frameUrl, tap.x, tap.y);
+    } catch {
+      // No box: the tap alone still steers the 3D ghost.
+    }
+    setPicked({ ts: headlineShot.timestamp, box, tap });
+    setPicker(null);
+    if (forGhost) setGhostOpen(true);
+  }, [picker, headlineShot]);
+
   // Pose analysis for the hero (top) shot — drives the big skeleton frame
   // and the full-width metric row. Called unconditionally (hooks rule); it
   // no-ops until headlineShot resolves.
@@ -3299,7 +3340,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     thumbnail: headlineShot?.thumbnail || null,
     sport,
     shotType: headlineShot?.category || headlineShot?.type || headlineShot?.label,
-    contactBox: headlineShot?.contactBox || null,
+    contactBox: effectiveBox,
   });
 
   // AI Correct auto-fire removed (see note above).
@@ -3377,11 +3418,19 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   // so in that case the panel is dropped and the clip takes the full width.
   const postureIsTrustworthy = (
     heroPosture.status !== "ready"
-    || !!headlineShot?.contactBox
+    || !!effectiveBox
     || (heroPosture.result?.peopleCount ?? 1) <= 1
   );
   const showPosture = (heroPosture.status === "loading" || heroPosture.status === "ready")
     && postureIsTrustworthy;
+  const peopleInShot = heroPosture.status === "ready" ? (heroPosture.result?.peopleCount ?? 1) : null;
+  // Ask "which one are you?" instead of hiding the posture check silently:
+  // several people and no box, or the full-frame read failed outright.
+  const askWhoIsPlayer = canShowVideo && !!videoFile && isPostureSupported(sport)
+    && !effectiveBox && !tapPoint && !picker
+    && (heroPosture.status === "failed" || (peopleInShot ?? 1) > 1);
+  // The 3D ghost asks first too, unless we know only one person is in view.
+  const ghostNeedsPick = !effectiveBox && !tapPoint && peopleInShot !== 1;
 
   // Click YOU panel → seek the page's main video to this shot AND
   // scroll it into view, so users have one path to "study this in
@@ -3480,15 +3529,69 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             {heroPosture.status === "ready" && heroPosture.result.peopleCount > 1 && (
               <div className="absolute bottom-2 left-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-1">
                 <p className="text-[9px] text-zinc-300 leading-snug">
-                  {heroPosture.result.peopleCount} people in frame — tracked the player at the contact point
+                  {heroPosture.result.peopleCount} people in frame — {pickFor?.box ? "tracking the player you tapped" : "tracked the player at the contact point"}
                 </p>
               </div>
             )}
           </div>
         )}
       </div>
-      {/* Measured joint angles — a single compact line. */}
-      {heroPosture.status === "ready" && (
+      {/* WHICH ONE ARE YOU? — several people and no box: ask once instead of
+          guessing, then the posture check and the 3D ghost follow that person. */}
+      {picker && (
+        <div className="px-4 pt-3 pb-1">
+          <PlayerTapPicker
+            frameUrl={picker.frameUrl}
+            peopleHint={peopleInShot}
+            busy={picker.busy}
+            error={picker.error}
+            onConfirm={confirmPick}
+            onCancel={() => setPicker(null)}
+          />
+        </div>
+      )}
+      {askWhoIsPlayer && (
+        <div className="px-4 pt-3 pb-1">
+          <div className="flex items-center gap-3 rounded-xl border border-sky-400/30 bg-sky-400/5 px-3 py-2.5">
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold text-white">
+                {(peopleInShot ?? 0) > 1 ? `${peopleInShot} people in this shot — which one are you?` : "Help us find you"}
+              </p>
+              <p className="text-[11px] text-zinc-400 leading-snug mt-0.5">
+                {(peopleInShot ?? 0) > 1
+                  ? "Tap yourself once and we'll measure your posture, not someone else's."
+                  : "We couldn't measure your posture on the full frame. Tap yourself and we'll look at just you."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openPicker(false)}
+              className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-bold bg-sky-400 text-black hover:bg-sky-300"
+            >
+              Pick me
+            </button>
+          </div>
+        </div>
+      )}
+      {!picker && canShowVideo && !!videoFile && isPostureSupported(sport) && (pickFor || headlineShot?.contactBox) && (
+        <div className="px-4 py-2 border-t border-zinc-800 flex items-center justify-between gap-2">
+          <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-lime-400" />
+            {pickFor ? "Following the player you tapped" : "Following the player the coach analysed"}
+          </p>
+          <button
+            type="button"
+            onClick={() => openPicker(false)}
+            className="text-[11px] font-semibold text-sky-300 hover:text-sky-200"
+          >
+            {pickFor ? "Change" : "Not you?"}
+          </button>
+        </div>
+      )}
+      {/* Measured joint angles — a single compact line. Same trust gate as
+          the skeleton: these are someone's angles, so only show them when we
+          know whose. */}
+      {heroPosture.status === "ready" && showPosture && (
         <div className="px-4 py-2.5 border-t border-zinc-800">
           <PostureMetricsRow state={heroPosture} />
         </div>
@@ -3512,11 +3615,15 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
       {canShowVideo && videoFile && isPostureSupported(sport) && (
         <div className="px-4 pb-4 pt-1">
           <GhostLauncher
+            open={ghostOpen}
+            onOpen={() => (ghostNeedsPick ? openPicker(true) : setGhostOpen(true))}
+            onRepick={() => openPicker(true)}
             videoFile={videoFile}
             contactSec={headlineShot.timestamp}
             sport={sport}
             shotType={headlineShot?.category || headlineShot?.type || headlineShot?.label}
-            contactBox={headlineShot?.contactBox || null}
+            contactBox={effectiveBox}
+            tapPoint={tapPoint}
             shotLabel={headlineShot?._name || null}
           />
         </div>

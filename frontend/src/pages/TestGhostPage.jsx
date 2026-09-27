@@ -7,6 +7,7 @@ import GhostPlayback from "@/components/GhostPlayback";
  * browser; the clip never leaves the device.
  *
  * Dev shortcut: /test-ghost?src=/dev-samples/clip.mp4&t=25.4&sport=badminton&shot=clear&box=ymin,xmin,ymax,xmax
+ * Steer by a tap instead of a box with &tap=x,y (0-1 of the frame).
  */
 export default function TestGhostPage() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -31,6 +32,10 @@ export default function TestGhostPage() {
     const n = box.split(",").map((x) => Number(x.trim()));
     return n.length === 4 && n.every(Number.isFinite) ? n : null;
   }, [box]);
+  const tapPoint = useMemo(() => {
+    const n = (params.get("tap") || "").split(",").map((x) => Number(x.trim()));
+    return n.length === 2 && n.every(Number.isFinite) ? { x: n[0], y: n[1] } : null;
+  }, [params]);
   const contactSec = Number(t);
   const ready = file && Number.isFinite(contactSec) && t !== "";
 
@@ -81,6 +86,7 @@ export default function TestGhostPage() {
             sport={sport}
             shotType={shot}
             contactBox={contactBox}
+            tapPoint={tapPoint}
             shotLabel={`${shot} · ${contactSec}s`}
           />
         )}
