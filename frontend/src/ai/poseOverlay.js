@@ -2,7 +2,7 @@
  * @module poseOverlay
  * Draws a pose skeleton on a shot thumbnail with joints color-coded
  * by whether their measured angles fall inside the "ideal range" for
- * that shot type. Pedagogical alternative to AI video regeneration â€”
+ * that shot type. Pedagogical alternative to AI video regeneration —
  * users see exactly which joints are off and by how much.
  */
 import { initModel, detectPose, detectMultiplePeople, getKeypointByName, calculateAngle, KEYPOINT_NAMES, SKELETON_EDGES } from "./poseDetector.js";
@@ -50,12 +50,49 @@ function _pickSubject(people) {
 }
 
 
+/**
+ * The person under a tap on a frame, as a [ymin,xmin,ymax,xmax] 0-1000 box:
+ * the same shape as Gemini's contact_box, so the posture crop and the 3D
+ * ghost take it unchanged. Returns null when nobody is near the tap.
+ *
+ * Used when a clip has several people and Gemini didn't box the player:
+ * rather than guess (the "skeleton on the wrong person" complaint), the
+ * player taps themselves once.
+ */
+export async function findPlayerBoxAt(imageDataUrl, x, y) {
+  const img = new Image();
+  img.src = imageDataUrl;
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("failed to load frame")); });
+  const W = img.width, H = img.height;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  c.getContext("2d").drawImage(img, 0, 0);
+  const people = await detectMultiplePeople(c);
+  const tx = x * W, ty = y * H;
+  let best = null, bestScore = Infinity;
+  for (const p of people) {
+    const pts = (p.keypoints || []).filter((k) => (k.score || 0) > 0.3);
+    if (pts.length < 5) continue;
+    const xs = pts.map((k) => k.x), ys = pts.map((k) => k.y);
+    const b = { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+    // A tap on the racket, head or feet still counts: grow the joint box a little.
+    const gx = (b.x1 - b.x0) * 0.2, gy = (b.y1 - b.y0) * 0.1;
+    const out = Math.hypot(Math.max(b.x0 - gx - tx, 0, tx - b.x1 - gx), Math.max(b.y0 - gy - ty, 0, ty - b.y1 - gy));
+    if (out > 0.06 * Math.max(W, H)) continue;
+    const score = out * 10 + Math.hypot((b.x0 + b.x1) / 2 - tx, (b.y0 + b.y1) / 2 - ty);
+    if (score < bestScore) { best = b; bestScore = score; }
+  }
+  if (!best) return null;
+  const clamp = (v) => Math.round(Math.max(0, Math.min(1, v)) * 1000);
+  return [clamp(best.y0 / H), clamp(best.x0 / W), clamp(best.y1 / H), clamp(best.x1 / W)];
+}
+
 // Ideal ranges + shot-name lookup live in ./idealAngles.js (TF-free, shared
 // with the 3D ghost).
 
 
 /**
- * Pick which side (left or right) is the "racket arm" â€” heuristic:
+ * Pick which side (left or right) is the "racket arm" — heuristic:
  * the arm with the wrist HIGHER in the frame at contact (smaller y).
  * For non-overhead shots, the arm whose elbow is FURTHER from the
  * shoulder horizontally. Returns "left" or "right".
@@ -66,7 +103,7 @@ function detectRacketSide(kps) {
   if (!lw || !rw) return "right";
   if ((lw.score || 0) < 0.3 && (rw.score || 0) >= 0.3) return "right";
   if ((rw.score || 0) < 0.3 && (lw.score || 0) >= 0.3) return "left";
-  // Higher wrist (smaller y) wins â€” that's typically the racket-bearing arm
+  // Higher wrist (smaller y) wins — that's typically the racket-bearing arm
   return lw.y < rw.y ? "left" : "right";
 }
 
@@ -83,7 +120,7 @@ function angleAt(kps, sideName, joint) {
     return calculateAngle(a, b, c);
   }
   if (joint === "shoulder") {
-    // shoulderâ†’elbow vs shoulderâ†’hip axis (how high the upper arm is)
+    // shoulder→elbow vs shoulder→hip axis (how high the upper arm is)
     const sh = get(`${sideName}_shoulder`);
     const el = get(`${sideName}_elbow`);
     const hp = get(`${sideName}_hip`);
@@ -159,13 +196,13 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
   const racketSide = detectRacketSide(keypoints);
   const ideal = getIdealAngles(sport, shotType);
 
-  // â”€â”€ Pose-reliability gate for overhead shots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Pose-reliability gate for overhead shots ──────────────────────────
   // Overhead shots (smash, clear, serve, overhead, spike, jump shot, bowling
-  // â€¦) have a high ideal shoulder elevation. At contact the racket wrist
-  // MUST sit at or above the shoulder. When MoveNet says otherwise â€” common
+  // …) have a high ideal shoulder elevation. At contact the racket wrist
+  // MUST sit at or above the shoulder. When MoveNet says otherwise — common
   // on multi-person frames, motion-blurred overhead arms, or an arm partway
-  // out of the crop â€” the arm keypoints are mis-detected and ANY angle they
-  // produce is garbage (the "55Â° Â· Off" on a clearly-overhead smash bug).
+  // out of the crop — the arm keypoints are mis-detected and ANY angle they
+  // produce is garbage (the "55° · Off" on a clearly-overhead smash bug).
   // In that case we DROP the arm measurements rather than flag good
   // technique as a fault.
   const isOverhead = !!(ideal?.shoulder && ideal.shoulder.ideal >= 150);
@@ -187,7 +224,7 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
     if (value == null) continue;
     const range = ideal?.[joint];
     // Gross-contradiction guard: a high-ideal joint (overhead arm) measuring
-    // far BELOW its range is a detection failure, not a coaching fault â€” skip
+    // far BELOW its range is a detection failure, not a coaching fault — skip
     // it instead of rendering a misleading "Off".
     if (range && range.ideal >= 150 && value < range.min - 40) continue;
     let status = "neutral";
@@ -232,7 +269,7 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
     ctx.stroke();
   }
 
-  // Then dots â€” color-coded for the measured joints on the racket side
+  // Then dots — color-coded for the measured joints on the racket side
   const racketJointMap = {
     [`${racketSide}_elbow`]: measurements.find((m) => m.joint === "elbow")?.status,
     [`${racketSide}_shoulder`]: measurements.find((m) => m.joint === "shoulder")?.status,

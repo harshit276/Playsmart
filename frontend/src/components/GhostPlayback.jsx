@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause, RotateCcw, Info, ArrowRight } from "lucide-react";
-import { buildGhostTrack, GHOST_EDGES, isWebGLError } from "@/ai/ghostPose";
+import { buildGhostTrack, GHOST_EDGES, isWebGLError, ghostDelegate } from "@/ai/ghostPose";
+import { track as trackEvent } from "@/lib/analytics";
 
 /**
  * GhostPlayback — the player's real clip, slowed down, with their own arm
@@ -15,13 +16,16 @@ const JOINT_LABEL = { elbow: "Elbow", shoulder: "Arm height" };
 const REASON_COPY = {
   "no-contact-time": "This shot has no timestamp, so we can't find the moment of contact.",
   "clip-too-short": "There isn't enough video around this shot.",
-  "no-player-at-contact": "We couldn't find the player at the moment of contact.",
-  "lost-player": "We lost track of the player during the shot. Try a clip where they stay in view.",
-  "arm-not-visible": "The hitting arm isn't clearly visible at contact from this camera angle.",
+  "no-player-at-contact": "We couldn't find you at the moment of contact.",
+  "need-player-pick": "There are several people in this shot. Tap yourself so we follow the right player.",
+  "lost-player": "We lost track of you during the shot.",
+  "arm-not-visible": "Your hitting arm isn't clearly visible at contact from this camera angle.",
   "video-load-failed": "Your clip couldn't be opened on this device.",
   "video-load-timeout": "Your clip took too long to open on this device.",
   "no-webgl": "This browser can't run the 3D pose model because graphics acceleration is off. Try Chrome or Safari with hardware acceleration turned on.",
 };
+// Failures where following a different person is the likely fix.
+const REPICK_REASONS = new Set(["no-player-at-contact", "need-player-pick", "lost-player", "arm-not-visible"]);
 const HOLD_AT_CONTACT_MS = 900;
 const RED = "#f87171", GREEN = "#a3e635", OUTLINE = "rgba(10,10,10,0.85)";
 
@@ -60,7 +64,9 @@ function nearestFrame(frames, t) {
   return frames[lo];
 }
 
-export default function GhostPlayback({ videoFile, contactSec, sport, shotType, contactBox = null, shotLabel = null }) {
+export default function GhostPlayback({
+  videoFile, contactSec, sport, shotType, contactBox = null, tapPoint = null, shotLabel = null, onRepick = null,
+}) {
   const [state, setState] = useState({ status: "working", phase: "model", done: 0, total: 1 });
   const [playing, setPlaying] = useState(true);
   const [rate, setRate] = useState(0.5);
@@ -78,26 +84,38 @@ export default function GhostPlayback({ videoFile, contactSec, sport, shotType, 
   // Build the track once per clip/shot. Keyed on the box's values, not the
   // array, so a parent re-render can't restart a 20-second build.
   const boxKey = Array.isArray(contactBox) ? contactBox.join(",") : "";
+  const tapKey = tapPoint ? `${tapPoint.x},${tapPoint.y}` : "";
   useEffect(() => {
     if (!videoFile) { setState({ status: "failed", reason: "video-load-failed" }); return undefined; }
     const ac = new AbortController();
     setState({ status: "working", phase: "model", done: 0, total: 1 });
+    const started = Date.now();
+    // One event per build, success or not: the only way to see why it fails
+    // on real phones. No clip content, just the outcome and how it was steered.
+    const report = (ok, reason, extra = {}) => trackEvent("ghost_built", {
+      ok, reason: reason || null, sport: sport || null, delegate: ghostDelegate(),
+      steered_by: tapPoint ? "tap" : contactBox ? "box" : "none",
+      seconds: Math.round((Date.now() - started) / 100) / 10, ...extra,
+    });
     buildGhostTrack({
-      video: videoFile, contactSec, sport, shotType, contactBox, signal: ac.signal,
+      video: videoFile, contactSec, sport, shotType, contactBox, tapPoint, signal: ac.signal,
       onProgress: (p) => !ac.signal.aborted && setState({ status: "working", ...p }),
     })
       .then((r) => {
         if (ac.signal.aborted) return;
         if (!r.ok && process.env.NODE_ENV !== "production") console.info("[ghost] not built:", r);
+        report(r.ok, r.ok ? null : r.reason, { coverage: r.coverage ?? r.quality?.coverage ?? null, corrections: r.applied?.length ?? null });
         setState(r.ok ? { status: "ready", track: r } : { status: "failed", reason: r.reason });
       })
       .catch((e) => {
         if (ac.signal.aborted) return;
         if (process.env.NODE_ENV !== "production") console.warn("[ghost] failed:", e);
-        setState({ status: "failed", reason: isWebGLError(e) ? "no-webgl" : (e?.message || "error") });
+        const reason = isWebGLError(e) ? "no-webgl" : (e?.message || "error");
+        report(false, reason);
+        setState({ status: "failed", reason });
       });
     return () => ac.abort();
-  }, [videoFile, contactSec, sport, shotType, boxKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [videoFile, contactSec, sport, shotType, boxKey, tapKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const track = state.status === "ready" ? state.track : null;
   const crop = useMemo(() => (track ? cropRect(track) : null), [track]);
@@ -234,11 +252,21 @@ export default function GhostPlayback({ videoFile, contactSec, sport, shotType, 
   }
 
   if (state.status === "failed") {
+    const canRepick = onRepick && REPICK_REASONS.has(state.reason);
     return (
-      <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
-        <p className="text-sm text-zinc-300">
+      <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 flex items-center gap-3 flex-wrap">
+        <p className="text-sm text-zinc-300 flex-1 min-w-[180px]">
           {REASON_COPY[state.reason] || "We couldn't build the corrected motion for this clip."}
         </p>
+        {canRepick && (
+          <button
+            type="button"
+            onClick={onRepick}
+            className="shrink-0 px-3 py-2 rounded-lg text-[12px] font-bold bg-sky-400 text-black hover:bg-sky-300"
+          >
+            {tapPoint ? "Pick yourself again" : "Pick yourself"}
+          </button>
+        )}
       </div>
     );
   }
