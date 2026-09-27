@@ -1944,8 +1944,8 @@ export async function compressVideoForUpload(videoFile, options = {}) {
     recorder.start(200);
     let rafId = null;
     let lastDrawnTime = -1;
-    const drawLoop = () => {
-      if (video.ended || video.currentTime >= endSec) return;
+    const drawFrame = () => {
+      if (video.ended || video.currentTime >= endSec) return false;
       const t = video.currentTime;
       if (t !== lastDrawnTime) {
         try { ctx.drawImage(video, 0, 0, outW, outH); } catch {}
@@ -1953,8 +1953,16 @@ export async function compressVideoForUpload(videoFile, options = {}) {
         if (t > maxDrawnTime) maxDrawnTime = t;
         if (onProgress) onProgress(Math.min(99, Math.round(((t - clampedStart) / duration) * 100)));
       }
-      rafId = requestAnimationFrame(drawLoop);
+      return true;
     };
+    const drawLoop = () => {
+      if (drawFrame()) rafId = requestAnimationFrame(drawLoop);
+    };
+    // Animation frames stop whenever the window isn't being painted — e.g. a
+    // desktop browser sitting behind another app — while the video keeps
+    // playing, so the capture recorded one frozen frame. A timer keeps
+    // drawing in that case (drawFrame skips frames already drawn).
+    const drawTimer = setInterval(drawFrame, 40);
     const playEnded = new Promise((resolve) => {
       const finish = () => { resolve(); };
       video.addEventListener("ended", finish, { once: true });
@@ -1996,6 +2004,7 @@ export async function compressVideoForUpload(videoFile, options = {}) {
       fastPathOk = false;
     } finally {
       if (rafId) cancelAnimationFrame(rafId);
+      clearInterval(drawTimer);
       try { video.pause(); } catch {}
     }
   }
