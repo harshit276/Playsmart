@@ -15,7 +15,7 @@
  * doesn't already show: per-type technique consistency + the coaching
  * narrative. No duplicated counts.
  */
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { TrendingUp, AlertCircle, Target, Loader2, Trophy, Zap, X, Activity, Award, AlertTriangle, Dumbbell, Clock, Play, ArrowRight, Sparkles, ScanFace } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
@@ -30,6 +30,45 @@ import CoachNoteOverlay from "@/components/CoachNoteOverlay";
 // "is this supported?" would defeat the point of asking.
 import { isPostureSupported } from "@/ai/posturePolicy";
 import FormCompareView from "@/components/FormCompareView";
+
+// 3D corrected-motion ghost. Lazy: MediaPipe's model + WASM only download when
+// a player taps "Watch the fix in motion".
+const GhostPlayback = lazy(() => import("@/components/GhostPlayback"));
+
+function GhostLauncher({ videoFile, contactSec, sport, shotType, contactBox, shotLabel }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        className="w-full flex items-center justify-between gap-3 rounded-2xl border border-lime-400/40 bg-lime-400/5 hover:bg-lime-400/10 px-4 py-3 text-left transition-colors"
+      >
+        <span>
+          <span className="block text-sm font-bold text-white">Watch the fix in motion</span>
+          <span className="block text-[11px] text-zinc-400">
+            Your clip, slowed down, with your arm corrected in 3D around contact
+          </span>
+        </span>
+        <span className="shrink-0 text-lime-300 text-lg" aria-hidden="true">▶</span>
+      </button>
+    );
+  }
+  return (
+    <Suspense
+      fallback={<div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 text-sm text-zinc-400">Loading…</div>}
+    >
+      <GhostPlayback
+        videoFile={videoFile}
+        contactSec={contactSec}
+        sport={sport}
+        shotType={shotType}
+        contactBox={contactBox}
+        shotLabel={shotLabel}
+      />
+    </Suspense>
+  );
+}
 
 
 // "Coach's read" text quality gate. The VLM sometimes emits a purely
@@ -3464,6 +3503,21 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           <FormCompareView
             pose={heroPosture.result}
             shotLabel={heroPosture.result.shotLabel || headlineShot?._name || null}
+          />
+        </div>
+      )}
+      {/* THE FIX IN MOTION — same target as the panel above, but measured and
+          corrected in 3D across the swing and drawn over the real clip. Needs
+          the clip itself, so it's only offered in the live session. */}
+      {canShowVideo && videoFile && isPostureSupported(sport) && (
+        <div className="px-4 pb-4 pt-1">
+          <GhostLauncher
+            videoFile={videoFile}
+            contactSec={headlineShot.timestamp}
+            sport={sport}
+            shotType={headlineShot?.category || headlineShot?.type || headlineShot?.label}
+            contactBox={headlineShot?.contactBox || null}
+            shotLabel={headlineShot?._name || null}
           />
         </div>
       )}
