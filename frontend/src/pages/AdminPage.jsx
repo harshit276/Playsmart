@@ -1134,7 +1134,7 @@ function TransactionsTab({ headers }) {
             <td className="py-2 px-3 text-zinc-300 text-xs">{t.kind}</td>
             <td className={`py-2 px-3 font-mono text-right font-bold ${t.delta > 0 ? "text-lime-400" : "text-amber-400"}`}>{t.delta > 0 ? "+" : ""}{t.delta}</td>
             <td className="py-2 px-3 font-mono text-right text-purple-300">{t.balance_after ?? "—"}</td>
-            <td className="py-2 px-3 text-zinc-500 text-[10px] font-mono">{(t.user_id || "").slice(0, 12)}…</td>
+            <td className="py-2 px-3 text-zinc-300 text-xs" title={t.user_id || ""}>{t.user_label || t.user_email || (t.user_id || "").slice(0, 12)}</td>
             <td className="py-2 px-3 text-zinc-500 text-xs">{fmtDate(t.created_at)}</td>
           </tr>
         ))}
@@ -1164,7 +1164,7 @@ function PaymentsTab({ headers }) {
                 "bg-amber-400/15 text-amber-300 border-amber-400/30"
               }`}>{p.status}</Badge>
             </td>
-            <td className="py-2 px-3 text-zinc-500 text-[10px] font-mono">{(p.user_id || "").slice(0, 12)}…</td>
+            <td className="py-2 px-3 text-zinc-300 text-xs" title={p.user_id || ""}>{p.user_label || p.user_email || (p.user_id || "").slice(0, 12)}</td>
             <td className="py-2 px-3 text-zinc-500 text-xs">{fmtDate(p.created_at)}</td>
           </tr>
         ))}
