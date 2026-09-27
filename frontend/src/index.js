@@ -26,8 +26,18 @@ if (isPrerendered) {
   );
 }
 
+// Dev server chunk names aren't content-hashed, so a caching service worker
+// keeps serving the pre-edit code after every change (it silently ran stale
+// chunks while testing the ghost overlay). Never cache in development, and
+// clear a worker left behind by an earlier dev session.
+if ('serviceWorker' in navigator && process.env.NODE_ENV !== 'production') {
+  navigator.serviceWorker.getRegistrations()
+    .then((regs) => regs.forEach((r) => r.unregister()))
+    .catch(() => {});
+}
+
 // Register PWA service worker + show "new version available" prompt
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
   // Was this page already controlled by a service worker when it loaded?
   // Read BEFORE registering. On a first visit it is null, and the fresh SW's
   // clients.claim() then fires `controllerchange` even though nothing was

@@ -5235,7 +5235,8 @@ async def analyze_video_universal_endpoint(
     # OUTPUT is not worth that spend spike — it once drained the prepaid Gemini
     # credits to zero and took analysis down for everyone. Only bump when the
     # produced result genuinely changes, and watch billing after you do.
-    PROMPT_VERSION = "v2026-08-17-stroke-side-and-fps"
+    # 2026-09-27: per-rep technique_checks → dynamic /10 (output shape changed).
+    PROMPT_VERSION = "v2026-09-27-technique-checks"
     if req.file_name:
         # Files API path — no bytes locally; key the cache off the handle name
         # (it's content-specific for the life of the upload).
@@ -5318,6 +5319,7 @@ async def analyze_video_universal_endpoint(
         "sport_detected": result.get("sport_detected", "unknown"),
         "summary": result.get("summary", ""),
         "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
+        "technique_score": result.get("technique_score"),
         # Forward the rich coach narrative paragraphs straight through.
         # This is the field that gives the user the Gemini-Studio-grade
         # coach voice they expect on the analyze result page.
@@ -5634,6 +5636,7 @@ async def analyze_video_stream_endpoint(
                     "sport_detected": final_payload.get("sport_detected"),
                     "summary": final_payload.get("summary"),
                     "overall_skill_level": final_payload.get("overall_skill_level"),
+                    "technique_score": final_payload.get("technique_score"),
                     "coach_narrative": final_payload.get("coach_narrative") or {},
                     "target_mismatch_warning": final_payload.get("target_mismatch_warning") or None,
                     "court_map": final_payload.get("court_map") or None,
@@ -5925,6 +5928,7 @@ async def _process_job(job: dict, claimed: bool = False):
         "sport_detected": result.get("sport_detected", "unknown"),
         "summary": result.get("summary", ""),
         "overall_skill_level": result.get("overall_skill_level", "Intermediate"),
+        "technique_score": result.get("technique_score"),
         "coach_narrative": result.get("coach_narrative") or {},
         "target_mismatch_warning": result.get("target_mismatch_warning") or None,
         "court_map": result.get("court_map") or None,
@@ -6824,24 +6828,36 @@ def _reengage_copy(analysis: dict, milestone_days: int, nudge_id: str = "") -> d
     sport = (analysis.get("sport") or "").replace("_", " ").strip()
     sport_title = sport.title() if sport else "your sport"
     shot = _primary_shot_type(analysis)
-    weaknesses = sorted(_shot_set(analysis))
-    weak = weaknesses[0] if weaknesses else None
+    # Name the #1 fix from that session (what the results page led with), not
+    # the alphabetically-first weakness phrase the old sorted() picked.
+    top_fixes = [f for f in ((analysis.get("vlm_coaching") or {}).get("key_focus_areas") or [])
+                 if isinstance(f, str) and f.strip()]
+    listed = [w for w in ((analysis.get("shot_analysis") or {}).get("weaknesses") or [])
+              if isinstance(w, str) and w.strip()]
+    weak = (top_fixes or listed or sorted(_shot_set(analysis)) or [None])[0]
+    if weak and len(weak) > 90:
+        weak = weak[:87].rsplit(" ", 1)[0] + "…"
     focus = shot if (shot and shot != "shot") else (sport.lower() or "technique")
     title = f"Ready to see if your {focus} improved?"
     if weak:
         body = (f'Last time we flagged "{weak}". Have you worked on it? '
-                f"Upload a new {sport_title} clip and let's measure your progress.")
+                f"Film the same shot again and we'll check.")
     else:
         body = (f"It's been a few days — upload a new {sport_title} clip and "
                 f"we'll measure how much you've improved since last time.")
     # The URL carries the nudge id so a tap can be attributed (see
-    # POST /push/clicked) — without it we could only count sends.
-    url = "/analyze?src=push&n={}".format(nudge_id) if nudge_id else "/analyze"
+    # POST /push/clicked), and the analysis id so the tap opens straight into
+    # compare mode against that session — before, it landed on a plain upload
+    # page and the new clip was analysed with nothing to compare it to.
+    aid = analysis.get("id") or ""
+    url = "/analyze?src=push&n={}&compare={}".format(nudge_id, aid) if nudge_id else (
+        "/analyze?compare={}".format(aid) if aid else "/analyze")
     return {
         "title": title,
         "body": body[:180],
         "url": url,
-        "job_id": f"reengage-{analysis.get('id')}-{milestone_days}",
+        "compare_id": aid,
+        "job_id": f"reengage-{aid}-{milestone_days}",
     }
 
 
@@ -6849,6 +6865,8 @@ def _reengage_email_html(payload: dict, nudge_id: str) -> tuple:
     """Same nudge for users with no push subscription — most people never
     granted notifications, so push alone reaches only a fraction of them."""
     link = "{}/analyze?src=email&n={}".format(SHARE_SITE_URL, nudge_id)
+    if payload.get("compare_id"):
+        link += "&compare={}".format(payload["compare_id"])
     html = (
         "<div style=\"margin:0;padding:0;background:#0b0f14;font-family:-apple-system,"
         "BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">"
@@ -6910,7 +6928,7 @@ async def _scan_and_send_reengagement():
                 db.video_analyses.find(
                     {"date": {"$gte": lo, "$lte": hi}},
                     {"id": 1, "user_id": 1, "sport": 1, "date": 1,
-                     "shot_analysis": 1, "shots": 1},
+                     "shot_analysis": 1, "shots": 1, "vlm_coaching": 1},
                 ).to_list(length=500),
                 timeout=10.0)
         except (Exception, asyncio.TimeoutError):
@@ -7019,7 +7037,7 @@ async def admin_reengage_now(
         try:
             latest = await asyncio.wait_for(db.video_analyses.find(
                 {"user_id": uid}, {"_id": 0, "id": 1, "user_id": 1, "sport": 1, "date": 1,
-                                   "shot_analysis": 1, "shots": 1}
+                                   "shot_analysis": 1, "shots": 1, "vlm_coaching": 1}
             ).sort("date", -1).to_list(1), timeout=6.0)
         except Exception:
             continue
@@ -8715,6 +8733,30 @@ def _shot_set(analysis: dict) -> set:
     return {x for x in out if x}
 
 
+_STOPWORDS = {
+    "the", "and", "with", "your", "you", "for", "from", "into", "onto", "that", "this",
+    "more", "less", "keep", "make", "ensure", "focus", "slightly", "after", "before",
+    "during", "while", "when", "than", "then", "them", "their", "they", "have", "been",
+    "shot", "shots", "better", "good", "work", "working", "also", "each", "every",
+}
+
+
+def _content_words(text: str) -> set:
+    """Meaningful words only (4+ letters, not filler) — for loose matching of
+    two differently-worded descriptions of the same technique issue."""
+    import re as _re
+    return {w for w in _re.findall(r"[a-z]{4,}", (text or "").lower()) if w not in _STOPWORDS}
+
+
+def _is_derived_score(analysis: dict) -> bool:
+    """Universal-mode scores come from the skill label plus the count of
+    strengths vs improvements (see _derive_universal_score) — not from a
+    measurement. Comparing two of them shows AI wording variance, not
+    progress (same player + same rally re-read as 79 -> 58 in testing)."""
+    return (analysis.get("analysis_mode") == "universal"
+            or (analysis.get("_meta") or {}).get("source") == "universal")
+
+
 def _primary_shot_type(analysis: dict) -> str:
     """The shot type the player was working on, if identifiable."""
     sa = analysis.get("shot_analysis") or {}
@@ -8817,30 +8859,48 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
     # The compare_analyses() helper already pulls the per-shot reasoning +
     # form_feedback text from each session's saved shots, which is dense
     # enough metadata to detect technique changes without needing keyframes. ───
+    old_focus = [f for f in ((old.get("vlm_coaching") or {}).get("key_focus_areas") or [])
+                 if isinstance(f, str) and f.strip()][:3]
+
     def _run() -> dict:
-        return _compare_analyses(old, new, days_between, backend=req.backend)
+        return _compare_analyses(old, new, days_between, backend=req.backend,
+                                 focus_areas=old_focus)
     loop = asyncio.get_event_loop()
     try:
         narrative = await loop.run_in_executor(None, _run)
     except Exception as exc:
         narrative = {"_error": str(exc)[:200]}
 
-    # ─── Drill attribution: did the OLD analysis flag a weakness that
-    # the NEW analysis no longer has? Surface it as "you fixed X". ───
-    old_focus = (old.get("vlm_coaching") or {}).get("key_focus_areas") or []
+    # ─── Drill attribution: for each fix the player was told to work on,
+    # is it resolved, still there, or not in this clip? The coach model
+    # judges this against the new session (it reads meaning, not wording).
+    # The old word-overlap matcher counted a match whenever ANY word — "the",
+    # "a", "to" — appeared in both texts, so almost everything came back
+    # "resolved", including fixes for shots the new clip didn't contain. ───
+    _status_to_outcome = {"resolved": "resolved", "still_there": "still working",
+                          "not_observable": "not in this clip"}
+    judged = {fs.get("focus"): fs for fs in (narrative.get("focus_status") or [])
+              if isinstance(fs, dict)} if isinstance(narrative, dict) else {}
     drill_attribution = []
-    for focus in old_focus[:3]:
-        focus_lower = focus.lower()
-        related_resolved = [w for w in resolved if any(t in w for t in focus_lower.split()) or any(t in focus_lower for t in w.split())]
-        related_persistent = [w for w in persistent if any(t in w for t in focus_lower.split()) or any(t in focus_lower for t in w.split())]
+    for focus in old_focus:
+        fs = judged.get(focus)
+        if fs:
+            drill_attribution.append({
+                "focus_area": focus,
+                "outcome": _status_to_outcome.get(fs.get("status"), "no signal"),
+                "evidence": fs.get("evidence", ""),
+                "source": "coach",
+            })
+            continue
+        # Fallback when the model returned nothing usable: only count real
+        # content-word overlap (4+ letters, not stopwords), 2+ shared words.
+        fwords = _content_words(focus)
+        still = [w for w in new_weak if len(fwords & _content_words(w)) >= 2]
         drill_attribution.append({
             "focus_area": focus,
-            "resolved": related_resolved,
-            "persistent": related_persistent,
-            "outcome": "resolved" if related_resolved and not related_persistent
-                     else "improving" if related_resolved
-                     else "still working" if related_persistent
-                     else "no signal",
+            "outcome": "still working" if still else "no signal",
+            "evidence": still[0] if still else "",
+            "source": "text",
         })
 
     comparison = {
@@ -8850,6 +8910,9 @@ async def compare_analyses_endpoint(req: CompareAnalysesRequest, authorization: 
         "days_between": days_between,
         "same_shot_type": same_shot,
         "shot_type": _primary_shot_type(new),
+        # True when either score is derived (not measured) — the UI then
+        # hides the score/level delta instead of presenting noise as progress.
+        "score_is_derived": _is_derived_score(old) or _is_derived_score(new),
         # Edge-case flags so the frontend can warn the user that the
         # comparison isn't apples-to-apples (different sport, no shared
         # shot types, skill jump that hints at a different player).
@@ -8894,6 +8957,9 @@ class SaveUniversalAnalysisRequest(BaseModel):
     # Content fingerprint of the analyzed clip — lets the trend endpoint
     # detect "same video re-analyzed" and suppress fake progress deltas.
     video_hash: str | None = None
+    # Dynamic /10 from the reps' technique checks (see
+    # session_technique_score). Saved ×10 so history's /100 matches the /10.
+    technique_score: float | None = None
 
 
 def _grade_from_score(s: float) -> str:
@@ -8931,7 +8997,11 @@ async def save_universal_analysis(req: SaveUniversalAnalysisRequest, authorizati
     dom = cats.most_common(1)[0][0] if cats else "shot"
     shot_name = (dom.replace("_", " ").title() if dom != "shot"
                  else (req.sport or "Analysis").replace("_", " ").title())
-    score = _derive_universal_score(req.skill_level, len(strengths), len(improvements))
+    if isinstance(req.technique_score, (int, float)) and 0 < req.technique_score <= 10:
+        score = int(round(float(req.technique_score) * 10))
+    else:
+        # Older clients / cached results without technique checks.
+        score = _derive_universal_score(req.skill_level, len(strengths), len(improvements))
 
     file_id = str(uuid.uuid4())
     analysis_record = {
