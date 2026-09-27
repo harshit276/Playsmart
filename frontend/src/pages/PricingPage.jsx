@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatPackPrice } from "@/lib/price";
+import { formatPackPrice, formatChargeNote } from "@/lib/price";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -167,6 +167,9 @@ export default function PricingPage() {
                   )}
                   <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">{pack.label}</p>
                   <p className="text-3xl font-heading font-black text-white mb-0.5">{formatPackPrice(pack)}</p>
+                  {formatChargeNote(pack) && (
+                    <p className="text-[11px] text-zinc-500 mb-1">{formatChargeNote(pack)} · your card converts it</p>
+                  )}
                   <p className="text-xs text-lime-400 font-semibold flex items-center gap-1 mb-2">
                     <Video className="w-3 h-3" /> {n.toLocaleString()} {analysisWord(n)}
                   </p>

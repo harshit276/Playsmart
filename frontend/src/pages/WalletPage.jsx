@@ -6,7 +6,7 @@
  * TOKEN_RULES so this page stays in sync with backend changes.
  */
 import { useEffect, useState } from "react";
-import { formatPackPrice } from "@/lib/price";
+import { formatPackPrice, formatChargeNote } from "@/lib/price";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Badge } from "@/components/ui/badge";
@@ -167,6 +167,7 @@ export default function WalletPage() {
                 <p className="font-heading font-black text-xl text-white mt-1">{analysesFrom(p.tokens).toLocaleString("en-IN")}</p>
                 <p className="text-[10px] text-zinc-500">{analysisWord(analysesFrom(p.tokens))}</p>
                 <p className="text-sm font-bold text-purple-300 mt-2">{formatPackPrice(p)}</p>
+                {formatChargeNote(p) && <p className="text-[9px] text-zinc-500">{formatChargeNote(p)}</p>}
                 <p className="text-[9px] text-zinc-500 mt-1">Buy →</p>
               </button>
             ))}

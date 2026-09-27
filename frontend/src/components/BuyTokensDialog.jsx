@@ -13,7 +13,7 @@
  *   directly so the flow is testable without a real charge.
  */
 import { useState, useEffect, useCallback } from "react";
-import { formatPackPrice } from "@/lib/price";
+import { formatPackPrice, formatChargeNote } from "@/lib/price";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
@@ -227,6 +227,9 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
                   <p className="font-heading font-black text-2xl text-white mt-1">{n.toLocaleString("en-IN")}</p>
                   <p className="text-[10px] text-zinc-500 mb-2">{analysisWord(n)}</p>
                   <p className="text-base font-bold text-purple-300">{formatPackPrice(p)}</p>
+                  {formatChargeNote(p) && (
+                    <p className="text-[9px] text-zinc-500">{formatChargeNote(p)}</p>
+                  )}
                   {n > 1 && (
                     <p className="text-[9px] text-zinc-600 mt-0.5">
                       {symbol}{perAnalysis.toFixed(perAnalysis < 10 ? 2 : 0)} per analysis

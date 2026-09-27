@@ -2754,14 +2754,20 @@ import string as _string
 TOKEN_PACKS = [
     # Baseline: 100 tokens = ₹30 = 1 Standard analysis (or 0.4 Premium).
     # Bulk packs give progressive discount to reward repeat users.
-    # price_usd is the INTERNATIONAL price, not a converted INR price. ~3x the
-    # India rate, which is ordinary geo-pricing: $1 for a first analysis is a
-    # trivial sum in the US/EU while Rs 30 is the right number in India.
-    {"key": "pack_100",  "tokens":   100, "price_inr":   30, "price_usd":  1, "label": "Trial"},
-    {"key": "pack_500",  "tokens":   500, "price_inr":  130, "price_usd":  4, "label": "Starter"},
-    {"key": "pack_1500", "tokens":  1500, "price_inr":  350, "price_usd": 10, "label": "Best Value", "highlight": True},
-    {"key": "pack_5000", "tokens":  5000, "price_inr": 1000, "price_usd": 30, "label": "Power"},
+    # price_usd is the INTERNATIONAL price, not a converted INR price. Set on
+    # 2026-09-27 so no pack goes under $1 per analysis ($2 / $1.60 / $1.33 /
+    # $1.10): paying customers so far are mostly abroad, and $0.60 an analysis
+    # undersold it. India keeps the INR ladder.
+    {"key": "pack_100",  "tokens":   100, "price_inr":   30, "price_usd":  2, "label": "Trial"},
+    {"key": "pack_500",  "tokens":   500, "price_inr":  130, "price_usd":  8, "label": "Starter"},
+    {"key": "pack_1500", "tokens":  1500, "price_inr":  350, "price_usd": 20, "label": "Best Value", "highlight": True},
+    {"key": "pack_5000", "tokens":  5000, "price_inr": 1000, "price_usd": 55, "label": "Power"},
 ]
+
+# Rupees per dollar used when a USD-priced pack has to be CHARGED in INR
+# (International Payments not switched on). Deliberately a fixed number, not a
+# live rate: the quote on the page must equal the charge at checkout.
+USD_INR_RATE = float(os.environ.get("USD_INR_RATE", "88") or 88)
 
 # Razorpay only settles USD once International Payments is approved on the
 # account. Until then we still SHOW local pricing, but the actual charge stays
@@ -2786,14 +2792,37 @@ def _is_india(request) -> bool:
     return c in ("", "IN")
 
 
+def _charge_for(pack: dict, india: bool) -> tuple:
+    """(currency, amount, amount_in_inr) actually charged for this visitor.
+
+    Abroad the page quotes USD. Razorpay can only settle USD once International
+    Payments is approved (INTERNATIONAL_CHARGING); until then the SAME dollar
+    price is charged as its rupee equivalent. Before this, a foreign visitor
+    saw "$10" and Razorpay then billed ₹350 (~$4) — a different number at the
+    moment of paying, which is exactly when people abandon.
+    """
+    if india or not pack.get("price_usd"):
+        return "INR", pack["price_inr"], pack["price_inr"]
+    usd = pack["price_usd"]
+    inr = int(round(usd * USD_INR_RATE))
+    if INTERNATIONAL_CHARGING:
+        return "USD", usd, inr
+    return "INR", inr, inr
+
+
 def _packs_for(request) -> list:
-    """Packs with a `price` + `currency` the client can render directly."""
+    """Packs with a `price` + `currency` the client can render directly, plus
+    what the card will actually be charged (`charge_currency`/`charge_amount`)
+    so the page can say "billed as ₹176" when the two differ."""
     india = _is_india(request)
     out = []
     for p in TOKEN_PACKS:
         q = dict(p)
         q["currency"] = "INR" if india else "USD"
         q["price"] = p["price_inr"] if india else p.get("price_usd", p["price_inr"])
+        cur, amt, _inr = _charge_for(p, india)
+        q["charge_currency"] = cur
+        q["charge_amount"] = amt
         out.append(q)
     return out
 
@@ -3102,6 +3131,16 @@ async def _find_payment_order(oid: str):
     return None, False
 
 
+def _money(currency: str, amount) -> str:
+    sym = {"INR": "₹", "USD": "$"}.get((currency or "INR").upper(), (currency or "") + " ")
+    try:
+        amt = float(amount)
+        amt_s = f"{amt:,.0f}" if amt == int(amt) else f"{amt:,.2f}"
+    except Exception:
+        amt_s = str(amount)
+    return f"{sym}{amt_s}"
+
+
 async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> Optional[int]:
     """Idempotent credit keyed on razorpay_payment_id (so verify + webhook
     can't double-credit)."""
@@ -3116,8 +3155,10 @@ async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> 
             return None
     except Exception:
         pass
+    paid_inr = order.get("amount_inr") or pack["price_inr"]
     new_balance = await _credit_tokens(user_id, "purchase", pack["tokens"], {
-        "pack_key": pack["key"], "amount_inr": pack["price_inr"],
+        "pack_key": pack["key"], "amount_inr": paid_inr,
+        "currency": order.get("currency") or "INR", "amount": order.get("amount") or paid_inr,
         "razorpay_order_id": order.get("razorpay_order_id"),
         "razorpay_payment_id": payment_id, "provider": "razorpay"})
     try:
@@ -3129,8 +3170,10 @@ async def _credit_razorpay_order(user_id: str, order: dict, payment_id: str) -> 
         pass
     try:
         await _notify_admin_now(
-            f"\U0001f4b0 Purchase · ₹{pack['price_inr']} (Razorpay)",
-            f"User: {await _user_label(user_id)}\nPack: {pack['key']} (+{pack['tokens']} tokens)\nNew balance: {new_balance}")
+            f"\U0001f4b0 Purchase · {_money(order.get('currency') or 'INR', order.get('amount') or paid_inr)} (Razorpay)",
+            f"User: {await _user_label(user_id)}\n"
+            f"Pack: {pack['tokens'] // 100} analyses\n"
+            f"Balance now: {(new_balance or 0) // 100} analyses")
     except Exception:
         pass
     return new_balance
@@ -3162,10 +3205,7 @@ async def razorpay_create_order(req: CreateOrderRequest, request: Request, autho
     # the account. Before that a USD order is rejected outright, so a foreign
     # buyer is better served by an INR charge their bank converts — which is
     # what happens when INTERNATIONAL_CHARGING is off.
-    _use_usd = (INTERNATIONAL_CHARGING and not _is_india(request)
-                and pack.get("price_usd"))
-    _amount = (pack["price_usd"] if _use_usd else pack["price_inr"])
-    _currency = "USD" if _use_usd else "INR"
+    _currency, _amount, _amount_inr = _charge_for(pack, _is_india(request))
     payload = {"amount": int(round(_amount * 100)), "currency": _currency,
                "receipt": f"ath_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
                "notes": {"user_id": user["id"], "pack_key": pack["key"], "tokens": str(pack["tokens"])}}
@@ -3194,7 +3234,9 @@ async def razorpay_create_order(req: CreateOrderRequest, request: Request, autho
     try:
         await asyncio.wait_for(db.payment_orders.insert_one({
             "id": str(uuid.uuid4()), "user_id": user["id"], "razorpay_order_id": order_id,
-            "pack_key": pack["key"], "tokens_amount": pack["tokens"], "amount_inr": pack["price_inr"],
+            "pack_key": pack["key"], "tokens_amount": pack["tokens"],
+            # What was actually charged, plus its rupee value for revenue totals.
+            "currency": _currency, "amount": _amount, "amount_inr": _amount_inr,
             "status": "created", "provider": "razorpay", "paid_at": None,
             "created_at": datetime.now(timezone.utc).isoformat()}), timeout=2.0)
     except Exception as e:

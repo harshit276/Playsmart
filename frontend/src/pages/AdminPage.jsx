@@ -111,7 +111,7 @@ export default function AdminPage() {
             <TabsTrigger value="feedback" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Feedback</TabsTrigger>
             <TabsTrigger value="users" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Users</TabsTrigger>
             <TabsTrigger value="enquiries" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Enquiries</TabsTrigger>
-            <TabsTrigger value="transactions" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Tokens</TabsTrigger>
+            <TabsTrigger value="transactions" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Analyses</TabsTrigger>
             <TabsTrigger value="payments" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Payments</TabsTrigger>
             <TabsTrigger value="support" className="text-xs data-[state=active]:bg-amber-400 data-[state=active]:text-black">Support</TabsTrigger>
           </TabsList>
@@ -320,7 +320,7 @@ function StatsTab({ headers }) {
     { label: "Profiles", val: data.counts?.player_profiles },
     { label: "Games", val: data.counts?.games },
     { label: "Enquiries", val: data.counts?.enquiries },
-    { label: "Token Txns", val: data.counts?.token_transactions },
+    { label: "Ledger entries", val: data.counts?.token_transactions },
     { label: "Payments", val: data.counts?.payment_orders },
     { label: "Referrals", val: data.counts?.referrals },
   ];
@@ -366,17 +366,17 @@ function StatsTab({ headers }) {
       <ReengagementCard headers={headers} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
         <div className="bg-gradient-to-br from-purple-500/10 to-zinc-900 border border-purple-400/30 rounded-2xl p-5">
-          <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-2">Token Economy</p>
+          <p className="text-[10px] uppercase tracking-wider text-purple-300 font-bold mb-2">Analyses (all accounts)</p>
           <div className="grid grid-cols-3 gap-3">
-            <div><p className="text-[10px] text-zinc-500">Credited</p><p className="text-xl font-bold text-lime-400">{data.tokens?.credited?.toLocaleString("en-IN")}</p></div>
-            <div><p className="text-[10px] text-zinc-500">Spent</p><p className="text-xl font-bold text-amber-400">{data.tokens?.spent?.toLocaleString("en-IN")}</p></div>
-            <div><p className="text-[10px] text-zinc-500">Outstanding</p><p className="text-xl font-bold text-purple-300">{data.tokens?.outstanding?.toLocaleString("en-IN")}</p></div>
+            <div><p className="text-[10px] text-zinc-500">Given / bought</p><p className="text-xl font-bold text-lime-400">{toAnalyses(data.tokens?.credited)}</p></div>
+            <div><p className="text-[10px] text-zinc-500">Used</p><p className="text-xl font-bold text-amber-400">{toAnalyses(data.tokens?.spent)}</p></div>
+            <div><p className="text-[10px] text-zinc-500">Unused</p><p className="text-xl font-bold text-purple-300">{toAnalyses(data.tokens?.outstanding)}</p></div>
           </div>
         </div>
         <div className="bg-gradient-to-br from-lime-500/10 to-zinc-900 border border-lime-400/30 rounded-2xl p-5">
           <p className="text-[10px] uppercase tracking-wider text-lime-300 font-bold mb-2">Revenue (INR)</p>
           <p className="font-heading font-black text-3xl text-white">₹{(data.revenue_inr || 0).toLocaleString("en-IN")}</p>
-          <p className="text-[10px] text-zinc-500 mt-1">From token pack purchases</p>
+          <p className="text-[10px] text-zinc-500 mt-1">From analysis pack purchases (dollar orders counted at their rupee value)</p>
         </div>
       </div>
 
@@ -506,8 +506,8 @@ function UsersTab({ headers }) {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-lg font-mono font-bold text-purple-300">🪙 {(u.tokens ?? 0).toLocaleString("en-IN")}</p>
-                <p className="text-[10px] text-zinc-500">tokens</p>
+                <p className="text-lg font-mono font-bold text-purple-300">{toAnalyses(u.tokens ?? 0)}</p>
+                <p className="text-[10px] text-zinc-500">analyses left</p>
               </div>
             </div>
           ))}
@@ -871,18 +871,19 @@ function MailPanel({ headers }) {
 
 function BulkGrantPanel({ headers }) {
   const [ids, setIds] = useState("");
-  const [amount, setAmount] = useState("200");
+  const [amount, setAmount] = useState("2");
   const [reason, setReason] = useState("");
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(null);
 
   const run = async (dry) => {
-    const amt = parseInt(amount, 10);
+    const n = parseInt(amount, 10);
+    const amt = n * 100; // the API takes tokens; the admin types analyses
     if (!ids.trim()) { toast.error("Paste some emails first"); return; }
-    if (!Number.isFinite(amt) || amt === 0) { toast.error("Enter a non-zero amount"); return; }
+    if (!Number.isFinite(n) || n === 0) { toast.error("Enter a non-zero number of analyses"); return; }
     if (!dry && !window.confirm(
-      "Credit " + amt + " tokens to " + (preview?.found ?? "?") + " account(s)? This cannot be undone.")) return;
+      "Give " + n + " analyses to " + (preview?.found ?? "?") + " account(s)? This cannot be undone.")) return;
     setBusy(true);
     try {
       const { data } = await api.post("/admin/grant-tokens-bulk",
@@ -900,7 +901,7 @@ function BulkGrantPanel({ headers }) {
   return (
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl p-4 mb-6">
       <p className="text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-3 flex items-center gap-1.5">
-        <Coins className="w-3.5 h-3.5" /> Bulk grant tokens
+        <Coins className="w-3.5 h-3.5" /> Give analyses to many accounts
       </p>
       <textarea
         value={ids}
@@ -914,7 +915,7 @@ function BulkGrantPanel({ headers }) {
         <input
           value={amount}
           onChange={(e) => setAmount(e.target.value.replace(/[^0-9-]/g, ""))}
-          placeholder="Amount"
+          placeholder="Analyses each"
           inputMode="numeric"
           disabled={busy}
           className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none font-mono"
@@ -929,7 +930,7 @@ function BulkGrantPanel({ headers }) {
       </div>
       <label className="flex items-center gap-2 text-[12px] text-zinc-400 mb-3">
         <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} disabled={busy} />
-        Email each person that tokens were added
+        Email each person that analyses were added
       </label>
       <div className="flex gap-2 flex-wrap">
         <Button size="sm" variant="outline" onClick={() => run(true)} disabled={busy}
@@ -949,7 +950,7 @@ function BulkGrantPanel({ headers }) {
           </p>
           {(preview.preview || preview.accounts || []).slice(0, 40).map((r, i) => (
             <div key={i} className="font-mono text-[11px] text-zinc-400">
-              {r.email} {r.before != null ? r.before + " → " + r.after : "→ " + r.balance}
+              {r.email} {r.before != null ? toAnalyses(r.before) + " → " + toAnalyses(r.after) : "→ " + toAnalyses(r.balance)}
             </div>
           ))}
           {preview.not_found?.length > 0 && (
@@ -995,7 +996,7 @@ function FeedbackCampaignPanel({ headers }) {
       </p>
       <p className="text-[12px] text-zinc-400 mb-3">
         One email per user, ever, asking what the analysis got wrong — and offering
-        bonus tokens for answering, paid the same for criticism as for praise.
+        2 bonus analyses for answering, the same for criticism as for praise.
         Skips anyone who unsubscribed or already received it.
       </p>
       <div className="flex gap-2 flex-wrap">
@@ -1034,17 +1035,18 @@ function GrantTokensPanel({ headers, onDone }) {
   const [result, setResult] = useState(null);
 
   const submit = async () => {
-    const amt = parseInt(amount, 10);
+    const n = parseInt(amount, 10);
+    const amt = n * 100; // the API takes tokens; the admin types analyses
     if (!identifier.trim()) { toast.error("Enter an email, phone or user id"); return; }
-    if (!Number.isFinite(amt) || amt === 0) { toast.error("Enter a non-zero amount"); return; }
-    if (amt < 0 && !window.confirm(`Deduct ${Math.abs(amt)} tokens from ${identifier.trim()}?`)) return;
+    if (!Number.isFinite(n) || n === 0) { toast.error("Enter a non-zero number of analyses"); return; }
+    if (n < 0 && !window.confirm(`Take ${Math.abs(n)} analyses from ${identifier.trim()}?`)) return;
     setBusy(true);
     try {
       const { data } = await api.post("/admin/grant-tokens",
         { identifier: identifier.trim(), amount: amt, reason: reason.trim() },
         { headers, timeout: 15000 });
       setResult(data);
-      toast.success(`${data.amount > 0 ? "+" : ""}${data.amount} → ${data.user.email || data.user.phone || "account"} (now ${data.balance})`);
+      toast.success(`${data.amount > 0 ? "+" : ""}${toAnalyses(data.amount)} analyses → ${data.user.email || data.user.phone || "account"} (now ${toAnalyses(data.balance)})`);
       setAmount(""); setReason("");
       onDone?.();
     } catch (e) {
@@ -1056,7 +1058,7 @@ function GrantTokensPanel({ headers, onDone }) {
   return (
     <div className="bg-zinc-900/60 border border-amber-400/30 rounded-xl p-4 mb-6">
       <p className="text-[11px] uppercase tracking-wider text-amber-400 font-bold mb-3 flex items-center gap-1.5">
-        <Coins className="w-3.5 h-3.5" /> Adjust tokens manually
+        <Coins className="w-3.5 h-3.5" /> Give or take analyses
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-2 mb-2">
         <input
@@ -1070,7 +1072,7 @@ function GrantTokensPanel({ headers, onDone }) {
           value={amount}
           onChange={e => setAmount(e.target.value.replace(/[^\d-]/g, ""))}
           onKeyDown={e => { if (e.key === "Enter") submit(); }}
-          placeholder="Amount (−ve deducts)"
+          placeholder="Analyses (−ve takes away)"
           inputMode="numeric"
           disabled={busy}
           className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none font-mono"
@@ -1084,7 +1086,7 @@ function GrantTokensPanel({ headers, onDone }) {
         className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-amber-400 focus:outline-none mb-2"
       />
       <div className="flex items-center gap-2 flex-wrap">
-        {[100, 500, 1000].map(n => (
+        {[1, 2, 5].map(n => (
           <button
             key={n}
             type="button"
@@ -1108,13 +1110,20 @@ function GrantTokensPanel({ headers, onDone }) {
       {result && (
         <p className="text-[11px] text-zinc-400 mt-3 pt-3 border-t border-zinc-800">
           <span className="text-white font-medium">{result.user.name || result.user.email || result.user.phone || result.user.id}</span>
-          {" · "}{result.balance_before} → <span className="text-lime-400 font-mono font-bold">{result.balance}</span>
-          {" "}({result.amount > 0 ? "+" : ""}{result.amount})
+          {" · "}{toAnalyses(result.balance_before)} → <span className="text-lime-400 font-mono font-bold">{toAnalyses(result.balance)}</span>
+          {" "}analyses ({result.amount > 0 ? "+" : ""}{toAnalyses(result.amount)})
         </p>
       )}
     </div>
   );
 }
+
+// The ledger stays in tokens (100 = 1 analysis); the admin reads analyses,
+// the same unit customers see.
+const toAnalyses = (tokens) => {
+  const n = Number(tokens || 0) / 100;
+  return Number.isInteger(n) ? n.toLocaleString("en-IN") : n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+};
 
 function TransactionsTab({ headers }) {
   const { data, loading, refresh } = useFetch("/admin/transactions?limit=200", headers);
@@ -1128,12 +1137,12 @@ function TransactionsTab({ headers }) {
       <MailPanel headers={headers} />
       <DeleteUserPanel headers={headers} />
       <Header title={`${rows.length} transactions`} onRefresh={refresh} />
-      <Table cols={["Kind", "Δ", "Balance after", "User", "When"]}>
+      <Table cols={["Kind", "Analyses", "Left after", "User", "When"]}>
         {rows.map(t => (
           <tr key={t.id} className="border-b border-zinc-800">
             <td className="py-2 px-3 text-zinc-300 text-xs">{t.kind}</td>
-            <td className={`py-2 px-3 font-mono text-right font-bold ${t.delta > 0 ? "text-lime-400" : "text-amber-400"}`}>{t.delta > 0 ? "+" : ""}{t.delta}</td>
-            <td className="py-2 px-3 font-mono text-right text-purple-300">{t.balance_after ?? "—"}</td>
+            <td className={`py-2 px-3 font-mono text-right font-bold ${t.delta > 0 ? "text-lime-400" : "text-amber-400"}`}>{t.delta > 0 ? "+" : ""}{toAnalyses(t.delta)}</td>
+            <td className="py-2 px-3 font-mono text-right text-purple-300">{t.balance_after != null ? toAnalyses(t.balance_after) : "—"}</td>
             <td className="py-2 px-3 text-zinc-300 text-xs" title={t.user_id || ""}>{t.user_label || t.user_email || (t.user_id || "").slice(0, 12)}</td>
             <td className="py-2 px-3 text-zinc-500 text-xs">{fmtDate(t.created_at)}</td>
           </tr>
@@ -1155,8 +1164,10 @@ function PaymentsTab({ headers }) {
         {rows.map(p => (
           <tr key={(p.razorpay_order_id || p.cashfree_order_id)} className="border-b border-zinc-800">
             <td className="py-2 px-3 text-zinc-400 text-[10px] font-mono">{(p.razorpay_order_id || p.cashfree_order_id)?.slice(0, 24)}…</td>
-            <td className="py-2 px-3 text-zinc-300 text-xs">{p.pack_key} · {p.tokens_amount} 🪙</td>
-            <td className="py-2 px-3 text-purple-300 font-mono text-right">₹{p.amount_inr}</td>
+            <td className="py-2 px-3 text-zinc-300 text-xs">{toAnalyses(p.tokens_amount)} analyses</td>
+            <td className="py-2 px-3 text-purple-300 font-mono text-right">
+              {p.currency === "USD" ? `$${p.amount}` : `₹${(p.amount ?? p.amount_inr)?.toLocaleString?.("en-IN") ?? p.amount_inr}`}
+            </td>
             <td className="py-2 px-3">
               <Badge className={`text-[10px] ${
                 p.status === "paid" ? "bg-lime-400/15 text-lime-300 border-lime-400/30" :
