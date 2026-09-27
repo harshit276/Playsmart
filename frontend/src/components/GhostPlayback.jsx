@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Pause, RotateCcw, Info, ArrowRight } from "lucide-react";
+import { Play, Pause, RotateCcw, Info, ArrowRight, Dumbbell } from "lucide-react";
+import { fixCue } from "@/ai/fixCues";
 import { buildGhostTrack, GHOST_EDGES, isWebGLError, ghostDelegate } from "@/ai/ghostPose";
 import { track as trackEvent } from "@/lib/analytics";
 
@@ -347,19 +348,29 @@ export default function GhostPlayback({
       )}
       {applied.length > 0 && (
         <div className="mt-3 space-y-2">
-          {applied.map((a) => (
-            <div key={a.joint} className="bg-zinc-950/70 border border-zinc-800 rounded-xl p-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-bold text-white">{JOINT_LABEL[a.joint] || a.joint}</span>
-                <span className="flex items-center gap-1.5 text-sm font-mono">
+          <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">What to do</p>
+          {applied.map((a) => {
+            const cue = fixCue(a.joint, a.from, a.to);
+            return (
+              <div key={a.joint} className="bg-zinc-950/70 border border-lime-400/25 rounded-xl p-3">
+                <p className="text-[15px] font-bold text-white leading-snug">{cue?.headline || JOINT_LABEL[a.joint] || a.joint}</p>
+                {cue?.feel && <p className="text-[13px] text-zinc-300 mt-1 leading-snug">{cue.feel}</p>}
+                {cue?.drill && (
+                  <p className="text-[12px] text-sky-200 mt-2 leading-snug flex gap-1.5">
+                    <Dumbbell className="w-3.5 h-3.5 shrink-0 mt-0.5 text-sky-300" />
+                    <span>{cue.drill}</span>
+                  </p>
+                )}
+                <p className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-500 mt-2">
+                  {JOINT_LABEL[a.joint] || a.joint}
                   <span className="text-rose-400">{a.from}°</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-zinc-600" />
-                  <span className="text-lime-400 font-bold">{achieved[a.joint] ?? a.to}°</span>
-                </span>
+                  <ArrowRight className="w-3 h-3 text-zinc-600" />
+                  <span className="text-lime-400">{achieved[a.joint] ?? a.to}°</span>
+                  <span className="font-sans">at contact</span>
+                </p>
               </div>
-              {a.why && <p className="text-[12px] text-zinc-400 mt-1.5 leading-relaxed">{a.why}</p>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

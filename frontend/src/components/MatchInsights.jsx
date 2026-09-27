@@ -31,6 +31,9 @@ import CoachNoteOverlay from "@/components/CoachNoteOverlay";
 import { isPostureSupported } from "@/ai/posturePolicy";
 import FormCompareView from "@/components/FormCompareView";
 import PlayerTapPicker from "@/components/PlayerTapPicker";
+import { captureFrameAt as _captureFrameAt } from "@/lib/captureFrame";
+import ShotFixInMotion from "@/components/ShotFixInMotion";
+import { fixCue } from "@/ai/fixCues";
 
 // 3D corrected-motion ghost. Lazy: MediaPipe's model + WASM only download when
 // a player taps "Watch the fix in motion".
@@ -952,7 +955,7 @@ export default function MatchInsights({
 
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
             <div id="analysis-section-shot-analysis" className="scroll-mt-24 relative">
-              <PerShotCoachSection perShot={perShot} sport={sport} />
+              <PerShotCoachSection perShot={perShot} sport={sport} videoFile={videoFile} />
               {lockDetail && (
                 <div className="absolute inset-0 z-10 flex items-end justify-center"
                   style={{ backdropFilter: "blur(7px)", WebkitBackdropFilter: "blur(7px)",
@@ -2231,7 +2234,7 @@ function InlineShotVsPro({ shot, sport, shotType }) {
 }
 
 
-function IndividualShotCard({ shot, label, sport, shotId = null }) {
+function IndividualShotCard({ shot, label, sport, shotId = null, videoFile = null }) {
   const ff = shot.formFeedback || {};
   const conf = shot.confidence != null ? Math.round(shot.confidence * 100) : null;
   // Real shot score (technique checks in the level band), 0-100. Older
@@ -2541,6 +2544,9 @@ function IndividualShotCard({ shot, label, sport, shotId = null }) {
             </button>
           </div>
         )}
+
+        {/* The 3D fix for THIS shot, built on demand. */}
+        <ShotFixInMotion videoFile={videoFile} sport={sport} reps={[shot]} shotName={cleanLabel} />
       </div>
       <FormComparisonModal
         open={formCompareOpen}
@@ -2638,7 +2644,7 @@ function TechniqueChecks({ checks, showCount = false }) {
   );
 }
 
-function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
+function ShotGroupCard({ groupKey, shots: groupShots, sport, videoFile = null }) {
   // Per-shot timestamps + counts were removed: Gemini's shot count was
   // often wrong (over-segmenting one swing into multiple events) and the
   // individual timestamps didn't accurately land on the contact moment,
@@ -2968,6 +2974,9 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
             </button>
           </div>
         )}
+
+        {/* The 3D fix, any rep of this shot type, built on demand. */}
+        <ShotFixInMotion videoFile={videoFile} sport={sport} reps={groupShots} shotName={name} />
       </div>
       <FormComparisonModal
         open={formCompareOpen}
@@ -3009,64 +3018,6 @@ function ShotGroupCard({ groupKey, shots: groupShots, sport }) {
       />
     </motion.div>
   );
-}
-
-// Capture a single frame from a video FILE at time t as a JPEG data URL.
-// Takes the File (not a shared object URL) and owns its own URL lifecycle —
-// sharing the parent's URL caused net::ERR_FILE_NOT_FOUND when the parent
-// revoked it mid-capture (seen in prod console).
-async function _captureFrameAt(videoFile, t, maxDim = 720, cropBox = null) {
-  return new Promise((resolve) => {
-    let url = null;
-    const finish = (val) => {
-      if (url) { try { URL.revokeObjectURL(url); } catch {} url = null; }
-      resolve(val);
-    };
-    try {
-      const v = document.createElement("video");
-      v.muted = true; v.playsInline = true; v.preload = "auto";
-      url = URL.createObjectURL(videoFile);
-      v.src = url;
-      const fail = setTimeout(() => finish(null), 8000);
-      const grab = () => {
-        try {
-          const vw = v.videoWidth, vh = v.videoHeight;
-          if (!vw || !vh) { clearTimeout(fail); finish(null); return; }
-          // Crop to the performing player's contact box when available
-          // ([ymin,xmin,ymax,xmax], 0-1000) with 20% padding — otherwise
-          // MoveNet's single-pose model can lock onto the wrong (more
-          // prominent) person in the frame.
-          let sx = 0, sy = 0, sw = vw, sh = vh;
-          if (Array.isArray(cropBox) && cropBox.length === 4) {
-            const [ymin, xmin, ymax, xmax] = cropBox.map(Number);
-            if (ymax > ymin && xmax > xmin) {
-              const padY = (ymax - ymin) * 0.2;
-              const padX = (xmax - xmin) * 0.2;
-              sy = Math.max(0, ((ymin - padY) / 1000) * vh);
-              sx = Math.max(0, ((xmin - padX) / 1000) * vw);
-              sh = Math.min(vh - sy, ((ymax - ymin + 2 * padY) / 1000) * vh);
-              sw = Math.min(vw - sx, ((xmax - xmin + 2 * padX) / 1000) * vw);
-              if (sw < 40 || sh < 40) { sx = 0; sy = 0; sw = vw; sh = vh; }
-            }
-          }
-          const scale = Math.min(1, maxDim / Math.max(sw, sh));
-          const c = document.createElement("canvas");
-          c.width = Math.max(2, Math.round(sw * scale));
-          c.height = Math.max(2, Math.round(sh * scale));
-          c.getContext("2d").drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
-          clearTimeout(fail);
-          finish(c.toDataURL("image/jpeg", 0.85));
-        } catch { clearTimeout(fail); finish(null); }
-      };
-      v.onloadedmetadata = () => {
-        try {
-          v.currentTime = Math.max(0.05, Math.min(t, (v.duration || t + 1) - 0.05));
-        } catch { grab(); }
-      };
-      v.onseeked = grab;
-      v.onerror = () => { finish(null); };
-    } catch { finish(null); }
-  });
 }
 
 const _JOINT_LABELS = { elbow: "Elbow angle", shoulder: "Arm elevation", knee: "Knee bend" };
@@ -3301,6 +3252,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   const [picked, setPicked] = useState(null); // { ts, box, tap }
   const [picker, setPicker] = useState(null); // { forGhost, frameUrl, busy, error }
   const [ghostOpen, setGhostOpen] = useState(false);
+  const [stillOpen, setStillOpen] = useState(false);
   const pickFor = picked && headlineShot && picked.ts === headlineShot.timestamp ? picked : null;
   // The player's own tap beats Gemini's box (which can sit on the wrong
   // person). A tap with no box found still steers the 3D ghost on its own.
@@ -3431,6 +3383,14 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     && (heroPosture.status === "failed" || (peopleInShot ?? 1) > 1);
   // The 3D ghost asks first too, unless we know only one person is in view.
   const ghostNeedsPick = !effectiveBox && !tapPoint && peopleInShot !== 1;
+  // The joint furthest outside its range, as one plain instruction.
+  const topCue = (() => {
+    if (!showPosture || heroPosture.status !== "ready") return null;
+    const off = (heroPosture.result?.measurements || [])
+      .filter((m) => m.ideal && (m.status === "off" || m.status === "okay"))
+      .sort((a, b) => (b.delta || 0) - (a.delta || 0))[0];
+    return off ? fixCue(off.joint, off.value, off.ideal.target) : null;
+  })();
 
   // Click YOU panel → seek the page's main video to this shot AND
   // scroll it into view, so users have one path to "study this in
@@ -3596,24 +3556,22 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
           <PostureMetricsRow state={heroPosture} />
         </div>
       )}
-      {/* FORM COMPARE — the angles above say a joint is 30° out; this shows
-          where it should actually be, by rotating the player's own limb to the
-          ideal and drawing it against the same frame. Only rendered when we
-          already trust who is being tracked (same gate as the skeleton panel),
-          because a corrected pose drawn on the wrong body is worse than none. */}
-      {showPosture && heroPosture.status === "ready" && heroPosture.result?.keypoints && (
-        <div id="analysis-section-form-compare" className="px-4 pb-4 pt-1 scroll-mt-24">
-          <FormCompareView
-            pose={heroPosture.result}
-            shotLabel={heroPosture.result.shotLabel || headlineShot?._name || null}
-          />
+      {/* WHAT TO DO — the measurement above, said as coaching: one plain
+          instruction for the joint furthest off target. */}
+      {topCue && (
+        <div className="px-4 pt-3">
+          <div className="rounded-xl border border-lime-400/30 bg-lime-400/5 px-3 py-2.5">
+            <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">What to do</p>
+            <p className="text-[15px] font-bold text-white leading-snug mt-0.5">{topCue.headline}</p>
+            <p className="text-[12.5px] text-zinc-300 leading-snug mt-1">{topCue.feel}</p>
+          </div>
         </div>
       )}
-      {/* THE FIX IN MOTION — same target as the panel above, but measured and
-          corrected in 3D across the swing and drawn over the real clip. Needs
-          the clip itself, so it's only offered in the live session. */}
+      {/* THE FIX IN MOTION — the main visual: measured and corrected in 3D
+          across the swing, drawn over the real clip. Needs the clip itself,
+          so it's only offered in the live session. */}
       {canShowVideo && videoFile && isPostureSupported(sport) && (
-        <div className="px-4 pb-4 pt-1">
+        <div className="px-4 pb-3 pt-3">
           <GhostLauncher
             open={ghostOpen}
             onOpen={() => (ghostNeedsPick ? openPicker(true) : setGhostOpen(true))}
@@ -3626,6 +3584,30 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             tapPoint={tapPoint}
             shotLabel={headlineShot?._name || null}
           />
+        </div>
+      )}
+      {/* FORM COMPARE — the same fix on one still frame, in 2D. Folded away
+          when the 3D version is on offer (one frozen frame with two near-
+          identical stick figures didn't tell players what to do); shown
+          directly when it's the only view (an analysis reopened from History).
+          Only rendered when we trust who is being tracked, because a corrected
+          pose drawn on the wrong body is worse than none. */}
+      {showPosture && heroPosture.status === "ready" && heroPosture.result?.keypoints && (
+        <div id="analysis-section-form-compare" className="px-4 pb-4 pt-1 scroll-mt-24">
+          {canShowVideo && videoFile && isPostureSupported(sport) && !stillOpen ? (
+            <button
+              type="button"
+              onClick={() => setStillOpen(true)}
+              className="text-[12px] font-semibold text-sky-300 hover:text-sky-200"
+            >
+              See it on a still frame ↓
+            </button>
+          ) : (
+            <FormCompareView
+              pose={heroPosture.result}
+              shotLabel={heroPosture.result.shotLabel || headlineShot?._name || null}
+            />
+          )}
         </div>
       )}
       {/* Speed controls row — only when a real video is loaded; we
@@ -3674,7 +3656,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
   );
 }
 
-function PerShotCoachSection({ perShot, sport }) {
+function PerShotCoachSection({ perShot, sport, videoFile = null }) {
   // Filter to shots with VLM data — but keep each shot's ORIGINAL
   // index into perShot so card clicks map to the same _id the
   // VideoPlayerWithMarkers uses for active-shot tracking.
@@ -3709,7 +3691,7 @@ function PerShotCoachSection({ perShot, sport }) {
       <div className="space-y-2">
         {shouldGroup
           ? groupedEntries.map(([key, group]) => (
-              <ShotGroupCard key={key} groupKey={key} shots={group} sport={sport} />
+              <ShotGroupCard key={key} groupKey={key} shots={group} sport={sport} videoFile={videoFile} />
             ))
           : usable.map(({ shot, originalIdx }, i) => (
               <IndividualShotCard
@@ -3717,6 +3699,7 @@ function PerShotCoachSection({ perShot, sport }) {
                 shot={shot}
                 shotId={originalIdx}
                 sport={sport}
+                videoFile={videoFile}
                 label={`Shot ${i + 1} · ${shot.name?.replace(/_/g, " ") || "Unknown"}`}
               />
             ))}
