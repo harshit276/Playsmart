@@ -37,6 +37,9 @@
  *   - The racket is not tracked.
  */
 import { getIdealAngles } from "./idealAngles.js";
+import { openFrameSource, waitVisible } from "../lib/frameSource.js";
+import { hasWebGL } from "../lib/webgl.js";
+import { reposeLeg } from "./legIK.js";
 
 const TASKS_VERSION = "1.0.1"; // keep in step with package.json
 const WASM_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/wasm`;
@@ -45,6 +48,7 @@ const MODEL_URL =
 
 // MediaPipe / BlazePose 33-landmark indices.
 const L_SH = 11, R_SH = 12, L_EL = 13, R_EL = 14, L_WR = 15, R_WR = 16, L_HIP = 23, R_HIP = 24;
+const L_KN = 25, R_KN = 26, L_AN = 27, R_AN = 28;
 export const GHOST_EDGES = [
   [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24],
   [23, 25], [25, 27], [24, 26], [26, 28], [27, 31], [28, 32], [27, 29], [28, 30],
@@ -65,6 +69,10 @@ const MAX_GAP = 4;
 // contact: the correction ramps in over the last 0.3 s and out over 0.25 s.
 // Past that, whatever stretch we followed is what plays; losing the player
 // at the edge of a 1.6 s window no longer sinks the whole shot.
+// Whole-build time budget. The 3D fix now starts on its own, so a phone that
+// can't keep up must not churn in the background for minutes: past this we
+// stop and say so. Time spent waiting for the tab to be visible doesn't count.
+const BUILD_BUDGET_MS = 150000;
 const NEED_BEFORE_S = 0.3; // = RAMP_IN_S
 const NEED_AFTER_S = 0.25; // = RAMP_OUT_S
 // Correction weight ramps: fully applied at contact, faded out around it so
@@ -113,14 +121,7 @@ export function loadLandmarker() {
 /** "GPU" or "CPU" — which path the model ended up on (for diagnostics). */
 export const ghostDelegate = () => _delegate;
 
-export function hasWebGL() {
-  try {
-    const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
-  } catch {
-    return false;
-  }
-}
+export { hasWebGL };
 
 /** True when an error came from MediaPipe losing / never having a GL context. */
 export function isWebGLError(err) {
@@ -159,55 +160,8 @@ function rotate(v, k, rad) {
 }
 
 // ─── frame sampling ─────────────────────────────────────────────────────
-// Browsers defer loading and seeking media in background tabs, so a player
-// who switches apps mid-analysis would otherwise hit a timeout. Pause while
-// hidden; carry on when they come back.
-function waitVisible() {
-  if (typeof document === "undefined" || !document.hidden) return Promise.resolve();
-  return new Promise((resolve) => {
-    const on = () => {
-      if (!document.hidden) { document.removeEventListener("visibilitychange", on); resolve(); }
-    };
-    document.addEventListener("visibilitychange", on);
-  });
-}
-
-function seek(video, t) {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (ok) => { if (!done) { done = true; video.removeEventListener("seeked", onSeek); resolve(ok); } };
-    const onSeek = () => finish(true);
-    video.addEventListener("seeked", onSeek);
-    setTimeout(() => finish(false), 2500);
-    video.currentTime = t;
-  });
-}
-
-async function openVideo(src) {
-  const v = document.createElement("video");
-  v.muted = true;
-  v.playsInline = true;
-  v.preload = "auto";
-  v.crossOrigin = "anonymous";
-  v.src = src;
-  // Metadata (size + duration) is all we need to start: each seek fetches the
-  // frames it needs. Waiting for `loadeddata` stalls on slow phones and in
-  // background tabs, where the browser defers media loading.
-  await new Promise((resolve, reject) => {
-    let t;
-    const arm = () => {
-      t = setTimeout(() => {
-        if (v.readyState >= 1) resolve();
-        else if (document.hidden) waitVisible().then(arm); // they switched away: the clock restarts on return
-        else reject(new Error("video-load-timeout"));
-      }, 20000);
-    };
-    arm();
-    v.addEventListener("loadedmetadata", () => { clearTimeout(t); resolve(); }, { once: true });
-    v.onerror = () => { clearTimeout(t); reject(new Error("video-load-failed")); };
-  });
-  return v;
-}
+// Frame reading (visibility, decoder wake-up, blank-frame rejection) lives in
+// lib/frameSource so the picker and the 2D check share it.
 
 // ─── target selection ───────────────────────────────────────────────────
 function torsoCentre(lm) {
@@ -305,11 +259,12 @@ function fillAndSmooth(series, width = 5) {
  * @param {string} args.shotType          free-text shot category (idealAngles resolves it)
  * @param {number[]|null} args.contactBox [ymin,xmin,ymax,xmax] 0-1000, optional
  * @param {{x:number,y:number}|null} args.tapPoint where the player tapped themselves (0-1), optional
+ * @param {number} [args.budgetMs] give up (reason "too-slow") after this long; default BUILD_BUDGET_MS
  * @param {(p:{phase:string, done:number, total:number})=>void} [args.onProgress]
  * @param {AbortSignal} [args.signal]
  * @returns {Promise<object>} { ok:true, ... } or { ok:false, reason }
  */
-export async function buildGhostTrack({ video, contactSec, sport, shotType, contactBox = null, tapPoint = null, onProgress, signal }) {
+async function buildInner({ video, contactSec, sport, shotType, contactBox = null, tapPoint = null, budgetMs = BUILD_BUDGET_MS, onProgress, signal }, diag) {
   if (typeof contactSec !== "number" || !Number.isFinite(contactSec)) return { ok: false, reason: "no-contact-time" };
   // MediaPipe's web runtime needs WebGL for image handling even on its CPU
   // path, so without it there's nothing to try — say so plainly.
@@ -320,18 +275,20 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
   let landmarker = await loadLandmarker();
   if (signal?.aborted) return { ok: false, reason: "aborted" };
 
-  const ownUrl = typeof video === "string" ? null : URL.createObjectURL(video);
-  const src = ownUrl || video;
-  let v;
+  let fs = null;
+  let budgetEnd = Date.now() + budgetMs;
+  const overBudget = () => Date.now() > budgetEnd;
   try {
     await waitVisible();
-    v = await openVideo(src);
-    const dur = v.duration || contactSec + WINDOW_AFTER_S;
+    fs = await openFrameSource(video);
+    diag.frames = fs.stats;
+    const v = fs.video;
+    const dur = fs.duration || contactSec + WINDOW_AFTER_S;
     const t0 = Math.max(0, contactSec - WINDOW_BEFORE_S);
     const t1 = Math.min(dur - 0.02, contactSec + WINDOW_AFTER_S);
     let times = [];
     for (let t = t0; t <= t1 + 1e-6; t += 1 / SAMPLE_FPS) times.push(+t.toFixed(4));
-    const W = v.videoWidth, H = v.videoHeight;
+    const W = fs.width, H = fs.height;
     if (!W || !H || times.length < 8) return { ok: false, reason: "clip-too-short" };
 
     const minWH = Math.min(W, H);
@@ -340,12 +297,13 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
+    // Show the frame at t. False when the browser can't produce a real picture
+    // there (blank/black): callers treat that frame as unreadable.
     const goTo = async (t) => {
+      const w0 = Date.now();
       await waitVisible();
-      if (!(await seek(v, t)) && document.hidden) {
-        await waitVisible();
-        await seek(v, t);
-      }
+      budgetEnd += Date.now() - w0; // hidden-tab waiting is the user's, not ours
+      return fs.ensureFrame(t);
     };
     // Run the model on one region of the current frame. Landmarks come back
     // in full-frame 0-1 coordinates whatever the region was.
@@ -423,6 +381,28 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
       return people.length === 1 ? 0 : -2;
     };
 
+    // Several candidates and nothing to choose between them. A "person" seen in
+    // this one frame and in neither neighbour is a glitch (the model stitching a
+    // pose out of two real players, observed on a tournament clip), and must not
+    // cost the player a prompt. Anyone who persists still counts: two real
+    // candidates always ask.
+    const stableCandidates = async (people, k) => {
+      const neighbours = [];
+      for (const nk of [k - 1, k + 1]) {
+        if (nk < 0 || nk >= times.length) continue;
+        if (!(await goTo(times[nk]))) continue;
+        neighbours.push(await detectRegion(FULL));
+      }
+      if (!neighbours.length) return people; // can't judge: treat them all as real
+      return people.filter((p) => {
+        const [px, py] = torsoPx(p);
+        // A player moves well under half a torso length between adjacent frames;
+        // anything farther is someone else (or nobody).
+        const lim = 0.5 * Math.max(0.02 * minWH, torsoLenPx(p));
+        return neighbours.some((np) => np.some((q) => { const [qx, qy] = torsoPx(q); return Math.hypot(qx - px, qy - py) < lim; }));
+      });
+    };
+
     // 1. find the player at contact. A fast arm blurs the contact frame
     // itself, so try the nearest frames (±0.2 s) too. A box is sized to the
     // player, so look in a crop around it first. A tap isn't: a small crop
@@ -440,22 +420,31 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
     } else {
       anchorRegions.push(FULL);
     }
-    let kc = -1, anchor = null, ambiguous = false;
+    let kc = -1, anchor = null, ambiguous = false, readableAnchor = 0;
     search:
     for (let d = 0; d <= maxShift; d++) {
       for (const k of d === 0 ? [kContact] : [kContact - d, kContact + d]) {
         if (k < 0 || k >= times.length) continue;
         if (signal?.aborted) return { ok: false, reason: "aborted" };
-        await goTo(times[k]);
+        if (overBudget()) return { ok: false, reason: "too-slow" };
+        if (!(await goTo(times[k]))) continue;
+        readableAnchor++;
         for (const r of anchorRegions) {
           const people = await detectRegion(r);
           const i = pickTarget(people);
-          if (i === -2) { ambiguous = true; break search; }
+          if (i === -2) {
+            const stable = await stableCandidates(people, k);
+            if (stable.length === 1) { kc = k; anchor = stable[0]; break search; }
+            if (stable.length === 0) continue; // all glitches: try the next region/frame
+            ambiguous = true; break search;
+          }
           if (i >= 0) { kc = k; anchor = people[i]; break search; }
         }
       }
     }
     if (ambiguous) return { ok: false, reason: "need-player-pick" };
+    // Not one readable frame near contact: this browser can't show the clip.
+    if (kc < 0 && readableAnchor === 0) return { ok: false, reason: "frames-blank" };
     if (kc < 0) return { ok: false, reason: "no-player-at-contact" };
 
     // 2. follow them out from contact, both ways, looking only in a crop
@@ -471,7 +460,8 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
       let prev = anchor, misses = 0;
       for (let i = kc + dir; i >= 0 && i < times.length && misses <= MAX_GAP; i += dir) {
         if (signal?.aborted) return { ok: false, reason: "aborted" };
-        await goTo(times[i]);
+        if (overBudget()) return { ok: false, reason: "too-slow" };
+        const readable = await goTo(times[i]);
         const grow = 1 + 0.35 * misses;
         const [px, py] = torsoPx(prev);
         const lim = 0.9 * grow * Math.max(0.02 * minWH, torsoLenPx(prev));
@@ -488,8 +478,11 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
         };
         // The crop usually finds them; when it doesn't, look at the whole
         // frame before calling it a miss (a crop can clip a lunging body).
-        let found = nearest(await detectRegion(regionFor(prev, grow)));
-        if (!found) found = nearest(await detectRegion(FULL));
+        let found = null;
+        if (readable) {
+          found = nearest(await detectRegion(regionFor(prev, grow)));
+          if (!found) found = nearest(await detectRegion(FULL));
+        }
         if (found) {
           tracked[i] = found;
           prev = found;
@@ -543,18 +536,29 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
     const side = lUp > rUp ? "left" : "right";
     const [SH, EL, WR, HIP] = side === "left" ? [L_SH, L_EL, L_WR, L_HIP] : [R_SH, R_EL, R_WR, R_HIP];
 
-    const armVis = Math.min(VIS[kc][SH], VIS[kc][EL], VIS[kc][WR]);
-    if (armVis < 0.5) return { ok: false, reason: "arm-not-visible", coverage: Math.round(followed * 100) / 100 };
+    const [KN, AN] = side === "left" ? [L_KN, L_AN] : [R_KN, R_AN];
+    // Arm and leg are judged separately: a hidden arm doesn't stop us reading
+    // the legs (and vice versa). Neither readable is the only real failure.
+    const armOk = Math.min(VIS[kc][SH], VIS[kc][EL], VIS[kc][WR]) >= 0.5;
+    const legOk = Math.min(VIS[kc][HIP], VIS[kc][KN], VIS[kc][AN]) >= 0.5;
+    if (!armOk && !legOk) return { ok: false, reason: "arm-not-visible", coverage: Math.round(followed * 100) / 100 };
 
-    // 5. measure at contact (3D) and decide the correction
+    // 5. measure at contact (3D) and decide the corrections
     const wc = WL[kc];
     const measured = {
-      elbow: angleDeg(wc[SH], wc[EL], wc[WR]),
-      shoulder: angleDeg(wc[HIP], wc[SH], wc[EL]),
+      elbow: armOk ? angleDeg(wc[SH], wc[EL], wc[WR]) : null,
+      shoulder: armOk ? angleDeg(wc[HIP], wc[SH], wc[EL]) : null,
+      knee: legOk ? angleDeg(wc[HIP], wc[KN], wc[AN]) : null, // the hitting-side leg
     };
+    // Base width: how far apart the feet are, in shoulder widths. Shown for
+    // information only: there is no curated target for it (yet).
+    const shoulderW = Math.hypot(...sub(wc[L_SH], wc[R_SH]));
+    const footGap = Math.hypot(wc[L_AN][0] - wc[R_AN][0], wc[L_AN][2] - wc[R_AN][2]);
+    const bothFeet = Math.min(VIS[kc][L_AN], VIS[kc][R_AN]) >= 0.5;
+    const stanceWidth = bothFeet && shoulderW > 0.05 ? footGap / shoulderW : null;
     const applied = [];
-    const delta = { shoulder: 0, elbow: 0 };
-    for (const joint of ["shoulder", "elbow"]) {
+    const delta = { shoulder: 0, elbow: 0, knee: 0 };
+    for (const joint of ["shoulder", "elbow", "knee"]) {
       const range = ideal?.[joint];
       const val = measured[joint];
       if (!range || val == null) continue;
@@ -585,26 +589,41 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
         const q = project(wl[k]);
         fitErr += Math.hypot(q[0] - PX[i][k][0], q[1] - PX[i][k][1]); fitN++;
       }
-      let el = wl[EL], wr = wl[WR];
-      const sh = wl[SH], hip = wl[HIP];
-      if (delta.shoulder) {
-        const ax = unit(cross(sub(hip, sh), sub(el, sh)));
-        if (ax) {
-          const rad = (delta.shoulder * w * Math.PI) / 180;
-          el = add(sh, rotate(sub(el, sh), ax, rad));
-          wr = add(sh, rotate(sub(wr, sh), ax, rad));
+      const corrected = { arm: null, leg: null };
+      if (delta.shoulder || delta.elbow) {
+        let el = wl[EL], wr = wl[WR];
+        const sh = wl[SH], hip = wl[HIP];
+        if (delta.shoulder) {
+          const ax = unit(cross(sub(hip, sh), sub(el, sh)));
+          if (ax) {
+            const rad = (delta.shoulder * w * Math.PI) / 180;
+            el = add(sh, rotate(sub(el, sh), ax, rad));
+            wr = add(sh, rotate(sub(wr, sh), ax, rad));
+          }
+        }
+        if (delta.elbow) {
+          const ax = unit(cross(sub(sh, el), sub(wr, el)));
+          if (ax) {
+            const rad = (delta.elbow * w * Math.PI) / 180;
+            wr = add(el, rotate(sub(wr, el), ax, rad));
+          }
+        }
+        const off = sub([...PX[i][SH], 0], [...project(sh), 0]);
+        const toPx = (p) => { const q = project(p); return [q[0] + off[0], q[1] + off[1]]; };
+        corrected.arm = { sh: PX[i][SH], el: toPx(el), wr: toPx(wr) };
+      }
+      if (delta.knee) {
+        // Foot planted, hips settle: the leg reaches the target knee angle,
+        // blended in and out around contact like the arm.
+        const cur = angleDeg(wl[HIP], wl[KN], wl[AN]);
+        const re = cur != null ? reposeLeg(wl[HIP], wl[KN], wl[AN], cur + delta.knee * w) : null;
+        if (re) {
+          const off = sub([...PX[i][AN], 0], [...project(wl[AN]), 0]);
+          const toPx = (p) => { const q = project(p); return [q[0] + off[0], q[1] + off[1]]; };
+          corrected.leg = { hip: toPx(re.hip), kn: toPx(re.knee), an: PX[i][AN] };
         }
       }
-      if (delta.elbow) {
-        const ax = unit(cross(sub(sh, el), sub(wr, el)));
-        if (ax) {
-          const rad = (delta.elbow * w * Math.PI) / 180;
-          wr = add(el, rotate(sub(wr, el), ax, rad));
-        }
-      }
-      const off = sub([...PX[i][SH], 0], [...project(sh), 0]);
-      const toPx = (p) => { const q = project(p); return [q[0] + off[0], q[1] + off[1]]; };
-      frame.corrected = { sh: PX[i][SH], el: toPx(el), wr: toPx(wr) };
+      frame.corrected = corrected.arm || corrected.leg ? corrected : null;
       return frame;
     });
 
@@ -621,7 +640,16 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
         const ax = unit(cross(sub(sh, el), sub(wr, el)));
         if (ax) { const r = (delta.elbow * Math.PI) / 180; wr = add(el, rotate(sub(wr, el), ax, r)); }
       }
-      return { elbow: angleDeg(sh, el, wr), shoulder: angleDeg(hip, sh, el) };
+      let knee = measured.knee;
+      if (delta.knee) {
+        const re = reposeLeg(wl[HIP], wl[KN], wl[AN], measured.knee + delta.knee);
+        knee = re ? angleDeg(re.hip, re.knee, re.ankle) : null;
+      }
+      return {
+        elbow: armOk ? angleDeg(sh, el, wr) : null,
+        shoulder: armOk ? angleDeg(hip, sh, el) : null,
+        knee,
+      };
     })();
 
     return {
@@ -634,17 +662,34 @@ export async function buildGhostTrack({ video, contactSec, sport, shotType, cont
       videoWidth: W,
       videoHeight: H,
       frames: out,
-      measured: { elbow: measured.elbow != null ? Math.round(measured.elbow) : null,
-        shoulder: measured.shoulder != null ? Math.round(measured.shoulder) : null },
-      achieved: { elbow: check.elbow != null ? Math.round(check.elbow) : null,
-        shoulder: check.shoulder != null ? Math.round(check.shoulder) : null },
+      measured: {
+        elbow: measured.elbow != null ? Math.round(measured.elbow) : null,
+        shoulder: measured.shoulder != null ? Math.round(measured.shoulder) : null,
+        knee: measured.knee != null ? Math.round(measured.knee) : null,
+      },
+      achieved: {
+        elbow: check.elbow != null ? Math.round(check.elbow) : null,
+        shoulder: check.shoulder != null ? Math.round(check.shoulder) : null,
+        knee: check.knee != null ? Math.round(check.knee) : null,
+      },
+      legs: {
+        readable: legOk,
+        hasKneeTarget: !!ideal?.knee,
+        stanceWidth: stanceWidth != null ? Math.round(stanceWidth * 10) / 10 : null,
+      },
+      arm: { readable: armOk },
       applied,
       hasIdeal: !!ideal,
       idealLabel: ideal?.label || null,
       quality: { coverage: Math.round(followed * 100) / 100, fitErrorPx: fitN ? Math.round(fitErr / fitN) : null },
     };
   } finally {
-    try { v?.removeAttribute("src"); v?.load?.(); } catch { /* noop */ }
-    if (ownUrl) URL.revokeObjectURL(ownUrl);
+    fs?.close();
   }
+}
+
+export async function buildGhostTrack(args) {
+  const diag = {};
+  const r = await buildInner(args, diag);
+  return { ...r, diag };
 }

@@ -62,14 +62,14 @@ export function fixCue(joint, measured, target) {
   if (joint === "knee") {
     return delta > 0
       ? {
-          headline: `Stand ${more}taller through the shot`,
-          feel: "Push up out of your legs into contact rather than staying crouched.",
+          headline: `Stand ${more}taller on your hitting-side leg at contact`,
+          feel: "Push up out of that leg into the shot instead of staying crouched, and let your hips rise with the swing.",
           drill: "Split-step, lunge, then drive up through your front leg as you swing.",
         }
       : {
-          headline: `Bend your knees ${more}more`,
-          feel: "Get lower so you can push off quickly: weight on the balls of your feet.",
-          drill: "Hold a low ready position for 20 seconds between rallies to feel the depth.",
+          headline: `Bend your hitting-side knee ${more}more at contact`,
+          feel: "Sink your hips so your weight drops over your front foot: get lower so you can push off quickly.",
+          drill: "Hold a low ready position for 20 seconds between rallies, then shadow a lunge and freeze on the front knee.",
         };
   }
   return null;

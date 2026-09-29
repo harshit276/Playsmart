@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { Play } from "lucide-react";
 import PlayerTapPicker from "@/components/PlayerTapPicker";
 import { captureFrameAt } from "@/lib/captureFrame";
+import { imageIfReal } from "@/lib/frameSource";
 import { formatClock } from "@/lib/seekMainVideo";
 import { isPostureSupported } from "@/ai/posturePolicy";
 
@@ -43,7 +44,8 @@ export default function ShotFixInMotion({ videoFile, sport, reps, shotName = nul
   const openPicker = async () => {
     setOpen(false);
     setPicker({ frameUrl: null, busy: false, error: null });
-    const url = await captureFrameAt(videoFile, Math.max(0.05, rep.timestamp), 960, null);
+    const url = (await captureFrameAt(videoFile, Math.max(0.05, rep.timestamp), 960, null))
+      || (await imageIfReal(rep.thumbnail));
     setPicker((p) => (p ? { ...p, frameUrl: url, error: url ? null : "We couldn't grab a frame from this clip." } : p));
   };
 
@@ -93,6 +95,7 @@ export default function ShotFixInMotion({ videoFile, sport, reps, shotName = nul
           error={picker.error}
           onConfirm={confirmPick}
           onCancel={() => setPicker(null)}
+          onRetry={openPicker}
         />
       ) : open ? (
         <Suspense fallback={<div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 text-sm text-zinc-400">Loading…</div>}>

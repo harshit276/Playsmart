@@ -16,8 +16,9 @@ import { Hand, Check, X } from "lucide-react";
  *   error     — optional message (e.g. nobody found at the tap)
  *   onConfirm({x, y}) — tap position in 0-1 frame coordinates
  *   onCancel()
+ *   onRetry() — optional: shown next to an error when there is no frame
  */
-export default function PlayerTapPicker({ frameUrl, peopleHint = null, busy = false, error = null, onConfirm, onCancel }) {
+export default function PlayerTapPicker({ frameUrl, peopleHint = null, busy = false, error = null, onConfirm, onCancel, onRetry = null }) {
   const imgRef = useRef(null);
   const [tap, setTap] = useState(null);
 
@@ -56,7 +57,7 @@ export default function PlayerTapPicker({ frameUrl, peopleHint = null, busy = fa
         )}
       </div>
 
-      <div className="relative rounded-xl overflow-hidden bg-black select-none">
+      <div className="relative rounded-xl overflow-hidden bg-zinc-800 select-none">
         {frameUrl ? (
           <>
             <img
@@ -82,15 +83,24 @@ export default function PlayerTapPicker({ frameUrl, peopleHint = null, busy = fa
               </div>
             )}
           </>
+        ) : error ? (
+          <div className="aspect-video flex flex-col items-center justify-center gap-2 px-4 text-center">
+            <p className="text-[12px] text-zinc-300">We couldn't show that moment on this browser.</p>
+            {onRetry && (
+              <button type="button" onClick={onRetry} className="px-3 py-1.5 rounded-lg text-[12px] font-bold bg-sky-400 text-black hover:bg-sky-300">
+                Try again
+              </button>
+            )}
+          </div>
         ) : (
           <div className="aspect-video flex items-center justify-center gap-2">
             <div className="w-5 h-5 rounded-full border-2 border-sky-400/30 border-t-sky-400 animate-spin" />
-            <p className="text-[12px] text-zinc-400">Grabbing the moment of contact…</p>
+            <p className="text-[12px] text-zinc-300">Grabbing the moment of contact…</p>
           </div>
         )}
       </div>
 
-      {error && <p className="text-[12px] text-amber-300 mt-2">{error}</p>}
+      {error && frameUrl && <p className="text-[12px] text-amber-300 mt-2">{error}</p>}
 
       <div className="flex items-center justify-end gap-2 mt-3">
         {tap && !busy && (
