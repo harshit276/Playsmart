@@ -223,10 +223,13 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
     const value = angleAt(keypoints, racketSide, joint);
     if (value == null) continue;
     const range = ideal?.[joint];
-    // Gross-contradiction guard: a high-ideal joint (overhead arm) measuring
-    // far BELOW its range is a detection failure, not a coaching fault — skip
-    // it instead of rendering a misleading "Off".
-    if (range && range.ideal >= 150 && value < range.min - 40) continue;
+    // Gross-contradiction guard: a joint measuring 40°+ below the lowest
+    // plausible angle at contact is a detection failure, not a coaching fault,
+    // so skip it rather than render a misleading "Off" and a bogus correction.
+    // Typical cause: filmed from behind, an arm reaching toward the net
+    // foreshortens in 2D ("Elbow 13° → 125°" on a normal drive).
+    if (range && value < range.min - 40) continue;
+    if (joint === "elbow" && value < 45) continue; // a near-folded arm at contact isn't a real hit
     let status = "neutral";
     let delta = null;
     if (range) {
