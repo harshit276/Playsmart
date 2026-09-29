@@ -32,7 +32,9 @@ import { isPostureSupported } from "@/ai/posturePolicy";
 import FormCompareView from "@/components/FormCompareView";
 import PlayerTapPicker from "@/components/PlayerTapPicker";
 import { captureFrameAt as _captureFrameAt } from "@/lib/captureFrame";
+import { openFrameSource, frameToDataUrl, looksBlank, imageIfReal } from "@/lib/frameSource";
 import ShotFixInMotion from "@/components/ShotFixInMotion";
+import { autoGhostAllowed } from "@/lib/webgl";
 import { fixCue } from "@/ai/fixCues";
 
 // 3D corrected-motion ghost. Lazy: MediaPipe's model + WASM only download when
@@ -504,7 +506,9 @@ export default function MatchInsights({
         if (!capturedThumb && typeof center === "number" && center >= 0) {
           try {
             const seekOk = await safeSeek(videoEl, Math.max(0, Math.min(videoEl.duration || center, center)));
-            if (seekOk) {
+            // A phone that can't decode this element draws black: keep no thumbnail
+            // (the panels have fallbacks) rather than saving a black one.
+            if (seekOk && !looksBlank(videoEl, videoEl.videoWidth, videoEl.videoHeight)) {
               thumbCtx.drawImage(videoEl, 0, 0, thumbCanvas.width, thumbCanvas.height);
               capturedThumb = thumbCanvas.toDataURL("image/jpeg", 0.78);
             }
@@ -3052,6 +3056,11 @@ function usePostureAnalysis({ videoFile, timestamp, thumbnail, sport, shotType, 
       return undefined;
     }
     setState({ status: "loading" });
+    // Never leave a "measuring…" box up forever (a phone that can't run the
+    // model, or a stalled decode): after 90 s it becomes "couldn't measure".
+    const watchdog = setTimeout(() => {
+      if (!cancelled) setState((cur) => (cur.status === "loading" ? { status: "failed" } : cur));
+    }, 90000);
     (async () => {
       try {
         const mod = await import("@/ai/poseOverlay");
@@ -3063,20 +3072,29 @@ function usePostureAnalysis({ videoFile, timestamp, thumbnail, sport, shotType, 
         const haveVideo = videoFile && typeof timestamp === "number" && Number.isFinite(timestamp);
         const offsets = haveVideo ? [0, -0.25, 0.3] : [null];
         let best = null;
-        for (const off of offsets) {
-          if (cancelled) return;
-          let frame = null;
-          if (off !== null) {
-            frame = await _captureFrameAt(videoFile, Math.max(0.05, timestamp + off), 720, contactBox || null);
+        // One decode of the clip serves all three candidate frames. A frame the
+        // browser can't really show comes back as a failure (see frameSource),
+        // never as a black picture for the pose model to chew on.
+        let fs = null;
+        if (haveVideo) { try { fs = await openFrameSource(videoFile); } catch { fs = null; } }
+        try {
+          for (const off of offsets) {
+            if (cancelled) return;
+            let frame = null;
+            if (off !== null && fs && (await fs.ensureFrame(Math.max(0.05, timestamp + off)))) {
+              frame = frameToDataUrl(fs, { maxDim: 720, cropBox: contactBox || null });
+            }
+            if (!frame) frame = thumbnail || null;
+            if (!frame) continue;
+            const r = await mod.analyzePoseOnFrame(frame, sport, shotType, { maxDim: 600 });
+            if (!r || r.error || !r.annotatedDataUrl) continue;
+            const graded = (r.measurements || []).filter((m) => m.ideal).length;
+            const score = graded * 2 + (r.measurements || []).length;
+            if (!best || score > best.score) best = { r, score, graded, frame };
+            if (best.graded >= 2) break; // good enough — stop burning frames
           }
-          if (!frame) frame = thumbnail || null;
-          if (!frame) continue;
-          const r = await mod.analyzePoseOnFrame(frame, sport, shotType, { maxDim: 600 });
-          if (!r || r.error || !r.annotatedDataUrl) continue;
-          const graded = (r.measurements || []).filter((m) => m.ideal).length;
-          const score = graded * 2 + (r.measurements || []).length;
-          if (!best || score > best.score) best = { r, score, graded, frame };
-          if (best.graded >= 2) break; // good enough — stop burning frames
+        } finally {
+          fs?.close();
         }
         if (cancelled) return;
         // Meaningful-or-nothing: without at least one joint graded against
@@ -3094,7 +3112,7 @@ function usePostureAnalysis({ videoFile, timestamp, thumbnail, sport, shotType, 
         if (!cancelled) setState({ status: "failed" });
       }
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; clearTimeout(watchdog); };
   }, [videoFile, timestamp, thumbnail, sport, shotType, contactBox]);
 
   return state;
@@ -3263,7 +3281,10 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     if (!videoFile || typeof headlineShot?.timestamp !== "number") return;
     setGhostOpen(false);
     setPicker({ forGhost, frameUrl: null, busy: false, error: null });
-    const url = await _captureFrameAt(videoFile, Math.max(0.05, headlineShot.timestamp), 960, null);
+    // The saved shot thumbnail is the fallback when this browser can't decode
+    // the clip: same moment, lower resolution, still plenty to tap on.
+    const url = (await _captureFrameAt(videoFile, Math.max(0.05, headlineShot.timestamp), 960, null))
+      || (await imageIfReal(headlineShot.thumbnail));
     setPicker((p) => (p ? { ...p, frameUrl: url, error: url ? null : "We couldn't grab a frame from this clip." } : p));
   }, [videoFile, headlineShot]);
 
@@ -3280,7 +3301,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     }
     setPicked({ ts: headlineShot.timestamp, box, tap });
     setPicker(null);
-    if (forGhost) setGhostOpen(true);
+    if (forGhost || autoGhostAllowed()) setGhostOpen(true);
   }, [picker, headlineShot]);
 
   // Pose analysis for the hero (top) shot — drives the big skeleton frame
@@ -3294,6 +3315,25 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     shotType: headlineShot?.category || headlineShot?.type || headlineShot?.label,
     contactBox: effectiveBox,
   });
+
+  // The 3D fix starts by itself for the top shot: nothing to find or tap. It
+  // waits for the 2D pass (one heavy job at a time, and that pass tells us how
+  // many people are in shot) and for a clear answer to "which one is the
+  // player?": several people and no box means the prompt below asks first,
+  // and the tap starts it. Off entirely where it would cost the player
+  // (data saver, slow link, low memory, no WebGL): the button stays.
+  const autoGhostTried = useRef(new Set());
+  useEffect(() => {
+    if (!headlineShot || typeof headlineShot.timestamp !== "number") return undefined;
+    if (!userVideoUrl || !videoFile || !isPostureSupported(sport)) return undefined;
+    if (ghostOpen || picker || heroPosture.status === "loading") return undefined;
+    const people = heroPosture.status === "ready" ? (heroPosture.result?.peopleCount ?? 1) : null;
+    if (!effectiveBox && !tapPoint && people !== 1) return undefined;
+    const ts = headlineShot.timestamp;
+    if (autoGhostTried.current.has(ts) || !autoGhostAllowed()) return undefined;
+    const id = setTimeout(() => { autoGhostTried.current.add(ts); setGhostOpen(true); }, 1200);
+    return () => clearTimeout(id);
+  }, [headlineShot, userVideoUrl, videoFile, sport, ghostOpen, picker, heroPosture.status, heroPosture.result, effectiveBox, tapPoint]);
 
   // AI Correct auto-fire removed (see note above).
 
@@ -3507,6 +3547,7 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             error={picker.error}
             onConfirm={confirmPick}
             onCancel={() => setPicker(null)}
+            onRetry={() => openPicker(picker.forGhost)}
           />
         </div>
       )}

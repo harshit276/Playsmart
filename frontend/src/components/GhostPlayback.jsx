@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, Info, ArrowRight, Dumbbell } from "lucide-react
 import { fixCue } from "@/ai/fixCues";
 import { buildGhostTrack, GHOST_EDGES, isWebGLError, ghostDelegate } from "@/ai/ghostPose";
 import { track as trackEvent } from "@/lib/analytics";
+import { deviceKind } from "@/lib/frameSource";
 
 /**
  * GhostPlayback — the player's real clip, slowed down, with their own arm
@@ -13,7 +14,7 @@ import { track as trackEvent } from "@/lib/analytics";
  * time, cached after) only download when someone asks to see the fix.
  */
 
-const JOINT_LABEL = { elbow: "Elbow", shoulder: "Arm height" };
+const JOINT_LABEL = { elbow: "Elbow", shoulder: "Arm height", knee: "Knee bend" };
 const REASON_COPY = {
   "no-contact-time": "This shot has no timestamp, so we can't find the moment of contact.",
   "clip-too-short": "There isn't enough video around this shot.",
@@ -24,10 +25,17 @@ const REASON_COPY = {
   "video-load-failed": "Your clip couldn't be opened on this device.",
   "video-load-timeout": "Your clip took too long to open on this device.",
   "no-webgl": "This browser can't run the 3D pose model because graphics acceleration is off. Try Chrome or Safari with hardware acceleration turned on.",
+  "too-slow": "This took too long on your device, so we stopped. The 3D fix works best on a recent phone.",
+  "frames-blank": "This browser couldn't read the video frames of your clip. Opening Formanti in Chrome, or in the Formanti app, usually helps.",
 };
 // Failures where following a different person is the likely fix.
 const REPICK_REASONS = new Set(["no-player-at-contact", "need-player-pick", "lost-player", "arm-not-visible"]);
 const HOLD_AT_CONTACT_MS = 900;
+
+// Finished tracks by clip + shot + who was followed, so closing and reopening a
+// shot (or the page re-rendering) doesn't redo ~20 s of work on a phone.
+const _trackCache = new Map();
+const cacheKey = (f, ...rest) => (f ? [f.name, f.size, f.lastModified, ...rest].join("|") : null);
 const RED = "#f87171", GREEN = "#a3e635", OUTLINE = "rgba(10,10,10,0.85)";
 
 /** Crop around the player over the whole window: bigger arm on a phone. */
@@ -35,7 +43,8 @@ function cropRect(track) {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const f of track.frames) {
     const pts = [...(f.pts || [])];
-    if (f.corrected) pts.push(f.corrected.el, f.corrected.wr);
+    if (f.corrected?.arm) pts.push(f.corrected.arm.el, f.corrected.arm.wr);
+    if (f.corrected?.leg) pts.push(f.corrected.leg.hip, f.corrected.leg.kn);
     for (const p of pts) {
       if (!p) continue;
       x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]);
@@ -89,6 +98,9 @@ export default function GhostPlayback({
   useEffect(() => {
     if (!videoFile) { setState({ status: "failed", reason: "video-load-failed" }); return undefined; }
     const ac = new AbortController();
+    const key = cacheKey(videoFile, contactSec, sport, shotType, boxKey, tapKey);
+    const cached = key ? _trackCache.get(key) : null;
+    if (cached) { setState({ status: "ready", track: cached }); return undefined; }
     setState({ status: "working", phase: "model", done: 0, total: 1 });
     const started = Date.now();
     // One event per build, success or not: the only way to see why it fails
@@ -96,7 +108,7 @@ export default function GhostPlayback({
     const report = (ok, reason, extra = {}) => trackEvent("ghost_built", {
       ok, reason: reason || null, sport: sport || null, delegate: ghostDelegate(),
       steered_by: tapPoint ? "tap" : contactBox ? "box" : "none",
-      seconds: Math.round((Date.now() - started) / 100) / 10, ...extra,
+      seconds: Math.round((Date.now() - started) / 100) / 10, device: deviceKind(), ...extra,
     });
     buildGhostTrack({
       video: videoFile, contactSec, sport, shotType, contactBox, tapPoint, signal: ac.signal,
@@ -105,7 +117,16 @@ export default function GhostPlayback({
       .then((r) => {
         if (ac.signal.aborted) return;
         if (!r.ok && process.env.NODE_ENV !== "production") console.info("[ghost] not built:", r);
-        report(r.ok, r.ok ? null : r.reason, { coverage: r.coverage ?? r.quality?.coverage ?? null, corrections: r.applied?.length ?? null });
+        const fr = r.diag?.frames || {};
+        report(r.ok, r.ok ? null : r.reason, {
+          coverage: r.coverage ?? r.quality?.coverage ?? null, corrections: r.applied?.length ?? null,
+          blank_frames: fr.blank ?? 0, retried_frames: fr.retried ?? 0, nudged: fr.nudged ?? 0,
+          joints: (r.applied || []).map((a) => a.joint).join(","), legs_readable: r.legs?.readable ?? null, arm_readable: r.arm?.readable ?? null,
+        });
+        if (r.ok && key) {
+          _trackCache.set(key, r);
+          if (_trackCache.size > 4) _trackCache.delete(_trackCache.keys().next().value);
+        }
         setState(r.ok ? { status: "ready", track: r } : { status: "failed", reason: r.reason });
       })
       .catch((e) => {
@@ -184,16 +205,23 @@ export default function GhostPlayback({
         ctx.restore();
       }
       if (f?.corrected && f.w > 0.02) {
-        const { sh, el, wr } = f.corrected;
+        // Each corrected limb is a green polyline with a dark outline and white joints.
+        const limbs = [];
+        const a = f.corrected.arm, l = f.corrected.leg;
+        if (a) limbs.push([a.sh, a.el, a.wr]);
+        if (l) limbs.push([l.hip, l.kn, l.an]);
         ctx.save();
         ctx.globalAlpha = 0.35 + 0.65 * f.w;
         ctx.lineCap = "round";
-        for (const [color, width] of [[OUTLINE, lw * 3.6], [GREEN, lw * 2.4]]) {
-          ctx.strokeStyle = color; ctx.lineWidth = width;
-          ctx.beginPath(); ctx.moveTo(X(sh), Y(sh)); ctx.lineTo(X(el), Y(el)); ctx.lineTo(X(wr), Y(wr)); ctx.stroke();
+        ctx.lineJoin = "round";
+        for (const pts of limbs) {
+          for (const [color, width] of [[OUTLINE, lw * 3.6], [GREEN, lw * 2.4]]) {
+            ctx.strokeStyle = color; ctx.lineWidth = width;
+            ctx.beginPath(); ctx.moveTo(X(pts[0]), Y(pts[0])); ctx.lineTo(X(pts[1]), Y(pts[1])); ctx.lineTo(X(pts[2]), Y(pts[2])); ctx.stroke();
+          }
+          ctx.fillStyle = "#ffffff";
+          for (const p of [pts[1], pts[2]]) { ctx.beginPath(); ctx.arc(X(p), Y(p), lw * 1.6, 0, Math.PI * 2); ctx.fill(); }
         }
-        ctx.fillStyle = "#ffffff";
-        for (const p of [el, wr]) { ctx.beginPath(); ctx.arc(X(p), Y(p), lw * 1.6, 0, Math.PI * 2); ctx.fill(); }
         ctx.restore();
       }
       if (Math.abs(v.currentTime - track.contactSec) < 0.05) {
@@ -272,7 +300,7 @@ export default function GhostPlayback({
     );
   }
 
-  const { applied, measured, achieved, hasIdeal, quality } = track;
+  const { applied, measured, achieved, hasIdeal, quality, legs } = track;
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -318,7 +346,7 @@ export default function GhostPlayback({
       <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
         <div className="flex items-center gap-3 text-[10px] text-zinc-500">
           <span className="flex items-center gap-1.5"><i className="w-4 h-0.5 rounded-full inline-block" style={{ background: RED }} /> What you did</span>
-          <span className="flex items-center gap-1.5"><i className="w-4 h-1 rounded-full inline-block" style={{ background: GREEN }} /> Corrected arm</span>
+          <span className="flex items-center gap-1.5"><i className="w-4 h-1 rounded-full inline-block" style={{ background: GREEN }} /> Corrected position</span>
         </div>
         <div className="inline-flex rounded-md overflow-hidden border border-zinc-700 bg-zinc-900">
           {[0.25, 0.5, 1].map((r) => (
@@ -342,8 +370,12 @@ export default function GhostPlayback({
       )}
       {hasIdeal && applied.length === 0 && (
         <p className="text-sm text-zinc-300 mt-3">
-          Measured in 3D, your arm is already inside the ideal range at contact
-          {measured.elbow != null ? ` (elbow ${measured.elbow}°)` : ""}. Nothing to correct here.
+          Measured in 3D, your{" "}
+          {[measured.elbow != null && "arm", measured.knee != null && legs?.hasKneeTarget && "leg"].filter(Boolean).join(" and ") || "position"}
+          {" "}already sit inside the ideal range at contact
+          {measured.elbow != null ? ` (elbow ${measured.elbow}°` : ""}
+          {measured.elbow != null && measured.knee != null && legs?.hasKneeTarget ? `, knee ${measured.knee}°` : ""}
+          {measured.elbow != null ? ")" : ""}. Nothing to correct here.
         </p>
       )}
       {applied.length > 0 && (
@@ -374,11 +406,31 @@ export default function GhostPlayback({
         </div>
       )}
 
+      {legs && (measured.knee != null || legs.stanceWidth != null) && (
+        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-zinc-400 font-bold">Legs at contact</p>
+          <p className="text-[13px] text-zinc-200 mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
+            {measured.knee != null && <span>Hitting-side knee <span className="font-mono font-bold text-white">{measured.knee}°</span></span>}
+            {legs.stanceWidth != null && <span>Feet <span className="font-mono font-bold text-white">{legs.stanceWidth}×</span> shoulder width apart</span>}
+          </p>
+          {!legs.hasKneeTarget && measured.knee != null && (
+            <p className="text-[11px] text-zinc-500 mt-1 leading-snug">
+              We don't have a leg target for this shot yet, so this is just for your information.
+            </p>
+          )}
+        </div>
+      )}
+      {legs && !legs.readable && (
+        <p className="text-[11px] text-zinc-500 mt-3 leading-snug">
+          Your legs aren't fully in view from this angle, so we only measured your arm.
+        </p>
+      )}
+
       <p className="flex gap-1.5 text-[11px] text-zinc-500 mt-3 leading-relaxed">
         <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span>
-          Measured in 3D from one camera, so treat the green arm as the direction to move, not an
-          exact angle. It changes only your hitting arm around contact; the rest is your real swing.
+          Measured in 3D from one camera, so treat the green as the direction to move, not an
+          exact angle. It changes only your hitting arm and leg around contact; the rest is your real swing.
           {quality?.coverage != null && quality.coverage < 0.9 ? " Some frames were estimated where the player was hidden." : ""}
         </span>
       </p>

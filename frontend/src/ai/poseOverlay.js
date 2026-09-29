@@ -7,6 +7,7 @@
  */
 import { initModel, detectPose, detectMultiplePeople, getKeypointByName, calculateAngle, KEYPOINT_NAMES, SKELETON_EDGES } from "./poseDetector.js";
 import { getIdealAngles } from "./idealAngles.js";
+import { looksBlank } from "../lib/frameSource.js";
 
 // Angles are only reported when EVERY contributing joint clears this. MoveNet
 // happily emits low-confidence guesses for occluded limbs, and those produced
@@ -157,6 +158,10 @@ export async function analyzePoseOnFrame(imageDataUrl, sport, shotType, options 
   await new Promise((res, rej) => {
     img.onload = res; img.onerror = () => rej(new Error("failed to load thumbnail"));
   });
+
+  // A black frame (a phone that couldn't decode the clip, or a saved black
+  // thumbnail) has no player in it; say so instead of measuring nothing.
+  if (looksBlank(img, img.width, img.height)) return { error: "blank-frame" };
 
   // Downscale if huge (perf)
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
