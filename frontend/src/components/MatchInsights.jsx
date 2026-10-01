@@ -35,6 +35,8 @@ import { captureFrameAt as _captureFrameAt } from "@/lib/captureFrame";
 import { openFrameSource, frameToDataUrl, looksBlank, imageIfReal } from "@/lib/frameSource";
 import ShotFixInMotion from "@/components/ShotFixInMotion";
 import { autoGhostAllowed } from "@/lib/webgl";
+import { Link } from "react-router-dom";
+import { practiceUrl, resolveShot, isPracticeSport } from "@/lib/practiceShots";
 import { fixCue } from "@/ai/fixCues";
 
 // 3D corrected-motion ghost. Lazy: MediaPipe's model + WASM only download when
@@ -3429,7 +3431,15 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
     const off = (heroPosture.result?.measurements || [])
       .filter((m) => m.ideal && (m.status === "off" || m.status === "okay"))
       .sort((a, b) => (b.delta || 0) - (a.delta || 0))[0];
-    return off ? fixCue(off.joint, off.value, off.ideal.target) : null;
+    const cue = off ? fixCue(off.joint, off.value, off.ideal.target) : null;
+    return cue ? { ...cue, joint: off.joint } : null;
+  })();
+  // Can this shot be practised live? (racquet sport with curated targets)
+  const practiceTarget = (() => {
+    const sp = String(sport || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+    if (!isPracticeSport(sp)) return null;
+    const r = resolveShot(sp, headlineShot?.category || headlineShot?.type || headlineShot?.label);
+    return r ? { sport: sp, key: r.key } : null;
   })();
 
   // Click YOU panel → seek the page's main video to this shot AND
@@ -3605,6 +3615,14 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">What to do</p>
             <p className="text-[15px] font-bold text-white leading-snug mt-0.5">{topCue.headline}</p>
             <p className="text-[12.5px] text-zinc-300 leading-snug mt-1">{topCue.feel}</p>
+            {practiceTarget && (
+              <Link
+                to={practiceUrl({ sport: practiceTarget.sport, shot: practiceTarget.key, focus: topCue.joint })}
+                className="inline-flex items-center gap-1 mt-2 text-[12.5px] font-bold text-lime-300 hover:text-lime-200"
+              >
+                Practise this now with your camera →
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -3625,6 +3643,21 @@ function AutoProReferencePanel({ perShot, sport, videoFile }) {
             tapPoint={tapPoint}
             shotLabel={headlineShot?._name || null}
           />
+        </div>
+      )}
+      {/* SHADOW PRACTICE — the fix, rehearsed live in front of the phone. */}
+      {practiceTarget && (
+        <div className="px-4 pb-3">
+          <Link
+            to={practiceUrl({ sport: practiceTarget.sport, shot: practiceTarget.key, focus: topCue?.joint })}
+            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-sky-400/40 bg-sky-400/5 hover:bg-sky-400/10 px-4 py-3 text-left transition-colors"
+          >
+            <span>
+              <span className="block text-sm font-bold text-white">Practise this shot with your camera</span>
+              <span className="block text-[11px] text-zinc-400">No shuttle needed: we watch your form live and check every swing</span>
+            </span>
+            <span className="shrink-0 text-sky-300 text-lg" aria-hidden="true">→</span>
+          </Link>
         </div>
       )}
       {/* FORM COMPARE — the same fix on one still frame, in 2D. Folded away

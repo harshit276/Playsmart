@@ -49,6 +49,7 @@ const LabelPage = lazyWithReload(() => import("@/pages/LabelPage"));
 const TestModelPage = lazyWithReload(() => import("@/pages/TestModelPage"));
 const TestAiGenPage = lazyWithReload(() => import("@/pages/TestAiGenPage"));
 const TestGhostPage = lazyWithReload(() => import("@/pages/TestGhostPage"));
+const PracticePage = lazyWithReload(() => import("@/pages/PracticePage"));
 const WalletPage = lazyWithReload(() => import("@/pages/WalletPage"));
 const PricingPage = lazyWithReload(() => import("@/pages/PricingPage"));
 const ReferralPage = lazyWithReload(() => import("@/pages/ReferralPage"));
@@ -344,6 +345,7 @@ function AppRoutes() {
       <Route path="/label" element={<LabelPage />} />
       <Route path="/test-model" element={<TestModelPage />} />
       <Route path="/test-ai-gen" element={<TestAiGenPage />} />
+      <Route path="/practice" element={<PracticePage />} />
       <Route path="/test-ghost" element={<TestGhostPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

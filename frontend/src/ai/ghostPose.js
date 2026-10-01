@@ -39,20 +39,14 @@
 import { getIdealAngles } from "./idealAngles.js";
 import { openFrameSource, waitVisible } from "../lib/frameSource.js";
 import { hasWebGL } from "../lib/webgl.js";
-import { reposeLeg } from "./legIK.js";
+import { WASM_BASE, MODEL_URL, isWebGLError } from "./mediapipeConfig.js";
+import {
+  GHOST_EDGES, L_SH, R_SH, L_WR, R_WR, L_HIP, R_HIP,
+  measureJoints, planCorrections, correctLimbs, achievedAngles,
+} from "./correctPose.js";
 
-const TASKS_VERSION = "1.0.1"; // keep in step with package.json
-const WASM_BASE = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/wasm`;
-const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
-
-// MediaPipe / BlazePose 33-landmark indices.
-const L_SH = 11, R_SH = 12, L_EL = 13, R_EL = 14, L_WR = 15, R_WR = 16, L_HIP = 23, R_HIP = 24;
-const L_KN = 25, R_KN = 26, L_AN = 27, R_AN = 28;
-export const GHOST_EDGES = [
-  [11, 12], [11, 13], [13, 15], [12, 14], [14, 16], [11, 23], [12, 24], [23, 24],
-  [23, 25], [25, 27], [24, 26], [26, 28], [27, 31], [28, 32], [27, 29], [28, 30],
-];
+// Landmark indices, the maths and the edge list are shared with the live mode.
+export { GHOST_EDGES };
 
 const WINDOW_BEFORE_S = 1.0;
 const WINDOW_AFTER_S = 0.6;
@@ -123,11 +117,7 @@ export const ghostDelegate = () => _delegate;
 
 export { hasWebGL };
 
-/** True when an error came from MediaPipe losing / never having a GL context. */
-export function isWebGLError(err) {
-  const m = String(err?.message || err || "");
-  return /activeTexture|webgl|WebGL|GL context|kGpuService/.test(m);
-}
+export { isWebGLError };
 
 async function _fallBackToCpu() {
   const old = await _landmarkerPromise?.catch(() => null);
@@ -135,28 +125,6 @@ async function _fallBackToCpu() {
   _delegate = "CPU";
   _landmarkerPromise = null;
   return loadLandmarker();
-}
-
-// ─── small vector helpers ───────────────────────────────────────────────
-const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const scale = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
-const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm = (a) => Math.hypot(a[0], a[1], a[2]);
-const unit = (a) => { const n = norm(a); return n > 1e-9 ? scale(a, 1 / n) : null; };
-
-function angleDeg(a, b, c) {
-  const u = sub(a, b), v = sub(c, b);
-  const nu = norm(u), nv = norm(v);
-  if (nu < 1e-9 || nv < 1e-9) return null;
-  return (Math.acos(Math.max(-1, Math.min(1, dot(u, v) / (nu * nv)))) * 180) / Math.PI;
-}
-
-// Rodrigues: rotate v about unit axis k by rad.
-function rotate(v, k, rad) {
-  const c = Math.cos(rad), s = Math.sin(rad);
-  return add(add(scale(v, c), scale(cross(k, v), s)), scale(k, dot(k, v) * (1 - c)));
 }
 
 // ─── frame sampling ─────────────────────────────────────────────────────
@@ -181,47 +149,6 @@ function normTap(tap) {
   if (!tap || !Number.isFinite(tap.x) || !Number.isFinite(tap.y)) return null;
   if (tap.x < 0 || tap.x > 1 || tap.y < 0 || tap.y > 1) return null;
   return { x: tap.x, y: tap.y };
-}
-
-// ─── camera fit: world (x,y,z,1) → pixels, least squares ───────────────
-function solve4(A, b) {
-  // Gaussian elimination with partial pivoting on a 4x4 system (2 RHS columns).
-  const M = A.map((row, i) => [...row, ...b[i]]);
-  for (let c = 0; c < 4; c++) {
-    let p = c;
-    for (let r = c + 1; r < 4; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
-    if (Math.abs(M[p][c]) < 1e-12) return null;
-    [M[c], M[p]] = [M[p], M[c]];
-    for (let r = 0; r < 4; r++) {
-      if (r === c) continue;
-      const f = M[r][c] / M[c][c];
-      for (let k = c; k < 6; k++) M[r][k] -= f * M[c][k];
-    }
-  }
-  return [0, 1, 2, 3].map((r) => [M[r][4] / M[r][r], M[r][5] / M[r][r]]);
-}
-
-function fitCamera(world, px, vis) {
-  const AtA = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
-  const AtP = [[0, 0], [0, 0], [0, 0], [0, 0]];
-  let n = 0;
-  for (let i = 0; i < world.length; i++) {
-    if ((vis[i] ?? 0) < 0.5) continue;
-    const x = [world[i][0], world[i][1], world[i][2], 1];
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 4; c++) AtA[r][c] += x[r] * x[c];
-      AtP[r][0] += x[r] * px[i][0];
-      AtP[r][1] += x[r] * px[i][1];
-    }
-    n++;
-  }
-  if (n < 8) return null;
-  const M = solve4(AtA, AtP);
-  if (!M) return null;
-  return (p) => [
-    p[0] * M[0][0] + p[1] * M[1][0] + p[2] * M[2][0] + M[3][0],
-    p[0] * M[0][1] + p[1] * M[1][1] + p[2] * M[2][1] + M[3][1],
-  ];
 }
 
 // ─── smoothing + gap fill ───────────────────────────────────────────────
@@ -534,43 +461,15 @@ async function buildInner({ video, contactSec, sport, shotType, contactBox = nul
       if (PX[i][L_WR][1] < PX[i][R_WR][1]) lUp++; else rUp++;
     }
     const side = lUp > rUp ? "left" : "right";
-    const [SH, EL, WR, HIP] = side === "left" ? [L_SH, L_EL, L_WR, L_HIP] : [R_SH, R_EL, R_WR, R_HIP];
 
-    const [KN, AN] = side === "left" ? [L_KN, L_AN] : [R_KN, R_AN];
-    // Arm and leg are judged separately: a hidden arm doesn't stop us reading
-    // the legs (and vice versa). Neither readable is the only real failure.
-    const armOk = Math.min(VIS[kc][SH], VIS[kc][EL], VIS[kc][WR]) >= 0.5;
-    const legOk = Math.min(VIS[kc][HIP], VIS[kc][KN], VIS[kc][AN]) >= 0.5;
+    // 5. measure at contact (3D) and decide the corrections. Arm and leg are
+    // judged separately: a hidden arm doesn't stop us reading the legs (and
+    // vice versa). Neither readable is the only real failure.
+    const { armOk, legOk, measured, stanceWidth } = measureJoints(WL[kc], VIS[kc], side);
     if (!armOk && !legOk) return { ok: false, reason: "arm-not-visible", coverage: Math.round(followed * 100) / 100 };
+    const { applied, delta } = planCorrections(measured, ideal);
 
-    // 5. measure at contact (3D) and decide the corrections
-    const wc = WL[kc];
-    const measured = {
-      elbow: armOk ? angleDeg(wc[SH], wc[EL], wc[WR]) : null,
-      shoulder: armOk ? angleDeg(wc[HIP], wc[SH], wc[EL]) : null,
-      knee: legOk ? angleDeg(wc[HIP], wc[KN], wc[AN]) : null, // the hitting-side leg
-    };
-    // Base width: how far apart the feet are, in shoulder widths. Shown for
-    // information only: there is no curated target for it (yet).
-    const shoulderW = Math.hypot(...sub(wc[L_SH], wc[R_SH]));
-    const footGap = Math.hypot(wc[L_AN][0] - wc[R_AN][0], wc[L_AN][2] - wc[R_AN][2]);
-    const bothFeet = Math.min(VIS[kc][L_AN], VIS[kc][R_AN]) >= 0.5;
-    const stanceWidth = bothFeet && shoulderW > 0.05 ? footGap / shoulderW : null;
-    const applied = [];
-    const delta = { shoulder: 0, elbow: 0, knee: 0 };
-    for (const joint of ["shoulder", "elbow", "knee"]) {
-      const range = ideal?.[joint];
-      const val = measured[joint];
-      if (!range || val == null) continue;
-      if (val >= range.min && val <= range.max) continue;
-      delta[joint] = range.ideal - val;
-      applied.push({
-        joint, from: Math.round(val), to: Math.round(range.ideal),
-        deltaDeg: Math.round(range.ideal - val), why: range.why || null,
-      });
-    }
-
-    // 6. per-frame corrected arm (3D rotation blended around contact) → pixels
+    // 6. per-frame corrected limbs (blended in and out around contact) → pixels
     const weightAt = (t) => {
       const d = t - contactSec;
       if (d <= -RAMP_IN_S || d >= RAMP_OUT_S) return 0;
@@ -582,75 +481,15 @@ async function buildInner({ video, contactSec, sport, shotType, contactBox = nul
       const w = applied.length ? weightAt(t) : 0;
       const frame = { t, pts: PX[i], w, corrected: null, tracked: !!tracked[i] };
       if (w < 0.02) return frame;
-      const wl = WL[i];
-      const project = fitCamera(wl, PX[i], VIS[i]);
-      if (!project) return frame;
-      for (const k of [SH, L_HIP, R_HIP]) {
-        const q = project(wl[k]);
-        fitErr += Math.hypot(q[0] - PX[i][k][0], q[1] - PX[i][k][1]); fitN++;
-      }
-      const corrected = { arm: null, leg: null };
-      if (delta.shoulder || delta.elbow) {
-        let el = wl[EL], wr = wl[WR];
-        const sh = wl[SH], hip = wl[HIP];
-        if (delta.shoulder) {
-          const ax = unit(cross(sub(hip, sh), sub(el, sh)));
-          if (ax) {
-            const rad = (delta.shoulder * w * Math.PI) / 180;
-            el = add(sh, rotate(sub(el, sh), ax, rad));
-            wr = add(sh, rotate(sub(wr, sh), ax, rad));
-          }
-        }
-        if (delta.elbow) {
-          const ax = unit(cross(sub(sh, el), sub(wr, el)));
-          if (ax) {
-            const rad = (delta.elbow * w * Math.PI) / 180;
-            wr = add(el, rotate(sub(wr, el), ax, rad));
-          }
-        }
-        const off = sub([...PX[i][SH], 0], [...project(sh), 0]);
-        const toPx = (p) => { const q = project(p); return [q[0] + off[0], q[1] + off[1]]; };
-        corrected.arm = { sh: PX[i][SH], el: toPx(el), wr: toPx(wr) };
-      }
-      if (delta.knee) {
-        // Foot planted, hips settle: the leg reaches the target knee angle,
-        // blended in and out around contact like the arm.
-        const cur = angleDeg(wl[HIP], wl[KN], wl[AN]);
-        const re = cur != null ? reposeLeg(wl[HIP], wl[KN], wl[AN], cur + delta.knee * w) : null;
-        if (re) {
-          const off = sub([...PX[i][AN], 0], [...project(wl[AN]), 0]);
-          const toPx = (p) => { const q = project(p); return [q[0] + off[0], q[1] + off[1]]; };
-          corrected.leg = { hip: toPx(re.hip), kn: toPx(re.knee), an: PX[i][AN] };
-        }
-      }
-      frame.corrected = corrected.arm || corrected.leg ? corrected : null;
+      const c = correctLimbs({ wl: WL[i], px: PX[i], vis: VIS[i], side, delta, w });
+      if (!c) return frame;
+      fitErr += c.fitErrSum; fitN += c.fitN;
+      frame.corrected = c.arm || c.leg ? { arm: c.arm, leg: c.leg } : null;
       return frame;
     });
 
     // What the correction achieves at contact (checked, not assumed).
-    const check = (() => {
-      const wl = WL[kc];
-      let el = wl[EL], wr = wl[WR];
-      const sh = wl[SH], hip = wl[HIP];
-      if (delta.shoulder) {
-        const ax = unit(cross(sub(hip, sh), sub(el, sh)));
-        if (ax) { const r = (delta.shoulder * Math.PI) / 180; el = add(sh, rotate(sub(el, sh), ax, r)); wr = add(sh, rotate(sub(wr, sh), ax, r)); }
-      }
-      if (delta.elbow) {
-        const ax = unit(cross(sub(sh, el), sub(wr, el)));
-        if (ax) { const r = (delta.elbow * Math.PI) / 180; wr = add(el, rotate(sub(wr, el), ax, r)); }
-      }
-      let knee = measured.knee;
-      if (delta.knee) {
-        const re = reposeLeg(wl[HIP], wl[KN], wl[AN], measured.knee + delta.knee);
-        knee = re ? angleDeg(re.hip, re.knee, re.ankle) : null;
-      }
-      return {
-        elbow: armOk ? angleDeg(sh, el, wr) : null,
-        shoulder: armOk ? angleDeg(hip, sh, el) : null,
-        knee,
-      };
-    })();
+    const check = achievedAngles(WL[kc], side, delta, measured, armOk);
 
     return {
       ok: true,
