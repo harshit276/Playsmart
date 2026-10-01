@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause, RotateCcw, Info, ArrowRight, Dumbbell } from "lucide-react";
 import { fixCue } from "@/ai/fixCues";
+import { Link } from "react-router-dom";
+import { practiceUrl, resolveShot, isPracticeSport } from "@/lib/practiceShots";
 import { buildGhostTrack, GHOST_EDGES, isWebGLError, ghostDelegate } from "@/ai/ghostPose";
 import { track as trackEvent } from "@/lib/analytics";
 import { deviceKind } from "@/lib/frameSource";
@@ -301,6 +303,12 @@ export default function GhostPlayback({
   }
 
   const { applied, measured, achieved, hasIdeal, quality, legs } = track;
+  const practiceTarget = (() => {
+    const sp = String(sport || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
+    if (!isPracticeSport(sp)) return null;
+    const r = resolveShot(sp, shotType);
+    return r ? { sport: sp, key: r.key } : null;
+  })();
   return (
     <div className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -403,6 +411,14 @@ export default function GhostPlayback({
               </div>
             );
           })}
+          {practiceTarget && (
+            <Link
+              to={practiceUrl({ sport: practiceTarget.sport, shot: practiceTarget.key, focus: applied[0]?.joint })}
+              className="inline-flex items-center gap-1 pt-1 text-[13px] font-bold text-lime-300 hover:text-lime-200"
+            >
+              Practise this now with your camera →
+            </Link>
+          )}
         </div>
       )}
 
