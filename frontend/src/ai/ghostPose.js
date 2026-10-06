@@ -119,6 +119,9 @@ export { hasWebGL };
 
 export { isWebGLError };
 
+// The lift analysis shares this model instance and its CPU fallback.
+export { _fallBackToCpu as fallBackToCpu };
+
 async function _fallBackToCpu() {
   const old = await _landmarkerPromise?.catch(() => null);
   try { old?.close(); } catch { /* noop */ }

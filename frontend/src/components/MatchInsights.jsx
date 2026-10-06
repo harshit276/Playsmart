@@ -38,10 +38,14 @@ import { autoGhostAllowed } from "@/lib/webgl";
 import { Link } from "react-router-dom";
 import { practiceUrl, resolveShot, isPracticeSport } from "@/lib/practiceShots";
 import { fixCue } from "@/ai/fixCues";
+// Pure and small (no pose stack): names the lift in the sport or shot text.
+import { resolveLift } from "@/ai/liftPose";
 
 // 3D corrected-motion ghost. Lazy: MediaPipe's model + WASM only download when
 // a player taps "Watch the fix in motion".
 const GhostPlayback = lazy(() => import("@/components/GhostPlayback"));
+// The lift form check (deadlift): runs the pose model in the browser on the lifter's clip.
+const LiftFix = lazy(() => import("@/components/LiftFix"));
 
 // Controlled by the parent: when the clip has several people and no box, the
 // parent asks "which one are you?" first and opens this after the tap.
@@ -957,6 +961,19 @@ export default function MatchInsights({
               type and inlines a Compare-to-Pro panel. No click needed.
               Plays user's video looped on the shot window (no
               video-generation cost) next to YouTube embed of the pro. */}
+          {(() => {
+            const liftKey = _liftFor(sport, [...(shotsProp || []), ...perShot]);
+            if (liftKey && videoFile) return <Suspense fallback={null}><LiftFix videoFile={videoFile} lift={liftKey} /></Suspense>;
+            if (!liftKey && _sportFamily(sport) === "strength") {
+              return (
+                <p className="text-[12px] text-zinc-500 rounded-xl border border-zinc-800 px-3 py-2.5">
+                  The form check with the corrected pose covers the deadlift for now. More lifts are coming.
+                </p>
+              );
+            }
+            return null;
+          })()}
+
           <AutoProReferencePanel perShot={perShot} sport={sport} videoFile={videoFile} />
 
           {perShot.some((s) => s.reasoning || s.formFeedback) && (
@@ -1587,6 +1604,18 @@ function _sportFamily(sport) {
   if (_STRENGTH_SPORTS.some((k) => s.includes(k))) return "strength";
   if (_CONTINUOUS_SPORTS.some((k) => s.includes(k))) return "continuous";
   return "other";
+}
+
+/** The lift to form-check (e.g. "deadlift"), from the sport label or the rep names, or null. */
+function _liftFor(sport, shots) {
+  const fromSport = resolveLift(sport);
+  if (fromSport) return fromSport;
+  if (_sportFamily(sport) !== "strength") return null;
+  for (const s of shots || []) {
+    const k = resolveLift(`${s?.name || ""} ${s?.type || ""} ${s?.label || ""}`);
+    if (k) return k;
+  }
+  return null;
 }
 
 function _shotMatchesKeyword(shot, kws) {

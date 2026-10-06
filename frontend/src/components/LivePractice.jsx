@@ -134,8 +134,17 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
     if (!seen.length) { setHud((h) => ({ ...h, hint: "Couldn't see your arm on that swing. Step back a little." })); return; }
     const plan = planCorrections(measured, ideal);
     const inBand = plan.applied.length === 0;
-    const worst = plan.applied.slice().sort((a, b) => Math.abs(b.deltaDeg) - Math.abs(a.deltaDeg))[0] || null;
-    const cue = worst ? fixCue(worst.joint, worst.from, worst.to) : null;
+    // Rank by how far out each joint is relative to ITS OWN band, not by raw degrees:
+    // a 60° arm miss must not bury a 25° knee miss that is just as far outside its range.
+    const severity = (a) => Math.abs(a.deltaDeg) / Math.max(10, (ideal[a.joint].max - ideal[a.joint].min) / 2);
+    const ranked = plan.applied.slice().sort((a, b) => severity(b) - severity(a));
+    const worst = ranked[0] || null;
+    // One cue for the arm and one for the leg when both are off: that's what gets spoken and shown.
+    const picks = [ranked.find((a) => a.joint !== "knee"), ranked.find((a) => a.joint === "knee")]
+      .filter(Boolean)
+      .sort((a, b) => severity(b) - severity(a));
+    const cues = picks.map((a) => ({ ...fixCue(a.joint, a.from, a.to), joint: a.joint, from: a.from, to: a.to })).filter((c) => c.headline);
+    const cue = cues[0] || null;
     const frame = frames.reduce((b, f) => (Math.abs(f.t - tPeak) < Math.abs(b.t - tPeak) ? f : b), frames[0]);
 
     // The contact picture: the nearest saved frame, with the skeleton and the correction drawn on it.
@@ -162,7 +171,7 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
       } catch { picture = null; }
     }
 
-    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, worst, cue, peakSpeed, picture };
+    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, worst, cue, cues, off: ranked, peakSpeed, picture };
     repsRef.current = [...repsRef.current, rep];
     setReps(repsRef.current);
     clearTimeout(toastTimerRef.current);
@@ -171,7 +180,7 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
 
     if (soundRef.current) {
       const streak = (() => { let n = 0; for (let i = repsRef.current.length - 1; i >= 0 && repsRef.current[i].inBand; i--) n++; return n; })();
-      if (!inBand && cue) speakCue(cue.headline);
+      if (!inBand && cues.length) speakCue(cues.map((c) => c.headline).join(". "));
       else if (inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good");
     }
   }, [ideal, judged, drawLimbs, drawSkeleton, clipSrc]);
@@ -392,10 +401,18 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
 
   let summary = null;
   if (phase === "summary") {
+    // every joint that was off on a rep counts, not just the worst one, so legs show up too
     const faults = {};
-    for (const r of reps) if (r.worst) faults[r.worst.joint] = (faults[r.worst.joint] || 0) + 1;
-    const top = Object.entries(faults).sort((a, b) => b[1] - a[1])[0];
-    const topCue = top ? (() => { const r = reps.find((x) => x.worst?.joint === top[0]); return r ? fixCue(r.worst.joint, r.worst.from, r.worst.to) : null; })() : null;
+    for (const r of reps) for (const o of r.off || []) faults[o.joint] = (faults[o.joint] || 0) + 1;
+    const topFor = (match) => {
+      const top = Object.entries(faults).filter(([j]) => match(j)).sort((a, b) => b[1] - a[1])[0];
+      if (!top) return null;
+      const r = reps.find((x) => x.off?.some((o) => o.joint === top[0]));
+      const o = r?.off.find((x) => x.joint === top[0]);
+      const c = o ? fixCue(o.joint, o.from, o.to) : null;
+      return c ? { ...c, joint: top[0], count: top[1] } : null;
+    };
+    const workOn = [topFor((j) => j !== "knee"), topFor((j) => j === "knee")].filter(Boolean).sort((a, b) => b.count - a.count);
     summary = (
       <div className="fixed inset-0 z-[62] bg-zinc-950 text-white overflow-y-auto">
         <div className="max-w-md mx-auto px-4 py-8">
@@ -412,14 +429,14 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
               ))}
             </div>
           )}
-          {topCue && (
-            <div className="mt-5 rounded-xl border border-lime-400/30 bg-lime-400/5 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">Work on next</p>
-              <p className="text-[15px] font-bold mt-0.5">{topCue.headline}</p>
-              <p className="text-[13px] text-zinc-300 mt-1">{topCue.feel}</p>
-              <p className="text-[12px] text-sky-200 mt-2 flex gap-1.5"><Dumbbell className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span>{topCue.drill}</span></p>
+          {workOn.map((c, i) => (
+            <div key={c.joint} className="mt-5 rounded-xl border border-lime-400/30 bg-lime-400/5 p-3">
+              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">{i === 0 ? "Work on next" : "Then"}<span className="text-zinc-400 normal-case tracking-normal font-medium"> · off on {c.count} of {reps.length} {reps.length === 1 ? "swing" : "swings"}</span></p>
+              <p className="text-[15px] font-bold mt-0.5">{c.headline}</p>
+              <p className="text-[13px] text-zinc-300 mt-1">{c.feel}</p>
+              <p className="text-[12px] text-sky-200 mt-2 flex gap-1.5"><Dumbbell className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span>{c.drill}</span></p>
             </div>
-          )}
+          ))}
           <div className="mt-6 grid gap-2">
             <button type="button" onClick={() => { repsRef.current = []; setReps([]); startedAtRef.current = Date.now(); startSession(facing); }} className="w-full py-3 rounded-xl bg-lime-400 text-black font-bold">Practise again</button>
             <Link to="/analyze" className="w-full py-3 rounded-xl border border-zinc-700 text-center font-semibold text-zinc-200">Film a real rally and get the full analysis</Link>
@@ -509,12 +526,20 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
               <p className={`text-[11px] uppercase tracking-wider font-bold ${toast.inBand ? "text-lime-400" : "text-rose-300"}`}>
                 Swing {toast.n} · {toast.inBand ? "in range" : "adjust"}
               </p>
-              <p className="text-[15px] font-bold leading-snug mt-0.5">
-                {toast.inBand ? "Good: that's the position" : toast.cue?.headline || "Close: check the target"}
-              </p>
+              {toast.inBand || !toast.cues?.length ? (
+                <p className="text-[15px] font-bold leading-snug mt-0.5">
+                  {toast.inBand ? "Good: that's the position" : toast.cue?.headline || "Close: check the target"}
+                </p>
+              ) : (
+                <ul className="mt-0.5 space-y-0.5">
+                  {toast.cues.map((c) => <li key={c.joint} className="text-[14px] font-bold leading-snug">{c.headline}</li>)}
+                </ul>
+              )}
               <p className="text-[12px] text-zinc-300 mt-1 leading-snug">
-                {Object.entries(toast.measured).filter(([, v]) => v != null).map(([j, v]) => `${JOINT_LABEL[j]} ${Math.round(v)}°`).join(" · ")}
-                {toast.worst ? ` · aim for ${Math.round(toast.worst.to)}°` : ""}
+                {Object.entries(toast.measured).filter(([, v]) => v != null).map(([j, v]) => {
+                  const o = toast.off?.find((x) => x.joint === j);
+                  return `${JOINT_LABEL[j]} ${Math.round(v)}°${o ? ` (aim ${Math.round(o.to)}°)` : ""}`;
+                }).join(" · ")}
               </p>
             </div>
           </div>

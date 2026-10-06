@@ -50,6 +50,12 @@ const TestModelPage = lazyWithReload(() => import("@/pages/TestModelPage"));
 const TestAiGenPage = lazyWithReload(() => import("@/pages/TestAiGenPage"));
 const TestGhostPage = lazyWithReload(() => import("@/pages/TestGhostPage"));
 const PracticePage = lazyWithReload(() => import("@/pages/PracticePage"));
+// Test-only: the lift check on a same-site clip, no login. Needs REACT_APP_DEV_ROUTES at build time AND a
+// localhost page, so it can never be reached on the live site (the flag isn't constant-folded by this build,
+// so the code ships but stays unrouted).
+const DevLiftPage = process.env.REACT_APP_DEV_ROUTES && typeof window !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
+  ? lazyWithReload(() => import("@/pages/DevLiftPage"))
+  : null;
 const WalletPage = lazyWithReload(() => import("@/pages/WalletPage"));
 const PricingPage = lazyWithReload(() => import("@/pages/PricingPage"));
 const ReferralPage = lazyWithReload(() => import("@/pages/ReferralPage"));
@@ -346,6 +352,7 @@ function AppRoutes() {
       <Route path="/test-model" element={<TestModelPage />} />
       <Route path="/test-ai-gen" element={<TestAiGenPage />} />
       <Route path="/practice" element={<PracticePage />} />
+      {DevLiftPage && <Route path="/dev/lift" element={<DevLiftPage />} />}
       <Route path="/test-ghost" element={<TestGhostPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
