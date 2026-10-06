@@ -1,4 +1,5 @@
 import { IDEAL_ANGLES, getIdealAngles } from "@/ai/idealAngles";
+import { LIFTS } from "@/ai/liftPose";
 
 /**
  * What live practice can coach. Racquet sports only for now: the moment that
@@ -12,6 +13,11 @@ export const PRACTICE_SPORTS = [
   { key: "pickleball", label: "Pickleball" },
   { key: "squash", label: "Squash" },
 ];
+
+/** Lifting is practised too, but it is its own thing: reps judged at the setup and the lockout, not a swing at contact. */
+export const LIFT_SPORT = { key: "strength", label: "Lifting" };
+export const isLiftSport = (s) => s === LIFT_SPORT.key;
+export const liftShots = () => Object.values(LIFTS).map((l) => ({ key: l.key, label: l.label, name: l.label }));
 
 const prettyKey = (k) => k.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 

@@ -20,9 +20,10 @@
  *     and there is no single contact instant (the stroke is cyclic).
  *   - football — the meaningful joints are the plant foot and the kicking
  *     leg's hip/knee/ankle chain, not a dominant arm. Different archetype.
- *   - gym / strength training — bilateral and rep-based. The useful measures
- *     are hip depth, spine angle and left/right symmetry at the bottom of a
- *     rep, which needs rep detection and a known camera view. Not built yet.
+ *   - gym / strength training — bilateral and rep-based, so it does NOT go
+ *     through this tracker. The deadlift has its own check (liftPose,
+ *     liftAnalyze, LiftFix): reps found from the hips closing and opening,
+ *     graded at the setup and the lockout. Other lifts aren't built yet.
  *
  * Keep in sync with IDEAL_ANGLES; poseOverlay dev-warns if they drift.
  */
