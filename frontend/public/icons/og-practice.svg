@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Formanti Shadow Practice — a form coach in front of your phone">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0a0a"/>
+      <stop offset="1" stop-color="#101510"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.18" cy="0.15" r="0.9">
+      <stop offset="0" stop-color="#a3e635" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#a3e635" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <rect x="0" y="0" width="1200" height="8" fill="#a3e635"/>
+
+  <text x="80" y="140" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="700" letter-spacing="4" fill="#a3e635">FORMANTI · SHADOW PRACTICE</text>
+
+  <text x="76" y="250" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="800" fill="#ffffff">A form coach</text>
+  <text x="76" y="338" font-family="Inter, Arial, sans-serif" font-size="82" font-weight="800" fill="#ffffff">in front of your phone</text>
+
+  <text x="80" y="406" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="400" fill="#cfcfcf">Live voice coaching, with the fix drawn on your body.</text>
+  <text x="80" y="450" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="400" fill="#cfcfcf">Runs on your phone. Nothing is uploaded.</text>
+
+  <g font-family="Inter, Arial, sans-serif" font-size="24" font-weight="600" fill="#0a0a0a">
+    <rect x="80" y="490" width="180" height="52" rx="26" fill="#a3e635"/>
+    <text x="170" y="524" text-anchor="middle">Badminton</text>
+    <rect x="276" y="490" width="130" height="52" rx="26" fill="#1c1c1c" stroke="#333"/>
+    <text x="341" y="524" text-anchor="middle" fill="#e5e5e5">Tennis</text>
+    <rect x="422" y="490" width="190" height="52" rx="26" fill="#1c1c1c" stroke="#333"/>
+    <text x="517" y="524" text-anchor="middle" fill="#e5e5e5">Table Tennis</text>
+    <rect x="628" y="490" width="170" height="52" rx="26" fill="#1c1c1c" stroke="#333"/>
+    <text x="713" y="524" text-anchor="middle" fill="#e5e5e5">Pickleball</text>
+    <rect x="814" y="490" width="160" height="52" rx="26" fill="#1c1c1c" stroke="#333"/>
+    <text x="894" y="524" text-anchor="middle" fill="#e5e5e5">Deadlift</text>
+  </g>
+
+  <text x="80" y="596" font-family="Inter, Arial, sans-serif" font-size="26" font-weight="500" fill="#7a7a7a">formanti.com/practice</text>
+</svg>

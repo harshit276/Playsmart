@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   LogOut, BarChart3, Dumbbell, Target, CreditCard,
   Video, Users, Flame, Film, BookOpen, Home, MoreHorizontal, Swords, Backpack,
-  Download, TrendingUp
+  Download, TrendingUp, Activity
 } from "lucide-react";
 import { FormantiIcon } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
@@ -19,11 +19,15 @@ import { motion, AnimatePresence } from "framer-motion";
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/analyze", label: "Analyze", icon: Video },
+  { path: "/practice", label: "Practice", icon: Activity, newUntil: "2027-01-15" },
   { path: "/progress", label: "Progress", icon: TrendingUp },
   { path: "/marketplace", label: "Gear", icon: Backpack },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/community?host=1", label: "Host Game", icon: Swords },
 ];
+
+// A "New" tag on a nav item until this date, then it disappears by itself.
+const isNewItem = (item) => !!item.newUntil && Date.now() < Date.parse(item.newUntil);
 
 // Mobile bottom nav — 4 items + More (5 slots total, like Instagram/YouTube).
 // Host was buried in the More menu, which is why nobody found it: hosting is
@@ -31,15 +35,19 @@ const NAV_ITEMS = [
 // return-visit feature people reach from the dashboard — moves into More.
 // "Gear" over "Shop": the page is AI-matched equipment recommendations, and
 // "Shop" promises a storefront we don't have.
+// Practice (shadow practice with the camera) is the flagship feature to market, so it
+// earns a permanent slot too; Gear, which people reach from search and the dashboard,
+// moves into More.
 const MOBILE_NAV_PRIMARY = [
   { path: "/dashboard", label: "Home", icon: Home },
   { path: "/analyze", label: "Analyze", icon: Video },
+  { path: "/practice", label: "Practice", icon: Activity, newUntil: "2027-01-15" },
   { path: "/community?host=1", label: "Host", icon: Swords },
-  { path: "/marketplace", label: "Gear", icon: Backpack },
 ];
 
 // "More" menu items on mobile
 const MOBILE_NAV_MORE = [
+  { path: "/marketplace", label: "Gear", icon: Backpack },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/progress", label: "Progress", icon: BarChart3 },
   { path: "/card", label: "My Card", icon: CreditCard },
@@ -118,7 +126,7 @@ export default function Navbar() {
   const isGuest = !isAuthenticated;
   const showNav = true; // Always show navbar on app pages
 
-  if (location.pathname === "/" || location.pathname === "/auth" || location.pathname === "/privacy" || location.pathname === "/demo" || location.pathname === "/practice") return null;
+  if (location.pathname === "/" || location.pathname === "/auth" || location.pathname === "/privacy" || location.pathname === "/demo") return null;
 
   const activeSport = profile?.active_sport || "badminton";
   const accentKey = SPORT_ACCENT[activeSport] || "lime";
@@ -145,21 +153,27 @@ export default function Navbar() {
               // Guests don't see host (signin required) or My Card (no profile yet)
               if (isGuest && (item.path?.startsWith("/community") || item.path === "/card")) return false;
               return true;
-            }).map(({ path, label, icon: Icon }) => (
-              <Link key={path} to={path} data-testid={`nav-${label.toLowerCase()}`}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                  location.pathname === path ? accent.active : `text-zinc-400 ${accent.hover}`
-                }`}>
-                <Icon className="w-4 h-4" strokeWidth={1.5} />
-                {label}
-              </Link>
-            ))}
-            <Link to="/blog" data-testid="nav-blog"
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+            }).map((item) => {
+              const { path, label, icon: Icon } = item;
+              return (
+                <Link key={path} to={path} data-testid={`nav-${label.toLowerCase()}`} title={label} aria-label={label}
+                  className={`relative flex items-center gap-1.5 px-2.5 xl:px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                    location.pathname === path ? accent.active : `text-zinc-400 ${accent.hover}`
+                  }`}>
+                  <Icon className="w-4 h-4" strokeWidth={1.5} />
+                  {/* eight links don't fit with labels below ~1280px: icons (with a tooltip) until there's room */}
+                  <span className="hidden lg:inline">{label}</span>
+                  {isNewItem(item) && <span className="hidden xl:inline ml-0.5 text-[9px] font-black uppercase tracking-wide bg-lime-400 text-black rounded px-1 py-px leading-none">New</span>}
+                  {isNewItem(item) && <span className="xl:hidden absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-lime-400" aria-hidden="true" />}
+                </Link>
+              );
+            })}
+            <Link to="/blog" data-testid="nav-blog" title="Blog" aria-label="Blog"
+              className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                 location.pathname.startsWith("/blog") ? accent.active : `text-zinc-400 ${accent.hover}`
               }`}>
               <BookOpen className="w-4 h-4" strokeWidth={1.5} />
-              Blog
+              <span className="hidden lg:inline">Blog</span>
             </Link>
           </div>
 
@@ -277,7 +291,8 @@ export default function Navbar() {
           data-testid="mobile-bottom-nav"
         >
           <div className="flex items-center justify-around h-[68px] px-1 relative">
-            {MOBILE_NAV_PRIMARY.map(({ path, label, icon: Icon }) => {
+            {MOBILE_NAV_PRIMARY.map((item) => {
+              const { path, label, icon: Icon } = item;
               const isActive = location.pathname === path;
               return (
                 <Link
@@ -289,6 +304,7 @@ export default function Navbar() {
                   data-testid={`mobile-nav-${label.toLowerCase()}`}
                 >
                   <Icon className="w-6 h-6" strokeWidth={isActive ? 2.2 : 1.8} />
+                  {isNewItem(item) && <span className="absolute top-1 left-1/2 ml-2.5 w-2 h-2 rounded-full bg-lime-400 ring-2 ring-zinc-950" aria-label="New" />}
                   <span className={`text-[11px] font-semibold ${isActive ? "" : "text-zinc-400"}`}>{label}</span>
                   {isActive && (
                     <motion.div

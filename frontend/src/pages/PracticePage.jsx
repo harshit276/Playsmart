@@ -91,7 +91,7 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-950 text-white pb-28">
+    <div className="min-h-[100dvh] bg-zinc-950 text-white pb-52 md:pb-28">
       <SEO
         title="Shadow practice: live form coach"
         description="Practise in front of your phone camera. Formanti tracks your form live, shows the correct position, and checks every swing at contact. Runs on your phone; your video is never uploaded."
@@ -183,7 +183,8 @@ export default function PracticePage() {
         <p className="text-[11px] text-zinc-500 mt-2">These are guide ranges, not a coach's verdict. Works best side-on, in good light.</p>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent px-4 pt-6 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {/* on phones the bottom nav is showing, so the Start bar sits just above it */}
+      <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] md:bottom-0 z-50 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent px-4 pt-6 pb-3 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-md mx-auto">
           {!canRun && <p className="text-[12px] text-amber-200 mb-2">This browser can't run the live pose model (graphics acceleration is off). Try Chrome or Safari.</p>}
           <button type="button" disabled={!ready || !canRun} onClick={() => { unlockSpeech(); setActive(true); }}

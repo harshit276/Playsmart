@@ -30,9 +30,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const BUILD_DIR = path.resolve(__dirname, "..", "build");
+// BUILD_PATH (the same variable CRA honours) lets a build go somewhere other than ./build
+const BUILD_DIR = process.env.BUILD_PATH ? path.resolve(process.env.BUILD_PATH) : path.resolve(__dirname, "..", "build");
 const ORIGIN = "https://www.formanti.com";
-const OG_IMAGE = `${ORIGIN}/icons/og-card.svg`;
+// PNG, not SVG: link previews on WhatsApp, Facebook and the like don't render SVG images.
+const OG_IMAGE = `${ORIGIN}/icons/og-card.png`;
 
 // Shared "What you get" block — identical across sports, keeps authoring light.
 const WHAT_YOU_GET = [
@@ -176,6 +178,21 @@ const ROUTES = {
       ["How long does analysis take?", "Most clips come back in under two minutes. You can close the tab while it runs; the analysis finishes on our servers."],
     ],
   },
+  "/practice": {
+    title: "Shadow Practice: Live AI Form Coach on Your Phone",
+    description:
+      "Practise in front of your phone camera. Formanti tracks your form live, shows the correct position and tells you out loud what to fix. Nothing is uploaded.",
+    // its own preview card for shared links (the site-wide card is used when this is omitted)
+    image: `${ORIGIN}/icons/og-practice.png`,
+    h1: "Shadow Practice: A Form Coach in Front of Your Phone",
+    blurb:
+      "Prop your phone up and swing, or lift, with no equipment. Formanti follows your body live on your phone, draws the correct position in green wherever you are off, and tells you out loud what to fix. Your video never leaves your phone.",
+    faqs: [
+      ["Does shadow practice upload my video?", "No. The pose tracking runs on your phone, so your video stays on it."],
+      ["Which sports does it cover?", "Badminton, tennis, table tennis, pickleball and squash swings, and the deadlift. More lifts are coming."],
+      ["Do I need a coach or any equipment?", "No. Prop your phone up two to three metres away with your whole body in view. The target ranges are guide values, not a coach's verdict."],
+    ],
+  },
   "/training": {
     title: "Personalized AI Training Plans for Your Sport",
     description:
@@ -240,7 +257,7 @@ function replaceOnce(html, re, replacement) {
 
 // Swap the shell's homepage <head> tags for this page's. Shared by the
 // landing pages and the blog so the two can never drift apart.
-function renderMeta(template, { url, fullTitle, description }) {
+function renderMeta(template, { url, fullTitle, description, image = null }) {
   let html = template;
   // Guarded replacements - each only fires if its target exists; the file is
   // written regardless, so an explicit Vercel route to it can never 404.
@@ -253,6 +270,11 @@ function renderMeta(template, { url, fullTitle, description }) {
     [/<meta property="og:description" content="[^"]*"\s*\/>/, `<meta property="og:description" content="${esc(description)}" />`],
     [/<meta name="twitter:title" content="[^"]*"\s*\/>/, `<meta name="twitter:title" content="${esc(fullTitle)}" />`],
     [/<meta name="twitter:description" content="[^"]*"\s*\/>/, `<meta name="twitter:description" content="${esc(description)}" />`],
+    // a page with its own preview card swaps the image too (the shell carries the site-wide one)
+    ...(image ? [
+      [/<meta property="og:image" content="[^"]*"\s*\/>/, `<meta property="og:image" content="${image}" />`],
+      [/<meta name="twitter:image" content="[^"]*"\s*\/>/, `<meta name="twitter:image" content="${image}" />`],
+    ] : []),
   ];
   for (const [re, out] of swaps) html = replaceOnce(html, re, out);
   return html;
@@ -261,7 +283,7 @@ function renderMeta(template, { url, fullTitle, description }) {
 function render(template, route, data) {
   const url = `${ORIGIN}${route}`;
   const fullTitle = `${data.title} | Formanti`;
-  let html = renderMeta(template, { url, fullTitle, description: data.description });
+  let html = renderMeta(template, { url, fullTitle, description: data.description, image: data.image || null });
   // Swap the homepage static fallback <main> for this page's content.
   html = replaceOnce(html, /<main[\s\S]*?<\/main>/, buildMain(data));
   return html;
@@ -472,6 +494,7 @@ const TEMPLATE_REVISION = "2026-08-30";
 const SITEMAP_STATIC = [
   ["/", "weekly", "1.0", TEMPLATE_REVISION],
   ["/analyze", "weekly", "0.9", TEMPLATE_REVISION],
+  ["/practice", "weekly", "0.9", "2026-10-08"],
   ["/demo", "monthly", "0.8", "2026-07-12"],
   ["/training", "weekly", "0.8", TEMPLATE_REVISION],
   ["/blog", "daily", "0.8", TEMPLATE_REVISION],
