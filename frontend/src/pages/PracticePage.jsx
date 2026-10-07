@@ -4,6 +4,7 @@ import { ShieldCheck, Smartphone, Camera, Target } from "lucide-react";
 import SEO from "@/components/SEO";
 import LivePractice from "@/components/LivePractice";
 import LiftPractice from "@/components/LiftPractice";
+import { PracticeHero, PracticeInfo } from "@/components/PracticeHero";
 import { LIFTS } from "@/ai/liftPose";
 import { PRACTICE_SPORTS, LIFT_SPORT, isLiftSport, liftShots, shotsFor, resolveShot, isPracticeSport } from "@/lib/practiceShots";
 import { unlockSpeech, cuesSupported } from "@/lib/speakCue";
@@ -25,6 +26,9 @@ const norm = (s) => String(s || "").toLowerCase().trim().replace(/[\s-]+/g, "_")
 export default function PracticePage() {
   const [params] = useSearchParams();
   const askedShot = params.get("shot");
+  // Someone coming from a result ("Practise this shot") carries a sport or shot and goes straight to the
+  // picker; someone arriving from a shared link gets the page that explains what this is first.
+  const deepLinked = params.has("sport") || params.has("shot") || params.has("clip");
   const askedSport = norm(params.get("sport"));
   const initialSport = isPracticeSport(askedSport) || isLiftSport(askedSport) ? askedSport : "badminton";
   const listShots = (s) => (isLiftSport(s) ? liftShots() : shotsFor(s));
@@ -97,14 +101,20 @@ export default function PracticePage() {
         description="Practise in front of your phone camera. Formanti tracks your form live, shows the correct position, and checks every swing at contact. Runs on your phone; your video is never uploaded."
         url="https://www.formanti.com/practice"
       />
-      <div className="max-w-md mx-auto px-4 pt-6">
-        <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold">Shadow practice</p>
-        <h1 className="font-heading text-3xl font-black leading-tight mt-1">Fix it in front of your phone</h1>
-        <p className="text-zinc-400 text-sm mt-2">
-          {isLift
-            ? "Do your reps with a bar, or just the hinge with no weight. We track your form live and check your hips, knees and back at the setup and the lockout of every rep."
-            : "Swing with no shuttle. We track your form live, show where your arm and knee should be, and check the moment of contact on every swing."}
-        </p>
+      <div className="max-w-md md:max-w-2xl mx-auto px-4 pt-6">
+        {deepLinked ? (
+          <>
+            <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold">Shadow practice</p>
+            <h1 className="font-heading text-3xl font-black leading-tight mt-1">Fix it in front of your phone</h1>
+            <p className="text-zinc-400 text-sm mt-2">
+              {isLift
+                ? "Do your reps with a bar, or just the hinge with no weight. We track your form live and check your hips, knees and back at the setup and the lockout of every rep."
+                : "Swing with no shuttle. We track your form live, show where your arm and knee should be, and check the moment of contact on every swing."}
+            </p>
+          </>
+        ) : (
+          <PracticeHero />
+        )}
 
         {unknownAsked && (
           <p className="mt-4 text-[13px] text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-lg px-3 py-2">
@@ -181,6 +191,8 @@ export default function PracticePage() {
         <p className="text-[12px] text-zinc-300 mt-4">{cuesSupported() ? "Turn your volume up: a voice coach talks you through it, and says when you have it right." : "This browser can't speak, so you'll get tones and the coaching line on screen instead."}</p>
         <p className="flex gap-2 text-[12px] text-zinc-400 mt-2"><ShieldCheck className="w-4 h-4 shrink-0 text-lime-400" /> Your video stays on your phone. Nothing is uploaded.</p>
         <p className="text-[11px] text-zinc-500 mt-2">These are guide ranges, not a coach's verdict. Works best side-on, in good light.</p>
+
+        {!deepLinked && <PracticeInfo />}
       </div>
 
       {/* on phones the bottom nav is showing, so the Start bar sits just above it */}

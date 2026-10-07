@@ -36,18 +36,18 @@ const isNewItem = (item) => !!item.newUntil && Date.now() < Date.parse(item.newU
 // "Gear" over "Shop": the page is AI-matched equipment recommendations, and
 // "Shop" promises a storefront we don't have.
 // Practice (shadow practice with the camera) is the flagship feature to market, so it
-// earns a permanent slot too; Gear, which people reach from search and the dashboard,
-// moves into More.
+// earns a permanent slot too. Host, which took the slot above, now lives in More
+// (the founder's call, 2026-10-08).
 const MOBILE_NAV_PRIMARY = [
   { path: "/dashboard", label: "Home", icon: Home },
   { path: "/analyze", label: "Analyze", icon: Video },
   { path: "/practice", label: "Practice", icon: Activity, newUntil: "2027-01-15" },
-  { path: "/community?host=1", label: "Host", icon: Swords },
+  { path: "/marketplace", label: "Gear", icon: Backpack },
 ];
 
 // "More" menu items on mobile
 const MOBILE_NAV_MORE = [
-  { path: "/marketplace", label: "Gear", icon: Backpack },
+  { path: "/community?host=1", label: "Host", icon: Swords },
   { path: "/training", label: "Training", icon: Dumbbell },
   { path: "/progress", label: "Progress", icon: BarChart3 },
   { path: "/card", label: "My Card", icon: CreditCard },
@@ -106,8 +106,10 @@ export default function Navbar() {
     try {
       if (localStorage.getItem("bottom_nav_intro_seen")) return;
     } catch { return; }
-    // Don't fire on landing/auth/privacy — Navbar already returns null there
-    if (["/", "/auth", "/privacy"].includes(location.pathname)) return;
+    // Don't fire on landing/auth/privacy — Navbar already returns null there. Nor on /practice and
+    // /demo: they're pages people arrive on from a shared link, and a menu sliding up over the first
+    // thing they see would be a poor welcome. The intro waits for the next page instead.
+    if (["/", "/auth", "/privacy", "/demo", "/practice"].includes(location.pathname)) return;
     const pulseTimer = setTimeout(() => setNavPulse(true), 800);
     const openTimer = setTimeout(() => setMoreOpen(true), 1400);
     const closeTimer = setTimeout(() => {
