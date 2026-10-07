@@ -6,7 +6,7 @@ import LivePractice from "@/components/LivePractice";
 import LiftPractice from "@/components/LiftPractice";
 import { LIFTS } from "@/ai/liftPose";
 import { PRACTICE_SPORTS, LIFT_SPORT, isLiftSport, liftShots, shotsFor, resolveShot, isPracticeSport } from "@/lib/practiceShots";
-import { unlockSpeech } from "@/lib/speakCue";
+import { unlockSpeech, cuesSupported } from "@/lib/speakCue";
 import { hasWebGL, autoGhostAllowed } from "@/lib/webgl";
 import { preloadLivePose } from "@/ai/livePose";
 
@@ -178,7 +178,8 @@ export default function PracticePage() {
           <Choice label="Camera" value={facing} onChange={setFacing} options={[["user", "Front"], ["environment", "Back"]]} />
         </div>
 
-        <p className="flex gap-2 text-[12px] text-zinc-400 mt-4"><ShieldCheck className="w-4 h-4 shrink-0 text-lime-400" /> Your video stays on your phone. Nothing is uploaded.</p>
+        <p className="text-[12px] text-zinc-300 mt-4">{cuesSupported() ? "Turn your volume up: a voice coach talks you through it, and says when you have it right." : "This browser can't speak, so you'll get tones and the coaching line on screen instead."}</p>
+        <p className="flex gap-2 text-[12px] text-zinc-400 mt-2"><ShieldCheck className="w-4 h-4 shrink-0 text-lime-400" /> Your video stays on your phone. Nothing is uploaded.</p>
         <p className="text-[11px] text-zinc-500 mt-2">These are guide ranges, not a coach's verdict. Works best side-on, in good light.</p>
       </div>
 

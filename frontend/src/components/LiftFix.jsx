@@ -162,10 +162,10 @@ function Result({ result, repIdx, setRepIdx, videoFile }) {
                 return (
                   <li key={j} className="text-[12px] leading-tight">
                     <span className="text-zinc-300">{ROW_LABEL[j]}</span>
-                    <span className={`float-right font-mono font-bold flex items-center gap-1 ${it.ok ? "text-lime-300" : "text-rose-300"}`}>
+                    <span className={`float-right font-mono font-bold flex items-center gap-1 ${!it.ok ? "text-rose-300" : it.borderline ? "text-amber-300" : "text-lime-300"}`}>
                       {Math.round(it.value)}°{it.ok ? <Check className="w-3.5 h-3.5" /> : <XIcon className="w-3.5 h-3.5" />}
                     </span>
-                    <span className="block text-[10px] text-zinc-500 clear-both">aim {it.range.min}–{it.range.max}°</span>
+                    <span className="block text-[10px] text-zinc-500 clear-both">aim {it.range.min}–{it.range.max}°{it.borderline ? " · just outside, within the margin of error" : ""}</span>
                   </li>
                 );
               })}

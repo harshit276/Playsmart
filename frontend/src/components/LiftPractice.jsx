@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { X, SwitchCamera, Volume2, VolumeX, Check, Camera, Dumbbell } from "lucide-react";
+import { X, SwitchCamera, Volume2, VolumeX, Check, Camera, Dumbbell, AlertTriangle } from "lucide-react";
 import { liveDelegate } from "@/ai/livePose";
-import { LIFTS, measureLift, findDeadliftReps, gradeLiftRep, planLiftCorrection, liftCue, viewLabel } from "@/ai/liftPose";
+import { LIFTS, measureLift, findDeadliftReps, gradeLiftRep, planLiftCorrection, liftCue, liftFaultsNow, viewLabel } from "@/ai/liftPose";
+import { createCoach } from "@/ai/liveCoach";
 import { correctLift } from "@/ai/liftCorrect";
 import { drawLiftFrame } from "@/ai/liftDraw";
-import { speakCue, cancelCue, cuesSupported } from "@/lib/speakCue";
+import { speakCue, cancelCue, cuesSupported, speakTest, deliverCue } from "@/lib/speakCue";
+import { useVoiceHealth, voiceNote } from "@/lib/useVoiceHealth";
 import { useLiveCamera, cameraErrorMessage } from "@/lib/useLiveCamera";
 import { track } from "@/lib/analytics";
 import { deviceKind } from "@/lib/frameSource";
@@ -47,6 +49,8 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   const toastTimerRef = useRef(0);
   const soundRef = useRef(true);
   const snapRef = useRef(null);
+  const coachRef = useRef(createCoach());
+  const coachKeyRef = useRef("");
   const facingRef = useRef(facingProp);
   const clipRef = useRef(clipSrc);
 
@@ -55,6 +59,9 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   const [reps, setReps] = useState([]);
   const [toast, setToast] = useState(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [coachLine, setCoachLine] = useState(null);
+  const vnote = voiceNote(useVoiceHealth());
+  const toggleSound = () => { const next = !sound; setSound(next); if (next) speakTest(); }; // the tap proves whether sound works
 
   useEffect(() => { soundRef.current = sound; if (!sound) cancelCue(); }, [sound]);
 
@@ -103,8 +110,9 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
 
     if (soundRef.current) {
       const streak = (() => { let n = 0; for (let i = repsRef.current.length - 1; i >= 0 && repsRef.current[i].inBand; i--) n++; return n; })();
-      if (!grade.inBand && grade.cues.length) speakCue(grade.cues.map((c) => c.headline).join(". "));
-      else if (grade.inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good rep");
+      // the verdict on the rep is the most important thing said: it interrupts a routine cue
+      if (!grade.inBand && grade.cues.length) speakCue(grade.cues.map((c) => c.headline).join(". "), { priority: 2, minGapMs: 0 });
+      else if (grade.inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good rep", { priority: 2, minGapMs: 0 });
     }
   }, [lift]);
 
@@ -171,6 +179,13 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     // which position are we judging right now?
     const phaseNow = smooth.hip == null ? null : smooth.hip >= 140 ? "lockout" : smooth.hip <= 110 ? "setup" : null;
 
+    // continuous coaching: while you hold the setup or the top, say what to fix (or that it's good)
+    const faultsNow = armed && holding && phaseNow ? liftFaultsNow(lift, phaseNow, smooth) : null;
+    const co = coachRef.current.update({ now: nowMs, active: armed && holding && !!phaseNow, faults: faultsNow });
+    const lineKey = co.line ? `${co.line.kind}:${co.line.text}` : "";
+    if (lineKey !== coachKeyRef.current) { coachKeyRef.current = lineKey; setCoachLine(co.line); }
+    deliverCue(co, soundRef.current);
+
     // reps: look every 0.4 s; a rep is graded once its lockout has held for 0.9 s
     if (armed && nowMs - lastCheckRef.current > 400) {
       lastCheckRef.current = nowMs;
@@ -214,6 +229,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     seriesRef.current = []; framesRef.current = []; picsRef.current = [];
     readingsRef.current = { hip: [], knee: [], trunk: [] }; histRef.current = [];
     lastRepTRef.current = -Infinity; inFrameSinceRef.current = 0;
+    coachRef.current.reset(); coachKeyRef.current = ""; setCoachLine(null);
   };
 
   const finish = () => {
@@ -281,7 +297,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
 
   const tip = !hud.inFrame ? "Step back until you're in view from head to feet, side-on to the camera"
     : !hud.armed ? "Hold on… getting ready"
-    : reps.length === 0 ? (hud.view === "head-on" ? "Turn side-on to the camera for the most accurate angles, then do a rep" : "Do a rep when you're ready. We check your setup and your lockout.")
+    : reps.length === 0 ? (hud.view === "head-on" ? "Turn side-on to the camera for the most accurate angles, then do a rep" : "Hold your setup or your top and we'll coach you. Do a rep and we'll check it.")
     : null;
 
   return (
@@ -293,7 +309,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
           <p className="text-sm font-bold truncate">{L.label}</p>
         </div>
         {cuesSupported() && (
-          <button type="button" onClick={() => setSound((s) => !s)} className="p-2 rounded-full bg-white/10" aria-label={sound ? "Mute voice cues" : "Unmute voice cues"}>
+          <button type="button" onClick={toggleSound} className="p-2 rounded-full bg-white/10" aria-label={sound ? "Mute voice cues" : "Unmute voice cues"}>
             {sound ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </button>
         )}
@@ -327,8 +343,13 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
         )}
 
         {/* hint + slow note share one column so neither can sit under the other or the score */}
-        {phase === "live" && (tip || hud.slow) && (
+        {phase === "live" && (coachLine || tip || hud.slow) && (
           <div className={`absolute top-3 flex flex-col gap-1.5 pointer-events-none ${reps.length > 0 ? "left-3 right-[92px] items-start" : "inset-x-3 items-center"}`}>
+            {coachLine && (
+              <div role="status" aria-live="polite" className={`rounded-2xl px-4 py-2 text-[18px] font-black leading-tight shadow-lg flex items-center gap-2 ${coachLine.kind === "good" ? "bg-lime-400 text-black" : "bg-rose-500 text-white"}`}>
+                {coachLine.kind === "good" ? <Check className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}{coachLine.text}
+              </div>
+            )}
             {tip && <div className="bg-black/70 backdrop-blur rounded-2xl px-4 py-2 text-[13px] text-center">{tip}</div>}
             {hud.slow && <div className="bg-amber-400/20 text-amber-200 rounded-full px-3 py-1 text-[11px]">Running slowly on this device</div>}
           </div>
@@ -367,6 +388,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
           {["hip", "knee", "trunk"].map((j) => <Gauge key={j} label={LABEL[j]} value={hud.vals?.[j]} domain={DOMAIN[j]} range={bands?.[j] || null} />)}
         </div>
         <p className="text-[11px] text-zinc-500 mt-1.5">{hud.phase === "setup" ? "Judging your setup position" : hud.phase === "lockout" ? "Judging your lockout position" : "In motion: judged at the setup and the lockout"}</p>
+        {vnote && sound && <p className="text-[11px] text-amber-200 mt-2 leading-snug">{vnote}</p>}
         {phase === "live" && <button type="button" onClick={finish} className="w-full mt-2 py-2.5 rounded-xl bg-white/10 text-sm font-semibold">Finish session</button>}
       </div>
       {summary}
