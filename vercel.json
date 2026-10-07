@@ -152,6 +152,10 @@
       "dest": "/frontend/analyze/index.html"
     },
     {
+      "src": "/practice",
+      "dest": "/frontend/practice/index.html"
+    },
+    {
       "src": "/training",
       "dest": "/frontend/training/index.html"
     },
