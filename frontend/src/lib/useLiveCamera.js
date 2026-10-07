@@ -61,18 +61,19 @@ export function useLiveCamera({ clipSrc = null, clipRate = 1, facing: facingProp
     c.height = Math.round(viewH * dpr);
   }, [viewW, viewH]);
 
-  const stop = useCallback(() => {
+  // release the camera and the model; speech is left alone so the "Voice coach on" from the Start tap isn't cut off
+  const teardown = useCallback(() => {
     try { engineRef.current?.stop(); } catch { /* noop */ }
     engineRef.current = null;
     try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* noop */ }
     streamRef.current = null;
     try { wakeRef.current?.release?.(); } catch { /* noop */ }
     wakeRef.current = null;
-    cancelCue();
   }, []);
+  const stop = useCallback(() => { teardown(); cancelCue(); }, [teardown]);
 
   const start = useCallback(async (face) => {
-    stop();
+    teardown();
     setError(null);
     setPhase("starting");
     facingRef.current = face;
@@ -137,7 +138,7 @@ export function useLiveCamera({ clipSrc = null, clipRate = 1, facing: facingProp
       clearTimeout(slowTimer);
       setSlowLoad(false);
     }
-  }, [stop, clipSrc, clipRate, trackName]);
+  }, [stop, teardown, clipSrc, clipRate, trackName]);
 
   useEffect(() => {
     aliveRef.current = true;

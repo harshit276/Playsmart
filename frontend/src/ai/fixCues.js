@@ -74,3 +74,16 @@ export function fixCue(joint, measured, target) {
   }
   return null;
 }
+
+/**
+ * The few words said out loud while the player holds a position, as opposed to the full
+ * instruction in fixCue. Same joints and the same direction logic.
+ */
+export function sayCue(joint, measured, target) {
+  if (!Number.isFinite(measured) || !Number.isFinite(target)) return null;
+  const up = target - measured > 0;
+  if (joint === "shoulder") return up ? "Arm higher" : "Arm lower";
+  if (joint === "elbow") return up ? "Straighten your arm" : "Bend your elbow a little";
+  if (joint === "knee") return up ? "Stand taller" : "Bend your knee more";
+  return null;
+}

@@ -57,6 +57,14 @@ export const LIFTS = {
 
 export const isLiftKey = (k) => !!LIFTS[k];
 
+/**
+ * The pose angles wobble by a few degrees from one sampling to the next (the same clip graded twice
+ * landed a setup knee on either side of its 105° limit and got two different verdicts). A number is
+ * only called a miss when it is clearly outside the range, by more than this; just outside is
+ * "borderline" and is shown as such, never as a fault.
+ */
+export const TOLERANCE_DEG = 4;
+
 /** A lift named in free text ("Conventional Deadlift", "deadlift - sumo"), or null. */
 export function resolveLift(text) {
   const s = String(text || "").toLowerCase();
@@ -125,6 +133,43 @@ export function liftCue(lift, phase, joint, measured, range) {
     default:
       return null;
   }
+}
+
+/**
+ * The few words said out loud while holding a position ("Chest up"), as opposed to the
+ * full instruction shown after a rep (liftCue). Short on purpose: it has to land before
+ * the lifter moves.
+ */
+export function liftSay(lift, phase, joint, measured, range) {
+  const low = range ? measured < range.min : false;
+  switch (`${lift}.${phase}.${joint}`) {
+    case "deadlift.setup.hip": return low ? "Hips up a little" : "Hips down a little";
+    case "deadlift.setup.knee": return low ? "Hips up, less knee bend" : "More knee bend";
+    case "deadlift.setup.trunk": return low ? "Hinge forward more" : "Chest up";
+    case "deadlift.lockout.hip": return "Drive your hips through";
+    case "deadlift.lockout.knee": return "Lock your knees";
+    case "deadlift.lockout.trunk": return low ? "Don't lean back" : "Stand tall";
+    default: return null;
+  }
+}
+
+/**
+ * What is out of range in the position being held right now, worst first, each with the
+ * words to say. `vals` = { hip, knee, trunk } (smoothed); `phase` = "setup" | "lockout".
+ */
+export function liftFaultsNow(lift, phase, vals) {
+  const L = LIFTS[lift];
+  const out = [];
+  for (const j of ["hip", "knee", "trunk"]) {
+    const r = L?.[phase]?.[j];
+    const v = vals?.[j];
+    if (!r || v == null) continue;
+    const miss = v < r.min ? r.min - v : v > r.max ? v - r.max : 0;
+    if (miss <= TOLERANCE_DEG) continue;
+    const say = liftSay(lift, phase, j, v, r);
+    if (say) out.push({ key: `${phase}.${j}`, say, severity: miss / Math.max(10, (r.max - r.min) / 2) });
+  }
+  return out.sort((a, b) => b.severity - a.severity);
 }
 
 // ─── per-frame measurement ──────────────────────────────────────────────
@@ -294,9 +339,9 @@ export function gradeLiftRep(lift, rep) {
     if (!range || value == null) return;
     // an unsigned trunk reading can't be told from leaning back: judge only its size
     const v = joint === "trunk" && !signedKnown ? Math.abs(value) : value;
-    const ok = v >= range.min && v <= range.max;
-    const miss = ok ? 0 : v < range.min ? range.min - v : v - range.max;
-    items.push({ phase, joint, value: v, range, ok, miss, severity: miss / Math.max(10, (range.max - range.min) / 2) });
+    const miss = v < range.min ? range.min - v : v > range.max ? v - range.max : 0;
+    const ok = miss <= TOLERANCE_DEG;
+    items.push({ phase, joint, value: v, range, ok, borderline: ok && miss > 0, miss, severity: miss / Math.max(10, (range.max - range.min) / 2) });
   };
   const sg = rep.signed !== false;
   for (const j of ["hip", "knee", "trunk"]) judge("setup", j, rep.setup?.[j], sg);
@@ -332,7 +377,7 @@ export function planLiftCorrection(lift, phase, measured) {
     const r = L[phase]?.[j];
     const v = measured?.[j];
     if (!r || v == null) continue;
-    if (v >= r.min && v <= r.max) continue;
+    if ((v < r.min ? r.min - v : v > r.max ? v - r.max : 0) <= TOLERANCE_DEG) continue;
     applied.push({ joint: j, from: Math.round(v), to: r.ideal, deltaDeg: Math.round(r.ideal - v) });
     if (j === "knee" || j === "trunk") delta[j] = r.ideal - v;
   }

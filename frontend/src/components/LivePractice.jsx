@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { X, SwitchCamera, Volume2, VolumeX, Check, Camera, Dumbbell } from "lucide-react";
+import { X, SwitchCamera, Volume2, VolumeX, Check, Camera, Dumbbell, AlertTriangle } from "lucide-react";
 import { startLivePose, liveDelegate, resetLivePose } from "@/ai/livePose";
 import { createSwingDetector } from "@/ai/swingDetector";
 import { GHOST_EDGES, jointIdx, measureJoints, planCorrections, correctLimbs } from "@/ai/correctPose";
-import { fixCue } from "@/ai/fixCues";
-import { speakCue, cancelCue, cuesSupported } from "@/lib/speakCue";
+import { fixCue, sayCue } from "@/ai/fixCues";
+import { createCoach } from "@/ai/liveCoach";
+import { speakCue, cancelCue, cuesSupported, speakTest, deliverCue } from "@/lib/speakCue";
+import { useVoiceHealth, voiceNote } from "@/lib/useVoiceHealth";
 import { track } from "@/lib/analytics";
 import { deviceKind } from "@/lib/frameSource";
 
@@ -37,6 +39,8 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
   const ringRef = useRef([]); // recent frames {t, px, wl, vis, vw, vh}
   const bmpRef = useRef([]); // recent small pictures {t, bmp}
   const snapRef = useRef(null);
+  const coachRef = useRef(createCoach({ holdMs: 1200, repeatMs: 12000 })); // a ready stance isn't a contact position: nag less
+  const coachKeyRef = useRef("");
   const readingsRef = useRef({ shoulder: [], elbow: [], knee: [] });
   const armedRef = useRef(false);
   const lastHudRef = useRef(0);
@@ -62,6 +66,9 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
   const [hud, setHud] = useState({ inFrame: false, armed: false, moving: false, vals: {}, slow: false });
   const [reps, setReps] = useState([]);
   const [toast, setToast] = useState(null);
+  const [coachLine, setCoachLine] = useState(null);
+  const vnote = voiceNote(useVoiceHealth());
+  const toggleSound = () => { const next = !sound; setSound(next); if (next) speakTest(); }; // the tap proves whether sound works
   const [slowLoad, setSlowLoad] = useState(false);
 
   const judged = ["shoulder", "elbow", "knee"].filter((j) => ideal?.[j]);
@@ -180,8 +187,9 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
 
     if (soundRef.current) {
       const streak = (() => { let n = 0; for (let i = repsRef.current.length - 1; i >= 0 && repsRef.current[i].inBand; i--) n++; return n; })();
-      if (!inBand && cues.length) speakCue(cues.map((c) => c.headline).join(". "));
-      else if (inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good");
+      // the verdict on the swing is the most important thing said: it interrupts a routine cue
+      if (!inBand && cues.length) speakCue(cues.map((c) => c.headline).join(". "), { priority: 2, minGapMs: 0 });
+      else if (inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good", { priority: 2, minGapMs: 0 });
     }
   }, [ideal, judged, drawLimbs, drawSkeleton, clipSrc]);
 
@@ -241,6 +249,17 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
 
     // in-band now? (the arm turns green when what you're doing is inside the target)
     const plan = planCorrections(smooth, ideal);
+
+    // continuous coaching: while you hold still, say what to fix (or that it's good); the arm and the leg take turns
+    const sevOf = (a) => Math.abs(a.deltaDeg) / Math.max(10, (ideal[a.joint].max - ideal[a.joint].min) / 2);
+    const faultsNow = plan.applied
+      .map((a) => ({ key: a.joint, say: sayCue(a.joint, a.from, a.to), severity: sevOf(a) }))
+      .filter((f) => f.say)
+      .sort((a, b) => b.severity - a.severity);
+    const co = coachRef.current.update({ now: nowMs, active: armed && !moving && judged.some((j) => smooth[j] != null), faults: faultsNow });
+    const lineKey = co.line ? `${co.line.kind}:${co.line.text}` : "";
+    if (lineKey !== coachKeyRef.current) { coachKeyRef.current = lineKey; setCoachLine(co.line); }
+    deliverCue(co, soundRef.current);
     const armJudged = ["shoulder", "elbow"].filter((j) => smooth[j] != null && ideal?.[j]);
     const armGood = armJudged.length > 0 && armJudged.every((j) => !plan.applied.some((a) => a.joint === j));
 
@@ -268,7 +287,7 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
   }, [ideal, judged, evaluateRep, drawLimbs, drawSkeleton]);
 
   // ─── camera session ───
-  const stopSession = useCallback(() => {
+  const stopSession = useCallback((keepVoice = false) => {
     try { engineRef.current?.stop(); } catch { /* noop */ }
     engineRef.current = null;
     try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* noop */ }
@@ -277,11 +296,11 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
     wakeRef.current = null;
     for (const p of bmpRef.current) { try { p.bmp.close(); } catch { /* noop */ } }
     bmpRef.current = [];
-    cancelCue();
+    if (!keepVoice) cancelCue(); // starting the camera must not cut off the "Voice coach on" from the Start tap
   }, []);
 
   const startSession = useCallback(async (face) => {
-    stopSession();
+    stopSession(true);
     setError(null);
     setPhase("starting");
     detectorRef.current.reset();
@@ -469,7 +488,7 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
           ))}
         </div>
         {cuesSupported() && (
-          <button type="button" onClick={() => setSound((s) => !s)} className="p-2 rounded-full bg-white/10" aria-label={sound ? "Mute voice cues" : "Unmute voice cues"}>
+          <button type="button" onClick={toggleSound} className="p-2 rounded-full bg-white/10" aria-label={sound ? "Mute voice cues" : "Unmute voice cues"}>
             {sound ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </button>
         )}
@@ -504,8 +523,13 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
         )}
 
         {/* hint + slow note share one column so a long hint can never sit under the note or the score */}
-        {phase === "live" && (tip || hud.slow) && (
+        {phase === "live" && (coachLine || tip || hud.slow) && (
           <div className={`absolute top-3 flex flex-col gap-1.5 pointer-events-none ${reps.length > 0 ? "left-3 right-[92px] items-start" : "inset-x-3 items-center"}`}>
+            {coachLine && (
+              <div role="status" aria-live="polite" className={`rounded-2xl px-4 py-2 text-[18px] font-black leading-tight shadow-lg flex items-center gap-2 ${coachLine.kind === "good" ? "bg-lime-400 text-black" : "bg-rose-500 text-white"}`}>
+                {coachLine.kind === "good" ? <Check className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}{coachLine.text}
+              </div>
+            )}
             {tip && <div className="bg-black/70 backdrop-blur rounded-2xl px-4 py-2 text-[13px] text-center">{tip}</div>}
             {hud.slow && <div className="bg-amber-400/20 text-amber-200 rounded-full px-3 py-1 text-[11px]">Running slowly on this device</div>}
           </div>
@@ -551,6 +575,7 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
         <div className="space-y-1.5">
           {judged.map((j) => <Gauge key={j} label={JOINT_LABEL[j]} value={hud.vals?.[j]} range={ideal[j]} focus={focus === j} />)}
         </div>
+        {vnote && sound && <p className="text-[11px] text-amber-200 mt-2 leading-snug">{vnote}</p>}
         {phase === "live" && (
           <button type="button" onClick={finish} className="w-full mt-3 py-2.5 rounded-xl bg-white/10 text-sm font-semibold">Finish session</button>
         )}
