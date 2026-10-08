@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Download, X, Share } from "lucide-react";
 
@@ -11,6 +12,9 @@ function isInStandaloneMode() {
 }
 
 export default function InstallPrompt() {
+  // On /practice the Start button sits at the bottom (above the phone nav), so the card rides above it.
+  const onPractice = useLocation().pathname === "/practice";
+  const spot = onPractice ? "bottom-[calc(180px+env(safe-area-inset-bottom))] md:bottom-28" : "bottom-4";
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
   const [showAndroidPrompt, setShowAndroidPrompt] = useState(false);
@@ -71,7 +75,7 @@ export default function InstallPrompt() {
   // iOS: Show manual install instructions
   if (showIOSPrompt) {
     return (
-      <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-50 animate-in slide-in-from-bottom-4">
+      <div className={`fixed ${spot} left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-50 animate-in slide-in-from-bottom-4`}>
         <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-2xl shadow-black/50">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center shrink-0">
@@ -101,7 +105,7 @@ export default function InstallPrompt() {
   if (!deferredPrompt || !showAndroidPrompt) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-50 animate-in slide-in-from-bottom-4">
+    <div className={`fixed ${spot} left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-50 animate-in slide-in-from-bottom-4`}>
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-4 shadow-2xl shadow-black/50">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-lime-400/10 flex items-center justify-center shrink-0">

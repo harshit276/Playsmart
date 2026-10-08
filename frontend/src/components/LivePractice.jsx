@@ -1,131 +1,112 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { X, SwitchCamera, Volume2, VolumeX, Check, Camera, Dumbbell, AlertTriangle } from "lucide-react";
-import { startLivePose, liveDelegate, resetLivePose } from "@/ai/livePose";
+import { liveDelegate } from "@/ai/livePose";
 import { createSwingDetector } from "@/ai/swingDetector";
-import { GHOST_EDGES, jointIdx, measureJoints, planCorrections, correctLimbs } from "@/ai/correctPose";
-import { fixCue, sayCue } from "@/ai/fixCues";
+import { jointIdx, measureJoints, planCorrections, correctLimbs } from "@/ai/correctPose";
+import { measureBody, bodyFaults, bodyState, bodyDelta, isOverheadShot } from "@/ai/bodyCheck";
+import { correctLift } from "@/ai/liftCorrect";
+import { drawLiftFrame } from "@/ai/liftDraw";
+import { fixCue } from "@/ai/fixCues";
 import { createCoach } from "@/ai/liveCoach";
-import { speakCue, cancelCue, cuesSupported, speakTest, deliverCue } from "@/lib/speakCue";
+import { speakCue, cancelCue, speakTest, deliverCue } from "@/lib/speakCue";
 import { useVoiceHealth, voiceNote } from "@/lib/useVoiceHealth";
+import { useLiveCamera } from "@/lib/useLiveCamera";
 import { track } from "@/lib/analytics";
 import { deviceKind } from "@/lib/frameSource";
+import { verdictMs } from "@/lib/testHooks";
+import PracticeShell from "@/components/practice/PracticeShell";
+import PracticeTopBar from "@/components/practice/PracticeTopBar";
+import PracticeStage from "@/components/practice/PracticeStage";
+import CoachBanner from "@/components/practice/CoachBanner";
+import FormChips from "@/components/practice/FormChips";
+import VerdictCard from "@/components/practice/VerdictCard";
+import SettingsSheet from "@/components/practice/SettingsSheet";
+import PracticeSummary from "@/components/practice/PracticeSummary";
 
 /**
- * LivePractice — shadow practice with the phone's camera.
+ * LivePractice — shadow practice for a racquet shot, with the phone's camera.
  *
- * The player props the phone up, swings in front of it, and sees themselves
- * with a live skeleton. Holding still shows the correct form (green) wherever a
- * joint is outside its target; every swing is caught at its moment of contact,
- * frozen with the correction drawn on it, scored in or out of range, and spoken.
+ * Two things are judged, at two different moments:
+ *   - Between swings, while you hold still (the READY stance): knees, back lean and stance width.
+ *     The coach talks about those, and shows the corrected stance in green.
+ *   - At the moment of each swing (CONTACT): the arm and elbow against the shot's own targets,
+ *     plus the knee target where the shot has one and any gross body fault. That is the verdict.
+ *
+ * It does NOT check that the swing is the shot you picked (a serve versus a drive): that needs
+ * real footage of each shot to calibrate, and without it the check would be guesswork.
  * All on the device: the video never leaves the phone.
  *
- * Props: ideal (an idealAngles entry), shotName, sport, focus (joint to stress),
- * hand ("right"|"left"), facing ("user"|"environment"), onExit().
+ * Props: ideal (an idealAngles entry), shotName, shotKey, sport, hand, facing, clipSrc/clipRate, onExit().
  */
 
-const JOINT_LABEL = { shoulder: "Arm height", elbow: "Elbow", knee: "Knee bend" };
-const RED = "#f87171", GREEN = "#a3e635", DARK = "rgba(10,10,10,0.85)";
 const HOLD_SPEED = 1.0; // m/s: below this the player is holding a pose, not swinging (landmark jitter alone reaches ~0.5)
-const median = (a) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
+const SWING_QUIET_MS = 2500; // after a swing the coach stays quiet this long: the verdict is what matters
+const VERDICT_MS = 4200;
+const GREEN = "#a3e635", DARK = "rgba(10,10,10,0.85)";
+const median = (a) => { const s = a.filter((v) => v != null).sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
 
-export default function LivePractice({ ideal, shotName, sport, focus = null, hand: handProp = "right", facing: facingProp = "user", clipSrc = null, clipRate = 1, onExit }) {
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const boxRef = useRef(null);
-  const streamRef = useRef(null);
-  const engineRef = useRef(null);
+// the green arm/leg fix drawn on a contact picture
+function drawLimbs(ctx, limbs, s, lw) {
+  ctx.save();
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const pts of limbs) {
+    for (const [color, width] of [[DARK, lw * 3.6], [GREEN, lw * 2.4]]) {
+      ctx.strokeStyle = color; ctx.lineWidth = width;
+      ctx.beginPath(); ctx.moveTo(pts[0][0] * s, pts[0][1] * s); ctx.lineTo(pts[1][0] * s, pts[1][1] * s); ctx.lineTo(pts[2][0] * s, pts[2][1] * s); ctx.stroke();
+    }
+    ctx.fillStyle = "#fff";
+    for (const p of [pts[1], pts[2]]) { ctx.beginPath(); ctx.arc(p[0] * s, p[1] * s, lw * 1.6, 0, Math.PI * 2); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+export default function LivePractice({ ideal, shotName, shotKey = "", sport, hand: handProp = "right", facing: facingProp = "user", clipSrc = null, clipRate = 1, onExit }) {
   const detectorRef = useRef(createSwingDetector());
   const ringRef = useRef([]); // recent frames {t, px, wl, vis, vw, vh}
   const bmpRef = useRef([]); // recent small pictures {t, bmp}
   const snapRef = useRef(null);
-  const coachRef = useRef(createCoach({ holdMs: 1200, repeatMs: 12000 })); // a ready stance isn't a contact position: nag less
+  const coachRef = useRef(createCoach({ holdMs: 1000, cooldownMs: 4000, repeatMs: 12000, goodText: "Good stance" }));
   const coachKeyRef = useRef("");
-  const readingsRef = useRef({ shoulder: [], elbow: [], knee: [] });
-  const armedRef = useRef(false);
+  const fwdRef = useRef(null);
+  const readingsRef = useRef({ shoulder: [], elbow: [], knee: [], bknee: [], btrunk: [], bstance: [] });
   const lastHudRef = useRef(0);
   const nullRunRef = useRef(0);
   const inFrameSinceRef = useRef(0);
+  const lastSwingAtRef = useRef(-1e9);
   const repsRef = useRef([]);
   const startedAtRef = useRef(0);
-  const wakeRef = useRef(null);
-  const toastTimerRef = useRef(0);
+  const verdictTimerRef = useRef(0);
+  const noticeTimerRef = useRef(0);
   const soundRef = useRef(true);
-  const aliveRef = useRef(true);
-  const timeoutsRef = useRef(0);
   const handRef = useRef(handProp);
   const facingRef = useRef(facingProp);
 
-  const [phase, setPhase] = useState("starting"); // starting | live | summary | error
-  const [error, setError] = useState(null);
-  const [facing, setFacing] = useState(facingProp);
-  const [hand, setHand] = useState(handProp);
   const [sound, setSound] = useState(true);
-  const [box, setBox] = useState({ w: 320, h: 480 });
-  const [aspect, setAspect] = useState(9 / 16);
-  const [hud, setHud] = useState({ inFrame: false, armed: false, moving: false, vals: {}, slow: false });
+  const [hand, setHand] = useState(handProp);
+  const [showValues, setShowValues] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [hud, setHud] = useState({ inFrame: false, armed: false, slow: false, stance: {} });
   const [reps, setReps] = useState([]);
-  const [toast, setToast] = useState(null);
+  const [verdict, setVerdict] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [coachLine, setCoachLine] = useState(null);
   const vnote = voiceNote(useVoiceHealth());
-  const toggleSound = () => { const next = !sound; setSound(next); if (next) speakTest(); }; // the tap proves whether sound works
-  const [slowLoad, setSlowLoad] = useState(false);
 
   const judged = ["shoulder", "elbow", "knee"].filter((j) => ideal?.[j]);
+  const armJudged = ["shoulder", "elbow"].filter((j) => ideal?.[j]);
+  const toggleSound = () => { const next = !sound; setSound(next); if (next) speakTest(); }; // the tap proves whether sound works
 
   useEffect(() => { soundRef.current = sound; if (!sound) cancelCue(); }, [sound]);
   useEffect(() => { handRef.current = hand; detectorRef.current.reset(); }, [hand]);
 
-  // ─── layout: fit the camera picture into the space, canvas at device resolution ───
-  useEffect(() => {
-    const el = boxRef.current;
-    if (!el) return undefined;
-    const fit = () => setBox({ w: el.clientWidth, h: el.clientHeight });
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const viewW = Math.max(1, Math.min(box.w, box.h * aspect));
-  const viewH = viewW / aspect;
-  useEffect(() => {
-    const c = canvasRef.current;
-    if (!c) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    c.width = Math.round(viewW * dpr);
-    c.height = Math.round(viewH * dpr);
-  }, [viewW, viewH]);
+  // The camera session comes first; it calls whatever frame handler is current (set below).
+  const onFrameRef = useRef(null);
+  const cam = useLiveCamera({ clipSrc, clipRate, facing: facingProp, onFrame: (f) => onFrameRef.current?.(f), trackName: "practice", trackProps: { sport, shot: shotName } });
+  const { videoRef, canvasRef, engineRef, phase, facing, flip, start, stop } = cam;
+  useEffect(() => { facingRef.current = facing; }, [facing]);
 
-  // ─── drawing ───
-  const drawLimbs = useCallback((ctx, limbs, s, lw) => {
-    ctx.save();
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    for (const pts of limbs) {
-      for (const [color, width] of [[DARK, lw * 3.6], [GREEN, lw * 2.4]]) {
-        ctx.strokeStyle = color; ctx.lineWidth = width;
-        ctx.beginPath(); ctx.moveTo(pts[0][0] * s, pts[0][1] * s); ctx.lineTo(pts[1][0] * s, pts[1][1] * s); ctx.lineTo(pts[2][0] * s, pts[2][1] * s); ctx.stroke();
-      }
-      ctx.fillStyle = "#fff";
-      for (const p of [pts[1], pts[2]]) { ctx.beginPath(); ctx.arc(p[0] * s, p[1] * s, lw * 1.6, 0, Math.PI * 2); ctx.fill(); }
-    }
-    ctx.restore();
-  }, []);
-
-  const drawSkeleton = useCallback((ctx, f, s, lw, armGood) => {
-    const { SH, EL, WR } = jointIdx(handRef.current);
-    ctx.save();
-    ctx.lineCap = "round"; ctx.lineWidth = lw;
-    for (const [a, b] of GHOST_EDGES) {
-      if (f.vis[a] < 0.3 || f.vis[b] < 0.3) continue;
-      const onArm = (a === SH && b === EL) || (a === EL && b === WR);
-      ctx.strokeStyle = onArm ? (armGood ? GREEN : RED) : "rgba(255,255,255,0.75)";
-      ctx.beginPath(); ctx.moveTo(f.px[a][0] * s, f.px[a][1] * s); ctx.lineTo(f.px[b][0] * s, f.px[b][1] * s); ctx.stroke();
-    }
-    ctx.restore();
-  }, []);
-
-  // ─── a rep: the swing just happened at tPeak ───
-  const evaluateRep = useCallback(async ({ tPeak, peakSpeed }) => {
+  // ─── a swing: the moment of contact was at tPeak ───
+  const evaluateRep = useCallback(({ tPeak, peakSpeed }) => {
     const ring = ringRef.current;
     if (!ring.length) return;
     const near = ring.filter((f) => Math.abs(f.t - tPeak) <= 0.06);
@@ -133,29 +114,41 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
     const side = handRef.current;
     const per = frames.map((f) => measureJoints(f.wl, f.vis, side));
     const measured = {};
-    for (const j of judged) {
-      const vals = per.map((p) => p.measured[j]).filter((v) => v != null);
-      measured[j] = vals.length ? median(vals) : null;
+    for (const j of judged) measured[j] = median(per.map((p) => p.measured[j]));
+    const bodies = frames.map((f) => measureBody(f.wl, f.vis, fwdRef.current));
+    const bodyVals = { knee: median(bodies.map((b) => b.knee)), trunk: median(bodies.map((b) => b.trunk)), stance: median(bodies.map((b) => b.stance)) };
+    if (!armJudged.some((j) => measured[j] != null)) {
+      setNotice("Couldn't see your arm on that swing. Step back a little.");
+      clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = setTimeout(() => setNotice(null), 3500);
+      return;
     }
-    const seen = judged.filter((j) => measured[j] != null);
-    if (!seen.length) { setHud((h) => ({ ...h, hint: "Couldn't see your arm on that swing. Step back a little." })); return; }
-    const plan = planCorrections(measured, ideal);
-    const inBand = plan.applied.length === 0;
-    // Rank by how far out each joint is relative to ITS OWN band, not by raw degrees:
-    // a 60° arm miss must not bury a 25° knee miss that is just as far outside its range.
-    const severity = (a) => Math.abs(a.deltaDeg) / Math.max(10, (ideal[a.joint].max - ideal[a.joint].min) / 2);
-    const ranked = plan.applied.slice().sort((a, b) => severity(b) - severity(a));
-    const worst = ranked[0] || null;
-    // One cue for the arm and one for the leg when both are off: that's what gets spoken and shown.
-    const picks = [ranked.find((a) => a.joint !== "knee"), ranked.find((a) => a.joint === "knee")]
-      .filter(Boolean)
-      .sort((a, b) => severity(b) - severity(a));
-    const cues = picks.map((a) => ({ ...fixCue(a.joint, a.from, a.to), joint: a.joint, from: a.from, to: a.to })).filter((c) => c.headline);
-    const cue = cues[0] || null;
-    const frame = frames.reduce((b, f) => (Math.abs(f.t - tPeak) < Math.abs(b.t - tPeak) ? f : b), frames[0]);
 
-    // The contact picture: the nearest saved frame, with the skeleton and the correction drawn on it.
+    // everything out of range at contact, worst first: the arm and (where the shot has a target) the knee, then gross body faults
+    const plan = planCorrections(measured, ideal);
+    const sevOf = (a) => Math.abs(a.deltaDeg) / Math.max(10, (ideal[a.joint].max - ideal[a.joint].min) / 2);
+    const faults = [
+      ...plan.applied.map((a) => ({ key: a.joint, area: a.joint === "knee" ? "body" : "arm", cue: { ...fixCue(a.joint, a.from, a.to) }, severity: sevOf(a), from: a.from, to: a.to })),
+      ...bodyFaults("contact", bodyVals, { sport, shot: shotKey, skip: ideal?.knee ? ["knee"] : [] }).map((f) => ({ key: f.key, area: "body", cue: f.cue, severity: f.severity })),
+    ].filter((f) => f.cue?.headline).sort((a, b) => b.severity - a.severity);
+    const inBand = faults.length === 0;
+    // one cue for the arm and one for the body when both are off
+    const cues = [faults.find((f) => f.area === "arm"), faults.find((f) => f.area === "body")].filter(Boolean).sort((a, b) => b.severity - a.severity).map((f) => ({ ...f.cue, key: f.key, area: f.area }));
+
+    // the Last-swing chips
+    const jointState = (j) => (ideal?.[j] == null || measured[j] == null ? "na" : plan.applied.some((a) => a.joint === j) ? "off" : "ok");
+    // the body is judged at contact when the shot has its own knee target, or isn't an overhead shot (where an arched back and straight legs are normal)
+    const bodyJudged = !!ideal?.knee || !isOverheadShot(sport, shotKey);
+    const bodySeen = bodyVals.knee != null || bodyVals.trunk != null || measured.knee != null;
+    const chips = {
+      shoulder: jointState("shoulder"),
+      elbow: jointState("elbow"),
+      body: faults.some((f) => f.area === "body") ? "off" : bodyJudged && bodySeen ? "ok" : "na",
+    };
+
+    // the contact picture: the nearest saved frame, with the skeleton and the correction drawn on it
     let picture = null;
+    const frame = frames.reduce((b, f) => (Math.abs(f.t - tPeak) < Math.abs(b.t - tPeak) ? f : b), frames[0]);
     const pic = bmpRef.current.reduce((b, p) => (!b || Math.abs(p.t - tPeak) < Math.abs(b.t - tPeak) ? p : b), null);
     if (pic && Math.abs(pic.t - tPeak) < 0.25) {
       try {
@@ -166,7 +159,7 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
         ctx.drawImage(pic.bmp, 0, 0);
         const s = c.width / frame.vw;
         const lw = Math.max(2, c.width / 120);
-        drawSkeleton(ctx, frame, s, lw, inBand);
+        drawLiftFrame(ctx, { px: frame.px, vis: frame.vis }, s, { lw });
         if (!inBand) {
           const fix = correctLimbs({ wl: frame.wl, px: frame.px, vis: frame.vis, side, delta: plan.delta, w: 1 });
           const limbs = [];
@@ -178,12 +171,14 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
       } catch { picture = null; }
     }
 
-    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, worst, cue, cues, off: ranked, peakSpeed, picture };
+    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, bodyVals, faults, cues, chips, picture, peakSpeed };
     repsRef.current = [...repsRef.current, rep];
     setReps(repsRef.current);
-    clearTimeout(toastTimerRef.current);
-    setToast(rep);
-    toastTimerRef.current = setTimeout(() => setToast(null), 3200);
+    lastSwingAtRef.current = performance.now();
+    coachRef.current.reset(); coachKeyRef.current = ""; setCoachLine(null);
+    clearTimeout(verdictTimerRef.current);
+    setVerdict(rep);
+    verdictTimerRef.current = setTimeout(() => setVerdict(null), verdictMs(VERDICT_MS));
 
     if (soundRef.current) {
       const streak = (() => { let n = 0; for (let i = repsRef.current.length - 1; i >= 0 && repsRef.current[i].inBand; i--) n++; return n; })();
@@ -191,7 +186,7 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
       if (!inBand && cues.length) speakCue(cues.map((c) => c.headline).join(". "), { priority: 2, minGapMs: 0 });
       else if (inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good", { priority: 2, minGapMs: 0 });
     }
-  }, [ideal, judged, drawLimbs, drawSkeleton, clipSrc]);
+  }, [ideal, judged, armJudged, sport, shotKey, clipSrc]);
 
   // ─── every camera frame ───
   const onFrame = useCallback((f) => {
@@ -200,24 +195,32 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
     const det = detectorRef.current;
     if (!f) {
       det.push(0, null, null);
-      if (++nullRunRef.current > 8) { inFrameSinceRef.current = 0; armedRef.current = false; }
+      if (++nullRunRef.current > 8) inFrameSinceRef.current = 0;
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       const now = performance.now();
-      if (now - lastHudRef.current > 150) { lastHudRef.current = now; setHud((h) => ({ ...h, inFrame: false, armed: false, moving: false, vals: {} })); }
+      if (now - lastHudRef.current > 150) { lastHudRef.current = now; setHud((h) => ({ ...h, inFrame: false, armed: false, stance: {} })); }
       return;
     }
     nullRunRef.current = 0;
     const side = handRef.current;
     const { WR, SH } = jointIdx(side);
     const { armOk, measured } = measureJoints(f.wl, f.vis, side);
-    // "In frame": the hitting arm and both hips are seen well enough to coach.
+    const body = measureBody(f.wl, f.vis, fwdRef.current);
+    if (body.fwdFrame) {
+      const cur = fwdRef.current;
+      if (!cur) fwdRef.current = body.fwdFrame;
+      else {
+        const x = 0.92 * cur[0] + 0.08 * body.fwdFrame[0], z = 0.92 * cur[2] + 0.08 * body.fwdFrame[2], n = Math.hypot(x, z) || 1;
+        fwdRef.current = [x / n, 0, z / n];
+      }
+    }
+    // "in frame": the hitting arm and both hips are seen well enough to coach
     const inFrame = armOk && f.vis[23] >= 0.5 && f.vis[24] >= 0.5;
     const nowMs = performance.now();
     if (inFrame) { if (!inFrameSinceRef.current) inFrameSinceRef.current = nowMs; } else inFrameSinceRef.current = 0;
     const armed = !!inFrameSinceRef.current && nowMs - inFrameSinceRef.current > 800;
-    armedRef.current = armed;
 
-    // keep ~1.2 s of frames and a small picture every other frame
+    // keep ~1.2 s of frames and a small picture every other frame, for the contact picture
     const ring = ringRef.current;
     ring.push({ t: f.t, px: f.px, wl: f.wl, vis: f.vis, vw: f.vw, vh: f.vh });
     while (ring.length && ring[0].t < f.t - 1.2) ring.shift();
@@ -235,172 +238,49 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
     }
 
     // smooth the readings over the last few frames
-    for (const j of judged) {
-      const arr = readingsRef.current[j];
-      if (measured[j] != null) { arr.push(measured[j]); if (arr.length > 5) arr.shift(); } else arr.length = 0;
-    }
-    const smooth = {};
-    for (const j of judged) smooth[j] = median(readingsRef.current[j]);
+    const push = (k, v) => { const a = readingsRef.current[k]; if (v != null) { a.push(v); if (a.length > 5) a.shift(); } else a.length = 0; };
+    for (const j of judged) push(j, measured[j]);
+    push("bknee", body.knee); push("btrunk", body.trunk); push("bstance", body.stance);
+    const stance = { knee: median(readingsRef.current.bknee), trunk: median(readingsRef.current.btrunk), stance: median(readingsRef.current.bstance) };
 
     // swings
     const ev = armed && armOk ? det.push(f.t, f.wl[WR], f.wl[SH]) : (det.push(f.t, null, null), null);
     if (ev) evaluateRep(ev);
     const moving = det.speed() > HOLD_SPEED;
 
-    // in-band now? (the arm turns green when what you're doing is inside the target)
-    const plan = planCorrections(smooth, ideal);
-
-    // continuous coaching: while you hold still, say what to fix (or that it's good); the arm and the leg take turns
-    const sevOf = (a) => Math.abs(a.deltaDeg) / Math.max(10, (ideal[a.joint].max - ideal[a.joint].min) / 2);
-    const faultsNow = plan.applied
-      .map((a) => ({ key: a.joint, say: sayCue(a.joint, a.from, a.to), severity: sevOf(a) }))
-      .filter((f) => f.say)
-      .sort((a, b) => b.severity - a.severity);
-    const co = coachRef.current.update({ now: nowMs, active: armed && !moving && judged.some((j) => smooth[j] != null), faults: faultsNow });
+    // between swings, while you hold still: coach the ready stance (knees, back, feet), not the arm
+    const quiet = nowMs - lastSwingAtRef.current < SWING_QUIET_MS;
+    const faultsNow = bodyFaults("ready", stance, { sport }).map((x) => ({ key: x.key, say: x.say, severity: x.severity }));
+    const measurable = stance.knee != null || stance.trunk != null || stance.stance != null;
+    const co = coachRef.current.update({ now: nowMs, active: armed && !moving && !quiet && measurable, faults: faultsNow });
     const lineKey = co.line ? `${co.line.kind}:${co.line.text}` : "";
     if (lineKey !== coachKeyRef.current) { coachKeyRef.current = lineKey; setCoachLine(co.line); }
     deliverCue(co, soundRef.current);
-    const armJudged = ["shoulder", "elbow"].filter((j) => smooth[j] != null && ideal?.[j]);
-    const armGood = armJudged.length > 0 && armJudged.every((j) => !plan.applied.some((a) => a.joint === j));
 
-    // draw
+    // draw: the skeleton, and the corrected stance in green while you hold still outside the target
     if (ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const s = canvas.width / f.vw;
-      const lw = Math.max(2, canvas.width / 150);
-      drawSkeleton(ctx, f, s, lw, armGood);
-      // Holding still and outside the target: show where the limb should be.
-      if (armed && !moving && plan.applied.length) {
-        const fix = correctLimbs({ wl: f.wl, px: f.px, vis: f.vis, side, delta: plan.delta, w: 1 });
-        const limbs = [];
-        if (fix?.arm) limbs.push([fix.arm.sh, fix.arm.el, fix.arm.wr]);
-        if (fix?.leg) limbs.push([fix.leg.hip, fix.leg.kn, fix.leg.an]);
-        drawLimbs(ctx, limbs, s, lw);
+      const lf = { px: f.px, vis: f.vis, ghost: null };
+      if (armed && !moving && !quiet && measurable) {
+        const { delta, faults: bf } = bodyDelta("ready", stance, { sport });
+        if (bf.some((x) => x.joint === "knee" || x.joint === "trunk") && fwdRef.current) {
+          const c = correctLift({ wl: f.wl, px: f.px, vis: f.vis, delta, w: 1, fwd: fwdRef.current });
+          if (c) lf.ghost = { px2: c.px2, moved: c.moved, w: 1 };
+        }
       }
+      drawLiftFrame(ctx, lf, canvas.width / f.vw, {});
     }
 
     if (nowMs - lastHudRef.current > 130) {
       lastHudRef.current = nowMs;
       const st = engineRef.current?.stats();
-      setHud({ inFrame, armed, moving, vals: smooth, slow: !!st && st.inferMs > 140, hint: null });
+      setHud({ inFrame, armed, slow: !!st && st.inferMs > 140, stance });
     }
-  }, [ideal, judged, evaluateRep, drawLimbs, drawSkeleton]);
+  }, [judged, sport, evaluateRep, canvasRef, engineRef, videoRef]);
 
-  // ─── camera session ───
-  const stopSession = useCallback((keepVoice = false) => {
-    try { engineRef.current?.stop(); } catch { /* noop */ }
-    engineRef.current = null;
-    try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* noop */ }
-    streamRef.current = null;
-    try { wakeRef.current?.release?.(); } catch { /* noop */ }
-    wakeRef.current = null;
-    for (const p of bmpRef.current) { try { p.bmp.close(); } catch { /* noop */ } }
-    bmpRef.current = [];
-    if (!keepVoice) cancelCue(); // starting the camera must not cut off the "Voice coach on" from the Start tap
-  }, []);
-
-  const startSession = useCallback(async (face) => {
-    stopSession(true);
-    setError(null);
-    setPhase("starting");
-    detectorRef.current.reset();
-    ringRef.current = [];
-    inFrameSinceRef.current = 0;
-    facingRef.current = face;
-    setSlowLoad(false);
-    // The pose model is ~20 MB from a CDN: ~2.5 minutes on a slow 3G link. Say so
-    // after a few seconds; if it still hasn't arrived after the budget, stop
-    // with a way to retry instead of spinning forever. The first retry rejoins
-    // the SAME download (it may be nearly done); only a second consecutive
-    // timeout throws it away and starts fresh.
-    const slowTimer = setTimeout(() => setSlowLoad(true), 12000);
-    try {
-      const v = videoRef.current;
-      if (clipSrc) {
-        // A same-site sample video stands in for the camera (for people without
-        // one, and for testing): same pipeline, played at clipRate.
-        v.srcObject = null;
-        v.src = clipSrc;
-        v.muted = true;
-        v.playbackRate = clipRate;
-        await v.play();
-      } else {
-        if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error("no-camera-api"), { name: "NotSupportedError" });
-        let stream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: face }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-            audio: false,
-          });
-        } catch (e) {
-          if (e?.name === "OverconstrainedError") stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-          else throw e;
-        }
-        streamRef.current = stream;
-        v.srcObject = stream;
-        v.muted = true;
-        await v.play();
-      }
-      setAspect((v.videoWidth || 9) / (v.videoHeight || 16));
-      try { wakeRef.current = await navigator.wakeLock?.request("screen"); } catch { /* optional */ }
-      const enginePromise = startLivePose({
-        video: v,
-        onFrame: (f) => onFrameRef.current?.(f),
-        onError: (e) => { setError(e); setPhase("error"); track("practice_error", { reason: String(e?.message || e).slice(0, 80), device: deviceKind() }); },
-      });
-      let giveUp = 0;
-      const timeout = new Promise((_, reject) => {
-        giveUp = setTimeout(() => reject(Object.assign(new Error("model-timeout"), { name: "ModelTimeout" })), 150000);
-      });
-      try {
-        engineRef.current = await Promise.race([enginePromise, timeout]);
-      } catch (e) {
-        // A late-arriving engine must not keep running behind the error screen.
-        enginePromise.then((eng) => eng.stop()).catch(() => {});
-        if (e?.name === "ModelTimeout") {
-          if (++timeoutsRef.current >= 2) { resetLivePose(); timeoutsRef.current = 0; }
-        }
-        throw e;
-      } finally {
-        clearTimeout(giveUp);
-      }
-      timeoutsRef.current = 0;
-      if (!aliveRef.current) { stopSession(); return; } // closed while loading
-      startedAtRef.current = startedAtRef.current || Date.now();
-      setPhase("live");
-    } catch (e) {
-      stopSession();
-      setError(e);
-      setPhase("error");
-      track("practice_error", { reason: e?.name || String(e?.message || e).slice(0, 80), device: deviceKind() });
-    } finally {
-      clearTimeout(slowTimer);
-      setSlowLoad(false);
-    }
-  }, [stopSession, clipSrc, clipRate]);
-
-  // Mount: start. Unmount: release the camera. (The latest onFrame is used via ref below.)
-  const onFrameRef = useRef(onFrame);
   useEffect(() => { onFrameRef.current = onFrame; }, [onFrame]);
-  useEffect(() => {
-    aliveRef.current = true;
-    track("practice_started", { sport, shot: shotName, facing: facingProp, device: deviceKind() });
-    startSession(facingProp);
-    const onVis = async () => {
-      if (document.visibilityState === "visible" && streamRef.current && !wakeRef.current) {
-        try { wakeRef.current = await navigator.wakeLock?.request("screen"); } catch { /* optional */ }
-      }
-    };
-    document.addEventListener("visibilitychange", onVis);
-    return () => { aliveRef.current = false; document.removeEventListener("visibilitychange", onVis); clearTimeout(toastTimerRef.current); stopSession(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const flip = () => {
-    const next = facing === "user" ? "environment" : "user";
-    setFacing(next);
-    startSession(next);
-  };
+  useEffect(() => () => { clearTimeout(verdictTimerRef.current); clearTimeout(noticeTimerRef.current); for (const p of bmpRef.current) { try { p.bmp.close(); } catch { /* noop */ } } }, []);
+  useEffect(() => { if (phase === "live" && !startedAtRef.current) startedAtRef.current = Date.now(); }, [phase]);
 
   const finish = () => {
     const list = repsRef.current;
@@ -409,210 +289,104 @@ export default function LivePractice({ ideal, shotName, sport, focus = null, han
       seconds: Math.round((Date.now() - (startedAtRef.current || Date.now())) / 1000),
       device: deviceKind(), delegate: liveDelegate(), fps: Math.round(engineRef.current?.stats().fps || 0),
     });
-    stopSession();
-    setPhase("summary");
+    stop();
+    setSummaryOpen(true);
   };
 
-  // ─── render ───
-  const inRange = reps.filter((r) => r.inBand).length;
-  const streak = (() => { let n = 0; for (let i = reps.length - 1; i >= 0 && reps[i].inBand; i--) n++; return n; })();
-  const bestStreak = (() => { let best = 0, n = 0; for (const r of reps) { n = r.inBand ? n + 1 : 0; best = Math.max(best, n); } return best; })();
+  const again = () => {
+    repsRef.current = []; setReps([]); setVerdict(null);
+    for (const k of Object.keys(readingsRef.current)) readingsRef.current[k] = [];
+    coachRef.current.reset(); coachKeyRef.current = ""; setCoachLine(null);
+    lastSwingAtRef.current = -1e9; startedAtRef.current = Date.now();
+    setSummaryOpen(false);
+    start(facing);
+  };
 
-  let summary = null;
-  if (phase === "summary") {
-    // every joint that was off on a rep counts, not just the worst one, so legs show up too
-    const faults = {};
-    for (const r of reps) for (const o of r.off || []) faults[o.joint] = (faults[o.joint] || 0) + 1;
-    const topFor = (match) => {
-      const top = Object.entries(faults).filter(([j]) => match(j)).sort((a, b) => b[1] - a[1])[0];
-      if (!top) return null;
-      const r = reps.find((x) => x.off?.some((o) => o.joint === top[0]));
-      const o = r?.off.find((x) => x.joint === top[0]);
-      const c = o ? fixCue(o.joint, o.from, o.to) : null;
-      return c ? { ...c, joint: top[0], count: top[1] } : null;
-    };
-    const workOn = [topFor((j) => j !== "knee"), topFor((j) => j === "knee")].filter(Boolean).sort((a, b) => b.count - a.count);
-    summary = (
-      <div className="fixed inset-0 z-[62] bg-zinc-950 text-white overflow-y-auto">
-        <div className="max-w-md mx-auto px-4 py-8">
-          <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold">Session done · {shotName}</p>
-          <h1 className="font-heading text-3xl font-black mt-1">{reps.length ? `${inRange} of ${reps.length} in range` : "No swings counted"}</h1>
-          {reps.length > 0 && <p className="text-zinc-400 text-sm mt-1">Best run: {bestStreak} in a row</p>}
-          {reps.length === 0 && (
-            <p className="text-zinc-300 text-sm mt-3">We didn't catch a swing. Stand so your whole body is in view, turn your hitting side toward the camera, and swing at match speed.</p>
-          )}
-          {reps.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-4">
-              {reps.map((r) => (
-                <span key={r.n} className={`w-7 h-7 rounded-md text-[11px] font-bold flex items-center justify-center ${r.inBand ? "bg-lime-400 text-black" : "bg-rose-500/80 text-white"}`}>{r.n}</span>
-              ))}
-            </div>
-          )}
-          {workOn.map((c, i) => (
-            <div key={c.joint} className="mt-5 rounded-xl border border-lime-400/30 bg-lime-400/5 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">{i === 0 ? "Work on next" : "Then"}<span className="text-zinc-400 normal-case tracking-normal font-medium"> · off on {c.count} of {reps.length} {reps.length === 1 ? "swing" : "swings"}</span></p>
-              <p className="text-[15px] font-bold mt-0.5">{c.headline}</p>
-              <p className="text-[13px] text-zinc-300 mt-1">{c.feel}</p>
-              <p className="text-[12px] text-sky-200 mt-2 flex gap-1.5"><Dumbbell className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span>{c.drill}</span></p>
-            </div>
-          ))}
-          <div className="mt-6 grid gap-2">
-            <button type="button" onClick={() => { repsRef.current = []; setReps([]); startedAtRef.current = Date.now(); startSession(facing); }} className="w-full py-3 rounded-xl bg-lime-400 text-black font-bold">Practise again</button>
-            <Link to="/analyze" className="w-full py-3 rounded-xl border border-zinc-700 text-center font-semibold text-zinc-200">Film a real rally and get the full analysis</Link>
-            <button type="button" onClick={onExit} className="w-full py-3 text-zinc-400 font-semibold">Done</button>
-          </div>
-          <p className="text-[11px] text-zinc-500 mt-4">Your video stayed on your phone: nothing was uploaded.</p>
-        </div>
-      </div>
-    );
-  }
+  // ─── what's on screen ───
+  const good = reps.filter((r) => r.inBand).length;
+  const last = reps[reps.length - 1] || null;
+  const num = (v) => (v == null ? null : `${Math.round(v)}°`);
+  const chipDetail = { shoulder: num(last?.measured.shoulder), elbow: num(last?.measured.elbow), body: num(last?.bodyVals.knee ?? last?.measured.knee) };
+  const swingGroup = {
+    label: "Last swing",
+    items: [
+      ...(ideal?.shoulder ? [{ key: "shoulder", label: "Arm", state: last ? last.chips.shoulder : "na", detail: chipDetail.shoulder }] : []),
+      ...(ideal?.elbow ? [{ key: "elbow", label: "Elbow", state: last ? last.chips.elbow : "na", detail: chipDetail.elbow }] : []),
+      { key: "body", label: "Body", state: last ? last.chips.body : "na", detail: chipDetail.body },
+    ],
+  };
+  const live = hud.armed;
+  const stanceGroup = {
+    label: "Stance now",
+    items: [
+      { key: "knee", label: "Knees", state: live ? bodyState("ready", "knee", hud.stance.knee, { sport }) : "na", detail: num(hud.stance.knee) },
+      { key: "trunk", label: "Back", state: live ? bodyState("ready", "trunk", hud.stance.trunk, { sport }) : "na", detail: num(hud.stance.trunk) },
+      { key: "stance", label: "Feet", state: live ? bodyState("ready", "stance", hud.stance.stance, { sport }) : "na", detail: hud.stance.stance == null ? null : `${hud.stance.stance.toFixed(1)}×` },
+    ],
+  };
 
-  const tip = hud.hint ? hud.hint : !hud.inFrame
-    ? "Step back until your whole body and racket arm are in view"
-    : !hud.armed ? "Hold on… getting ready"
-    : reps.length === 0 ? "Swing when you're ready. We check the moment of contact." : null;
+  const tip = notice || (!hud.inFrame ? "Step back so your whole body is in view"
+    : !hud.armed ? "Hold still for a moment…"
+    : reps.length === 0 && !coachLine ? "Take your ready stance, then swing" : null);
+  const banner = coachLine && !verdict ? { kind: coachLine.kind, text: coachLine.text } : tip && !verdict ? { kind: "info", text: tip } : null;
+
+  const verdictText = verdict && (verdict.inBand
+    ? { headline: "In range: arm and body", detail: null }
+    : { headline: verdict.cues[0]?.headline || "Close: check the target", detail: verdict.cues[1]?.headline || null });
+
+  // the summary: the most common arm fault and the most common body fault
+  const summaryCards = (() => {
+    const counts = {};
+    for (const r of reps) for (const f of r.faults) { counts[f.key] = counts[f.key] || { n: 0, f }; counts[f.key].n++; counts[f.key].f = f; }
+    const top = (area) => Object.values(counts).filter((c) => c.f.area === area).sort((a, b) => b.n - a.n)[0];
+    return [top("arm"), top("body")].filter(Boolean).sort((a, b) => b.n - a.n).map((c) => ({ ...c.f.cue, count: c.n }));
+  })();
+
+  const summary = summaryOpen ? (
+    <PracticeSummary
+      title={shotName}
+      total={reps.length}
+      good={good}
+      noun="swing"
+      thumbs={reps.filter((r) => r.picture).map((r) => ({ n: r.n, inBand: r.inBand, url: r.picture }))}
+      cards={summaryCards}
+      onAgain={again}
+      onExit={onExit}
+      analyzeText="Film a real rally and get the full analysis"
+      emptyText="We didn't catch a swing. Stand so your whole body is in view, turn your hitting side toward the camera, and swing at match speed."
+    />
+  ) : null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black text-white flex flex-col select-none">
-      {/* header */}
-      <div className="flex items-center gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
-        <button type="button" onClick={phase === "live" ? finish : onExit} className="p-2 rounded-full bg-white/10" aria-label="Finish"><X className="w-5 h-5" /></button>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">Shadow practice</p>
-          <p className="text-sm font-bold truncate">{shotName}</p>
+    <>
+    <PracticeShell
+      top={<PracticeTopBar title={shotName} subtitle={sport?.replace(/_/g, " ")} onClose={phase === "live" ? finish : onExit} sound={sound} onToggleSound={toggleSound} onSettings={() => setSettingsOpen(true)} slow={hud.slow} />}
+      bottom={(
+        <div className="px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-zinc-950 space-y-2.5">
+          <FormChips groups={[swingGroup, stanceGroup]} showValues={showValues} />
+          {phase === "live" && <button type="button" onClick={finish} className="w-full py-3 rounded-xl bg-white/10 text-[15px] font-semibold active:bg-white/15">Finish session</button>}
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-white/10 p-0.5" role="group" aria-label="Racket hand">
-          {["right", "left"].map((h) => (
-            <button key={h} type="button" onClick={() => setHand(h)} aria-pressed={hand === h}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${hand === h ? "bg-lime-400 text-black" : "text-zinc-300"}`}>{h === "right" ? "Right" : "Left"}</button>
-          ))}
-        </div>
-        {cuesSupported() && (
-          <button type="button" onClick={toggleSound} className="p-2 rounded-full bg-white/10" aria-label={sound ? "Mute voice cues" : "Unmute voice cues"}>
-            {sound ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          </button>
-        )}
-        {!clipSrc && <button type="button" onClick={flip} className="p-2 rounded-full bg-white/10" aria-label="Switch camera"><SwitchCamera className="w-5 h-5" /></button>}
-      </div>
-
-      {/* camera */}
-      <div ref={boxRef} className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden">
-        <div className="relative bg-zinc-900 overflow-hidden" style={{ width: viewW, height: viewH, transform: facing === "user" && !clipSrc ? "scaleX(-1)" : "none" }}>
-          <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 w-full h-full object-cover" />
-          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-        </div>
-
-        {phase === "starting" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60">
-            <div className="w-8 h-8 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin" />
-            <p className="text-sm text-zinc-200">Starting your camera…</p>
-            <p className="text-[11px] text-zinc-400">First time also loads the pose model (about 20 MB).</p>
-            {slowLoad && <p className="text-[12px] text-amber-200 max-w-xs text-center">Still loading. Your connection looks slow; this only takes long the first time.</p>}
+      )}
+    >
+      <PracticeStage cam={cam} mirrored={facing === "user" && !clipSrc} onExit={onExit}>
+        {phase === "live" && banner && <CoachBanner kind={banner.kind} text={banner.text} />}
+        {phase === "live" && !verdict && reps.length > 0 && (
+          <div className="absolute bottom-3 left-3 rounded-full bg-black/65 backdrop-blur px-3 py-1.5 text-[13px] font-bold z-10">
+            {reps.length} {reps.length === 1 ? "swing" : "swings"} · <span className="text-lime-300">{good} good</span>
           </div>
         )}
-
-        {phase === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-950 px-6 text-center">
-            <Camera className="w-8 h-8 text-zinc-500" />
-            <p className="text-sm text-zinc-200 max-w-xs">{errorMessage(error)}</p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => startSession(facing)} className="px-4 py-2 rounded-lg bg-lime-400 text-black font-bold text-sm">Try again</button>
-              <button type="button" onClick={onExit} className="px-4 py-2 rounded-lg border border-zinc-700 text-sm">Back</button>
-            </div>
-          </div>
-        )}
-
-        {/* hint + slow note share one column so a long hint can never sit under the note or the score */}
-        {phase === "live" && (coachLine || tip || hud.slow) && (
-          <div className={`absolute top-3 flex flex-col gap-1.5 pointer-events-none ${reps.length > 0 ? "left-3 right-[92px] items-start" : "inset-x-3 items-center"}`}>
-            {coachLine && (
-              <div role="status" aria-live="polite" className={`rounded-2xl px-4 py-2 text-[18px] font-black leading-tight shadow-lg flex items-center gap-2 ${coachLine.kind === "good" ? "bg-lime-400 text-black" : "bg-rose-500 text-white"}`}>
-                {coachLine.kind === "good" ? <Check className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}{coachLine.text}
-              </div>
-            )}
-            {tip && <div className="bg-black/70 backdrop-blur rounded-2xl px-4 py-2 text-[13px] text-center">{tip}</div>}
-            {hud.slow && <div className="bg-amber-400/20 text-amber-200 rounded-full px-3 py-1 text-[11px]">Running slowly on this device</div>}
-          </div>
-        )}
-
-        {phase === "live" && reps.length > 0 && (
-          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur rounded-xl px-3 py-1.5 text-right">
-            <p className="text-lg font-black leading-none"><span className="text-lime-300">{inRange}</span><span className="text-zinc-500">/{reps.length}</span></p>
-            <p className="text-[10px] text-zinc-400 mt-0.5">{streak > 1 ? `${streak} in a row` : "in range"}</p>
-          </div>
-        )}
-
-        {/* the verdict on the swing you just did */}
-        {toast && (
-          <div className="absolute inset-x-3 bottom-3 rounded-2xl overflow-hidden bg-zinc-950/95 border border-white/10 shadow-2xl flex">
-            {toast.picture && <img src={toast.picture} alt="Your moment of contact" className="w-28 object-cover shrink-0" />}
-            <div className="p-3 min-w-0">
-              <p className={`text-[11px] uppercase tracking-wider font-bold ${toast.inBand ? "text-lime-400" : "text-rose-300"}`}>
-                Swing {toast.n} · {toast.inBand ? "in range" : "adjust"}
-              </p>
-              {toast.inBand || !toast.cues?.length ? (
-                <p className="text-[15px] font-bold leading-snug mt-0.5">
-                  {toast.inBand ? "Good: that's the position" : toast.cue?.headline || "Close: check the target"}
-                </p>
-              ) : (
-                <ul className="mt-0.5 space-y-0.5">
-                  {toast.cues.map((c) => <li key={c.joint} className="text-[14px] font-bold leading-snug">{c.headline}</li>)}
-                </ul>
-              )}
-              <p className="text-[12px] text-zinc-300 mt-1 leading-snug">
-                {Object.entries(toast.measured).filter(([, v]) => v != null).map(([j, v]) => {
-                  const o = toast.off?.find((x) => x.joint === j);
-                  return `${JOINT_LABEL[j]} ${Math.round(v)}°${o ? ` (aim ${Math.round(o.to)}°)` : ""}`;
-                }).join(" · ")}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* readings */}
-      <div className="px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-zinc-950">
-        <div className="space-y-1.5">
-          {judged.map((j) => <Gauge key={j} label={JOINT_LABEL[j]} value={hud.vals?.[j]} range={ideal[j]} focus={focus === j} />)}
-        </div>
-        {vnote && sound && <p className="text-[11px] text-amber-200 mt-2 leading-snug">{vnote}</p>}
-        {phase === "live" && (
-          <button type="button" onClick={finish} className="w-full mt-3 py-2.5 rounded-xl bg-white/10 text-sm font-semibold">Finish session</button>
-        )}
-      </div>
-      {summary}
-    </div>
+        {verdict && <VerdictCard rep={verdict} headline={verdictText.headline} detail={verdictText.detail} label="Swing" />}
+        <SettingsSheet
+          open={settingsOpen} onClose={() => setSettingsOpen(false)}
+          hand={hand} onHand={setHand}
+          canFlip={!clipSrc} onFlip={flip}
+          sound={sound} onToggleSound={toggleSound}
+          showValues={showValues} onShowValues={setShowValues}
+          note={vnote}
+        />
+      </PracticeStage>
+    </PracticeShell>
+    {summary}
+    </>
   );
-}
-
-function Gauge({ label, value, range, focus }) {
-  const has = typeof value === "number";
-  const good = has && value >= range.min && value <= range.max;
-  const pct = (v) => `${Math.max(0, Math.min(100, (v / 180) * 100))}%`;
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-[76px] shrink-0">
-        <p className={`text-[11px] font-semibold leading-none ${focus ? "text-lime-300" : "text-zinc-300"}`}>{label}{focus ? " ★" : ""}</p>
-        <p className={`text-sm font-mono font-bold mt-0.5 ${!has ? "text-zinc-600" : good ? "text-lime-300" : "text-rose-300"}`}>{has ? `${Math.round(value)}°` : "—"}</p>
-      </div>
-      <div className="relative flex-1 h-2.5 rounded-full bg-zinc-800 overflow-hidden" aria-hidden="true">
-        <div className="absolute inset-y-0 bg-lime-400/35" style={{ left: pct(range.min), width: `calc(${pct(range.max)} - ${pct(range.min)})` }} />
-        {has && <div className={`absolute top-0 bottom-0 w-1.5 -ml-0.5 rounded-full ${good ? "bg-lime-300" : "bg-rose-400"}`} style={{ left: pct(value) }} />}
-      </div>
-      {good && <Check className="w-4 h-4 text-lime-300 shrink-0" aria-label="In range" />}
-      {!good && has && <span className="w-4 shrink-0" />}
-    </div>
-  );
-}
-
-function errorMessage(e) {
-  const n = e?.name || "";
-  if (n === "NotAllowedError" || n === "SecurityError") return "Camera access is blocked. Allow the camera for this site in your browser's settings, then try again.";
-  if (n === "NotFoundError" || n === "OverconstrainedError") return "We couldn't find a camera on this device.";
-  if (n === "NotReadableError") return "Another app is using the camera. Close it and try again.";
-  if (n === "ModelTimeout") return "The pose model didn't finish loading. Check your connection and try again.";
-  if (n === "NotSupportedError") return "This browser can't open the camera here. Try Chrome or Safari over a secure (https) connection.";
-  const m = String(e?.message || e || "");
-  if (/activeTexture|webgl|WebGL|GL context/.test(m)) return "This browser can't run the live pose model because graphics acceleration is off. Try Chrome or Safari with hardware acceleration on.";
-  return "Couldn't start live practice on this device. Try again, or use Chrome or Safari.";
 }

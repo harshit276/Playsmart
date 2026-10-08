@@ -20,9 +20,10 @@
  * @param {number} [o.goodAfterMs=1500] "Good" may follow a fix this soon after the last cue
  * @param {number} [o.goodGapMs=9000]  "Good" is not repeated sooner than this
  * @param {number} [o.lineClearMs=1800] the on-screen line fades this long after they start moving
+ * @param {string} [o.goodText="Good: hold it"] what the on-screen line says when everything is right
  */
 export function createCoach(o = {}) {
-  const cfg = { holdMs: 700, cooldownMs: 3200, repeatMs: 10000, goodAfterMs: 1500, goodGapMs: 9000, lineClearMs: 1800, ...o };
+  const cfg = { holdMs: 700, cooldownMs: 3200, repeatMs: 10000, goodAfterMs: 1500, goodGapMs: 9000, lineClearMs: 1800, goodText: "Good: hold it", ...o };
   let s;
   const reset = () => {
     s = { holdStart: 0, lastSayAt: -1e9, lastGoodAt: -1e9, goodSaid: false, spoken: new Map(), state: null, line: null, lineKey: null, lineSince: 0 };
@@ -65,7 +66,7 @@ export function createCoach(o = {}) {
         return out();
       }
 
-      show(now, "good", "Good: hold it");
+      show(now, "good", cfg.goodText);
       if (s.state !== "good") s.spoken.clear(); // a later slip is worth saying again straight away
       s.state = "good";
       // "Good" waits for its turn (it may follow a fix by a second or so) rather than being skipped
