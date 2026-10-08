@@ -82,8 +82,8 @@ export function PracticeInfo() {
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
             <p className="font-bold">Racquet sports</p>
             <p className="text-[13px] text-zinc-400 mt-1 leading-snug">
-              Badminton, tennis, table tennis, pickleball and squash. Arm height and elbow at the moment of contact on every swing,
-              and knee bend on the badminton smash and clear.
+              Badminton, tennis, table tennis, pickleball and squash. Your arm height and elbow at the moment of contact on every swing
+              (and knee bend on the badminton smash and clear), plus your knees, back and feet while you hold your ready stance.
             </p>
           </div>
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
@@ -107,6 +107,7 @@ export function PracticeInfo() {
         <ul className="mt-3 space-y-2 text-[13px] text-zinc-300 leading-snug">
           {[
             "The target ranges are guide values, not a coach's verdict, and every body is different.",
+            "It checks your arm and body position, not whether the swing is the shot you picked: a serve and a drive that finish in the same position look alike to it.",
             "It works best side-on, in good light, with your whole body in frame.",
             "It's an estimate from one camera, so angles are close, not lab-exact.",
             "Turn your volume up: the coach talks. If your browser can't speak, you get tones and an on-screen line instead.",

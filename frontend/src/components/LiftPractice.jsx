@@ -1,33 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { X, SwitchCamera, Volume2, VolumeX, Check, Camera, Dumbbell, AlertTriangle } from "lucide-react";
 import { liveDelegate } from "@/ai/livePose";
 import { LIFTS, measureLift, findDeadliftReps, gradeLiftRep, planLiftCorrection, liftCue, liftFaultsNow, viewLabel } from "@/ai/liftPose";
 import { createCoach } from "@/ai/liveCoach";
 import { correctLift } from "@/ai/liftCorrect";
 import { drawLiftFrame } from "@/ai/liftDraw";
-import { speakCue, cancelCue, cuesSupported, speakTest, deliverCue } from "@/lib/speakCue";
+import { speakCue, cancelCue, speakTest, deliverCue } from "@/lib/speakCue";
 import { useVoiceHealth, voiceNote } from "@/lib/useVoiceHealth";
-import { useLiveCamera, cameraErrorMessage } from "@/lib/useLiveCamera";
+import { useLiveCamera } from "@/lib/useLiveCamera";
 import { track } from "@/lib/analytics";
 import { deviceKind } from "@/lib/frameSource";
+import { verdictMs } from "@/lib/testHooks";
+import PracticeShell from "@/components/practice/PracticeShell";
+import PracticeTopBar from "@/components/practice/PracticeTopBar";
+import PracticeStage from "@/components/practice/PracticeStage";
+import CoachBanner from "@/components/practice/CoachBanner";
+import FormChips from "@/components/practice/FormChips";
+import VerdictCard from "@/components/practice/VerdictCard";
+import SettingsSheet from "@/components/practice/SettingsSheet";
+import PracticeSummary from "@/components/practice/PracticeSummary";
 
 /**
  * LiftPractice — shadow practice for a lift, with the phone's camera.
  *
- * Prop the phone up side-on, do your reps (with a bar, or the hinge with no weight),
- * and see yourself with a live skeleton and hip / knee / back angles. Each rep is found
- * from the hips closing and opening; after the lockout it is graded at the SETUP and the
- * LOCKOUT, spoken (one leg cue and one back cue at most) and shown. Holding still out of
- * range draws the corrected pose in green. All on the device: nothing is uploaded.
+ * Prop the phone up side-on, do your reps (with a bar, or the hinge with no weight). Each rep is
+ * found from the hips closing and opening; after the lockout it is graded at the SETUP and the
+ * LOCKOUT, spoken (one leg cue and one back cue at most) and shown. While you hold the setup or the
+ * top the coach says what to fix, and the corrected pose is drawn in green. All on the device:
+ * nothing is uploaded.
  *
  * Props: lift ("deadlift"), facing, clipSrc/clipRate (a same-site video instead of the camera), onExit().
  */
 
-const LABEL = { hip: "Hips", knee: "Knees", trunk: "Back angle" };
-const DOMAIN = { hip: [0, 180], knee: [0, 180], trunk: [-30, 100] };
 const median = (a) => { const s = a.filter((v) => v != null).sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
 const HISTORY_S = 40; // seconds of readings kept to find reps in
+const VERDICT_MS = 5000;
 
 export default function LiftPractice({ lift = "deadlift", facing: facingProp = "user", clipSrc = null, clipRate = 1, onExit }) {
   const L = LIFTS[lift];
@@ -46,7 +52,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   const lastRepTRef = useRef(-Infinity);
   const repsRef = useRef([]);
   const startedAtRef = useRef(0);
-  const toastTimerRef = useRef(0);
+  const verdictTimerRef = useRef(0);
   const soundRef = useRef(true);
   const snapRef = useRef(null);
   const coachRef = useRef(createCoach());
@@ -55,9 +61,11 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   const clipRef = useRef(clipSrc);
 
   const [sound, setSound] = useState(true);
+  const [showValues, setShowValues] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [hud, setHud] = useState({ inFrame: false, armed: false, vals: {}, slow: false, phase: null, view: null });
   const [reps, setReps] = useState([]);
-  const [toast, setToast] = useState(null);
+  const [verdict, setVerdict] = useState(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [coachLine, setCoachLine] = useState(null);
   const vnote = voiceNote(useVoiceHealth());
@@ -68,7 +76,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   // The camera session comes first; it calls whatever frame handler is current (set below).
   const onFrameRef = useRef(null);
   const cam = useLiveCamera({ clipSrc, clipRate, facing: facingProp, onFrame: (f) => onFrameRef.current?.(f), trackName: "lift_practice", trackProps: { lift } });
-  const { videoRef, canvasRef, boxRef, engineRef, phase, error, slowLoad, facing, flip, start, stop, viewW, viewH } = cam;
+  const { videoRef, canvasRef, engineRef, phase, facing, flip, start, stop } = cam;
 
   // ─── a finished rep ───
   const evaluateRep = useCallback(async (r) => {
@@ -78,7 +86,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
 
     // a small picture of each key moment with the skeleton (and the fix, where there is one) drawn on
     const pictures = {};
-    for (const [phase, t] of [["setup", r.tPull - 0.3], ["lockout", r.tLock]]) {
+    for (const [ph, t] of [["setup", r.tPull - 0.3], ["lockout", r.tLock]]) {
       try {
         const pic = picsRef.current.reduce((b, p) => (!b || Math.abs(p.t - t) < Math.abs(b.t - t) ? p : b), null);
         const fr = framesRef.current.reduce((b, p) => (!b || Math.abs(p.t - t) < Math.abs(b.t - t) ? p : b), null);
@@ -91,22 +99,22 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
         if (facingRef.current === "user" && !clipRef.current) { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
         ctx.drawImage(img, 0, 0);
         let ghost = null;
-        const plan = plans[phase];
+        const plan = plans[ph];
         if (plan.applied.some((x) => x.joint === "knee" || x.joint === "trunk")) {
           const cc = correctLift({ wl: fr.wl, px: fr.px, vis: fr.vis, delta: plan.delta, w: 1, fwd: fwdRef.current });
           if (cc) ghost = { px2: cc.px2, moved: cc.moved, w: 1 };
         }
         drawLiftFrame(ctx, { px: fr.px, vis: fr.vis, ghost }, c.width / fr.vw, {});
-        pictures[phase] = c.toDataURL("image/jpeg", 0.75);
+        pictures[ph] = c.toDataURL("image/jpeg", 0.75);
       } catch { /* a missing picture never hides the verdict */ }
     }
 
     const rep = { n: repsRef.current.length + 1, t: r.tLock, inBand: grade.inBand, grade, setup: r.setup, lockout: r.lockout, pictures };
     repsRef.current = [...repsRef.current, rep];
     setReps(repsRef.current);
-    clearTimeout(toastTimerRef.current);
-    setToast(rep);
-    toastTimerRef.current = setTimeout(() => setToast(null), 5200);
+    clearTimeout(verdictTimerRef.current);
+    setVerdict(rep);
+    verdictTimerRef.current = setTimeout(() => setVerdict(null), verdictMs(VERDICT_MS));
 
     if (soundRef.current) {
       const streak = (() => { let n = 0; for (let i = repsRef.current.length - 1; i >= 0 && repsRef.current[i].inBand; i--) n++; return n; })();
@@ -222,7 +230,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
 
   useEffect(() => { onFrameRef.current = onFrame; }, [onFrame]);
   useEffect(() => { facingRef.current = facing; }, [facing]);
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+  useEffect(() => () => clearTimeout(verdictTimerRef.current), []);
   useEffect(() => { if (phase === "live" && !startedAtRef.current) startedAtRef.current = Date.now(); }, [phase]);
 
   const reset = () => {
@@ -244,13 +252,50 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     setSummaryOpen(true);
   };
 
-  // ─── render ───
-  const inRange = reps.filter((r) => r.inBand).length;
-  const streak = (() => { let n = 0; for (let i = reps.length - 1; i >= 0 && reps[i].inBand; i--) n++; return n; })();
-  const bands = hud.phase ? L[hud.phase] : null;
+  const again = () => {
+    repsRef.current = []; setReps([]); setVerdict(null); reset();
+    startedAtRef.current = Date.now(); setSummaryOpen(false); start(facing);
+  };
 
-  let summary = null;
-  if (summaryOpen) {
+  // ─── what's on screen ───
+  const good = reps.filter((r) => r.inBand).length;
+  const last = reps[reps.length - 1] || null;
+  const num = (v) => (v == null ? null : `${Math.round(Math.abs(v))}°`);
+  const faultKeys = new Set(hud.armed && hud.phase ? liftFaultsNow(lift, hud.phase, hud.vals).map((f) => f.key) : []);
+  const nowState = (j) => (!hud.armed || !hud.phase || hud.vals?.[j] == null ? "na" : faultKeys.has(`${hud.phase}.${j}`) ? "off" : "ok");
+  const nowGroup = {
+    label: hud.phase === "setup" ? "Setup now" : hud.phase === "lockout" ? "Top now" : "Position",
+    items: [
+      { key: "hip", label: "Hips", state: nowState("hip"), detail: num(hud.vals?.hip) },
+      { key: "knee", label: "Knees", state: nowState("knee"), detail: num(hud.vals?.knee) },
+      { key: "trunk", label: "Back", state: nowState("trunk"), detail: num(hud.vals?.trunk) },
+    ],
+  };
+  const phaseState = (p) => {
+    if (!last) return "na";
+    const its = last.grade.items.filter((i) => i.phase === p);
+    return !its.length ? "na" : its.some((i) => !i.ok) ? "off" : "ok";
+  };
+  const lastGroup = {
+    label: "Last rep",
+    items: [
+      { key: "setup", label: "Setup", state: phaseState("setup") },
+      { key: "top", label: "Top", state: phaseState("lockout") },
+      ...(last && last.grade.faults.some((f) => f.phase === "pull") ? [{ key: "pull", label: "Pull", state: "off" }] : []),
+    ],
+  };
+
+  const tip = !hud.inFrame ? "Step back so you're in view from head to feet, side-on to the camera"
+    : !hud.armed ? "Hold still for a moment…"
+    : reps.length === 0 && !coachLine ? (hud.view === "head-on" ? "Turn side-on to the camera for the most accurate angles" : "Hold your setup or the top and we'll coach you. Do a rep and we'll check it.") : null;
+  const banner = coachLine && !verdict ? { kind: coachLine.kind, text: coachLine.text } : tip && !verdict ? { kind: "info", text: tip } : null;
+
+  const verdictText = verdict && (verdict.inBand
+    ? { headline: "Setup and top in range", detail: null }
+    : { headline: verdict.grade.cues[0]?.headline || "Close: check the numbers", detail: verdict.grade.cues[1]?.headline || null });
+
+  // the summary: the most common leg fault and the most common back fault
+  const summaryCards = (() => {
     const counts = {};
     for (const r of reps) for (const f of r.grade.faults) {
       const k = `${f.phase}.${f.joint}`;
@@ -259,162 +304,56 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     }
     const isBack = (f) => f.joint === "trunk" || f.joint === "hips";
     const top = (back) => Object.values(counts).filter((c) => isBack(c.f) === back).sort((a, b) => b.n - a.n)[0];
-    const cards = [top(false), top(true)].filter(Boolean).sort((a, b) => b.n - a.n).map((c) => ({
-      n: c.n,
+    return [top(false), top(true)].filter(Boolean).sort((a, b) => b.n - a.n).map((c) => ({
+      count: c.n,
       cue: c.f.joint === "hips" ? liftCue(lift, "pull", "hips", 0, null) : liftCue(lift, c.f.phase, c.f.joint, c.f.value, c.f.range),
-    })).filter((c) => c.cue);
-    summary = (
-      <div className="fixed inset-0 z-[62] bg-zinc-950 text-white overflow-y-auto">
-        <div className="max-w-md mx-auto px-4 py-8">
-          <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold">Session done · {L.label}</p>
-          <h1 className="font-heading text-3xl font-black mt-1">{reps.length ? `${inRange} of ${reps.length} in range` : "No reps counted"}</h1>
-          {reps.length === 0 && (
-            <p className="text-zinc-300 text-sm mt-3">We didn't catch a full rep. Film from the side with your whole body in view, and go from the setup all the way to a standing lockout.</p>
-          )}
-          {reps.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-4">
-              {reps.map((r) => <span key={r.n} className={`w-7 h-7 rounded-md text-[11px] font-bold flex items-center justify-center ${r.inBand ? "bg-lime-400 text-black" : "bg-rose-500/80 text-white"}`}>{r.n}</span>)}
-            </div>
-          )}
-          {cards.map(({ n, cue }, i) => (
-            <div key={cue.headline} className="mt-5 rounded-xl border border-lime-400/30 bg-lime-400/5 p-3">
-              <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">{i === 0 ? "Work on next" : "Then"}<span className="text-zinc-400 normal-case tracking-normal font-medium"> · off on {n} of {reps.length} {reps.length === 1 ? "rep" : "reps"}</span></p>
-              <p className="text-[15px] font-bold mt-0.5">{cue.headline}</p>
-              <p className="text-[13px] text-zinc-300 mt-1">{cue.feel}</p>
-              <p className="text-[12px] text-sky-200 mt-2 flex gap-1.5"><Dumbbell className="w-3.5 h-3.5 shrink-0 mt-0.5" /><span>{cue.drill}</span></p>
-            </div>
-          ))}
-          <div className="mt-6 grid gap-2">
-            <button type="button" onClick={() => { repsRef.current = []; setReps([]); reset(); startedAtRef.current = Date.now(); setSummaryOpen(false); start(facing); }} className="w-full py-3 rounded-xl bg-lime-400 text-black font-bold">Practise again</button>
-            <Link to="/analyze" className="w-full py-3 rounded-xl border border-zinc-700 text-center font-semibold text-zinc-200">Film a real lift and get the full check</Link>
-            <button type="button" onClick={onExit} className="w-full py-3 text-zinc-400 font-semibold">Done</button>
-          </div>
-          <p className="text-[11px] text-zinc-500 mt-4">Your video stayed on your phone: nothing was uploaded. Guide ranges, not a coach's verdict.</p>
-        </div>
-      </div>
-    );
-  }
+    })).filter((c) => c.cue).map((c) => ({ ...c.cue, count: c.count }));
+  })();
 
-  const tip = !hud.inFrame ? "Step back until you're in view from head to feet, side-on to the camera"
-    : !hud.armed ? "Hold on… getting ready"
-    : reps.length === 0 ? (hud.view === "head-on" ? "Turn side-on to the camera for the most accurate angles, then do a rep" : "Hold your setup or your top and we'll coach you. Do a rep and we'll check it.")
-    : null;
+  const summary = summaryOpen ? (
+    <PracticeSummary
+      title={L.label}
+      total={reps.length}
+      good={good}
+      noun="rep"
+      thumbs={reps.map((r) => ({ n: r.n, inBand: r.inBand, url: r.pictures.lockout || r.pictures.setup })).filter((t) => t.url)}
+      cards={summaryCards}
+      onAgain={again}
+      onExit={onExit}
+      analyzeText="Film a real lift and get the full check"
+      emptyText="We didn't catch a full rep. Film from the side with your whole body in view, and go from the setup all the way to a standing lockout."
+    />
+  ) : null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black text-white flex flex-col select-none">
-      <div className="flex items-center gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
-        <button type="button" onClick={phase === "live" ? finish : onExit} className="p-2 rounded-full bg-white/10" aria-label="Finish"><X className="w-5 h-5" /></button>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-wider text-lime-400 font-bold">Shadow practice</p>
-          <p className="text-sm font-bold truncate">{L.label}</p>
-        </div>
-        {cuesSupported() && (
-          <button type="button" onClick={toggleSound} className="p-2 rounded-full bg-white/10" aria-label={sound ? "Mute voice cues" : "Unmute voice cues"}>
-            {sound ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          </button>
-        )}
-        {!clipSrc && <button type="button" onClick={flip} className="p-2 rounded-full bg-white/10" aria-label="Switch camera"><SwitchCamera className="w-5 h-5" /></button>}
-      </div>
-
-      <div ref={boxRef} className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden">
-        <div className="relative bg-zinc-900 overflow-hidden" style={{ width: viewW, height: viewH, transform: facing === "user" && !clipSrc ? "scaleX(-1)" : "none" }}>
-          <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 w-full h-full object-cover" />
-          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-        </div>
-
-        {phase === "starting" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60">
-            <div className="w-8 h-8 rounded-full border-2 border-lime-400/30 border-t-lime-400 animate-spin" />
-            <p className="text-sm text-zinc-200">Starting your camera…</p>
-            <p className="text-[11px] text-zinc-400">First time also loads the pose model (about 20 MB).</p>
-            {slowLoad && <p className="text-[12px] text-amber-200 max-w-xs text-center">Still loading. Your connection looks slow; this only takes long the first time.</p>}
+    <>
+      <PracticeShell
+        top={<PracticeTopBar title={L.label} subtitle="Shadow practice" onClose={phase === "live" ? finish : onExit} sound={sound} onToggleSound={toggleSound} onSettings={() => setSettingsOpen(true)} slow={hud.slow} />}
+        bottom={(
+          <div className="px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-zinc-950 space-y-2.5">
+            <FormChips groups={[nowGroup, lastGroup]} showValues={showValues} />
+            {phase === "live" && <button type="button" onClick={finish} className="w-full py-3 rounded-xl bg-white/10 text-[15px] font-semibold active:bg-white/15">Finish session</button>}
           </div>
         )}
-
-        {phase === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-zinc-950 px-6 text-center">
-            <Camera className="w-8 h-8 text-zinc-500" />
-            <p className="text-sm text-zinc-200 max-w-xs">{cameraErrorMessage(error)}</p>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => start(facing)} className="px-4 py-2 rounded-lg bg-lime-400 text-black font-bold text-sm">Try again</button>
-              <button type="button" onClick={onExit} className="px-4 py-2 rounded-lg border border-zinc-700 text-sm">Back</button>
+      >
+        <PracticeStage cam={cam} mirrored={facing === "user" && !clipSrc} onExit={onExit}>
+          {phase === "live" && banner && <CoachBanner kind={banner.kind} text={banner.text} />}
+          {phase === "live" && !verdict && reps.length > 0 && (
+            <div className="absolute bottom-3 left-3 rounded-full bg-black/65 backdrop-blur px-3 py-1.5 text-[13px] font-bold z-10">
+              {reps.length} {reps.length === 1 ? "rep" : "reps"} · <span className="text-lime-300">{good} good</span>
             </div>
-          </div>
-        )}
-
-        {/* hint + slow note share one column so neither can sit under the other or the score */}
-        {phase === "live" && (coachLine || tip || hud.slow) && (
-          <div className={`absolute top-3 flex flex-col gap-1.5 pointer-events-none ${reps.length > 0 ? "left-3 right-[92px] items-start" : "inset-x-3 items-center"}`}>
-            {coachLine && (
-              <div role="status" aria-live="polite" className={`rounded-2xl px-4 py-2 text-[18px] font-black leading-tight shadow-lg flex items-center gap-2 ${coachLine.kind === "good" ? "bg-lime-400 text-black" : "bg-rose-500 text-white"}`}>
-                {coachLine.kind === "good" ? <Check className="w-5 h-5 shrink-0" /> : <AlertTriangle className="w-5 h-5 shrink-0" />}{coachLine.text}
-              </div>
-            )}
-            {tip && <div className="bg-black/70 backdrop-blur rounded-2xl px-4 py-2 text-[13px] text-center">{tip}</div>}
-            {hud.slow && <div className="bg-amber-400/20 text-amber-200 rounded-full px-3 py-1 text-[11px]">Running slowly on this device</div>}
-          </div>
-        )}
-
-        {phase === "live" && reps.length > 0 && (
-          <div className="absolute top-3 right-3 bg-black/70 backdrop-blur rounded-xl px-3 py-1.5 text-right">
-            <p className="text-lg font-black leading-none"><span className="text-lime-300">{inRange}</span><span className="text-zinc-500">/{reps.length}</span></p>
-            <p className="text-[10px] text-zinc-400 mt-0.5">{streak > 1 ? `${streak} in a row` : "in range"}</p>
-          </div>
-        )}
-
-        {toast && (
-          <div className="absolute inset-x-3 bottom-3 rounded-2xl overflow-hidden bg-zinc-950/95 border border-white/10 shadow-2xl flex">
-            <div className="flex shrink-0">
-              {["setup", "lockout"].map((p) => toast.pictures[p] && <img key={p} src={toast.pictures[p]} alt={`Your ${p}`} className="w-20 object-cover" />)}
-            </div>
-            <div className="p-3 min-w-0">
-              <p className={`text-[11px] uppercase tracking-wider font-bold ${toast.inBand ? "text-lime-400" : "text-rose-300"}`}>Rep {toast.n} · {toast.inBand ? "in range" : "adjust"}</p>
-              {toast.inBand || !toast.grade.cues.length ? (
-                <p className="text-[15px] font-bold leading-snug mt-0.5">{toast.inBand ? "Good: setup and lockout are in range" : "Close: check the numbers"}</p>
-              ) : (
-                <ul className="mt-0.5 space-y-0.5">{toast.grade.cues.map((c) => <li key={`${c.phase}.${c.joint}`} className="text-[14px] font-bold leading-snug">{c.headline}</li>)}</ul>
-              )}
-              <p className="text-[12px] text-zinc-300 mt-1 leading-snug">
-                <span className="text-zinc-500">Setup</span> {fmt(toast.setup)}<br />
-                <span className="text-zinc-500">Top</span> {fmt(toast.lockout)}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-zinc-950">
-        <div className="space-y-1.5">
-          {["hip", "knee", "trunk"].map((j) => <Gauge key={j} label={LABEL[j]} value={hud.vals?.[j]} domain={DOMAIN[j]} range={bands?.[j] || null} />)}
-        </div>
-        <p className="text-[11px] text-zinc-500 mt-1.5">{hud.phase === "setup" ? "Judging your setup position" : hud.phase === "lockout" ? "Judging your lockout position" : "In motion: judged at the setup and the lockout"}</p>
-        {vnote && sound && <p className="text-[11px] text-amber-200 mt-2 leading-snug">{vnote}</p>}
-        {phase === "live" && <button type="button" onClick={finish} className="w-full mt-2 py-2.5 rounded-xl bg-white/10 text-sm font-semibold">Finish session</button>}
-      </div>
+          )}
+          {verdict && <VerdictCard rep={verdict} headline={verdictText.headline} detail={verdictText.detail} label="Rep" />}
+          <SettingsSheet
+            open={settingsOpen} onClose={() => setSettingsOpen(false)}
+            canFlip={!clipSrc} onFlip={flip}
+            sound={sound} onToggleSound={toggleSound}
+            showValues={showValues} onShowValues={setShowValues}
+            note={vnote}
+          />
+        </PracticeStage>
+      </PracticeShell>
       {summary}
-    </div>
-  );
-}
-
-const fmt = (m) => [["hip", "hips"], ["knee", "knees"], ["trunk", "back"]].map(([j, n]) => (m?.[j] != null ? `${n} ${Math.round(m[j])}°` : null)).filter(Boolean).join(" · ");
-
-function Gauge({ label, value, domain, range }) {
-  const [lo, hi] = domain;
-  const has = typeof value === "number";
-  const good = has && range && value >= range.min && value <= range.max;
-  const pct = (v) => `${Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100))}%`;
-  return (
-    <div className="flex items-center gap-2.5">
-      <div className="w-[84px] shrink-0">
-        <p className="text-[11px] font-semibold leading-none text-zinc-300">{label}</p>
-        <p className={`text-sm font-mono font-bold mt-0.5 ${!has ? "text-zinc-600" : !range ? "text-zinc-200" : good ? "text-lime-300" : "text-rose-300"}`}>{has ? `${Math.round(value)}°` : "—"}</p>
-      </div>
-      <div className="relative flex-1 h-2.5 rounded-full bg-zinc-800 overflow-hidden" aria-hidden="true">
-        {range && <div className="absolute inset-y-0 bg-lime-400/35" style={{ left: pct(range.min), width: `calc(${pct(range.max)} - ${pct(range.min)})` }} />}
-        {has && <div className={`absolute top-0 bottom-0 w-1.5 -ml-0.5 rounded-full ${!range ? "bg-zinc-300" : good ? "bg-lime-300" : "bg-rose-400"}`} style={{ left: pct(value) }} />}
-      </div>
-      {good && <Check className="w-4 h-4 text-lime-300 shrink-0" aria-label="In range" />}
-      {!good && <span className="w-4 shrink-0" />}
-    </div>
+    </>
   );
 }
