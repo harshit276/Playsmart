@@ -7,6 +7,7 @@ import LiftPractice from "@/components/LiftPractice";
 import { PracticeHero, PracticeInfo } from "@/components/PracticeHero";
 import { LIFTS } from "@/ai/liftPose";
 import { readyProfile } from "@/ai/bodyCheck";
+import { usesReach, widen } from "@/ai/overheadSwing";
 import { PRACTICE_SPORTS, LIFT_SPORT, isLiftSport, liftShots, shotsFor, resolveShot, isPracticeSport } from "@/lib/practiceShots";
 import { unlockSpeech, cuesSupported } from "@/lib/speakCue";
 import { hasWebGL, autoGhostAllowed } from "@/lib/webgl";
@@ -98,12 +99,17 @@ export default function PracticePage() {
   }
 
   // what will be checked, in plain words
+  const reachShot = !isLift && !!ideal && usesReach(sport, shot?.key, ideal);
+  const shownIdeal = reachShot ? widen(ideal) : ideal;
   const checks = isLift
     ? ["Hips, knees and back at the setup", "Hips, knees and back at the top", "A voice cue while you hold each position"]
     : [
-      `Your ${[ideal?.shoulder && "arm", ideal?.elbow && "elbow", ideal?.knee && "knees"].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1")} at the moment of contact`,
-      "Your knees, back and feet in your ready stance",
-      "A voice cue between swings, and a verdict on every swing",
+      reachShot
+        ? `How high you reach, your ${[ideal?.elbow && "elbow", ideal?.knee && "knees"].filter(Boolean).join(" and ")}, and your elbow lead, at the top of each swing`
+        : `Your ${[ideal?.shoulder && "arm", ideal?.elbow && "elbow", ideal?.knee && "knees"].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1")} at the moment of contact`,
+      reachShot ? "Swing speed, against your own other swings" : "Your knees, back and feet in your ready stance",
+      reachShot ? "Your knees, back and feet in your ready stance" : "A voice cue between swings, and a verdict on every swing",
+      ...(reachShot ? ["A voice cue between swings, and a verdict on every swing"] : []),
     ];
   const body = !isLift ? readyProfile(sport) : null;
 
@@ -174,10 +180,11 @@ export default function PracticePage() {
                 ))}
                 {ideal && (
                   <div>
-                    <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">At contact</p>
-                    {["shoulder", "elbow", "knee"].filter((j) => ideal[j]).map((j) => (
-                      <p key={j}><span className="font-semibold">{JOINT_LABEL[j]}</span> <span className="font-mono text-lime-300">{ideal[j].min}–{ideal[j].max}°</span> <span className="text-zinc-500">· {ideal[j].why}</span></p>
+                    <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">{reachShot ? "At the top of the reach" : "At contact"}</p>
+                    {["shoulder", "elbow", "knee"].filter((j) => shownIdeal[j]).map((j) => (
+                      <p key={j}><span className="font-semibold">{JOINT_LABEL[j]}</span> <span className="font-mono text-lime-300">{shownIdeal[j].min}–{shownIdeal[j].max}°</span> <span className="text-zinc-500">· {ideal[j].why}</span></p>
                     ))}
+                    {reachShot && <p className="text-zinc-500">Your hand must also get clearly above your shoulder, or it isn't counted as an overhead swing.</p>}
                   </div>
                 )}
                 {body && (
