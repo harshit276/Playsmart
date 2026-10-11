@@ -3,6 +3,7 @@ import { liveDelegate } from "@/ai/livePose";
 import { createSwingDetector } from "@/ai/swingDetector";
 import { jointIdx, measureJoints, planCorrections, correctLimbs } from "@/ai/correctPose";
 import { measureBody, bodyFaults, bodyState, bodyDelta, isOverheadShot } from "@/ai/bodyCheck";
+import { judgeOverhead, usesReach } from "@/ai/overheadSwing";
 import { correctLift } from "@/ai/liftCorrect";
 import { drawLiftFrame } from "@/ai/liftDraw";
 import { fixCue } from "@/ai/fixCues";
@@ -105,16 +106,26 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const { videoRef, canvasRef, engineRef, phase, facing, flip, start, stop } = cam;
   useEffect(() => { facingRef.current = facing; }, [facing]);
 
-  // ─── a swing: the moment of contact was at tPeak ───
+  // ─── a swing ───
+  // For most shots the moment of contact is the fastest-wrist moment (tPeak). For shots hit up high it is not:
+  // the wrist is fastest in the follow-through, with the arm already coming down. Those are judged at the
+  // reach (the highest point of the hand just before), and with more questions than the arm angle.
   const evaluateRep = useCallback(({ tPeak, peakSpeed }) => {
     const ring = ringRef.current;
     if (!ring.length) return;
-    const near = ring.filter((f) => Math.abs(f.t - tPeak) <= 0.06);
-    const frames = near.length ? near : [ring.reduce((b, f) => (Math.abs(f.t - tPeak) < Math.abs(b.t - tPeak) ? f : b), ring[0])];
     const side = handRef.current;
-    const per = frames.map((f) => measureJoints(f.wl, f.vis, side));
-    const measured = {};
-    for (const j of judged) measured[j] = median(per.map((p) => p.measured[j]));
+    const oj = usesReach(sport, shotKey, ideal)
+      ? judgeOverhead({ frames: ring, tPeak, side, ideal, peakSpeed, prevSpeeds: repsRef.current.map((r) => r.peakSpeed) })
+      : null;
+    const tAt = oj ? oj.reach.t : tPeak; // the moment judged and pictured
+    const near = ring.filter((f) => Math.abs(f.t - tAt) <= 0.06);
+    const frames = near.length ? near : [ring.reduce((b, f) => (Math.abs(f.t - tAt) < Math.abs(b.t - tAt) ? f : b), ring[0])];
+    let measured = {};
+    if (oj) measured = oj.measured;
+    else {
+      const per = frames.map((f) => measureJoints(f.wl, f.vis, side));
+      for (const j of judged) measured[j] = median(per.map((p) => p.measured[j]));
+    }
     const bodies = frames.map((f) => measureBody(f.wl, f.vis, fwdRef.current));
     const bodyVals = { knee: median(bodies.map((b) => b.knee)), trunk: median(bodies.map((b) => b.trunk)), stance: median(bodies.map((b) => b.stance)) };
     if (!armJudged.some((j) => measured[j] != null)) {
@@ -125,15 +136,21 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     }
 
     // everything out of range at contact, worst first: the arm and (where the shot has a target) the knee, then gross body faults
-    const plan = planCorrections(measured, ideal);
+    const plan = oj ? oj.plan : planCorrections(measured, ideal);
     const sevOf = (a) => Math.abs(a.deltaDeg) / Math.max(10, (ideal[a.joint].max - ideal[a.joint].min) / 2);
+    const armFaults = oj
+      ? oj.faults
+      : plan.applied.filter((a) => a.joint !== "knee").map((a) => ({ key: a.joint, area: "arm", cue: { ...fixCue(a.joint, a.from, a.to) }, severity: sevOf(a), from: a.from, to: a.to }));
+    const kneeFaults = plan.applied.filter((a) => a.joint === "knee").map((a) => ({ key: a.joint, area: "body", cue: { ...fixCue(a.joint, a.from, a.to) }, severity: sevOf(a), from: a.from, to: a.to }));
     const faults = [
-      ...plan.applied.map((a) => ({ key: a.joint, area: a.joint === "knee" ? "body" : "arm", cue: { ...fixCue(a.joint, a.from, a.to) }, severity: sevOf(a), from: a.from, to: a.to })),
+      ...armFaults,
+      ...kneeFaults,
       ...bodyFaults("contact", bodyVals, { sport, shot: shotKey, skip: ideal?.knee ? ["knee"] : [] }).map((f) => ({ key: f.key, area: "body", cue: f.cue, severity: f.severity })),
     ].filter((f) => f.cue?.headline).sort((a, b) => b.severity - a.severity);
     const inBand = faults.length === 0;
-    // one cue for the arm and one for the body when both are off
-    const cues = [faults.find((f) => f.area === "arm"), faults.find((f) => f.area === "body")].filter(Boolean).sort((a, b) => b.severity - a.severity).map((f) => ({ ...f.cue, key: f.key, area: f.area }));
+    // Shots hit up high have more to say (reach, arm, elbow, prep, speed): the two worst. Otherwise one cue for the arm and one for the body.
+    const cues = (oj ? faults.slice(0, 2) : [faults.find((f) => f.area === "arm"), faults.find((f) => f.area === "body")].filter(Boolean))
+      .sort((a, b) => b.severity - a.severity).map((f) => ({ ...f.cue, key: f.key, area: f.area }));
 
     // the Last-swing chips
     const jointState = (j) => (ideal?.[j] == null || measured[j] == null ? "na" : plan.applied.some((a) => a.joint === j) ? "off" : "ok");
@@ -141,16 +158,18 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     const bodyJudged = !!ideal?.knee || !isOverheadShot(sport, shotKey);
     const bodySeen = bodyVals.knee != null || bodyVals.trunk != null || measured.knee != null;
     const chips = {
-      shoulder: jointState("shoulder"),
-      elbow: jointState("elbow"),
+      shoulder: oj ? oj.checks.shoulder : jointState("shoulder"),
+      elbow: oj ? oj.checks.elbow : jointState("elbow"),
+      prep: oj ? oj.checks.prep : "na",
+      speed: oj ? oj.checks.speed : "na",
       body: faults.some((f) => f.area === "body") ? "off" : bodyJudged && bodySeen ? "ok" : "na",
     };
 
     // the contact picture: the nearest saved frame, with the skeleton and the correction drawn on it
     let picture = null;
-    const frame = frames.reduce((b, f) => (Math.abs(f.t - tPeak) < Math.abs(b.t - tPeak) ? f : b), frames[0]);
-    const pic = bmpRef.current.reduce((b, p) => (!b || Math.abs(p.t - tPeak) < Math.abs(b.t - tPeak) ? p : b), null);
-    if (pic && Math.abs(pic.t - tPeak) < 0.25) {
+    const frame = frames.reduce((b, f) => (Math.abs(f.t - tAt) < Math.abs(b.t - tAt) ? f : b), frames[0]);
+    const pic = bmpRef.current.reduce((b, p) => (!b || Math.abs(p.t - tAt) < Math.abs(b.t - tAt) ? p : b), null);
+    if (pic && Math.abs(pic.t - tAt) < 0.25) {
       try {
         const c = document.createElement("canvas");
         c.width = pic.bmp.width; c.height = pic.bmp.height;
@@ -171,7 +190,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
       } catch { picture = null; }
     }
 
-    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, bodyVals, faults, cues, chips, picture, peakSpeed };
+    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, bodyVals, faults, cues, chips, picture, peakSpeed, byReach: !!oj, overhead: oj ? oj.isOverhead : null, reachUp: oj ? oj.reach.up : null };
     repsRef.current = [...repsRef.current, rep];
     setReps(repsRef.current);
     lastSwingAtRef.current = performance.now();
@@ -183,8 +202,10 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     if (soundRef.current) {
       const streak = (() => { let n = 0; for (let i = repsRef.current.length - 1; i >= 0 && repsRef.current[i].inBand; i--) n++; return n; })();
       // the verdict on the swing is the most important thing said: it interrupts a routine cue
-      if (!inBand && cues.length) speakCue(cues.map((c) => c.headline).join(". "), { priority: 2, minGapMs: 0 });
-      else if (inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good", { priority: 2, minGapMs: 0 });
+      // say what was right as well as what to fix, so it doesn't sound like the same complaint every time
+      const praise = oj && oj.isOverhead && oj.checks.shoulder === "ok" ? "Good reach. " : "";
+      if (!inBand && cues.length) speakCue(praise + cues.map((c) => c.headline).join(". "), { priority: 2, minGapMs: 0 });
+      else if (inBand) speakCue(streak >= 3 ? `${streak} in a row` : oj ? "Good reach and arm" : "Good", { priority: 2, minGapMs: 0 });
     }
   }, [ideal, judged, armJudged, sport, shotKey, clipSrc]);
 
@@ -307,11 +328,16 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const last = reps[reps.length - 1] || null;
   const num = (v) => (v == null ? null : `${Math.round(v)}°`);
   const chipDetail = { shoulder: num(last?.measured.shoulder), elbow: num(last?.measured.elbow), body: num(last?.bodyVals.knee ?? last?.measured.knee) };
+  const reachShot = usesReach(sport, shotKey, ideal);
   const swingGroup = {
     label: "Last swing",
     items: [
-      ...(ideal?.shoulder ? [{ key: "shoulder", label: "Arm", state: last ? last.chips.shoulder : "na", detail: chipDetail.shoulder }] : []),
+      ...(ideal?.shoulder ? [{ key: "shoulder", label: reachShot ? "Reach" : "Arm", state: last ? last.chips.shoulder : "na", detail: chipDetail.shoulder }] : []),
       ...(ideal?.elbow ? [{ key: "elbow", label: "Elbow", state: last ? last.chips.elbow : "na", detail: chipDetail.elbow }] : []),
+      ...(reachShot ? [
+        { key: "prep", label: "Prep", state: last ? last.chips.prep : "na", detail: null },
+        { key: "speed", label: "Speed", state: last ? last.chips.speed : "na", detail: last?.peakSpeed != null ? `${last.peakSpeed.toFixed(1)} m/s` : null },
+      ] : []),
       { key: "body", label: "Body", state: last ? last.chips.body : "na", detail: chipDetail.body },
     ],
   };
@@ -330,16 +356,16 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     : reps.length === 0 && !coachLine ? "Take your ready stance, then swing" : null);
   const banner = coachLine && !verdict ? { kind: coachLine.kind, text: coachLine.text } : tip && !verdict ? { kind: "info", text: tip } : null;
 
+  const speedWords = verdict?.peakSpeed != null ? `Swing speed ${verdict.peakSpeed.toFixed(1)} m/s` : null;
   const verdictText = verdict && (verdict.inBand
-    ? { headline: "In range: arm and body", detail: null }
-    : { headline: verdict.cues[0]?.headline || "Close: check the target", detail: verdict.cues[1]?.headline || null });
+    ? { headline: verdict.byReach ? "Good: reach, arm and elbow in range" : "In range: arm and body", detail: verdict.byReach ? speedWords : null }
+    : { headline: verdict.cues[0]?.headline || "Close: check the target", detail: verdict.cues[1]?.headline || (verdict.byReach && verdict.chips.shoulder === "ok" ? `Good reach. ${speedWords || ""}`.trim() : null) });
 
-  // the summary: the most common arm fault and the most common body fault
+  // the summary: what went wrong most often, up to three things (the same fault counts once, however many swings had it)
   const summaryCards = (() => {
     const counts = {};
     for (const r of reps) for (const f of r.faults) { counts[f.key] = counts[f.key] || { n: 0, f }; counts[f.key].n++; counts[f.key].f = f; }
-    const top = (area) => Object.values(counts).filter((c) => c.f.area === area).sort((a, b) => b.n - a.n)[0];
-    return [top("arm"), top("body")].filter(Boolean).sort((a, b) => b.n - a.n).map((c) => ({ ...c.f.cue, count: c.n }));
+    return Object.values(counts).sort((a, b) => b.n - a.n).slice(0, 3).map((c) => ({ ...c.f.cue, count: c.n }));
   })();
 
   const summary = summaryOpen ? (
