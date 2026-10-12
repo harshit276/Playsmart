@@ -3,16 +3,18 @@ import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
 import { motion, useReducedMotion } from "framer-motion";
 import SEO from "@/components/SEO";
-import DemoPhone from "@/components/DemoPhone";
+import PoseDemo from "@/components/PoseDemo";
+import HomeHeader from "@/components/HomeHeader";
+import StickyCta from "@/components/StickyCta";
 import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import QuickSignupCTA from "@/components/QuickSignupCTA";
 import FeatureShowcase from "@/components/FeatureShowcase";
 import {
   Zap, Play, ChevronRight, Sparkles, TrendingUp, Upload,
-  ArrowRight, Clock, Timer, Smartphone, Activity, Shield
+  ArrowRight, Clock, Timer, Smartphone, Activity, Shield, ShieldCheck, ChevronDown
 } from "lucide-react";
-import { FormantiIcon, FormantiLogo } from "@/components/FormantiLogo";
+import { FormantiIcon } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import demo from "@/data/demoAnalysis.json";
@@ -23,7 +25,7 @@ import samplePoster from "@/assets/demo/sample-badminton-poster.jpg";
 // interactive /demo. Pulls real fields from the same demoAnalysis.json the /demo
 // page uses (no pose detection here — the heavy MatchInsights stays on /demo so
 // the landing page loads fast on cheap phones). Everything is real sample data.
-const PREVIEW_SHOTS = (demo.events || []).slice(0, 3).map((e) => ({
+const PREVIEW_SHOTS = [0, 2, 4].map((i) => (demo.events || [])[i]).filter(Boolean).map((e) => ({
   t: `0:${String(Math.max(1, Math.round(e.timestamp_sec))).padStart(2, "0")}`,
   label: (e.shot_label || "Shot").replace(/\s+with\s+.*/i, ""), // trim "…with hip rotation"
   strength: (e.strengths && e.strengths[0]) || null,
@@ -60,8 +62,22 @@ const MORE_ACTIVITIES = [
 // don't describe one.
 const HOW_IT_WORKS = [
   { step: "01", icon: Upload, title: "Film 10–30 seconds", desc: "Any phone, any angle where your body is clearly in frame. A single rally or a couple of reps is plenty — you don't need a tripod or a full match." },
-  { step: "02", icon: Sparkles, title: "Our AI breaks it down", desc: "Shot by shot with timestamps, posture on the contact frame, and a coach's read on what's working and what isn't. Analysis runs on our servers, so you can lock your phone and walk away." },
+  { step: "02", icon: Sparkles, title: "Our AI breaks it down", desc: "Shot by shot with timestamps, posture on the contact frame, and a coach's read on what's working and what isn't. Analysis runs on our servers, so once your upload finishes you can lock your phone and walk away." },
   { step: "03", icon: TrendingUp, title: "Practise, then film again", desc: "Work the drills and weekly plan it gives you, then film the same shot again and see both sessions side by side." },
+];
+
+// The three ways in. Every claim maps to something the product does: analysis (/analyze), shadow practice
+// (/practice, pose tracking runs on the device, 33 body points in 3D), and film-again-and-compare.
+const WAYS = [
+  { icon: Upload, tag: "Analyze a clip", title: "Film it. Get the breakdown.", text: "Upload 10–30 seconds. You get your shots found and timed, your pose redrawn where it's off, a coach's read and a drill to fix first.", cta: "See a real analysis", to: "/demo" },
+  { icon: Activity, tag: "Practice live", title: "Get coached as you swing.", text: "Prop your phone up. A skeleton follows you live, tracking 33 points on your body in 3D, the right position shows in green and a voice tells you what to fix.", cta: "Try live practice", to: "/practice", isNew: true },
+  { icon: TrendingUp, tag: "Film again", title: "See what changed.", text: "Work the drills, film the same shot again, and see both sessions side by side with your score change.", cta: "Start with a clip", to: "/analyze" },
+];
+
+const FOOTER_COLS = [
+  { title: "Product", links: [["/auth", "Video Analysis"], ["/practice", "Live Practice"], ["/auth", "Training Plans"], ["/auth", "Equipment Finder"], ["/pricing", "Pricing"], ["/download", "Install the App"], ["/community", "Community Games"]] },
+  { title: "Sports", links: [["/badminton", "🏸 Badminton Coach"], ["/tennis", "🎾 Tennis Coach"], ["/table-tennis", "🏓 Table Tennis Coach"], ["/pickleball", "⚡ Pickleball Coach"], ["/basketball", "🏀 Basketball Coach"], ["/cricket", "🏏 Cricket Coach"], ["/football", "⚽ Football Coach"], ["/swimming", "🏊 Swimming Coach"], ["/gym", "🏋️ Gym"], ["/weight-lifting", "🔩 Weight Lifting"], ["/physiotherapy", "🩹 Physiotherapy"]] },
+  { title: "Resources", links: [["/blog", "Blog"], ["/auth", "Sign Up"], ["/auth", "Login"], ["/community", "Community"], ["/privacy", "Privacy Policy"], ["/terms", "Terms & Conditions"], ["/refund", "Refund Policy"], ["/cancellation", "Cancellation Policy"]] },
 ];
 
 const FAQS = [
@@ -77,7 +93,7 @@ const FAQS = [
   },
   {
     q: "Is Formanti free?",
-    a: "You can get started for free — new users receive free tokens to try video analysis. Beyond that, analyses use tokens, which you can top up in affordable packs. Browsing equipment recommendations and training content is free. See our Pricing page for token pack details.",
+    a: "You can get started for free: new users get 2 free analyses. After that it is from ₹30 per analysis, in packs that never expire, with no subscription. Live practice, equipment recommendations and training content are free. See our Pricing page for the packs.",
   },
   {
     q: "What happens to the video I upload?",
@@ -210,26 +226,19 @@ export default function LandingPage() {
         structuredData={APP_STRUCTURED_DATA}
       />
 
-      {/* ============ HERO ============ */}
-      <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden pt-20 sm:pt-24 pb-12 sm:pb-16">
-        {/* Background stack: photo → wash → vignette → lime bloom → grid.
-            Layering (rather than a single flat gradient) is what stops the
-            hero reading as "text on a dark rectangle". */}
-        <div className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1461896836934-bd45ba8a0a58?w=1920&q=60')",
-            backgroundSize: "cover", backgroundPosition: "center"
-          }} />
-        <div className="absolute inset-0 bg-zinc-950/80" />
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-transparent to-zinc-950" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-zinc-950 via-transparent to-zinc-950/60" />
+      <HomeHeader />
 
-        {/* Lime bloom behind the headline + a cool counterweight */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] max-w-full bg-lime-400/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-sky-500/5 rounded-full blur-3xl" />
-
-        {/* Faint grid — texture, not decoration you can consciously see */}
-        <div className="absolute inset-0 opacity-[0.07]"
+      {/* ============ HERO ============
+          Shows the product doing its thing in the first screen: the skeleton replay is real tracked data
+          (see PoseDemo). The headline promises what that shows. CTA first on phones, the demo right after;
+          no entrance delays, so nothing here waits on an animation before it can be read or tapped. */}
+      <main id="main">
+      <section className="relative overflow-hidden pt-8 sm:pt-12 lg:pt-16 pb-10 sm:pb-14">
+        {/* Background: lime bloom + a cool counterweight + a faint grid. (The stock photo this used to sit
+            on was a dead link on every load.) */}
+        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] max-w-full bg-lime-400/10 rounded-full blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-sky-500/5 rounded-full blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07]"
           style={{
             backgroundImage:
               "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
@@ -239,121 +248,109 @@ export default function LandingPage() {
           }} />
 
         <div className="relative z-10 container mx-auto px-4 max-w-6xl w-full">
-          {/* Hero grid. Three blocks so MOBILE reads brand → hook → demo → CTA
-              (a first-time ad visitor must see who we are and what they get
-              before any scroll), while DESKTOP stays two columns with the demo
-              spanning both rows on the right. */}
-          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-y-5 lg:gap-x-12 lg:gap-y-0 items-center">
+          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-8 sm:gap-10 lg:gap-14 items-center">
 
-            {/* 1 — brand + headline */}
-            <div className="order-1 w-full text-center lg:text-left lg:col-start-1 lg:row-start-1 lg:self-end">
-              <motion.div initial="hidden" animate="visible" variants={rise}>
-                <FormantiLogo className="h-8 sm:h-9 lg:h-11 mx-auto lg:mx-0 mb-4 lg:mb-5" markClassName="h-7 sm:h-8 lg:h-10"
-                  textClassName="font-heading font-bold text-xl sm:text-2xl lg:text-3xl uppercase tracking-tight text-white" />
-              </motion.div>
+            {/* copy + calls to action */}
+            <div className="w-full text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 mb-4 lg:mb-5" data-testid="hero-badge">
+                <Zap className="w-3.5 h-3.5 text-lime-400 shrink-0" />
+                <span className="text-xs sm:text-sm font-medium text-lime-300 tracking-wide uppercase">
+                  <span className="sm:hidden">AI coach · badminton, tennis, gym +6</span>
+                  <span className="hidden sm:inline">AI coach for badminton, tennis, table tennis, cricket and gym</span>
+                </span>
+              </div>
 
-              <motion.div initial="hidden" animate="visible" custom={0.05} variants={rise}>
-                <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-lime-400/10 border border-lime-400/25 mb-4 lg:mb-5 backdrop-blur-sm" data-testid="hero-badge">
-                  <Zap className="w-3.5 h-3.5 text-lime-400" />
-                  <span className="text-[11px] sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI Sports Coaching</span>
-                </div>
-              </motion.div>
+              <h1 className="font-heading font-black text-[2.5rem] leading-[0.95] sm:text-6xl lg:text-7xl tracking-tighter uppercase" data-testid="hero-heading">
+                <span className="block text-white">Film one rally.</span>
+                <span className="block neon-glow text-lime-400">See your form corrected.</span>
+              </h1>
 
-              <motion.h1 initial="hidden" animate="visible" custom={0.1} variants={rise}
-                className="font-heading font-black text-[2.5rem] leading-[0.85] sm:text-6xl lg:text-7xl tracking-tighter uppercase" data-testid="hero-heading">
-                <span className="block text-zinc-500 text-xl sm:text-3xl tracking-tight mb-1.5 sm:mb-3">Film one rally.</span>
-                <span className="block text-white">Get coached</span>
-                <span className="block neon-glow text-lime-400">like a pro.</span>
-              </motion.h1>
-            </div>
+              <p className="text-base sm:text-lg text-zinc-300 max-w-xl mx-auto lg:mx-0 mt-4 sm:mt-5 leading-relaxed" data-testid="hero-subtitle">
+                Formanti finds your shots, redraws your pose in green where it's off, and gives you a drill to fix first.
+              </p>
 
-            {/* 2 — the demo, in a device frame (spans both rows on desktop) */}
-            <motion.div initial="hidden" animate="visible" custom={0.35} variants={rise}
-              className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex justify-center lg:justify-end lg:self-center">
-              <DemoPhone />
-            </motion.div>
-
-            {/* 3 — pitch + CTA */}
-            <div className="order-3 w-full text-center lg:text-left lg:col-start-1 lg:row-start-2 lg:self-start">
-              <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
-                className="hidden lg:block text-base sm:text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0 mb-6 mt-6 leading-relaxed" data-testid="hero-subtitle">
-                Our AI breaks your clip down shot by shot, shows you the posture behind each one,
-                and turns it into drills, a plan and a written report.
-              </motion.p>
-              {/* Phones: one short line so the button stays above the fold. */}
-              <motion.p initial="hidden" animate="visible" custom={0.3} variants={rise}
-                className="sm:hidden text-[15px] text-zinc-300 leading-snug mb-4 px-2">
-                See your pose corrected and the one thing to fix first.
-              </motion.p>
-
-              <motion.div initial="hidden" animate="visible" custom={0.5} variants={rise}
-                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
                 <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
-                  className="w-full sm:w-auto max-w-[320px] bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
-                  Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
+                  className="w-full sm:w-auto max-w-[340px] bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
+                  Analyze my first clip, free <ChevronRight className="w-5 h-5 ml-1" />
                 </Button>
-                <Button onClick={() => navigate("/demo")}
-                  variant="ghost" size="lg"
-                  className="hidden sm:inline-flex w-full sm:w-auto text-zinc-300 hover:text-white bg-zinc-900/50 backdrop-blur-sm border border-zinc-700 hover:border-zinc-500 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
-                  <Play className="w-5 h-5 mr-1.5" /> See a sample analysis
+                <Button onClick={() => navigate("/practice")} variant="ghost" size="lg" data-testid="hero-practice-btn"
+                  className="w-full sm:w-auto max-w-[340px] text-white bg-zinc-900/60 border border-zinc-600 hover:border-lime-400/60 hover:bg-zinc-900 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
+                  <Activity className="w-5 h-5 mr-1.5 text-lime-400" /> Try live practice
                 </Button>
-              </motion.div>
+              </div>
 
-              <motion.p initial="hidden" animate="visible" custom={0.55} variants={rise}
-                className="text-xs sm:text-sm text-lime-400/90 font-medium mt-3 lg:mt-4">
-                2 free analyses when you sign up · no card needed
-                <Link to="/demo" className="sm:hidden block mt-2 text-zinc-400 underline underline-offset-4 decoration-zinc-600">
-                  See a real analysis first
-                </Link>
-              </motion.p>
+              <p className="text-sm text-lime-300 font-medium mt-4">
+                2 free analyses · no card · your video isn't kept after analysis
+              </p>
+              <Link to="/demo" className="inline-flex items-center gap-1.5 min-h-11 mt-1 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500 hover:text-white">
+                <Play className="w-4 h-4" /> See a real analysis first
+              </Link>
 
-              {/* No clip on hand? Claim the free analyses now (one-tap Google).
-                  Hidden for signed-in visitors. */}
-              <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
-                className="mt-6 max-w-sm mx-auto lg:mx-0">
-                <QuickSignupCTA source="home" align="start-lg" />
-              </motion.div>
-
-              {/* Sport pills — quieter than the headline, below the CTA on mobile. */}
-              <motion.div initial="hidden" animate="visible" custom={0.4} variants={rise}
-                className="hidden sm:flex flex-wrap justify-center lg:justify-start gap-1.5 sm:gap-2 mt-5 max-w-xl mx-auto lg:mx-0">
+              {/* Sport pills — quieter than the headline. */}
+              <div className="hidden sm:flex flex-wrap justify-center lg:justify-start gap-2 mt-4 max-w-xl mx-auto lg:mx-0">
                 {SPORTS.map(s => (
-                  <span key={s.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm text-[11px] sm:text-xs text-zinc-300">
-                    <span>{s.emoji}</span> {s.label}
+                  <span key={s.key} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-800 bg-zinc-900/60 text-xs text-zinc-300">
+                    <span aria-hidden="true">{s.emoji}</span> {s.label}
                   </span>
                 ))}
-              </motion.div>
+              </div>
+            </div>
 
-              <motion.div initial="hidden" animate="visible" custom={0.6} variants={rise}
-                className="mt-5 hidden sm:flex flex-col items-center lg:items-start">
-                <Link
-                  to="/download"
-                  className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900/70 border border-zinc-800 hover:border-lime-400/40 text-zinc-300 hover:text-white text-sm transition-all"
-                  data-testid="hero-get-app"
-                >
-                  <Sparkles className="w-4 h-4 text-lime-400" />
-                  <span>Install as an app — ~5MB, no store</span>
-                  <ArrowRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-              </motion.div>
+            {/* the product, working */}
+            <div className="flex justify-center lg:justify-end">
+              <PoseDemo />
             </div>
           </div>
 
-          {/* FACTS — folded into the hero so the proof sits with the pitch and
-              the demo, seen at once (was a separate strip below). */}
-          <motion.div initial="hidden" animate="visible" custom={0.7} variants={rise}
-            className="mt-8 lg:mt-14 grid grid-cols-4 gap-x-2 sm:gap-x-4 border-t border-zinc-800/60 pt-6 sm:pt-8">
-            {FACTS.map((s) => (
-              <div key={s.label} className="flex flex-col items-center text-center px-0.5 sm:px-2">
-                <s.icon className="hidden sm:block w-4 h-4 text-lime-400/70 mb-2" strokeWidth={1.75} />
-                <div className="font-heading font-black text-lg sm:text-2xl md:text-3xl text-white tracking-tight mb-0.5 sm:mb-1">{s.value}</div>
-                <div className="text-zinc-500 text-[10px] sm:text-[11px] leading-tight sm:leading-snug max-w-[10rem]">
-                  <span className="sm:hidden">{s.short}</span>
-                  <span className="hidden sm:inline">{s.label}</span>
+          {/* FACTS — the proof strip under the hero. */}
+          <div className="mt-10 lg:mt-14 grid grid-cols-4 gap-x-2 sm:gap-x-4 border-t border-zinc-800/60 pt-6 sm:pt-8">
+            {FACTS.map((f) => (
+              <div key={f.label} className="flex flex-col items-center text-center px-0.5 sm:px-2">
+                <f.icon className="hidden sm:block w-4 h-4 text-lime-400/70 mb-2" strokeWidth={1.75} />
+                <div className="font-heading font-black text-xl sm:text-2xl md:text-3xl text-white tracking-tight mb-0.5 sm:mb-1">{f.value}</div>
+                <div className="text-zinc-400 text-[11px] leading-tight sm:leading-snug max-w-[10rem]">
+                  <span className="sm:hidden">{f.short}</span>
+                  <span className="hidden sm:inline">{f.label}</span>
                 </div>
               </div>
             ))}
-          </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ THREE WAYS TO USE IT ============
+          Ranks the features: the two ways in (a clip, or live in front of the camera) and the reason to
+          come back. Swipeable on phones so it doesn't add a screen of scrolling. */}
+      <section className="relative pb-12 sm:pb-16 bg-zinc-950" aria-labelledby="ways-heading">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <h2 id="ways-heading" className="font-heading font-black text-3xl md:text-5xl tracking-tighter uppercase text-white leading-[0.95] mb-6 md:mb-8">
+            Three ways to <span className="text-lime-400">improve.</span>
+          </h2>
+          <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pb-0"
+            style={{ scrollbarWidth: "none" }}>
+            {WAYS.map((w) => (
+              <Link key={w.to} to={w.to}
+                className="group snap-start shrink-0 w-[84%] sm:w-[60%] md:w-auto flex flex-col rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5 hover:border-lime-400/40 transition-colors">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/25 flex items-center justify-center">
+                    <w.icon className="w-5 h-5 text-lime-400" strokeWidth={1.75} />
+                  </span>
+                  <span className="text-xs uppercase tracking-wider font-bold text-lime-300">{w.tag}</span>
+                  {w.isNew && <span className="text-[9px] font-black uppercase tracking-wide bg-lime-400 text-black rounded px-1 py-px leading-none">New</span>}
+                </div>
+                <h3 className="font-heading font-bold text-xl text-white tracking-tight mb-1.5">{w.title}</h3>
+                <p className="text-sm text-zinc-300 leading-relaxed flex-1">{w.text}</p>
+                <span className="mt-4 inline-flex items-center gap-1.5 min-h-11 text-[15px] font-bold text-lime-300 group-hover:text-lime-200">
+                  {w.cta} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+          <p className="mt-4 flex items-center gap-2 text-sm text-zinc-400">
+            <ShieldCheck className="w-4 h-4 text-lime-400 shrink-0" strokeWidth={1.75} />
+            Live practice runs on your phone: no account, nothing uploaded.
+          </p>
         </div>
       </section>
 
@@ -366,11 +363,11 @@ export default function LandingPage() {
           cards + coach line), then hand off to /demo for the full interactive
           version. Kept deliberately light — no pose detection on the landing
           page. All copy is real sample data; no provider named. */}
-      <section className="relative py-16 md:py-24 bg-zinc-950 overflow-hidden">
+      <section className="relative py-12 md:py-24 bg-zinc-950 overflow-hidden">
         <div className="pointer-events-none absolute -right-40 top-0 w-[30rem] h-[30rem] bg-lime-400/[0.05] rounded-full blur-3xl" />
         <div className="relative container mx-auto px-4 max-w-4xl">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="mb-8 md:mb-10 text-center">
+            className="mb-6 md:mb-10 text-center">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400 text-black text-xs sm:text-sm font-black uppercase tracking-[0.15em] mb-4 shadow-[0_0_24px_rgba(163,230,53,0.35)]">
               <Sparkles className="w-3.5 h-3.5" /> See it first — real result
             </span>
@@ -378,15 +375,15 @@ export default function LandingPage() {
               This is what you<br />get back.
             </h2>
             <p className="text-zinc-400 text-base md:text-lg max-w-xl mx-auto">
-              A real result our AI produced from one short clip — every shot found,
-              timed, and coached. Here's a taste; the full interactive version is one tap away.
+              A real result our AI produced from one short clip: the shots found, timed
+              and coached. Here's a taste; the full interactive version is one tap away.
             </p>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
             className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-900/40 p-4 sm:p-6 md:p-8">
             {/* Clip + verdict */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-5">
               {/* Poster image, NOT an autoplaying video — the hero already
                   carries a video, and a second ~1.3MB autoplay clip here was
                   roughly doubling mobile page weight and driving ad-click
@@ -405,12 +402,12 @@ export default function LandingPage() {
                   <span className="text-[10px] uppercase tracking-wider font-bold text-white">Sample clip</span>
                 </div>
               </Link>
-              <div className="rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-400/10 to-zinc-900 p-4 flex flex-col justify-center gap-1">
-                <div className="flex items-center gap-2 mb-0.5">
+              <div className="rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-400/10 to-zinc-900 px-4 py-3 sm:p-4 flex flex-row flex-wrap items-baseline gap-x-3 gap-y-0.5 sm:flex-col sm:items-stretch sm:justify-center sm:gap-1">
+                <div className="flex items-center gap-2 mb-0.5 w-full sm:w-auto">
                   <Sparkles className="w-4 h-4 text-lime-400" />
                   <span className="text-[10px] uppercase tracking-wider text-lime-300 font-bold">Detected</span>
                 </div>
-                <p className="font-heading font-black text-2xl md:text-3xl text-white capitalize leading-none">
+                <p className="font-heading font-black text-xl sm:text-2xl md:text-3xl text-white capitalize leading-none">
                   {demo.sport_detected || "Badminton"}
                 </p>
                 <p className="text-zinc-400 text-sm">
@@ -423,9 +420,9 @@ export default function LandingPage() {
             </div>
 
             {/* 3 real shot cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+            <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 mb-3 [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mb-5" style={{ scrollbarWidth: "none" }}>
               {PREVIEW_SHOTS.map((s, i) => (
-                <div key={i} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5">
+                <div key={i} className="snap-start shrink-0 w-[78%] sm:w-auto rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5">
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-heading font-bold text-sm text-white truncate">{s.label}</span>
                     <span className="font-mono text-[10px] text-lime-400/70 shrink-0 ml-2">{s.t}</span>
@@ -445,7 +442,7 @@ export default function LandingPage() {
             </div>
 
             {/* Coach line */}
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 mb-6 flex gap-3">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 mb-5 sm:mb-6 flex gap-3">
               <span className="text-[10px] uppercase tracking-wider text-lime-300 font-bold shrink-0 pt-0.5">Coach</span>
               <p className="text-[13px] text-zinc-200 leading-relaxed">{demo.coach_narrative?.takeaway}</p>
             </div>
@@ -456,7 +453,7 @@ export default function LandingPage() {
                 className="inline-flex items-center justify-center gap-2 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-6 py-3 text-sm shadow-[0_0_24px_rgba(190,242,100,0.25)] transition-colors">
                 Open the full interactive analysis <ArrowRight className="w-4 h-4" />
               </Link>
-              <p className="text-[11px] text-zinc-500 mt-3">
+              <p className="text-xs text-zinc-400 mt-3">
                 Shot-by-shot breakdown · coach chat · downloadable PDF — no signup to look.
               </p>
             </div>
@@ -477,11 +474,11 @@ export default function LandingPage() {
       {/* Vertical numbered rail rather than a third three-across grid — the
           page needs a change of shape here, and a sequence reads better as a
           sequence than as parallel columns. */}
-      <section className="relative py-14 md:py-28 bg-zinc-950 overflow-hidden">
+      <section className="relative py-10 md:py-28 bg-zinc-950 overflow-hidden">
         <div className="pointer-events-none absolute -left-40 top-1/4 w-[30rem] h-[30rem] bg-lime-400/[0.04] rounded-full blur-3xl" />
         <div className="relative container mx-auto px-4 max-w-3xl">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="mb-12 md:mb-16">
+            className="mb-8 md:mb-16">
             <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
               <span className="w-8 h-px bg-lime-400/60" /> How it works
             </span>
@@ -493,7 +490,7 @@ export default function LandingPage() {
           <div className="relative">
             {/* the rail */}
             <div className="absolute left-6 md:left-8 top-4 bottom-6 w-px bg-gradient-to-b from-lime-400/40 via-zinc-800 to-transparent" />
-            <div className="space-y-8 md:space-y-12">
+            <div className="space-y-6 md:space-y-12">
               {HOW_IT_WORKS.map((item, i) => (
                 <motion.div key={item.step} initial="hidden" whileInView="visible" custom={i}
                   viewport={{ once: true, amount: 0.5 }} variants={rise}
@@ -518,13 +515,13 @@ export default function LandingPage() {
       {/* (Walkthrough demo now lives in the hero — see DemoPhone in the hero.) */}
 
       {/* ============ SPORTS SECTION ============ */}
-      <section className="relative py-14 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
+      <section className="relative py-10 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
         <div className="pointer-events-none absolute -right-40 top-1/3 w-[32rem] h-[32rem] bg-sky-500/5 rounded-full blur-3xl" />
         <div className="relative container mx-auto px-4 max-w-5xl">
           {/* Left-aligned header — the page was every-section-centred, which
               flattened the rhythm. Alternating alignment gives it a pulse. */}
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="max-w-2xl mb-10 md:mb-14">
+            className="max-w-2xl mb-7 md:mb-14">
             <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
               <span className="w-8 h-px bg-lime-400/60" /> Multi-sport
             </span>
@@ -532,7 +529,7 @@ export default function LandingPage() {
               One app.<br />Every session.
             </h2>
             <p className="text-zinc-400 text-base md:text-lg leading-relaxed">
-              Eight sports get purpose-built AI models, drills and coaching — and anything
+              Eight sports get sport-tuned analysis, drills and coaching, and anything
               else you film, from a squat rack to a swim lane, gets a coach's read on your form.
             </p>
           </motion.div>
@@ -552,7 +549,7 @@ export default function LandingPage() {
                 <div className="hidden md:block text-7xl shrink-0 leading-none">🏋️</div>
                 <div className="min-w-0 flex-1">
                   <h3 className="font-heading font-black text-2xl md:text-4xl uppercase tracking-tighter text-white leading-[0.95] mb-3">
-                    <span className="md:hidden mr-2">🏋️</span>Lifting? Skip the<br className="hidden sm:block" /> <span className="text-lime-400">₹10,000</span> trainer.
+                    <span className="md:hidden mr-2">🏋️</span>Lifting? Get a<br className="hidden sm:block" /> <span className="text-lime-400">form check</span> on every set.
                   </h3>
                   <p className="text-zinc-300 text-sm md:text-base leading-relaxed mb-4 md:mb-5 max-w-xl">
                     Film a set on your phone and get honest feedback on your form — what looked
@@ -562,7 +559,7 @@ export default function LandingPage() {
                   <div className="flex flex-wrap gap-2">
                     {MORE_ACTIVITIES.map((a) => (
                       <Link key={a.key} to={a.path}
-                        className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-zinc-950/60 border border-zinc-700 hover:border-lime-400/50 hover:bg-zinc-900 text-zinc-200 hover:text-white text-xs md:text-sm font-medium transition-all">
+                        className="inline-flex items-center gap-2 min-h-11 px-3.5 md:px-4 py-2 rounded-full bg-zinc-950/60 border border-zinc-700 hover:border-lime-400/50 hover:bg-zinc-900 text-zinc-200 hover:text-white text-xs md:text-sm font-medium transition-all">
                         <span>{a.emoji}</span> {a.label}
                         <ArrowRight className="w-3.5 h-3.5 opacity-50" />
                       </Link>
@@ -573,8 +570,8 @@ export default function LandingPage() {
             </div>
             {/* Scope note stays. This is the exact spot where over-claiming
                 would cost us: lifting gets FORM FEEDBACK, not joint angles. */}
-            <div className="mt-5 flex items-start gap-2.5 max-w-2xl text-zinc-500 text-xs leading-relaxed">
-              <Shield className="w-4 h-4 shrink-0 mt-px text-zinc-600" strokeWidth={1.75} />
+            <div className="mt-5 flex items-start gap-2.5 max-w-2xl text-zinc-400 text-sm leading-relaxed">
+              <Shield className="w-4 h-4 shrink-0 mt-0.5 text-zinc-500" strokeWidth={1.75} />
               <p>
                 Analysis works on any activity where the movement is clearly visible in frame.
                 The eight sports below additionally get sport-tuned shot detection, drills, and
@@ -584,29 +581,29 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-4 gap-2 sm:gap-4">
             {SPORTS.map((s, i) => (
               <motion.div key={s.key} initial="hidden" whileInView="visible" custom={i}
                 viewport={{ once: true }} variants={rise}>
                 <Link to={s.path}
-                  className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl p-4 sm:p-6 text-center hover:-translate-y-1.5 hover:border-zinc-600 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 ease-out will-change-transform`}>
+                  className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl px-1 py-3 sm:p-6 text-center hover:-translate-y-1.5 hover:border-zinc-600 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 ease-out will-change-transform`}>
                   {/* Sport-tinted wash on hover. Note: every colour class used
                       here comes verbatim from the SPORTS table above, so
                       Tailwind's source scan can see it — never build a class
                       name by string concatenation or it gets purged. */}
                   <div className={`pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${s.bg}`} />
                   <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-                  <div className="relative text-2xl sm:text-4xl mb-2 sm:mb-3 transition-transform duration-300 group-hover:scale-110">{s.emoji}</div>
-                  <h3 className={`relative font-heading font-semibold text-sm sm:text-lg ${s.color}`}>{s.label}</h3>
+                  <div className="relative text-2xl sm:text-4xl mb-1 sm:mb-3 transition-transform duration-300 group-hover:scale-110" aria-hidden="true">{s.emoji}</div>
+                  <h3 className={`relative font-heading font-semibold text-[12px] leading-tight sm:text-lg ${s.color}`}>{s.label}</h3>
                 </Link>
               </motion.div>
             ))}
             {/* "More coming" card */}
             <motion.div initial="hidden" whileInView="visible" custom={SPORTS.length}
               viewport={{ once: true }} variants={rise}
-              className="hidden sm:flex bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl p-5 sm:p-6 text-center flex-col items-center justify-center">
+              className="hidden sm:flex col-span-4 sm:col-span-1 bg-zinc-900/30 border border-dashed border-zinc-800 rounded-2xl p-5 sm:p-6 text-center flex-col items-center justify-center">
               <div className="text-3xl sm:text-4xl mb-3 opacity-50">🎯</div>
-              <h3 className="font-heading font-semibold text-sm sm:text-lg text-zinc-600">More Coming</h3>
+              <h3 className="font-heading font-semibold text-sm sm:text-lg text-zinc-400">More Coming</h3>
             </motion.div>
           </div>
         </div>
@@ -652,7 +649,7 @@ export default function LandingPage() {
                       </div>
                     )}
                     <div className="p-5">
-                      <div className="flex items-center gap-2 text-xs text-zinc-500 mb-2">
+                      <div className="flex items-center gap-2 text-xs text-zinc-400 mb-2">
                         {post.sport && <span className="text-lime-400 uppercase font-semibold">{post.sport}</span>}
                         {post.category && <span>· {post.category}</span>}
                         {post.read_time && (
@@ -680,7 +677,7 @@ export default function LandingPage() {
       )}
 
       {/* ============ FAQ ============ */}
-      <section className="py-14 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50">
+      <section className="py-10 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50">
         <div className="container mx-auto px-4 max-w-3xl">
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }} />
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
@@ -696,12 +693,12 @@ export default function LandingPage() {
             {FAQS.map((f, i) => (
               <motion.details key={i} initial="hidden" whileInView="visible" custom={i}
                 viewport={{ once: true }} variants={rise}
-                className="group rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5 open:border-lime-400/30 hover:border-zinc-700 transition-colors">
-                <summary className="cursor-pointer list-none font-heading font-semibold text-white text-base md:text-lg flex items-start justify-between gap-4">
+                className="group rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 open:border-lime-400/30 hover:border-zinc-700 transition-colors">
+                <summary className="cursor-pointer list-none p-5 min-h-11 font-heading font-semibold text-white text-base md:text-lg flex items-start justify-between gap-4">
                   <span className="min-w-0">{f.q}</span>
                   <ChevronRight className="w-5 h-5 text-lime-400 group-open:rotate-90 transition-transform flex-shrink-0 mt-0.5" />
                 </summary>
-                <p className="text-zinc-400 text-sm leading-relaxed mt-3 pr-8">{f.a}</p>
+                <p className="text-zinc-300 text-sm leading-relaxed px-5 pb-5 -mt-1 pr-12">{f.a}</p>
               </motion.details>
             ))}
           </div>
@@ -709,7 +706,7 @@ export default function LandingPage() {
       </section>
 
       {/* ============ FINAL CTA ============ */}
-      <section className="relative py-24 md:py-32 bg-zinc-950 border-t border-zinc-800/50 overflow-hidden">
+      <section className="relative py-14 md:py-32 bg-zinc-950 border-t border-zinc-800/50 overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 -bottom-40 h-96 bg-lime-400/[0.07] blur-3xl rounded-full" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/30 to-transparent" />
         <div className="relative container mx-auto px-4 max-w-3xl text-center">
@@ -726,84 +723,79 @@ export default function LandingPage() {
             </p>
             <Button onClick={handleCTA} size="lg" data-testid="cta-bottom-btn"
               className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] hover:scale-[1.03] transition-all active:scale-95">
-              Analyze my first clip <ChevronRight className="w-5 h-5 ml-1" />
+              Analyze my first clip, free <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
+            <p className="mt-4 text-[15px] text-zinc-300">
+              or <Link to="/practice" className="inline-flex items-center min-h-11 text-lime-300 font-semibold underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200">try live practice, no account</Link>
+            </p>
+            <div className="mt-6 max-w-sm mx-auto">
+              <QuickSignupCTA source="home" />
+            </div>
           </motion.div>
         </div>
       </section>
 
+      </main>
+
+      {!isAuthenticated && (
+        <StickyCta onClick={handleCTA} heroSelector="[data-testid='hero-cta-btn']" endSelectors={["[data-testid='cta-bottom-btn']", "footer"]} />
+      )}
+
       {/* ============ FOOTER ============ */}
       <footer className="py-10 md:py-16 border-t border-zinc-800/50 bg-zinc-950">
         <div className="container mx-auto px-4 max-w-6xl">
-          {/* Two link columns side by side on phones (one column made the
-              footer a screen and a half tall); four across from md. */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 md:gap-10 mb-10 md:mb-12">
-            {/* Brand */}
-            <div className="col-span-2 md:col-span-1">
+          {/* Phones: one tap-to-open row per group (the open footer was a screen and a half). */}
+          <div className="md:hidden mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <FormantiIcon className="h-5" />
+              <span className="font-heading font-bold text-lg uppercase tracking-wide text-white">Formanti</span>
+            </div>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-4">
+              AI-powered sports coaching platform. Train smarter across every sport you love.
+            </p>
+            {FOOTER_COLS.map((c) => (
+              <details key={c.title} className="group border-t border-zinc-800/70 last:border-b">
+                <summary className="flex items-center justify-between min-h-12 py-3 cursor-pointer list-none text-white font-semibold text-sm uppercase tracking-wider">
+                  {c.title}
+                  <ChevronDown className="w-4 h-4 text-lime-400 transition-transform group-open:rotate-180" aria-hidden="true" />
+                </summary>
+                <ul className="pb-3 grid grid-cols-2 gap-x-4">
+                  {c.links.map(([to, label]) => (
+                    <li key={label}><Link to={to} className="text-zinc-300 hover:text-lime-400 text-sm transition-colors inline-flex items-center min-h-11">{label}</Link></li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+          </div>
+
+          {/* md and up: four columns. */}
+          <div className="hidden md:grid md:grid-cols-4 gap-10 mb-12">
+            <div>
               <div className="flex items-center gap-2 mb-4">
                 <FormantiIcon className="h-5" />
                 <span className="font-heading font-bold text-lg uppercase tracking-wide text-white">Formanti</span>
               </div>
-              <p className="text-zinc-500 text-sm leading-relaxed">
+              <p className="text-zinc-400 text-sm leading-relaxed">
                 AI-powered sports coaching platform. Train smarter across every sport you love.
               </p>
             </div>
-
-            {/* Product */}
-            <div>
-              <h4 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Product</h4>
-              <ul className="space-y-2">
-                <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Video Analysis</Link></li>
-                <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Training Plans</Link></li>
-                <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Equipment Finder</Link></li>
-                <li><Link to="/pricing" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Pricing</Link></li>
-                <li><Link to="/download" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Install the App</Link></li>
-                <li><Link to="/community" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Community Games</Link></li>
-              </ul>
-            </div>
-
-            {/* Sports */}
-            <div>
-              <h4 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Sports</h4>
-              <ul className="space-y-2">
-                <li><Link to="/badminton" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🏸 Badminton Coach</Link></li>
-                <li><Link to="/tennis" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🎾 Tennis Coach</Link></li>
-                <li><Link to="/table-tennis" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🏓 Table Tennis Coach</Link></li>
-                <li><Link to="/pickleball" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">⚡ Pickleball Coach</Link></li>
-                <li><Link to="/basketball" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">🏀 Basketball Coach</Link></li>
-                <li><span className="text-zinc-500 text-sm">+ Cricket, Football, Swimming</span></li>
-                <li>
-                  <span className="text-zinc-600 text-xs">Also: </span>
-                  <Link to="/gym" className="text-zinc-500 hover:text-lime-400 text-xs transition-colors">Gym</Link>
-                  <span className="text-zinc-600 text-xs">, </span>
-                  <Link to="/weight-lifting" className="text-zinc-500 hover:text-lime-400 text-xs transition-colors">Weight Lifting</Link>
-                  <span className="text-zinc-600 text-xs">, </span>
-                  <Link to="/physiotherapy" className="text-zinc-500 hover:text-lime-400 text-xs transition-colors">Physiotherapy</Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Resources */}
-            <div>
-              <h4 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Resources</h4>
-              <ul className="space-y-2">
-                <li><Link to="/blog" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Blog</Link></li>
-                <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Sign Up</Link></li>
-                <li><Link to="/auth" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Login</Link></li>
-                <li><Link to="/community" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Community</Link></li>
-                <li><Link to="/privacy" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/terms" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Terms &amp; Conditions</Link></li>
-                <li><Link to="/refund" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Refund Policy</Link></li>
-                <li><Link to="/cancellation" className="text-zinc-500 hover:text-lime-400 text-sm transition-colors">Cancellation Policy</Link></li>
-              </ul>
-            </div>
+            {FOOTER_COLS.map((c) => (
+              <div key={c.title}>
+                <h2 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">{c.title}</h2>
+                <ul className="space-y-1">
+                  {c.links.map(([to, label]) => (
+                    <li key={label}><Link to={to} className="text-zinc-400 hover:text-lime-400 text-sm transition-colors py-1 inline-block">{label}</Link></li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
           {/* Bottom bar */}
           <div className="pt-8 border-t border-zinc-800/50 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <p className="text-zinc-600 text-xs">&copy; {new Date().getFullYear()} Formanti. All rights reserved.</p>
-              <Link to="/privacy" className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors">Privacy Policy</Link>
+              <p className="text-zinc-500 text-xs">&copy; {new Date().getFullYear()} Formanti. All rights reserved.</p>
+              <Link to="/privacy" className="text-zinc-400 hover:text-zinc-200 text-xs transition-colors py-2 inline-block">Privacy Policy</Link>
             </div>
             <div className="flex items-center gap-1">
               {SPORTS.map(s => (

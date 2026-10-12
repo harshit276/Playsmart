@@ -86,7 +86,7 @@ export default function DemoAnalysisPage() {
   return (
     <div className="min-h-[100dvh] bg-zinc-950 text-white">
       <SEO
-        title="See a Sample AI Sports Analysis — Formanti"
+        title="See a Sample AI Sports Analysis"
         description="See exactly what Formanti's AI produces from a single clip: shot-by-shot breakdown, technique feedback, coach's read, and a downloadable report. Then analyse your own — free."
         url="https://www.formanti.com/demo"
       />
@@ -237,7 +237,7 @@ export default function DemoAnalysisPage() {
             Sign up free and get 2 analyses of your
             own game. No card required.
           </p>
-          <SignupCTA label="Analyse your own video — first one free" />
+          <SignupCTA label="Analyse your own video: 2 free analyses" />
           <p className="text-[11px] text-zinc-500 mt-3">
             Works for badminton, tennis, cricket, pickleball and more — any clip
             where the action is clearly in frame.

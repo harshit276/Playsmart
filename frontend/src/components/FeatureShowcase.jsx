@@ -28,7 +28,7 @@ const MotionLink = motion.create(Link);
  */
 
 const SampleTag = ({ children = "Sample" }) => (
-  <span className="absolute top-3 right-3 text-[9px] uppercase tracking-widest font-semibold text-zinc-500 bg-zinc-950/70 border border-zinc-800 rounded-full px-2 py-0.5">
+  <span className="absolute bottom-2.5 right-3 text-[10px] uppercase tracking-widest font-semibold text-zinc-400 bg-zinc-950/80 border border-zinc-800 rounded-full px-2 py-0.5">
     {children}
   </span>
 );
@@ -569,7 +569,7 @@ function MobileFeatureTabs({ reduce }) {
   const go = (d) => setIdx((i) => (i + d + CARDS.length) % CARDS.length);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <div
         ref={railRef}
         role="tablist"
@@ -587,11 +587,11 @@ function MobileFeatureTabs({ reduce }) {
               role="tab"
               aria-selected={on}
               onClick={() => setIdx(i)}
-              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${
-                on ? `${t.chip} text-white` : "border-zinc-800 bg-zinc-900/60 text-zinc-400"
+              className={`shrink-0 inline-flex items-center gap-1.5 min-h-11 rounded-full border px-4 py-2 text-[13px] font-semibold transition-colors ${
+                on ? `${t.chip} text-white` : "border-zinc-800 bg-zinc-900/60 text-zinc-300"
               }`}
             >
-              <c.icon className={`w-3.5 h-3.5 ${on ? t.text : "text-zinc-500"}`} strokeWidth={1.8} />
+              <c.icon className={`w-3.5 h-3.5 ${on ? t.text : "text-zinc-400"}`} strokeWidth={1.8} />
               {c.short}
             </button>
           );
@@ -635,7 +635,7 @@ function MobileFeatureTabs({ reduce }) {
                 </li>
               ))}
             </ul>
-            <Link to={card.route} className={`mt-4 inline-flex items-center gap-1 text-xs font-semibold ${tone.text}`}>
+            <Link to={card.route} className={`mt-3 inline-flex items-center gap-1 min-h-11 text-sm font-semibold ${tone.text}`}>
               See it <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </motion.div>
@@ -643,7 +643,7 @@ function MobileFeatureTabs({ reduce }) {
 
       <div className="mt-3 flex items-center justify-between">
         <button type="button" onClick={() => go(-1)} aria-label="Previous feature"
-          className="w-9 h-9 rounded-full border border-zinc-800 bg-zinc-900/60 flex items-center justify-center text-zinc-400">
+          className="w-11 h-11 rounded-full border border-zinc-800 bg-zinc-900/60 flex items-center justify-center text-zinc-300">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <div className="flex items-center gap-1.5">
@@ -652,7 +652,7 @@ function MobileFeatureTabs({ reduce }) {
           ))}
         </div>
         <button type="button" onClick={() => go(1)} aria-label="Next feature"
-          className="w-9 h-9 rounded-full border border-zinc-800 bg-zinc-900/60 flex items-center justify-center text-zinc-400">
+          className="w-11 h-11 rounded-full border border-zinc-800 bg-zinc-900/60 flex items-center justify-center text-zinc-300">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -700,7 +700,7 @@ export default function FeatureShowcase() {
         <MobileFeatureTabs reduce={reduce} />
 
         {/* Tablet and desktop: the full grid, unchanged. */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+        <div className="hidden lg:grid lg:grid-cols-3 gap-4 md:gap-5">
           {CARDS.map((c, i) => (
             <FeatureCard key={c.key} card={c} index={i} reduce={reduce} rise={rise} />
           ))}
