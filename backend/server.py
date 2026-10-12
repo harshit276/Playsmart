@@ -2758,10 +2758,14 @@ TOKEN_PACKS = [
     # 2026-09-27 so no pack goes under $1 per analysis ($2 / $1.60 / $1.33 /
     # $1.10): paying customers so far are mostly abroad, and $0.60 an analysis
     # undersold it. India keeps the INR ladder.
-    {"key": "pack_100",  "tokens":   100, "price_inr":   30, "price_usd":  2, "label": "Trial"},
-    {"key": "pack_500",  "tokens":   500, "price_inr":  130, "price_usd":  8, "label": "Starter"},
-    {"key": "pack_1500", "tokens":  1500, "price_inr":  350, "price_usd": 20, "label": "Best Value", "highlight": True},
-    {"key": "pack_5000", "tokens":  5000, "price_inr": 1000, "price_usd": 55, "label": "Power"},
+    # India prices raised on 2026-10-14 (from 30 / 130 / 350 / 1000): at Rs 30 an
+    # analysis looked like a toy next to the value of a coach's feedback. New
+    # ladder: Rs 49 / 40 / 33 / 30 per analysis, kept under the Rs 50, 200 and
+    # 500 round-number thresholds. No price-sensitivity data yet - treat as a test.
+    {"key": "pack_100",  "tokens":   100, "price_inr":   49, "price_usd":  2, "label": "Trial"},
+    {"key": "pack_500",  "tokens":   500, "price_inr":  199, "price_usd":  8, "label": "Starter"},
+    {"key": "pack_1500", "tokens":  1500, "price_inr":  499, "price_usd": 20, "label": "Best Value", "highlight": True},
+    {"key": "pack_5000", "tokens":  5000, "price_inr": 1499, "price_usd": 55, "label": "Power"},
 ]
 
 # Rupees per dollar used when a USD-priced pack has to be CHARGED in INR

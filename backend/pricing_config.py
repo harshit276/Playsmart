@@ -133,20 +133,21 @@ SUBSCRIPTION_PLANS = [
 # (SUBSCRIPTION_PLANS above is kept for future re-enable but the /pricing
 # page only renders these packs for now).
 #
-# Baseline: 100 tokens = ₹30 = 1 Standard analysis.
-# Bulk discount kicks in at 500+ tokens.
+# Baseline (from 2026-10-14): 100 tokens = ₹49 = 1 Standard analysis.
+# Bulk discount kicks in at 500+ tokens. Keep in step with TOKEN_PACKS in
+# server.py, which is what checkout actually charges.
 ONE_OFF_PACKS = [
-    {"key": "pack_100",   "tokens":   100, "price_inr":   30,
-     "label": "Trial",       "per_token_inr": 0.30,
+    {"key": "pack_100",   "tokens":   100, "price_inr":   49,
+     "label": "Trial",       "per_token_inr": 0.49,
      "analyses_flash": 1, "analyses_premium": 0},
-    {"key": "pack_500",   "tokens":   500, "price_inr":  130,
-     "label": "Starter",     "per_token_inr": 0.26,
+    {"key": "pack_500",   "tokens":   500, "price_inr":  199,
+     "label": "Starter",     "per_token_inr": 0.398,
      "analyses_flash": 5, "analyses_premium": 2},
-    {"key": "pack_1500",  "tokens":  1500, "price_inr":  350,
-     "label": "Best Value", "highlight": True, "per_token_inr": 0.233,
+    {"key": "pack_1500",  "tokens":  1500, "price_inr":  499,
+     "label": "Best Value", "highlight": True, "per_token_inr": 0.333,
      "analyses_flash": 15, "analyses_premium": 6},
-    {"key": "pack_5000",  "tokens":  5000, "price_inr": 1000,
-     "label": "Power Pack",  "per_token_inr": 0.20,
+    {"key": "pack_5000",  "tokens":  5000, "price_inr": 1499,
+     "label": "Power Pack",  "per_token_inr": 0.30,
      "analyses_flash": 50, "analyses_premium": 20},
 ]
 

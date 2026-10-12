@@ -95,13 +95,13 @@ export default function PricingPage() {
   // (tokens x 0.30), so international visitors saw ₹30 on a page that should
   // have said $1.
   const unitPack = packs.find((p) => p.tokens === analysisCost) || null;
-  const analysisPriceLabel = unitPack ? formatPackPrice(unitPack) : `₹${Math.round(analysisCost * 0.30)}`;
+  const analysisPriceLabel = unitPack ? formatPackPrice(unitPack) : `₹${Math.round(analysisCost * 0.49)}`;
 
   return (
     <div className="min-h-screen bg-zinc-950 py-8 sm:py-12">
       <SEO
         title="Pricing - AI Video Analysis for Badminton, Tennis, Cricket"
-        description="Pay-as-you-go AI sports video analysis. ₹30 per analysis with bulk discount packs. No subscription required."
+        description="Pay-as-you-go AI sports video analysis. From ₹49 per analysis, with bulk discount packs. No subscription required."
         keywords="sports video analysis pricing, badminton coaching app, AI cricket analysis cost India"
         url="https://www.formanti.com/pricing"
       />
