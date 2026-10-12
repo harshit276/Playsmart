@@ -7,7 +7,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Sparkles, UserPlus, Users, LogIn, Dumbbell, Camera, ArrowRight, Infinity as InfinityIcon,
+  Sparkles, UserPlus, Users, LogIn, Dumbbell, Camera, ArrowRight, ChevronDown, Infinity as InfinityIcon,
 } from "lucide-react";
 
 const fadeUp = {
@@ -53,10 +53,10 @@ const EARN_WAYS = [
 
 export default function EarnTokensSection() {
   return (
-    <section className="py-14 sm:py-24 px-4 bg-zinc-900/50 border-y border-zinc-800/50" data-testid="earn-tokens-section">
+    <section className="py-10 sm:py-24 px-4 bg-zinc-900/50 border-y border-zinc-800/50" data-testid="earn-tokens-section">
       <div className="max-w-6xl mx-auto">
         <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}
-          className="text-center mb-8 sm:mb-12">
+          className="text-center mb-6 sm:mb-12">
           <span className="text-lime-400 text-sm font-semibold uppercase tracking-widest mb-3 block">Free analyses</span>
           <h2 className="font-heading font-bold text-3xl sm:text-4xl md:text-5xl tracking-tight uppercase text-white mb-4">
             How to Get Free Analyses
@@ -69,7 +69,12 @@ export default function EarnTokensSection() {
 
         {/* Phones: one compact list (five full cards stacked was a wall);
             sm and up: the card grid as before. */}
-        <div className="sm:hidden rounded-2xl border border-zinc-800 bg-zinc-900/80 divide-y divide-zinc-800/80 mb-4">
+        <details className="sm:hidden group rounded-2xl border border-zinc-800 bg-zinc-900/80 mb-4">
+          <summary className="flex items-center justify-between gap-3 px-4 min-h-12 py-3 cursor-pointer list-none">
+            <span className="text-sm font-semibold text-white">Sign up +2 · Invite a friend +2 · 3 more ways</span>
+            <ChevronDown className="w-4 h-4 text-lime-400 shrink-0 transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="divide-y divide-zinc-800/80 border-t border-zinc-800/80">
           {EARN_WAYS.map((w) => {
             const Row = w.link ? Link : "div";
             return (
@@ -79,13 +84,14 @@ export default function EarnTokensSection() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-white leading-tight">{w.title}</p>
-                  <p className="text-[11px] text-zinc-500 leading-snug mt-0.5">{w.desc}</p>
+                  <p className="text-xs text-zinc-400 leading-snug mt-0.5">{w.desc}</p>
                 </div>
                 <span className="font-mono font-bold text-lime-400 text-sm shrink-0">{w.amount}</span>
               </Row>
             );
           })}
-        </div>
+          </div>
+        </details>
 
         <div className="hidden sm:grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {EARN_WAYS.map((w, i) => (
@@ -99,7 +105,7 @@ export default function EarnTokensSection() {
                 <h3 className="font-heading font-semibold text-white text-sm leading-tight">{w.title}</h3>
                 <span className="font-mono font-bold text-lime-400 text-sm whitespace-nowrap">{w.amount}</span>
               </div>
-              <p className="text-zinc-500 text-xs leading-relaxed flex-1">{w.desc}</p>
+              <p className="text-zinc-400 text-xs leading-relaxed flex-1">{w.desc}</p>
               {w.link && (
                 <Link to={w.link.to} className="mt-3 inline-flex items-center gap-1 text-lime-400 hover:text-lime-300 text-xs font-medium">
                   {w.link.label} <ArrowRight className="w-3 h-3" />
@@ -118,10 +124,10 @@ export default function EarnTokensSection() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium text-white">Each video analysis uses 1 from your balance</p>
-              <p className="text-xs text-zinc-500">Training plans, equipment recommendations, and community games are always free.</p>
+              <p className="text-xs text-zinc-400">Training plans, equipment recommendations, and community games are always free.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-zinc-500 shrink-0">
+          <div className="flex items-center gap-2 text-xs text-zinc-400 shrink-0">
             <InfinityIcon className="w-4 h-4 text-lime-400" />
             Analyses never expire
           </div>

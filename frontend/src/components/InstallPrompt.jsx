@@ -13,8 +13,11 @@ function isInStandaloneMode() {
 
 export default function InstallPrompt() {
   // On /practice the Start button sits at the bottom (above the phone nav), so the card rides above it.
-  const onPractice = useLocation().pathname === "/practice";
-  const spot = onPractice ? "bottom-[calc(180px+env(safe-area-inset-bottom))] md:bottom-28" : "bottom-4";
+  const path = useLocation().pathname;
+  const onPractice = path === "/practice";
+  // on the home page phones carry a sticky sign-up bar along the bottom, so the card rides above that too
+  const onHome = path === "/";
+  const spot = onPractice ? "bottom-[calc(180px+env(safe-area-inset-bottom))] md:bottom-28" : onHome ? "bottom-[calc(88px+env(safe-area-inset-bottom))] md:bottom-4" : "bottom-4";
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showIOSPrompt, setShowIOSPrompt] = useState(false);
   const [showAndroidPrompt, setShowAndroidPrompt] = useState(false);

@@ -144,7 +144,7 @@ export default function Navbar() {
       <nav className="sticky top-0 z-50 glass" data-testid="navbar">
         <div className="container mx-auto px-4 max-w-7xl flex items-center justify-between h-14 sm:h-16">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-2 group" data-testid="nav-logo">
+          <Link to={isGuest ? "/" : "/dashboard"} className="flex items-center gap-2 group" data-testid="nav-logo">
             <FormantiIcon className="h-5 sm:h-6" />
             <span className="font-heading font-bold text-lg sm:text-xl tracking-tight uppercase text-white">Formanti</span>
           </Link>
@@ -294,7 +294,9 @@ export default function Navbar() {
         >
           <div className="flex items-center justify-around h-[68px] px-1 relative">
             {MOBILE_NAV_PRIMARY.map((item) => {
-              const { path, label, icon: Icon } = item;
+              const { label, icon: Icon } = item;
+              // guests' "Home" is the home page itself, not the second guest landing at /dashboard
+              const path = isGuest && item.path === "/dashboard" ? "/" : item.path;
               const isActive = location.pathname === path;
               return (
                 <Link

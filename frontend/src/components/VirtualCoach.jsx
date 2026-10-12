@@ -119,7 +119,8 @@ export default function VirtualCoach() {
   // Coach" + voice "Talk to Virtual Coach") confused users into picking
   // the wrong one.
   const HIDDEN_ROUTES = ["/auth", "/label", "/test-model", "/analyze"];
-  const hidden = HIDDEN_ROUTES.some((p) => location.pathname.startsWith(p));
+  // the home page has its own calls to action, and this button sat on top of them on phones
+  const hidden = location.pathname === "/" || HIDDEN_ROUTES.some((p) => location.pathname.startsWith(p));
 
   useEffect(() => { saveHistory(messages); }, [messages]);
 

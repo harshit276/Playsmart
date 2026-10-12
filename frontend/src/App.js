@@ -3,6 +3,7 @@ import lazyWithReload from "@/lib/lazyWithReload";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { MotionConfig } from "framer-motion";
 import { Toaster } from "@/components/ui/sonner";
 import api from "@/lib/api";
 import { identifyUser, resetAnalytics } from "@/lib/analytics";
@@ -365,6 +366,8 @@ function App() {
     <HelmetProvider>
       <BrowserRouter>
         <AuthProvider>
+          {/* people who ask their phone for reduced motion get no travel or scale from any animation */}
+          <MotionConfig reducedMotion="user">
           <div className="min-h-screen bg-background">
             <Navbar />
             <AppRoutes />
@@ -374,6 +377,7 @@ function App() {
             <NudgeTracker />
             <VirtualCoach />
           </div>
+          </MotionConfig>
         </AuthProvider>
       </BrowserRouter>
     </HelmetProvider>

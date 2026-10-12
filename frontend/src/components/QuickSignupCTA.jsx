@@ -73,7 +73,7 @@ const GoogleG = () => (
   </svg>
 );
 
-const INPUT = "h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 text-base text-white placeholder:text-zinc-600 focus:border-lime-400 focus:outline-none";
+const INPUT = "h-11 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 text-base text-white placeholder:text-zinc-500 focus:border-lime-400 focus:outline-none";
 
 export default function QuickSignupCTA({ source, sport, align = "center" }) {
   const copy = filmCopy(sport);
@@ -196,7 +196,7 @@ export default function QuickSignupCTA({ source, sport, align = "center" }) {
   const mx = startLg ? "mx-auto lg:mx-0" : "mx-auto";
   return (
     <div className={startLg ? "text-center lg:text-left" : "text-center"}>
-      <div className="mb-3 flex items-center gap-3 text-[11px] uppercase tracking-widest text-zinc-600">
+      <div className="mb-3 flex items-center gap-3 text-xs uppercase tracking-widest text-zinc-500">
         <span className="h-px flex-1 bg-zinc-800" /> or <span className="h-px flex-1 bg-zinc-800" />
       </div>
       <p className="font-semibold text-white">No clip yet?</p>
@@ -205,16 +205,6 @@ export default function QuickSignupCTA({ source, sport, align = "center" }) {
       </p>
 
       <div className={`${mx} mt-3 w-full max-w-xs space-y-2`}>
-        {/* Optional, asked at the same step: lets us follow up on WhatsApp. */}
-        <input
-          type="tel" inputMode="tel" autoComplete="tel"
-          value={phone}
-          onChange={(e) => { setPhone(e.target.value); setError(""); }}
-          placeholder="Mobile (optional, for WhatsApp tips)"
-          aria-label="Mobile number (optional)"
-          className={INPUT}
-        />
-
         {!inApp && (
           <button
             type="button"
@@ -249,14 +239,24 @@ export default function QuickSignupCTA({ source, sport, align = "center" }) {
           </form>
         ) : (
           <button type="button" onClick={() => setShowEmail(true)}
-            className="w-full text-sm text-zinc-400 underline underline-offset-4 decoration-zinc-600 hover:text-white">
+            className="w-full min-h-11 py-2 text-sm text-zinc-300 underline underline-offset-4 decoration-zinc-500 hover:text-white">
             Continue with email instead
           </button>
         )}
 
+        {/* Optional, and last: it used to sit in front of the Google button, which made the sign-in feel like a form. */}
+        <input
+          type="tel" inputMode="tel" autoComplete="tel"
+          value={phone}
+          onChange={(e) => { setPhone(e.target.value); setError(""); }}
+          placeholder="Mobile (optional, for WhatsApp tips)"
+          aria-label="Mobile number (optional)"
+          className={INPUT}
+        />
+
         {error && <p className="text-sm text-rose-400">{error}</p>}
       </div>
-      <p className="mt-2 text-[11px] text-zinc-500">No password · no card · analyses never expire</p>
+      <p className="mt-2 text-xs text-zinc-400">No password · no card · analyses never expire</p>
     </div>
   );
 }
