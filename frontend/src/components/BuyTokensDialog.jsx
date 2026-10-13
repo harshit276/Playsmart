@@ -165,14 +165,27 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
               payment_id: resp.razorpay_payment_id, err: lastErr?.message });
             resolve();
           },
-          modal: { ondismiss: () => { track("checkout_cancelled", packProps(pack)); toast.error("Payment cancelled"); resolve(); } },
+          modal: { ondismiss: () => { track("checkout_cancelled", packProps(pack)); toast.error("Payment cancelled"); onOpenChange(true); resolve(); } },
         });
         rzp.on("payment.failed", (r) => {
           // Razorpay's reason code (e.g. international card declined), not card data.
           track("checkout_failed", { ...packProps(pack), reason: r?.error?.reason || r?.error?.code || "unknown" });
           toast.error(r?.error?.description || "Payment failed");
         });
+        // The pack picker is a modal Radix dialog: while it is open Radix marks
+        // everything outside it inert (body pointer-events:none + focus trap),
+        // and Razorpay's checkout lives outside it, so it rendered but could
+        // not be clicked. Close the picker first and make sure the page is
+        // clickable again before the checkout opens.
+        onOpenChange(false);
+        const unlockPage = () => {
+          try {
+            document.body.style.pointerEvents = "";
+            document.body.removeAttribute("data-scroll-locked");
+          } catch { /* ignore */ }
+        };
         rzp.open();
+        [0, 300, 900].forEach((ms) => setTimeout(unlockPage, ms));
       });
     } catch (err) {
       console.error("Checkout failed:", err);
@@ -180,7 +193,7 @@ export default function BuyTokensDialog({ open, onOpenChange }) {
       toast.error(err?.response?.data?.detail || err.message || "Payment failed");
     }
     setLoading(false);
-  }, [onVerified]);
+  }, [onVerified, onOpenChange]);
 
   return (
     <>
