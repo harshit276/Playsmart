@@ -6,6 +6,7 @@ import SEO from "@/components/SEO";
 import PoseDemo from "@/components/PoseDemo";
 import HomeHeader from "@/components/HomeHeader";
 import StickyCta from "@/components/StickyCta";
+import ResultPreview from "@/components/ResultPreview";
 import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import QuickSignupCTA from "@/components/QuickSignupCTA";
@@ -17,23 +18,6 @@ import {
 import { FormantiIcon } from "@/components/FormantiLogo";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import demo from "@/data/demoAnalysis.json";
-import samplePoster from "@/assets/demo/sample-badminton-poster.jpg";
-
-// A lightweight, static taste of the REAL result — shown right on the home page
-// so cold visitors see value before deciding to click through to the full
-// interactive /demo. Pulls real fields from the same demoAnalysis.json the /demo
-// page uses (no pose detection here — the heavy MatchInsights stays on /demo so
-// the landing page loads fast on cheap phones). Everything is real sample data.
-const PREVIEW_SHOTS = [0, 2, 4].map((i) => (demo.events || [])[i]).filter(Boolean).map((e) => ({
-  t: `0:${String(Math.max(1, Math.round(e.timestamp_sec))).padStart(2, "0")}`,
-  label: (e.shot_label || "Shot").replace(/\s+with\s+.*/i, ""), // trim "…with hip rotation"
-  strength: (e.strengths && e.strengths[0]) || null,
-  fix:
-    (e.weaknesses && e.weaknesses[0] && !/^none/i.test(e.weaknesses[0])
-      ? e.weaknesses[0]
-      : e.tip) || null,
-}));
 
 const SPORTS = [
   { key: "badminton", emoji: "🏸", label: "Badminton", path: "/badminton", color: "text-lime-400", border: "border-lime-400/30", bg: "bg-lime-400/5" },
@@ -356,110 +340,9 @@ export default function LandingPage() {
 
       {/* (Facts bar folded into the hero above — no longer a separate strip.) */}
 
-      {/* ============ RESULT PREVIEW — a real result, right on the home page ==
-          Cold ad traffic bounced off /analyze without ever seeing what the app
-          produces. Rather than rely on them clicking "see a sample", we show a
-          static taste of the REAL result here (clip + verdict + 3 real shot
-          cards + coach line), then hand off to /demo for the full interactive
-          version. Kept deliberately light — no pose detection on the landing
-          page. All copy is real sample data; no provider named. */}
-      <section className="relative py-12 md:py-24 bg-zinc-950 overflow-hidden">
-        <div className="pointer-events-none absolute -right-40 top-0 w-[30rem] h-[30rem] bg-lime-400/[0.05] rounded-full blur-3xl" />
-        <div className="relative container mx-auto px-4 max-w-4xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="mb-6 md:mb-10 text-center">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-lime-400 text-black text-xs sm:text-sm font-black uppercase tracking-[0.15em] mb-4 shadow-[0_0_24px_rgba(163,230,53,0.35)]">
-              <Sparkles className="w-3.5 h-3.5" /> See it first — real result
-            </span>
-            <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95] mb-3">
-              This is what you<br />get back.
-            </h2>
-            <p className="text-zinc-400 text-base md:text-lg max-w-xl mx-auto">
-              A real result our AI produced from one short clip: the shots found, timed
-              and coached. Here's a taste; the full interactive version is one tap away.
-            </p>
-          </motion.div>
-
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-900/40 p-4 sm:p-6 md:p-8">
-            {/* Clip + verdict */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-5">
-              {/* Poster image, NOT an autoplaying video — the hero already
-                  carries a video, and a second ~1.3MB autoplay clip here was
-                  roughly doubling mobile page weight and driving ad-click
-                  bounces. Tapping opens the full interactive result on /demo. */}
-              <Link to="/demo" className="group relative block rounded-2xl overflow-hidden border border-zinc-800 bg-black aspect-video">
-                <img src={samplePoster} alt="Sample badminton analysis" loading="lazy"
-                  className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="w-12 h-12 rounded-full bg-lime-400/90 group-hover:bg-lime-400 flex items-center justify-center shadow-lg shadow-lime-400/30 transition-transform group-hover:scale-105">
-                    <Play className="w-5 h-5 text-black ml-0.5" fill="currentColor" />
-                  </span>
-                </div>
-                <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm rounded px-2 py-0.5 flex items-center gap-1">
-                  <Play className="w-3 h-3 text-lime-400" />
-                  <span className="text-[10px] uppercase tracking-wider font-bold text-white">Sample clip</span>
-                </div>
-              </Link>
-              <div className="rounded-2xl border border-lime-400/25 bg-gradient-to-br from-lime-400/10 to-zinc-900 px-4 py-3 sm:p-4 flex flex-row flex-wrap items-baseline gap-x-3 gap-y-0.5 sm:flex-col sm:items-stretch sm:justify-center sm:gap-1">
-                <div className="flex items-center gap-2 mb-0.5 w-full sm:w-auto">
-                  <Sparkles className="w-4 h-4 text-lime-400" />
-                  <span className="text-[10px] uppercase tracking-wider text-lime-300 font-bold">Detected</span>
-                </div>
-                <p className="font-heading font-black text-xl sm:text-2xl md:text-3xl text-white capitalize leading-none">
-                  {demo.sport_detected || "Badminton"}
-                </p>
-                <p className="text-zinc-400 text-sm">
-                  Skill read: <span className="text-white font-semibold">{demo.overall_skill_level}</span>
-                </p>
-                <p className="text-zinc-400 text-sm">
-                  <span className="text-white font-semibold">{(demo.events || []).length}</span> shots detected + timed
-                </p>
-              </div>
-            </div>
-
-            {/* 3 real shot cards */}
-            <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 mb-3 [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:mb-5" style={{ scrollbarWidth: "none" }}>
-              {PREVIEW_SHOTS.map((s, i) => (
-                <div key={i} className="snap-start shrink-0 w-[78%] sm:w-auto rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-heading font-bold text-sm text-white truncate">{s.label}</span>
-                    <span className="font-mono text-[10px] text-lime-400/70 shrink-0 ml-2">{s.t}</span>
-                  </div>
-                  {s.strength && (
-                    <p className="text-[12px] text-zinc-300 leading-snug mb-1.5">
-                      <span className="text-lime-400 font-bold">✓ </span>{s.strength}
-                    </p>
-                  )}
-                  {s.fix && (
-                    <p className="text-[12px] text-zinc-400 leading-snug">
-                      <span className="text-amber-400 font-bold">→ </span>{s.fix}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Coach line */}
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 mb-5 sm:mb-6 flex gap-3">
-              <span className="text-[10px] uppercase tracking-wider text-lime-300 font-bold shrink-0 pt-0.5">Coach</span>
-              <p className="text-[13px] text-zinc-200 leading-relaxed">{demo.coach_narrative?.takeaway}</p>
-            </div>
-
-            {/* Hand off to the full interactive demo */}
-            <div className="text-center">
-              <Link to="/demo"
-                className="inline-flex items-center justify-center gap-2 bg-lime-400 hover:bg-lime-500 text-black font-bold rounded-full px-6 py-3 text-sm shadow-[0_0_24px_rgba(190,242,100,0.25)] transition-colors">
-                Open the full interactive analysis <ArrowRight className="w-4 h-4" />
-              </Link>
-              <p className="text-xs text-zinc-400 mt-3">
-                Shot-by-shot breakdown · coach chat · downloadable PDF — no signup to look.
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {/* ============ WHAT YOU GET BACK ============
+          One real result in four named parts (shots, 3D pose, coach, practise). See components/ResultPreview.jsx. */}
+      <ResultPreview rise={rise} />
 
       {/* ============ FEATURE SHOWCASE — SECTION 2: what you get ============ */}
       {/* Moved to be the SECOND thing a visitor sees. The whole point of the
