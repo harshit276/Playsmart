@@ -218,7 +218,7 @@ export default function LandingPage() {
           (see PoseDemo). The headline promises what that shows. CTA first on phones, the demo right after;
           no entrance delays, so nothing here waits on an animation before it can be read or tapped. */}
       <main id="main">
-      <section className="relative overflow-hidden pt-8 sm:pt-12 lg:pt-16 pb-10 sm:pb-14">
+      <section className="relative overflow-hidden pt-4 sm:pt-12 lg:pt-16 pb-8 sm:pb-14">
         {/* Background: lime bloom + a cool counterweight + a faint grid. (The stock photo this used to sit
             on was a dead link on every load.) */}
         <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] max-w-full bg-lime-400/10 rounded-full blur-3xl" />
@@ -237,38 +237,50 @@ export default function LandingPage() {
 
             {/* copy + calls to action */}
             <div className="w-full text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 mb-4 lg:mb-5" data-testid="hero-badge">
+              <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/25 mb-4 lg:mb-5" data-testid="hero-badge">
                 <Zap className="w-3.5 h-3.5 text-lime-400 shrink-0" />
-                <span className="text-xs sm:text-sm font-medium text-lime-300 tracking-wide uppercase">
-                  <span className="sm:hidden">AI coach · badminton, tennis, gym +6</span>
-                  <span className="hidden sm:inline">AI coach for badminton, tennis, table tennis, cricket and gym</span>
-                </span>
+                <span className="text-xs sm:text-sm font-medium text-lime-300 tracking-wide uppercase">AI coach for badminton, tennis, table tennis, cricket and gym</span>
               </div>
 
-              <h1 className="font-heading font-black text-[2.5rem] leading-[0.95] sm:text-6xl lg:text-7xl tracking-tighter uppercase" data-testid="hero-heading">
+              <h1 className="font-heading font-black text-[2.15rem] leading-[0.95] sm:text-6xl lg:text-7xl tracking-tighter uppercase" data-testid="hero-heading">
                 <span className="block text-white">Film one rally.</span>
                 <span className="block neon-glow text-lime-400">See your form corrected.</span>
               </h1>
 
-              <p className="text-base sm:text-lg text-zinc-300 max-w-xl mx-auto lg:mx-0 mt-4 sm:mt-5 leading-relaxed" data-testid="hero-subtitle">
-                Formanti finds your shots, redraws your pose in green where it's off, and gives you a drill to fix first.
+              <p className="text-[15px] sm:text-lg text-zinc-300 max-w-xl mx-auto lg:mx-0 mt-3 sm:mt-5 leading-snug sm:leading-relaxed" data-testid="hero-subtitle">
+                <span className="sm:hidden">An AI coach for badminton, tennis and more. It redraws your pose in green where it's off.</span>
+                <span className="hidden sm:inline">Formanti finds your shots, redraws your pose in green where it's off, and gives you a drill to fix first.</span>
               </p>
 
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
+              <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
                 <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
                   className="w-full sm:w-auto max-w-[340px] bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
                   Analyze my first clip, free <ChevronRight className="w-5 h-5 ml-1" />
                 </Button>
                 <Button onClick={() => navigate("/practice")} variant="ghost" size="lg" data-testid="hero-practice-btn"
-                  className="w-full sm:w-auto max-w-[340px] text-white bg-zinc-900/60 border border-zinc-600 hover:border-lime-400/60 hover:bg-zinc-900 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
+                  className="hidden sm:inline-flex w-full sm:w-auto max-w-[340px] text-white bg-zinc-900/60 border border-zinc-600 hover:border-lime-400/60 hover:bg-zinc-900 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
                   <Activity className="w-5 h-5 mr-1.5 text-lime-400" /> Try live practice
                 </Button>
               </div>
 
-              <p className="text-sm text-lime-300 font-medium mt-4">
+              <p className="text-[13px] sm:text-sm text-lime-300 font-medium mt-3 sm:mt-4">
                 2 free analyses · no card · your video isn't kept after analysis
               </p>
-              <div className="mt-1 flex flex-wrap items-center justify-center lg:justify-start gap-x-6">
+
+              {/* Phones: the film is the hero visual, right under the button. Everything else waits below it. */}
+              <div className="sm:hidden mt-4" data-testid="hero-film-phone">
+                <p className="mb-2 flex items-center justify-center gap-1.5 text-[13px] font-semibold text-zinc-300">
+                  <Play className="w-3.5 h-3.5 text-lime-400" fill="currentColor" aria-hidden="true" /> 25-second film · tap it for sound
+                </p>
+                <HomeVideo eager testId="home-video-hero" />
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-x-6">
+                  <Link to="/practice" className="inline-flex items-center gap-1.5 min-h-11 text-[15px] font-semibold text-lime-300 underline underline-offset-4 decoration-lime-400/50">
+                    <Activity className="w-4 h-4" /> Try live practice
+                  </Link>
+                  <Link to="/demo" className="inline-flex items-center min-h-11 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500">See a real analysis</Link>
+                </div>
+              </div>
+              <div className="mt-1 hidden sm:flex flex-wrap items-center justify-center lg:justify-start gap-x-6">
                 <a href="#watch" onClick={(e) => { e.preventDefault(); document.getElementById("watch")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
                   className="inline-flex items-center gap-1.5 min-h-11 text-[15px] font-semibold text-lime-300 underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200" data-testid="hero-watch-link">
                   <Play className="w-4 h-4" fill="currentColor" /> Watch the 25-second film
@@ -289,7 +301,7 @@ export default function LandingPage() {
             </div>
 
             {/* the product, working */}
-            <div className="flex justify-center lg:justify-end">
+            <div className="hidden sm:flex justify-center lg:justify-end">
               <PoseDemo />
             </div>
           </div>
@@ -313,7 +325,7 @@ export default function LandingPage() {
       {/* ============ THE FILM ============
           25 seconds that show what Formanti does. One film in two cuts: 16:9 on computers and tablets, 9:16 on phones
           (components/HomeVideo.jsx). Loads nothing until it is near the screen. */}
-      <section id="watch" className="relative scroll-mt-20 py-10 sm:py-14 bg-zinc-950" aria-labelledby="watch-heading">
+      <section id="watch" className="relative scroll-mt-20 hidden sm:block py-10 sm:py-14 bg-zinc-950" aria-labelledby="watch-heading">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center mb-6 sm:mb-9">
             <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-3">

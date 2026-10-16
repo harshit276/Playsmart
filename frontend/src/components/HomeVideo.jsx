@@ -38,15 +38,17 @@ function useWide() {
   return wide;
 }
 
+// People who asked for less motion, turned on data saver, or are on a slow connection get the poster and a play button.
 const quiet = () => {
   try {
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const saver = navigator.connection?.saveData === true;
-    return !!(reduce || saver);
+    const c = navigator.connection;
+    const slow = !!c && /^(slow-2g|2g|3g)$/.test(c.effectiveType || "");
+    return !!(reduce || c?.saveData === true || slow);
   } catch { return false; }
 };
 
-export default function HomeVideo({ className = "" }) {
+export default function HomeVideo({ className = "", eager = false, testId = "home-video" }) {
   const wide = useWide();
   const cut = wide ? CUTS.wide : CUTS.tall;
   const boxRef = useRef(null);
@@ -58,6 +60,18 @@ export default function HomeVideo({ className = "" }) {
   const [muted, setMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [blocked, setBlocked] = useState(false); // the browser refused to autoplay: show the play button
+  const [calm] = useState(quiet); // true: no autoplay and nothing fetched until the person asks
+  const [asked, setAsked] = useState(false); // the person pressed play
+  const [ready, setReady] = useState(!eager); // the hero film waits for the page to finish loading
+
+  // the hero film is at the top of the page: let the page and its scripts finish first
+  useEffect(() => {
+    if (!eager) return undefined;
+    let t;
+    const go = () => { t = setTimeout(() => setReady(true), 500); };
+    if (document.readyState === "complete") go(); else window.addEventListener("load", go, { once: true });
+    return () => { clearTimeout(t); window.removeEventListener("load", go); };
+  }, [eager]);
 
   // when the player gets near, then when it is mostly visible
   useEffect(() => {
@@ -69,20 +83,23 @@ export default function HomeVideo({ className = "" }) {
     return () => { ioNear.disconnect(); ioSee.disconnect(); };
   }, []);
 
+  const load = (near && ready && !calm) || asked; // whether the file is fetched at all
+
   // the muted flag is a property, not just an attribute
   useEffect(() => { if (videoRef.current) videoRef.current.muted = muted; }, [muted, cut.src]);
 
   // autoplay while it is on screen; pause when it is not
   useEffect(() => {
     const v = videoRef.current;
-    if (!v || !near) return;
-    if (onScreen && !quiet()) {
+    if (!v || !load) return;
+    if (asked) { v.muted = false; setMuted(false); v.play().catch(() => {}); return; }
+    if (onScreen && !calm) {
       const p = v.play();
       if (p && p.catch) p.catch(() => setBlocked(true));
     } else if (!onScreen) {
       v.pause();
     }
-  }, [onScreen, near, cut.src]);
+  }, [onScreen, load, asked, calm, cut.src]);
 
   const onPlay = useCallback(() => {
     setPlaying(true); setBlocked(false);
@@ -100,9 +117,10 @@ export default function HomeVideo({ className = "" }) {
   // first tap while muted: sound on, from the start. Afterwards: play / pause.
   const onTap = useCallback(() => {
     const v = videoRef.current; if (!v) return;
+    if (!load) { setAsked(true); return; } // nothing was fetched yet: fetch it now, with sound
     if (v.muted) { v.currentTime = 0; v.muted = false; setMuted(false); v.play().catch(() => {}); track("home_video_sound", { cut: cut.label, by: "tap" }); return; }
     if (v.paused) v.play().catch(() => {}); else v.pause();
-  }, [cut.label]);
+  }, [cut.label, load]);
 
   const fullscreen = useCallback((e) => {
     e.stopPropagation();
@@ -123,15 +141,15 @@ export default function HomeVideo({ className = "" }) {
         ref={boxRef}
         className={`relative mx-auto overflow-hidden rounded-3xl border border-zinc-800 bg-black shadow-2xl shadow-black/60 ${frame.className}`}
         style={frame.style}
-        data-testid="home-video"
+        data-testid={testId}
       >
         <video
           key={cut.src}
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-contain bg-black cursor-pointer"
-          src={near ? cut.src : undefined}
+          src={load ? cut.src : undefined}
           poster={cut.poster}
-          preload={near ? "metadata" : "none"}
+          preload={load ? "metadata" : "none"}
           muted
           loop
           playsInline
