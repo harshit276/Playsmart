@@ -88,6 +88,8 @@ frontend/node_modules/.cache/default-development/1.pack
 
 # Video files
 *.mp4
+# the home page film (two cuts) lives in frontend/public/videos
+!frontend/public/videos/*.mp4
 *.avi
 *.mov
 *.mkv

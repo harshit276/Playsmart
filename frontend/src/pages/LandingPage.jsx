@@ -7,6 +7,7 @@ import PoseDemo from "@/components/PoseDemo";
 import HomeHeader from "@/components/HomeHeader";
 import StickyCta from "@/components/StickyCta";
 import ResultPreview from "@/components/ResultPreview";
+import HomeVideo from "@/components/HomeVideo";
 import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import QuickSignupCTA from "@/components/QuickSignupCTA";
@@ -267,9 +268,15 @@ export default function LandingPage() {
               <p className="text-sm text-lime-300 font-medium mt-4">
                 2 free analyses · no card · your video isn't kept after analysis
               </p>
-              <Link to="/demo" className="inline-flex items-center gap-1.5 min-h-11 mt-1 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500 hover:text-white">
-                <Play className="w-4 h-4" /> See a real analysis first
-              </Link>
+              <div className="mt-1 flex flex-wrap items-center justify-center lg:justify-start gap-x-6">
+                <a href="#watch" onClick={(e) => { e.preventDefault(); document.getElementById("watch")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                  className="inline-flex items-center gap-1.5 min-h-11 text-[15px] font-semibold text-lime-300 underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200" data-testid="hero-watch-link">
+                  <Play className="w-4 h-4" fill="currentColor" /> Watch the 25-second film
+                </a>
+                <Link to="/demo" className="inline-flex items-center gap-1.5 min-h-11 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500 hover:text-white">
+                  See a real analysis first
+                </Link>
+              </div>
 
               {/* Sport pills — quieter than the headline. */}
               <div className="hidden sm:flex flex-wrap justify-center lg:justify-start gap-2 mt-4 max-w-xl mx-auto lg:mx-0">
@@ -300,6 +307,26 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ============ THE FILM ============
+          25 seconds that show what Formanti does. One film in two cuts: 16:9 on computers and tablets, 9:16 on phones
+          (components/HomeVideo.jsx). Loads nothing until it is near the screen. */}
+      <section id="watch" className="relative scroll-mt-20 py-10 sm:py-14 bg-zinc-950" aria-labelledby="watch-heading">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="text-center mb-6 sm:mb-9">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-3">
+              <span className="w-8 h-px bg-lime-400/60" /> Watch it work <span className="w-8 h-px bg-lime-400/60" />
+            </span>
+            <h2 id="watch-heading" className="font-heading font-black text-3xl md:text-5xl tracking-tighter uppercase text-white leading-[0.95]">
+              The whole thing in <span className="text-lime-400">25 seconds.</span>
+            </h2>
+          </div>
+          <HomeVideo />
+          <p className="text-center text-sm text-zinc-400 mt-5 max-w-xl mx-auto">
+            Film a rally, get the breakdown, see your pose in 3D, practise the fix. Tap the video for sound.
+          </p>
         </div>
       </section>
 
@@ -621,7 +648,7 @@ export default function LandingPage() {
       </main>
 
       {!isAuthenticated && (
-        <StickyCta onClick={handleCTA} heroSelector="[data-testid='hero-cta-btn']" endSelectors={["[data-testid='cta-bottom-btn']", "footer"]} />
+        <StickyCta onClick={handleCTA} heroSelector="[data-testid='hero-cta-btn']" endSelectors={["[data-testid='cta-bottom-btn']", "[data-testid='home-video']", "footer"]} />
       )}
 
       {/* ============ FOOTER ============ */}
