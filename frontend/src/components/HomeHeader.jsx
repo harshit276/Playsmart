@@ -42,10 +42,10 @@ export default function HomeHeader() {
             </Link>
           ) : (
             <>
-              <Link to="/auth" className="inline-flex items-center min-h-11 px-2.5 sm:px-3 rounded-lg text-[14px] font-medium text-zinc-200 hover:text-white transition-colors" data-testid="home-login">
+              <Link to="/auth" className="inline-flex items-center min-h-11 px-2.5 sm:px-3 rounded-lg text-[14px] font-medium text-zinc-200 hover:text-white transition-colors" data-testid="home-login" data-cta="header_login">
                 Log in
               </Link>
-              <Link to="/auth" className="inline-flex items-center justify-center min-h-11 px-4 rounded-full bg-lime-400 text-black text-[14px] font-bold hover:bg-lime-300 transition-colors" data-testid="home-signup">
+              <Link to="/auth" className="inline-flex items-center justify-center min-h-11 px-4 rounded-full bg-lime-400 text-black text-[14px] font-bold hover:bg-lime-300 transition-colors" data-testid="home-signup" data-cta="header_signup">
                 Sign up
               </Link>
             </>
