@@ -37,8 +37,9 @@ export default function StickyCta({ onClick, label = "Analyze my first clip, fre
       className={`md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 backdrop-blur px-4 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-transform duration-200 ${show ? "translate-y-0" : "translate-y-full pointer-events-none"}`}
       aria-hidden={!show}
       data-testid="sticky-cta"
+      data-section="sticky"
     >
-      <button type="button" onClick={onClick} tabIndex={show ? 0 : -1}
+      <button type="button" onClick={onClick} tabIndex={show ? 0 : -1} data-cta="sticky_analyze"
         className="w-full h-12 rounded-full bg-lime-400 text-black font-bold uppercase tracking-wide text-[15px] flex items-center justify-center gap-1 shadow-[0_0_24px_rgba(163,230,53,0.25)] active:scale-[0.98] transition-transform">
         {label} <ChevronRight className="w-5 h-5" />
       </button>

@@ -8,6 +8,10 @@ import HomeHeader from "@/components/HomeHeader";
 import StickyCta from "@/components/StickyCta";
 import ResultPreview from "@/components/ResultPreview";
 import HomeVideo from "@/components/HomeVideo";
+import Shuttle3D from "@/components/Shuttle3D";
+import Court3D from "@/components/Court3D";
+import Tilt3D from "@/components/Tilt3D";
+import { useHomeTracking } from "@/lib/homeTracking";
 import EarnTokensSection from "@/components/EarnTokensSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import QuickSignupCTA from "@/components/QuickSignupCTA";
@@ -42,21 +46,13 @@ const MORE_ACTIVITIES = [
   { key: "physiotherapy", emoji: "🩹", label: "Physiotherapy", path: "/physiotherapy" },
 ];
 
-// Mirrors what actually happens: handleCTA() drops users straight into
-// /analyze — there is no intake quiz before the first analysis any more, so
-// don't describe one.
+// How it works, told once. Mirrors what actually happens: handleCTA() drops users straight into /analyze (no intake
+// quiz before the first analysis). Each step carries the way in to try it: a clip, a real result, live practice.
+// (This replaces two sections that said the same thing: "Three ways to improve" and "How it works".)
 const HOW_IT_WORKS = [
-  { step: "01", icon: Upload, title: "Film 10–30 seconds", desc: "Any phone, any angle where your body is clearly in frame. A single rally or a couple of reps is plenty — you don't need a tripod or a full match." },
-  { step: "02", icon: Sparkles, title: "Our AI breaks it down", desc: "Shot by shot with timestamps, posture on the contact frame, and a coach's read on what's working and what isn't. Analysis runs on our servers, so once your upload finishes you can lock your phone and walk away." },
-  { step: "03", icon: TrendingUp, title: "Practise, then film again", desc: "Work the drills and weekly plan it gives you, then film the same shot again and see both sessions side by side." },
-];
-
-// The three ways in. Every claim maps to something the product does: analysis (/analyze), shadow practice
-// (/practice, pose tracking runs on the device, 33 body points in 3D), and film-again-and-compare.
-const WAYS = [
-  { icon: Upload, tag: "Analyze a clip", title: "Film it. Get the breakdown.", text: "Upload 10–30 seconds. You get your shots found and timed, your pose redrawn where it's off, a coach's read and a drill to fix first.", cta: "See a real analysis", to: "/demo" },
-  { icon: Activity, tag: "Practice live", title: "Get coached as you swing.", text: "Prop your phone up. A skeleton follows you live, tracking 33 points on your body in 3D, the right position shows in green and a voice tells you what to fix.", cta: "Try live practice", to: "/practice", isNew: true },
-  { icon: TrendingUp, tag: "Film again", title: "See what changed.", text: "Work the drills, film the same shot again, and see both sessions side by side with your score change.", cta: "Start with a clip", to: "/analyze" },
+  { step: "01", icon: Upload, title: "Film 10–30 seconds", desc: "Any phone, any angle where your body is clearly in frame. A single rally or a couple of reps is plenty. No tripod, no full match.", cta: "Start with a clip", to: "/analyze", id: "how_film" },
+  { step: "02", icon: Sparkles, title: "Our AI breaks it down", desc: "Your shots found and timed, your pose redrawn where it's off, a coach's read and a drill to fix first. It runs on our servers, so once the upload finishes you can lock your phone and walk away.", cta: "See a real analysis", to: "/demo", id: "how_demo" },
+  { step: "03", icon: Activity, title: "Practise, then film again", desc: "Work the drills, or prop your phone up for live practice: a skeleton follows you, tracking 33 points in 3D, green where you're right, and a voice says what to fix. Then film the same shot again and see both sessions side by side.", cta: "Try live practice", to: "/practice", id: "how_practice", isNew: true },
 ];
 
 const FOOTER_COLS = [
@@ -174,6 +170,7 @@ export default function LandingPage() {
   // Respect prefers-reduced-motion: same layout, no travel/fade.
   const reduceMotion = useReducedMotion();
   const rise = reduceMotion ? fadeUpStill : fadeUp;
+  useHomeTracking();
 
   useEffect(() => {
     api.get("/blog", { timeout: 5000 })
@@ -218,11 +215,13 @@ export default function LandingPage() {
           (see PoseDemo). The headline promises what that shows. CTA first on phones, the demo right after;
           no entrance delays, so nothing here waits on an animation before it can be read or tapped. */}
       <main id="main">
-      <section className="relative overflow-hidden pt-4 sm:pt-12 lg:pt-16 pb-8 sm:pb-14">
+      <section data-section="hero" className="relative overflow-hidden pt-4 sm:pt-12 lg:pt-16 pb-8 sm:pb-14">
         {/* Background: lime bloom + a cool counterweight + a faint grid. (The stock photo this used to sit
             on was a dead link on every load.) */}
         <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] max-w-full bg-lime-400/10 rounded-full blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 right-0 w-[30rem] h-[30rem] bg-sky-500/5 rounded-full blur-3xl" />
+        {/* a badminton court floor receding into the distance (CSS 3D; stands still for reduced motion) */}
+        <Court3D className="hidden sm:block" />
         <div className="pointer-events-none absolute inset-0 opacity-[0.07]"
           style={{
             backgroundImage:
@@ -253,11 +252,11 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 sm:gap-4">
-                <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn"
+                <Button onClick={handleCTA} size="lg" data-testid="hero-cta-btn" data-cta="hero_analyze"
                   className="w-full sm:w-auto max-w-[340px] bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-8 sm:px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] transition-all hover:scale-[1.03] active:scale-95">
                   Analyze my first clip, free <ChevronRight className="w-5 h-5 ml-1" />
                 </Button>
-                <Button onClick={() => navigate("/practice")} variant="ghost" size="lg" data-testid="hero-practice-btn"
+                <Button onClick={() => navigate("/practice")} variant="ghost" size="lg" data-testid="hero-practice-btn" data-cta="hero_practice"
                   className="hidden sm:inline-flex w-full sm:w-auto max-w-[340px] text-white bg-zinc-900/60 border border-zinc-600 hover:border-lime-400/60 hover:bg-zinc-900 rounded-full px-8 py-6 text-base sm:text-lg transition-all">
                   <Activity className="w-5 h-5 mr-1.5 text-lime-400" /> Try live practice
                 </Button>
@@ -274,18 +273,18 @@ export default function LandingPage() {
                 </p>
                 <HomeVideo eager testId="home-video-hero" />
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-x-6">
-                  <Link to="/practice" className="inline-flex items-center gap-1.5 min-h-11 text-[15px] font-semibold text-lime-300 underline underline-offset-4 decoration-lime-400/50">
+                  <Link to="/practice" data-cta="hero_phone_practice" className="inline-flex items-center gap-1.5 min-h-11 text-[15px] font-semibold text-lime-300 underline underline-offset-4 decoration-lime-400/50">
                     <Activity className="w-4 h-4" /> Try live practice
                   </Link>
-                  <Link to="/demo" className="inline-flex items-center min-h-11 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500">See a real analysis</Link>
+                  <Link to="/demo" data-cta="hero_phone_demo" className="inline-flex items-center min-h-11 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500">See a real analysis</Link>
                 </div>
               </div>
               <div className="mt-1 hidden sm:flex flex-wrap items-center justify-center lg:justify-start gap-x-6">
                 <a href="#watch" onClick={(e) => { e.preventDefault(); document.getElementById("watch")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
-                  className="inline-flex items-center gap-1.5 min-h-11 text-[15px] font-semibold text-lime-300 underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200" data-testid="hero-watch-link">
+                  className="inline-flex items-center gap-1.5 min-h-11 text-[15px] font-semibold text-lime-300 underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200" data-testid="hero-watch-link" data-cta="hero_watch">
                   <Play className="w-4 h-4" fill="currentColor" /> Watch the 25-second film
                 </a>
-                <Link to="/demo" className="inline-flex items-center gap-1.5 min-h-11 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500 hover:text-white">
+                <Link to="/demo" data-cta="hero_demo" className="inline-flex items-center gap-1.5 min-h-11 text-[15px] text-zinc-300 underline underline-offset-4 decoration-zinc-500 hover:text-white">
                   See a real analysis first
                 </Link>
               </div>
@@ -301,8 +300,10 @@ export default function LandingPage() {
             </div>
 
             {/* the product, working */}
-            <div className="hidden sm:flex justify-center lg:justify-end">
-              <PoseDemo />
+            <div className="relative hidden sm:flex justify-center lg:justify-end">
+              <Tilt3D max={5} className="w-full max-w-[320px] rounded-[1.5rem]"><PoseDemo /></Tilt3D>
+              {/* a shuttlecock in 3D, spinning slowly and leaning toward the pointer (canvas, no WebGL) */}
+              <Shuttle3D size={210} className="hidden lg:block absolute -top-14 -right-8 z-20" />
             </div>
           </div>
 
@@ -325,7 +326,7 @@ export default function LandingPage() {
       {/* ============ THE FILM ============
           25 seconds that show what Formanti does. One film in two cuts: 16:9 on computers and tablets, 9:16 on phones
           (components/HomeVideo.jsx). Loads nothing until it is near the screen. */}
-      <section id="watch" className="relative scroll-mt-20 hidden sm:block py-10 sm:py-14 bg-zinc-950" aria-labelledby="watch-heading">
+      <section id="watch" data-section="film" className="relative scroll-mt-20 hidden sm:block py-10 sm:py-14 bg-zinc-950" aria-labelledby="watch-heading">
         <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center mb-6 sm:mb-9">
             <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-3">
@@ -342,32 +343,48 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ THREE WAYS TO USE IT ============
-          Ranks the features: the two ways in (a clip, or live in front of the camera) and the reason to
-          come back. Swipeable on phones so it doesn't add a screen of scrolling. */}
-      <section className="relative pb-12 sm:pb-16 bg-zinc-950" aria-labelledby="ways-heading">
-        <div className="container mx-auto px-4 max-w-6xl">
-          <h2 id="ways-heading" className="font-heading font-black text-3xl md:text-5xl tracking-tighter uppercase text-white leading-[0.95] mb-6 md:mb-8">
-            Three ways to <span className="text-lime-400">improve.</span>
-          </h2>
-          <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pb-0"
+      {/* (Facts bar folded into the hero above — no longer a separate strip.) */}
+
+      {/* ============ WHAT YOU GET BACK ============
+          One real result in four named parts (shots, 3D pose, coach, practise). See components/ResultPreview.jsx. */}
+      <div data-section="result"><ResultPreview rise={rise} /></div>
+
+      {/* ============ HOW IT WORKS ============
+          The three steps, each with the way in to try it (a clip, a real result, live practice). Swipeable on phones so
+          it doesn't add a screen of scrolling; the cards lean toward the pointer on computers. */}
+      <section data-section="how" className="relative py-10 md:py-20 bg-zinc-950 overflow-hidden" aria-labelledby="how-heading">
+        <div className="pointer-events-none absolute -left-40 top-1/4 w-[30rem] h-[30rem] bg-lime-400/[0.04] rounded-full blur-3xl" />
+        <div className="relative container mx-auto px-4 max-w-6xl">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise} className="mb-7 md:mb-12">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              <span className="w-8 h-px bg-lime-400/60" /> How it works
+            </span>
+            <h2 id="how-heading" className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95]">
+              Three steps.<br />No coach required.
+            </h2>
+          </motion.div>
+          <div className="-mx-4 px-4 scroll-px-4 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-5 md:overflow-visible md:pb-0"
             style={{ scrollbarWidth: "none" }}>
-            {WAYS.map((w) => (
-              <Link key={w.to} to={w.to}
-                className="group snap-start shrink-0 w-[84%] sm:w-[60%] md:w-auto flex flex-col rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5 hover:border-lime-400/40 transition-colors">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <span className="w-10 h-10 rounded-xl bg-lime-400/10 border border-lime-400/25 flex items-center justify-center">
-                    <w.icon className="w-5 h-5 text-lime-400" strokeWidth={1.75} />
-                  </span>
-                  <span className="text-xs uppercase tracking-wider font-bold text-lime-300">{w.tag}</span>
-                  {w.isNew && <span className="text-[9px] font-black uppercase tracking-wide bg-lime-400 text-black rounded px-1 py-px leading-none">New</span>}
-                </div>
-                <h3 className="font-heading font-bold text-xl text-white tracking-tight mb-1.5">{w.title}</h3>
-                <p className="text-sm text-zinc-300 leading-relaxed flex-1">{w.text}</p>
-                <span className="mt-4 inline-flex items-center gap-1.5 min-h-11 text-[15px] font-bold text-lime-300 group-hover:text-lime-200">
-                  {w.cta} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </Link>
+            {HOW_IT_WORKS.map((item) => (
+              <div key={item.step} className="snap-start shrink-0 w-[84%] sm:w-[60%] md:w-auto flex">
+                <Tilt3D max={5} className="flex w-full rounded-3xl">
+                  <Link to={item.to} data-cta={item.id}
+                    className="group flex w-full flex-col rounded-3xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 p-5 md:p-6 hover:border-lime-400/40 transition-colors">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="w-12 h-12 rounded-2xl bg-zinc-900 border border-lime-400/25 flex items-center justify-center shadow-lg shadow-lime-400/5">
+                        <item.icon className="w-6 h-6 text-lime-400" strokeWidth={1.5} />
+                      </span>
+                      <span className="font-mono text-xs text-lime-400/70 tracking-widest">STEP {item.step}</span>
+                      {item.isNew && <span className="text-[9px] font-black uppercase tracking-wide bg-lime-400 text-black rounded px-1 py-px leading-none">New</span>}
+                    </div>
+                    <h3 className="font-heading font-bold text-xl md:text-2xl text-white tracking-tight mb-2">{item.title}</h3>
+                    <p className="text-sm md:text-[15px] text-zinc-300 leading-relaxed flex-1">{item.desc}</p>
+                    <span className="mt-4 inline-flex items-center gap-1.5 min-h-11 text-[15px] font-bold text-lime-300 group-hover:text-lime-200">
+                      {item.cta} <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </Link>
+                </Tilt3D>
+              </div>
             ))}
           </div>
           <p className="mt-4 flex items-center gap-2 text-sm text-zinc-400">
@@ -377,67 +394,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* (Facts bar folded into the hero above — no longer a separate strip.) */}
-
-      {/* ============ WHAT YOU GET BACK ============
-          One real result in four named parts (shots, 3D pose, coach, practise). See components/ResultPreview.jsx. */}
-      <ResultPreview rise={rise} />
-
       {/* ============ FEATURE SHOWCASE — SECTION 2: what you get ============ */}
       {/* Moved to be the SECOND thing a visitor sees. The whole point of the
           page is that the product is far more than analysis, and this was
           getting buried five sections down. Everything here maps to shipped
           code — see the header comment in that file. */}
-      <div id="features" data-testid="features-section">
+      <div id="features" data-section="features" data-testid="features-section">
         <FeatureShowcase />
       </div>
-
-      {/* ============ HOW IT WORKS — SECTION 3: how to run an analysis ======= */}
-      {/* Vertical numbered rail rather than a third three-across grid — the
-          page needs a change of shape here, and a sequence reads better as a
-          sequence than as parallel columns. */}
-      <section className="relative py-10 md:py-28 bg-zinc-950 overflow-hidden">
-        <div className="pointer-events-none absolute -left-40 top-1/4 w-[30rem] h-[30rem] bg-lime-400/[0.04] rounded-full blur-3xl" />
-        <div className="relative container mx-auto px-4 max-w-3xl">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="mb-8 md:mb-16">
-            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
-              <span className="w-8 h-px bg-lime-400/60" /> How it works
-            </span>
-            <h2 className="font-heading font-black text-4xl md:text-6xl tracking-tighter uppercase text-white leading-[0.95]">
-              Three steps.<br />No coach required.
-            </h2>
-          </motion.div>
-
-          <div className="relative">
-            {/* the rail */}
-            <div className="absolute left-6 md:left-8 top-4 bottom-6 w-px bg-gradient-to-b from-lime-400/40 via-zinc-800 to-transparent" />
-            <div className="space-y-6 md:space-y-12">
-              {HOW_IT_WORKS.map((item, i) => (
-                <motion.div key={item.step} initial="hidden" whileInView="visible" custom={i}
-                  viewport={{ once: true, amount: 0.5 }} variants={rise}
-                  className="relative flex gap-5 md:gap-8">
-                  <div className="relative shrink-0">
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-2xl bg-zinc-900 border border-lime-400/25 flex items-center justify-center shadow-lg shadow-lime-400/5">
-                      <item.icon className="w-5 h-5 md:w-7 md:h-7 text-lime-400" strokeWidth={1.5} />
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1 pt-1">
-                    <span className="font-mono text-xs text-lime-400/60 tracking-widest">{item.step}</span>
-                    <h3 className="font-heading font-bold text-xl md:text-2xl text-white tracking-tight mt-1 mb-2">{item.title}</h3>
-                    <p className="text-zinc-400 text-sm md:text-base leading-relaxed">{item.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* (Walkthrough demo now lives in the hero — see DemoPhone in the hero.) */}
 
       {/* ============ SPORTS SECTION ============ */}
-      <section className="relative py-10 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
+      <section data-section="sports" className="relative py-10 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50 overflow-hidden">
         <div className="pointer-events-none absolute -right-40 top-1/3 w-[32rem] h-[32rem] bg-sky-500/5 rounded-full blur-3xl" />
         <div className="relative container mx-auto px-4 max-w-5xl">
           {/* Left-aligned header — the page was every-section-centred, which
@@ -507,6 +476,7 @@ export default function LandingPage() {
             {SPORTS.map((s, i) => (
               <motion.div key={s.key} initial="hidden" whileInView="visible" custom={i}
                 viewport={{ once: true }} variants={rise}>
+                <Tilt3D max={7} className="rounded-2xl">
                 <Link to={s.path}
                   className={`group relative block overflow-hidden bg-gradient-to-b from-zinc-900 to-zinc-900/40 border ${s.border} rounded-2xl px-1 py-3 sm:p-6 text-center hover:-translate-y-1.5 hover:border-zinc-600 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 ease-out will-change-transform`}>
                   {/* Sport-tinted wash on hover. Note: every colour class used
@@ -518,6 +488,7 @@ export default function LandingPage() {
                   <div className="relative text-2xl sm:text-4xl mb-1 sm:mb-3 transition-transform duration-300 group-hover:scale-110" aria-hidden="true">{s.emoji}</div>
                   <h3 className={`relative font-heading font-semibold text-[12px] leading-tight sm:text-lg ${s.color}`}>{s.label}</h3>
                 </Link>
+                </Tilt3D>
               </motion.div>
             ))}
             {/* "More coming" card */}
@@ -531,17 +502,46 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ============ TOKEN ECONOMY — moved below the sports grid ========== */}
-      <EarnTokensSection />
-
       {/* ============ TESTIMONIALS ============ */}
       {/* Renders nothing until PLACEHOLDER_TESTIMONIALS has real, approved
           user quotes — see the constant definition above for why. */}
       <TestimonialsSection testimonials={PLACEHOLDER_TESTIMONIALS} />
 
+      {/* ============ FAQ ============ */}
+      <section data-section="faq" className="py-10 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50">
+        <div className="container mx-auto px-4 max-w-3xl">
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }} />
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
+            className="mb-10 md:mb-12">
+            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+              <span className="w-8 h-px bg-lime-400/60" /> FAQ
+            </span>
+            <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tighter uppercase text-white leading-[0.95]">
+              Straight answers
+            </h2>
+          </motion.div>
+          <div className="space-y-3">
+            {FAQS.map((f, i) => (
+              <motion.details key={i} initial="hidden" whileInView="visible" custom={i}
+                viewport={{ once: true }} variants={rise}
+                className="group rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 open:border-lime-400/30 hover:border-zinc-700 transition-colors">
+                <summary className="cursor-pointer list-none p-5 min-h-11 font-heading font-semibold text-white text-base md:text-lg flex items-start justify-between gap-4">
+                  <span className="min-w-0">{f.q}</span>
+                  <ChevronRight className="w-5 h-5 text-lime-400 group-open:rotate-90 transition-transform flex-shrink-0 mt-0.5" />
+                </summary>
+                <p className="text-zinc-300 text-sm leading-relaxed px-5 pb-5 -mt-1 pr-12">{f.a}</p>
+              </motion.details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============ TOKEN ECONOMY — after the FAQ ========== */}
+      <div data-section="free"><EarnTokensSection /></div>
+
       {/* ============ BLOG PREVIEW ============ */}
       {blogPosts.length > 0 && (
-        <section className="py-14 md:py-24 bg-zinc-950">
+        <section data-section="blog" className="py-14 md:py-24 bg-zinc-950">
           <div className="container mx-auto px-4 max-w-7xl">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
               className="text-center mb-8 md:mb-16">
@@ -598,41 +598,14 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* ============ FAQ ============ */}
-      <section className="py-10 md:py-28 bg-zinc-900/40 border-y border-zinc-800/50">
-        <div className="container mx-auto px-4 max-w-3xl">
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_STRUCTURED_DATA) }} />
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}
-            className="mb-10 md:mb-12">
-            <span className="inline-flex items-center gap-2 text-lime-400 text-xs font-semibold uppercase tracking-[0.2em] mb-4">
-              <span className="w-8 h-px bg-lime-400/60" /> FAQ
-            </span>
-            <h2 className="font-heading font-black text-4xl md:text-5xl tracking-tighter uppercase text-white leading-[0.95]">
-              Straight answers
-            </h2>
-          </motion.div>
-          <div className="space-y-3">
-            {FAQS.map((f, i) => (
-              <motion.details key={i} initial="hidden" whileInView="visible" custom={i}
-                viewport={{ once: true }} variants={rise}
-                className="group rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-900 to-zinc-900/40 open:border-lime-400/30 hover:border-zinc-700 transition-colors">
-                <summary className="cursor-pointer list-none p-5 min-h-11 font-heading font-semibold text-white text-base md:text-lg flex items-start justify-between gap-4">
-                  <span className="min-w-0">{f.q}</span>
-                  <ChevronRight className="w-5 h-5 text-lime-400 group-open:rotate-90 transition-transform flex-shrink-0 mt-0.5" />
-                </summary>
-                <p className="text-zinc-300 text-sm leading-relaxed px-5 pb-5 -mt-1 pr-12">{f.a}</p>
-              </motion.details>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ============ FINAL CTA ============ */}
-      <section className="relative py-14 md:py-32 bg-zinc-950 border-t border-zinc-800/50 overflow-hidden">
+      <section data-section="final" className="relative py-14 md:py-32 bg-zinc-950 border-t border-zinc-800/50 overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 -bottom-40 h-96 bg-lime-400/[0.07] blur-3xl rounded-full" />
+        <Court3D className="h-[70%]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-lime-400/30 to-transparent" />
         <div className="relative container mx-auto px-4 max-w-3xl text-center">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={rise}>
+            <div className="flex justify-center -mb-2 sm:-mb-6"><Shuttle3D size={190} /></div>
             <FormantiIcon className="h-10 mx-auto mb-6 opacity-90" />
             <h2 className="font-heading font-black text-4xl md:text-6xl uppercase tracking-tighter text-white leading-[0.95] mb-5">
               Your next session<br /><span className="text-lime-400">can be your best one.</span>
@@ -643,12 +616,12 @@ export default function LandingPage() {
               Film 10–30 seconds today and see what our AI finds. No credit card, no app store —
               your first 2 analyses are on us.
             </p>
-            <Button onClick={handleCTA} size="lg" data-testid="cta-bottom-btn"
+            <Button onClick={handleCTA} size="lg" data-testid="cta-bottom-btn" data-cta="final_analyze"
               className="w-full sm:w-auto bg-lime-400 text-black hover:bg-lime-300 font-bold uppercase tracking-wide px-10 py-6 text-base sm:text-lg rounded-full shadow-[0_0_30px_rgba(163,230,53,0.25)] hover:shadow-[0_0_45px_rgba(163,230,53,0.45)] hover:scale-[1.03] transition-all active:scale-95">
               Analyze my first clip, free <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
             <p className="mt-4 text-[15px] text-zinc-300">
-              or <Link to="/practice" className="inline-flex items-center min-h-11 text-lime-300 font-semibold underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200">try live practice, no account</Link>
+              or <Link to="/practice" data-cta="final_practice" className="inline-flex items-center min-h-11 text-lime-300 font-semibold underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200">try live practice, no account</Link>
             </p>
             <div className="mt-6 max-w-sm mx-auto">
               <QuickSignupCTA source="home" />
