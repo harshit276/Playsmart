@@ -78,7 +78,7 @@ export default function PracticePage() {
     setShotKey(listShots(key)[0]?.key);
   };
 
-  const openPaywall = (reason) => setPaywall({ open: true, reason: reason === "pass_expired" ? "pass_expired" : "trial_over" });
+  const openPaywall = (reason) => setPaywall({ open: true, reason: reason === "pass_expired" || reason === "trial_ending" ? reason : "trial_over" });
 
   // Start needs an account; the server then decides: free trial time left, an active pass, or the paywall.
   const handleStart = async () => {
