@@ -83,8 +83,10 @@ export function PracticeInfo() {
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
             <p className="font-bold">Racquet sports</p>
             <p className="text-[13px] text-zinc-400 mt-1 leading-snug">
-              Badminton, tennis, table tennis, pickleball and squash. Your arm height and elbow at the moment of contact on every swing
-              (and knee bend on the badminton smash and clear), plus your knees, back and feet while you hold your ready stance.
+              Badminton, tennis, table tennis, pickleball and squash. Shots hit up high (smash, clear, overhead, tennis serve) are judged on how
+              high you reach, your elbow lead and your swing speed. Every other shot is judged by where your hand is at contact: out in front,
+              at the right height for that shot, with a compact backswing where the stroke is short. Plus your knees, back and feet while you
+              hold your ready stance. The contact-point ranges are coaching rules, not yet checked against real players.
             </p>
           </div>
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">

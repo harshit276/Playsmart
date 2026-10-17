@@ -4,6 +4,7 @@ import { createSwingDetector } from "@/ai/swingDetector";
 import { jointIdx, measureJoints, planCorrections, correctLimbs } from "@/ai/correctPose";
 import { measureBody, bodyFaults, bodyState, bodyDelta, isOverheadShot } from "@/ai/bodyCheck";
 import { judgeOverhead, usesReach } from "@/ai/overheadSwing";
+import { strokeRule, strokeFeatures, judgeStroke, grossOnly, heightName } from "@/ai/strokeRules";
 import { correctLift } from "@/ai/liftCorrect";
 import { drawLiftFrame } from "@/ai/liftDraw";
 import { fixCue } from "@/ai/fixCues";
@@ -166,7 +167,12 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     }
 
     // everything out of range at contact, worst first: the arm and (where the shot has a target) the knee, then gross body faults
-    const plan = oj ? oj.plan : planCorrections(measured, ideal);
+    // Shots not hit up high are judged by where the hand is at contact (in front, at the right height, a compact backswing):
+    // the arm and elbow ANGLES for those shots were never validated, so only a gross miss in them counts.
+    const rule = !oj ? strokeRule(sport, shotKey) : null;
+    const feat = rule ? strokeFeatures({ frames: ring, tContact: tAt, side, fwd: fwdRef.current }) : null;
+    const sj = rule && feat ? judgeStroke(rule, feat, { kneeAtContact: bodyVals.knee }) : null;
+    const plan = oj ? oj.plan : planCorrections(measured, rule ? grossOnly(ideal) : ideal);
     const sevOf = (a) => Math.abs(a.deltaDeg) / Math.max(10, (ideal[a.joint].max - ideal[a.joint].min) / 2);
     const armFaults = oj
       ? oj.faults
@@ -175,6 +181,8 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     const faults = [
       ...armFaults,
       ...kneeFaults,
+      ...(sj ? sj.faults : []),
+      ...(sj && sj.kneeTooStraight ? [{ key: "knee", area: "body", low: false, severity: 0.8, cue: fixCue("knee", bodyVals.knee, rule.kneeMax - 20) }] : []),
       ...bodyFaults("contact", bodyVals, { sport, shot: shotKey, skip: ideal?.knee ? ["knee"] : [] }).map((f) => ({ key: f.key, area: "body", cue: f.cue, severity: f.severity, low: f.value < f.range.min })),
     ].filter((f) => f.cue?.headline).sort((a, b) => b.severity - a.severity);
     const inBand = faults.length === 0;
@@ -193,6 +201,8 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
       prep: oj ? oj.checks.prep : "na",
       speed: oj ? oj.checks.speed : "na",
       body: faults.some((f) => f.area === "body") ? "off" : bodyJudged && bodySeen ? "ok" : "na",
+      contact: sj ? sj.chips.contact : "na",
+      backswing: sj ? sj.chips.backswing : "na",
     };
 
     // the contact picture: the nearest saved frame, with the skeleton and the correction drawn on it
@@ -224,7 +234,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     const lowOf = (f) => (f.low != null ? f.low : f.from != null && f.to != null ? f.to > f.from : undefined);
     const jump = oj && oj.isOverhead ? jumpOf(ring, tAt) : null;
     const said = policyRef.current.judge({ inBand, faults: faults.map((f) => ({ ...f, low: lowOf(f) })), peakSpeed, reachUp: oj ? oj.reach.up : null, overhead: oj ? oj.isOverhead : false, jump });
-    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, bodyVals, faults, cues, chips, picture, peakSpeed, byReach: !!oj, overhead: oj ? oj.isOverhead : null, reachUp: oj ? oj.reach.up : null, jump, note: said.note, drill: said.drill };
+    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, bodyVals, faults, cues, chips, picture, peakSpeed, byReach: !!oj, overhead: oj ? oj.isOverhead : null, reachUp: oj ? oj.reach.up : null, jump, note: said.note, drill: said.drill, feat, ruled: !!sj };
     repsRef.current = [...repsRef.current, rep];
     setReps(repsRef.current);
     lastSwingAtRef.current = performance.now();
@@ -402,6 +412,10 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
       ...(reachShot ? [
         { key: "prep", label: "Prep", state: last ? last.chips.prep : "na", detail: null },
         { key: "speed", label: "Speed", state: last ? last.chips.speed : "na", detail: last?.peakSpeed != null ? `${last.peakSpeed.toFixed(1)} m/s` : null },
+      ] : []),
+      ...(!reachShot && strokeRule(sport, shotKey) ? [
+        { key: "contact", label: "Contact", state: last ? last.chips.contact : "na", detail: last?.feat ? heightName(last.feat.height) : null },
+        ...(strokeRule(sport, shotKey).back ? [{ key: "backswing", label: "Backswing", state: last ? last.chips.backswing : "na", detail: null }] : []),
       ] : []),
       { key: "body", label: "Body", state: last ? last.chips.body : "na", detail: chipDetail.body },
     ],

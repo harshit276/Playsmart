@@ -59,8 +59,8 @@ const dd = session("slowing down", [...Array(4)].map(() => good({ peakSpeed: 8 }
 ok(dd.spoken.some((s) => s.r.later?.kind === "fatigue"), "a slowing arm is noticed");
 
 // every fault the engine produces has wording at three levels; an unknown one falls back to the phone's voice
-for (const k of ["reach", "prep", "speed", "shoulder", "elbow", "knee", "body.knee", "body.trunk"]) for (const low of [true, false]) {
-  if (["reach", "prep", "speed"].includes(k) && !low) continue;
+for (const k of ["reach", "prep", "speed", "shoulder", "elbow", "knee", "body.knee", "body.trunk", "contact.front", "contact.height", "backswing"]) for (const low of [true, false]) {
+  if (["reach", "prep", "speed", "contact.front", "backswing"].includes(k) && !low) continue;
   const fk = fixKeyFor({ key: k, low });
   ok(fk && BANK[`${fk}.1`] && BANK[`${fk}.2`] && BANK[`${fk}.3`], `wording for ${k} low=${low} (${fk})`);
 }
