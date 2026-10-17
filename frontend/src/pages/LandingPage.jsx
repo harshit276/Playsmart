@@ -559,10 +559,10 @@ export default function LandingPage() {
             <div className="-mx-4 px-4 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:pb-0"
               style={{ scrollbarWidth: "none" }}>
               {blogPosts.slice(0, 3).map((post, i) => (
-                <motion.div key={post.slug} initial="hidden" whileInView="visible" custom={i}
+                <motion.div key={post.id} initial="hidden" whileInView="visible" custom={i}
                   viewport={{ once: true }} variants={rise}
                   className="snap-start shrink-0 w-[80%] sm:w-[60%] md:w-auto">
-                  <Link to={`/blog/${post.slug}`}
+                  <Link to={`/blog/${post.id}`}
                     className="group block bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-lime-400/30 transition-all duration-300">
                     {post.cover_image && (
                       <div className="aspect-video overflow-hidden">
@@ -581,7 +581,7 @@ export default function LandingPage() {
                       <h3 className="font-heading font-semibold text-white text-lg mb-2 group-hover:text-lime-400 transition-colors line-clamp-2">
                         {post.title}
                       </h3>
-                      <p className="text-zinc-400 text-sm line-clamp-2">{post.excerpt}</p>
+                      <p className="text-zinc-400 text-sm line-clamp-2">{post.description}</p>
                     </div>
                   </Link>
                 </motion.div>
