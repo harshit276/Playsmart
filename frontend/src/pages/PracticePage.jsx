@@ -1,28 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { ShieldCheck, Smartphone, Camera, Check, ChevronDown } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ShieldCheck, Smartphone, Camera } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/App";
 import SEO from "@/components/SEO";
 import LivePractice from "@/components/LivePractice";
 import LiftPractice from "@/components/LiftPractice";
 import { PracticeHero, PracticeInfo } from "@/components/PracticeHero";
 import { LIFTS } from "@/ai/liftPose";
-import { readyProfile } from "@/ai/bodyCheck";
-import { usesReach, widen } from "@/ai/overheadSwing";
 import { PRACTICE_SPORTS, LIFT_SPORT, isLiftSport, liftShots, shotsFor, resolveShot, isPracticeSport } from "@/lib/practiceShots";
-import { unlockSpeech, cuesSupported } from "@/lib/speakCue";
+import PracticePaywall from "@/components/PracticePaywall";
+import { ShotBreakdown } from "@/components/ShotBreakdown";
+import { usePracticeAccess, startPracticeSession, rememberAfterLogin, fmtClock, fmtDate } from "@/lib/practiceAccess";
+import { track } from "@/lib/analytics";
+import { unlockSpeech, cuesSupported, cancelCue } from "@/lib/speakCue";
 import { allowClips } from "@/lib/coachVoice";
 import { hasWebGL, autoGhostAllowed } from "@/lib/webgl";
 import { preloadLivePose } from "@/ai/livePose";
 
-const JOINT_LABEL = { shoulder: "Arm height", elbow: "Elbow", knee: "Knee bend" };
-const LIFT_LABEL = { hip: "Hips", knee: "Knees", trunk: "Back angle" };
 const SPORT_PILLS = [...PRACTICE_SPORTS, LIFT_SPORT];
 const norm = (s) => String(s || "").toLowerCase().trim().replace(/[\s-]+/g, "_");
 
 /**
  * /practice — shadow practice. Pick a shot, prop your phone up, practise: the pose is tracked live on
  * the device, a voice coach talks you through your stance between swings, and every swing is checked
- * at contact. No account, no upload.
+ * at contact. No upload. Starting needs a free account; every account gets one free trial of 10 minutes
+ * (counted by the server), then a pass (see lib/practiceAccess.js and backend/practice_access.py).
  *
  * Arriving from a shared link shows what this is first (the hero); a deep link from a result
  * ("Practise this shot") goes straight to the picker.
@@ -45,6 +48,12 @@ export default function PracticePage() {
   const [facing, setFacing] = useState("user");
   const [active, setActive] = useState(false);
   const [changing, setChanging] = useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { access, setAccess, refresh } = usePracticeAccess();
+  const [session, setSession] = useState(null); // { id, access } of the session being run
+  const [starting, setStarting] = useState(false);
+  const [paywall, setPaywall] = useState({ open: false, reason: "trial_over" });
   // Practise along with a same-site sample video instead of the camera.
   const clipParam = params.get("clip");
   const clipSrc = clipParam && clipParam.startsWith("/") && !clipParam.startsWith("//") ? clipParam : null;
@@ -69,56 +78,94 @@ export default function PracticePage() {
     setShotKey(listShots(key)[0]?.key);
   };
 
+  const openPaywall = (reason) => setPaywall({ open: true, reason: reason === "pass_expired" ? "pass_expired" : "trial_over" });
+
+  // Start needs an account; the server then decides: free trial time left, an active pass, or the paywall.
+  const handleStart = async () => {
+    track("practice_start_tapped", { signed_in: isAuthenticated, reason: access?.reason || null });
+    if (!isAuthenticated) {
+      rememberAfterLogin(`/practice?sport=${encodeURIComponent(sport)}&shot=${encodeURIComponent(shot?.key || "")}&hand=${hand}`);
+      toast("Create a free account to start your 10 free minutes");
+      navigate("/auth");
+      return;
+    }
+    if (access && !access.allowed) { openPaywall(access.reason); return; }
+    allowClips(!isLift); unlockSpeech(); // inside the tap, which iOS needs to let the coach speak later
+    setStarting(true);
+    const r = await startPracticeSession({ sport, shot: shot?.key });
+    setStarting(false);
+    if (!r.ok) {
+      cancelCue();
+      if (r.code === "trial_over" || r.code === "pass_expired") { if (r.access) setAccess(r.access); openPaywall(r.code); }
+      else toast.error(r.error || "Couldn't start. Please try again.");
+      return;
+    }
+    setAccess(r.access);
+    if (r.access.reason === "trial" && r.access.trial_seconds_left >= r.access.trial_seconds_total) track("practice_trial_started");
+    setSession({ id: r.sessionId, access: r.access });
+    setActive(true);
+  };
+
+  const leave = () => { setActive(false); refresh(); };
+  const paywallEl = (
+    <PracticePaywall open={paywall.open} reason={paywall.reason} source={active ? "session" : "page"}
+      onOpenChange={(o) => setPaywall((p) => ({ ...p, open: o }))}
+      onPaid={(a) => { if (a) setAccess(a); refresh(); }} />
+  );
+
   if (active && lift) {
     return (
-      <LiftPractice
-        key={`${sport}-${shot.key}-${facing}`}
-        lift={shot.key}
-        facing={facing}
-        clipSrc={clipSrc}
-        clipRate={clipRate}
-        onExit={() => setActive(false)}
-      />
+      <>
+        <LiftPractice
+          key={`${sport}-${shot.key}-${facing}`}
+          lift={shot.key}
+          facing={facing}
+          clipSrc={clipSrc}
+          clipRate={clipRate}
+          session={session}
+          onPaywall={openPaywall}
+          onExit={leave}
+        />
+        {paywallEl}
+      </>
     );
   }
 
   if (active && ideal) {
     return (
-      <LivePractice
-        key={`${sport}-${shot.key}-${hand}-${facing}`}
-        ideal={ideal}
-        shotName={shot.name}
-        shotKey={shot.key}
-        sport={sport}
-        hand={hand}
-        facing={facing}
-        clipSrc={clipSrc}
-        clipRate={clipRate}
-        onExit={() => setActive(false)}
-      />
+      <>
+        <LivePractice
+          key={`${sport}-${shot.key}-${hand}-${facing}`}
+          ideal={ideal}
+          shotName={shot.name}
+          shotKey={shot.key}
+          sport={sport}
+          hand={hand}
+          facing={facing}
+          clipSrc={clipSrc}
+          clipRate={clipRate}
+          session={session}
+          onPaywall={openPaywall}
+          onExit={leave}
+        />
+        {paywallEl}
+      </>
     );
   }
 
-  // what will be checked, in plain words
-  const reachShot = !isLift && !!ideal && usesReach(sport, shot?.key, ideal);
-  const shownIdeal = reachShot ? widen(ideal) : ideal;
-  const checks = isLift
-    ? ["Hips, knees and back at the setup", "Hips, knees and back at the top", "A voice cue while you hold each position"]
-    : [
-      reachShot
-        ? `How high you reach, your ${[ideal?.elbow && "elbow", ideal?.knee && "knees"].filter(Boolean).join(" and ")}, and your elbow lead, at the top of each swing`
-        : `Your ${[ideal?.shoulder && "arm", ideal?.elbow && "elbow", ideal?.knee && "knees"].filter(Boolean).join(", ").replace(/, ([^,]*)$/, " and $1")} at the moment of contact`,
-      reachShot ? "Swing speed, against your own other swings" : "Your knees, back and feet in your ready stance",
-      reachShot ? "Your knees, back and feet in your ready stance" : "A voice cue between swings, and a verdict on every swing",
-      ...(reachShot ? ["A voice cue between swings, and a verdict on every swing"] : []),
-    ];
-  const body = !isLift ? readyProfile(sport) : null;
+  const accessLine = !isAuthenticated ? "Free for 10 minutes with a free account. Then a pass."
+    : !access ? ""
+    : access.reason === "trial" ? (access.trial_seconds_left >= access.trial_seconds_total ? "Your free 10 minutes start when you tap Start" : `Free trial: ${fmtClock(access.trial_seconds_left)} left`)
+    : access.reason === "pass" ? `Practice pass active until ${fmtDate(access.pass_until)}`
+    : !access.allowed ? "Your free trial is used up. Get a pass to keep practising."
+    : "";
+  const startLabel = starting ? "Starting…" : !isAuthenticated ? "Sign up free to start" : access && !access.allowed ? "Get a practice pass" : "Start camera";
 
   return (
     <div className="min-h-[100dvh] bg-zinc-950 text-white pb-52 md:pb-28">
       <SEO
         title="Shadow practice: live form coach"
-        description="Practise in front of your phone camera. Formanti tracks your form live, shows the correct position, and checks every swing at contact. Runs on your phone; your video is never uploaded."
+        description="Practise in front of your phone camera. Formanti tracks your form live, shows the correct position, checks every swing and gives you a drill for what you keep missing. Free for 10 minutes with an account. Runs on your phone; your video is never uploaded."
         url="https://www.formanti.com/practice"
       />
       <div className="max-w-md md:max-w-2xl mx-auto px-4 pt-6">
@@ -158,47 +205,10 @@ export default function PracticePage() {
           ))}
         </div>
 
-        {ready && (
-          <div className="mt-5 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
-            <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold">We'll check</p>
-            <ul className="mt-2 space-y-1.5">
-              {checks.map((c) => (
-                <li key={c} className="flex gap-2 text-[14px] text-zinc-200 leading-snug"><Check className="w-4 h-4 shrink-0 mt-0.5 text-lime-400" strokeWidth={3} />{c}</li>
-              ))}
-            </ul>
-            <details className="mt-3 group">
-              <summary className="flex items-center gap-1 text-[13px] text-zinc-400 cursor-pointer select-none list-none">
-                See the target ranges <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="mt-2 space-y-3 text-[13px] text-zinc-300 leading-snug">
-                {lift && ["setup", "lockout"].map((phase) => (
-                  <div key={phase}>
-                    <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">{phase === "setup" ? "Setup (bar leaves the floor)" : "Lockout"}</p>
-                    {["hip", "knee", "trunk"].map((j) => (
-                      <p key={j}><span className="font-semibold">{LIFT_LABEL[j]}</span> <span className="font-mono text-lime-300">{lift[phase][j].min}–{lift[phase][j].max}°</span> <span className="text-zinc-500">· {lift[phase][j].why}</span></p>
-                    ))}
-                  </div>
-                ))}
-                {ideal && (
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">{reachShot ? "At the top of the reach" : "At contact"}</p>
-                    {["shoulder", "elbow", "knee"].filter((j) => shownIdeal[j]).map((j) => (
-                      <p key={j}><span className="font-semibold">{JOINT_LABEL[j]}</span> <span className="font-mono text-lime-300">{shownIdeal[j].min}–{shownIdeal[j].max}°</span> <span className="text-zinc-500">· {ideal[j].why}</span></p>
-                    ))}
-                    {reachShot && <p className="text-zinc-500">Your hand must also get clearly above your shoulder, or it isn't counted as an overhead swing.</p>}
-                  </div>
-                )}
-                {body && (
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-bold">Ready stance</p>
-                    <p><span className="font-semibold">Knees</span> <span className="font-mono text-lime-300">{body.knee.min}–{body.knee.max}°</span> <span className="text-zinc-500">· {body.knee.why}</span></p>
-                    <p><span className="font-semibold">Back lean</span> <span className="font-mono text-lime-300">{body.trunk.min}–{body.trunk.max}° forward</span> <span className="text-zinc-500">· {body.trunk.why}</span></p>
-                    <p><span className="font-semibold">Feet apart</span> <span className="font-mono text-lime-300">{body.stance.min}–{body.stance.max}× shoulder width</span> <span className="text-zinc-500">· {body.stance.why}</span></p>
-                  </div>
-                )}
-                <p className="text-[12px] text-zinc-500">Guide ranges, not a coach's verdict. We check your arm and body position, not whether the swing is the right shot.</p>
-              </div>
-            </details>
+        {ready && shot && (
+          <div className="mt-6">
+            <p className="text-[11px] uppercase tracking-wider text-lime-400 font-bold mb-2">How {shot.name.toLowerCase()} is broken down</p>
+            <ShotBreakdown sport={sport} shotKey={shot.key} layout="stack" />
           </div>
         )}
 
@@ -225,13 +235,16 @@ export default function PracticePage() {
         {!deepLinked && <PracticeInfo />}
       </div>
 
+      {paywallEl}
+
       {/* on phones the bottom nav is showing, so the Start bar sits just above it */}
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] md:bottom-0 z-50 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent px-4 pt-6 pb-3 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-md mx-auto">
           {!canRun && <p className="text-[12px] text-amber-200 mb-2">This browser can't run the live pose model (graphics acceleration is off). Try Chrome or Safari.</p>}
-          <button type="button" disabled={!ready || !canRun} onClick={() => { allowClips(!isLift); unlockSpeech(); setActive(true); }}
+          {accessLine && <p className="text-center text-[12px] text-zinc-300 mb-2" data-testid="practice-access-line">{accessLine}</p>}
+          <button type="button" disabled={!ready || !canRun || starting} onClick={handleStart} data-testid="practice-start"
             className="w-full py-3.5 rounded-xl bg-lime-400 text-black font-bold text-base disabled:opacity-40">
-            Start camera
+            {startLabel}
           </button>
           <p className="text-center text-[11px] text-zinc-500 mt-2">Want the full AI breakdown of a real {isLift ? "lift" : "rally"}? <Link to="/analyze" className="text-lime-300 underline">Analyse a clip</Link></p>
         </div>

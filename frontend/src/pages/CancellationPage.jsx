@@ -31,7 +31,7 @@ export default function CancellationPage() {
           <XCircle className="w-8 h-8 text-lime-400" />
           <h1 className="font-heading font-black text-3xl md:text-4xl text-white uppercase tracking-tighter">Cancellation Policy</h1>
         </div>
-        <p className="text-zinc-500 text-sm mb-12">Last updated: July 7, 2026</p>
+        <p className="text-zinc-500 text-sm mb-12">Last updated: October 17, 2026</p>
 
         <Section title="1. Token Purchases">
           <p>
@@ -57,7 +57,13 @@ export default function CancellationPage() {
           </p>
         </Section>
 
-        <Section title="5. Contact">
+        <Section title="5. Practice Passes">
+          <p>
+            Practice passes are <strong className="text-white">one-time purchases</strong> for a fixed period and never renew on their own, so there is nothing to cancel and no recurring charge. When a pass ends, live practice simply closes until you buy another. Refunds are covered in our <Link to="/refund" className="text-lime-400 hover:text-lime-300">Refund Policy</Link>.
+          </p>
+        </Section>
+
+        <Section title="6. Contact">
           <p>
             For help with a cancellation or account deletion, contact <a href="mailto:support@formanti.com" className="text-lime-400 hover:text-lime-300 font-medium">support@formanti.com</a>.
           </p>

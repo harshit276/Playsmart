@@ -18,6 +18,8 @@ import FormChips from "@/components/practice/FormChips";
 import VerdictCard from "@/components/practice/VerdictCard";
 import SettingsSheet from "@/components/practice/SettingsSheet";
 import PracticeSummary from "@/components/practice/PracticeSummary";
+import { usePracticeMeter } from "@/lib/usePracticeMeter";
+import { fmtClock } from "@/lib/practiceAccess";
 
 /**
  * LiftPractice — shadow practice for a lift, with the phone's camera.
@@ -35,7 +37,7 @@ const median = (a) => { const s = a.filter((v) => v != null).sort((x, y) => x - 
 const HISTORY_S = 40; // seconds of readings kept to find reps in
 const VERDICT_MS = 5000;
 
-export default function LiftPractice({ lift = "deadlift", facing: facingProp = "user", clipSrc = null, clipRate = 1, onExit }) {
+export default function LiftPractice({ lift = "deadlift", facing: facingProp = "user", clipSrc = null, clipRate = 1, onExit, session = null, onPaywall = null }) {
   const L = LIFTS[lift];
   const seriesRef = useRef([]); // {t, hip, knee, trunk, trunkAbs}
   const framesRef = useRef([]); // {t, px, wl, vis, vw, vh}
@@ -77,6 +79,9 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   const onFrameRef = useRef(null);
   const cam = useLiveCamera({ clipSrc, clipRate, facing: facingProp, onFrame: (f) => onFrameRef.current?.(f), trackName: "lift_practice", trackProps: { lift } });
   const { videoRef, canvasRef, engineRef, phase, facing, flip, start, stop } = cam;
+
+  // The free trial counts down while the camera is live; when it runs out the session ends and the paywall opens.
+  const meter = usePracticeMeter({ session, running: phase === "live", sport: "strength", shot: lift, onExpire: () => { finish(); onPaywall?.("trial_over"); } });
 
   // ─── a finished rep ───
   const evaluateRep = useCallback(async (r) => {
@@ -252,7 +257,11 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     setSummaryOpen(true);
   };
 
-  const again = () => {
+  const again = async () => {
+    if (session) {
+      const r = await meter.restart();
+      if (!r.ok) { if (r.code === "trial_over" || r.code === "pass_expired") onPaywall?.(r.code); return; }
+    }
     repsRef.current = []; setReps([]); setVerdict(null); reset();
     startedAtRef.current = Date.now(); setSummaryOpen(false); start(facing);
   };
@@ -328,7 +337,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   return (
     <>
       <PracticeShell
-        top={<PracticeTopBar title={L.label} subtitle="Shadow practice" onClose={phase === "live" ? finish : onExit} sound={sound} onToggleSound={toggleSound} onSettings={() => setSettingsOpen(true)} slow={hud.slow} />}
+        top={<PracticeTopBar title={L.label} subtitle="Shadow practice" onClose={phase === "live" ? finish : onExit} sound={sound} onToggleSound={toggleSound} onSettings={() => setSettingsOpen(true)} slow={hud.slow} badge={meter.onTrial && meter.left != null ? `Free ${fmtClock(meter.left)}` : null} badgeWarn={meter.left != null && meter.left <= 60} />}
         bottom={(
           <div className="px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-zinc-950 space-y-2.5">
             <FormChips groups={[nowGroup, lastGroup]} showValues={showValues} />

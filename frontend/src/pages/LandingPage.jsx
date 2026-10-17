@@ -8,6 +8,7 @@ import HomeHeader from "@/components/HomeHeader";
 import StickyCta from "@/components/StickyCta";
 import ResultPreview from "@/components/ResultPreview";
 import HomeVideo from "@/components/HomeVideo";
+import PracticeBreakdownSection from "@/components/ShotBreakdown";
 import Shuttle3D from "@/components/Shuttle3D";
 import Court3D from "@/components/Court3D";
 import Tilt3D from "@/components/Tilt3D";
@@ -52,7 +53,7 @@ const MORE_ACTIVITIES = [
 const HOW_IT_WORKS = [
   { step: "01", icon: Upload, title: "Film 10–30 seconds", desc: "Any phone, any angle where your body is clearly in frame. A single rally or a couple of reps is plenty. No tripod, no full match.", cta: "Start with a clip", to: "/analyze", id: "how_film" },
   { step: "02", icon: Sparkles, title: "Our AI breaks it down", desc: "Your shots found and timed, your pose redrawn where it's off, a coach's read and a drill to fix first. It runs on our servers, so once the upload finishes you can lock your phone and walk away.", cta: "See a real analysis", to: "/demo", id: "how_demo" },
-  { step: "03", icon: Activity, title: "Practise, then film again", desc: "Work the drills, or prop your phone up for live practice: a skeleton follows you, tracking 33 points in 3D, green where you're right, and a voice says what to fix. Then film the same shot again and see both sessions side by side.", cta: "Try live practice", to: "/practice", id: "how_practice", isNew: true },
+  { step: "03", icon: Activity, title: "Practise, then film again", desc: "Work the drills, or prop your phone up for live practice: a skeleton follows you, tracking 33 points in 3D, green where you're right, and a voice says what to fix, and the first 10 minutes are free. Then film the same shot again and see both sessions side by side.", cta: "Try live practice", to: "/practice", id: "how_practice", isNew: true },
 ];
 
 const FOOTER_COLS = [
@@ -74,7 +75,7 @@ const FAQS = [
   },
   {
     q: "Is Formanti free?",
-    a: "You can get started for free: new users get 2 free analyses. After that it is ₹49 per analysis, cheaper in bigger packs, and analyses never expire. There is no subscription. Live practice, equipment recommendations and training content are free. See our Pricing page for the packs.",
+    a: "You can get started for free: new users get 2 free analyses. After that it is ₹49 per analysis, cheaper in bigger packs, and analyses never expire. Analyses have no subscription. Live practice is free for your first 10 minutes with an account, then a pass from ₹200 for a week (one payment, nothing renews on its own). Equipment recommendations and training content are free. See our Pricing page for the packs.",
   },
   {
     q: "What happens to the video I upload?",
@@ -389,10 +390,14 @@ export default function LandingPage() {
           </div>
           <p className="mt-4 flex items-center gap-2 text-sm text-zinc-400">
             <ShieldCheck className="w-4 h-4 text-lime-400 shrink-0" strokeWidth={1.75} />
-            Live practice runs on your phone: no account, nothing uploaded.
+            Live practice runs on your phone and nothing is uploaded. Free for 10 minutes with an account.
           </p>
         </div>
       </section>
+
+      {/* ============ PRACTICE, SHOT BY SHOT ============
+          What live practice checks, says and drills for each shot, built from the engine's own data (lib/practiceBreakdown). */}
+      <PracticeBreakdownSection />
 
       {/* ============ FEATURE SHOWCASE — SECTION 2: what you get ============ */}
       {/* Moved to be the SECOND thing a visitor sees. The whole point of the
@@ -621,7 +626,7 @@ export default function LandingPage() {
               Analyze my first clip, free <ChevronRight className="w-5 h-5 ml-1" />
             </Button>
             <p className="mt-4 text-[15px] text-zinc-300">
-              or <Link to="/practice" data-cta="final_practice" className="inline-flex items-center min-h-11 text-lime-300 font-semibold underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200">try live practice, no account</Link>
+              or <Link to="/practice" data-cta="final_practice" className="inline-flex items-center min-h-11 text-lime-300 font-semibold underline underline-offset-4 decoration-lime-400/50 hover:text-lime-200">try 10 minutes of live practice, free</Link>
             </p>
             <div className="mt-6 max-w-sm mx-auto">
               <QuickSignupCTA source="home" />

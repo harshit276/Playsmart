@@ -169,3 +169,38 @@ def analysis_cost(mode: Literal["keyframes", "video", "universal", "premium"] = 
 def premium_unlocked_for(plan_key: str | None) -> bool:
     p = get_plan(plan_key or "free")
     return bool(p and p.get("premium_unlocked"))
+
+
+# ─── Live practice: free trial + passes ──────────────────────────────
+# Live practice runs on the player's phone and costs us nothing per use, so it is
+# sold as time: every account gets one free trial of PRACTICE_TRIAL_SECONDS of
+# camera time (counted across sessions, once per account), then a pass.
+# A pass is a ONE-TIME payment that opens practice for `days` days; buying again
+# while a pass is running adds the days on the end. (No auto-renewal yet: that
+# needs Razorpay Subscriptions and an e-mandate, see practice_access.py.)
+#
+# Prices are the founder's to change: edit here, nothing else reads them.
+#   price_inr  what India pays, and what the countries in PRACTICE_BASE_PRICE_COUNTRIES pay (charged in rupees)
+#   everyone else pays PRACTICE_INTL_MULTIPLIER x that: in rupees while international charging is off (their bank
+#   converts), or price_usd once Razorpay International Payments is approved and INTERNATIONAL_CHARGING is on.
+PRACTICE_TRIAL_SECONDS = 600
+PRACTICE_INTL_MULTIPLIER = 2
+PRACTICE_PLANS = [
+    {"key": "practice_week",  "label": "1 week",  "days": 7,   "price_inr": 200,  "price_usd": 5},
+    {"key": "practice_month", "label": "1 month", "days": 30,  "price_inr": 400,  "price_usd": 10, "highlight": True},
+    {"key": "practice_year",  "label": "1 year",  "days": 365, "price_inr": 3500, "price_usd": 80},
+]
+
+# Countries that pay the India price: the World Bank's low and lower-middle income groups (about FY2025), where a
+# doubled price would be out of reach. An unknown country is treated as India (see _is_india in server.py).
+# Two-letter ISO codes; add or remove freely.
+PRACTICE_BASE_PRICE_COUNTRIES = frozenset("""
+IN BD PK LK NP BT AF
+ID PH VN KH LA MM TL MN UZ KG
+EG MA TN DZ JO LB IR SY YE
+NG GH KE TZ UG ET RW BI CD CG CM CI SN BJ BF ML NE TD TG GN GW GM LR SL MR
+MG MW MZ ZM ZW AO LS SZ KM DJ ER SO SD SS CF ST CV
+HT HN NI BO
+PG SB VU WS KI FM
+UA
+""".split())

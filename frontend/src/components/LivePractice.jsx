@@ -16,6 +16,8 @@ import { prefetch, getVoicePref, setVoicePref } from "@/lib/coachVoice";
 import { useVoiceHealth, voiceNote } from "@/lib/useVoiceHealth";
 import { useLiveCamera } from "@/lib/useLiveCamera";
 import { track } from "@/lib/analytics";
+import { usePracticeMeter } from "@/lib/usePracticeMeter";
+import { fmtClock } from "@/lib/practiceAccess";
 import { deviceKind } from "@/lib/frameSource";
 import { verdictMs } from "@/lib/testHooks";
 import PracticeShell from "@/components/practice/PracticeShell";
@@ -64,7 +66,7 @@ function drawLimbs(ctx, limbs, s, lw) {
   ctx.restore();
 }
 
-export default function LivePractice({ ideal, shotName, shotKey = "", sport, hand: handProp = "right", facing: facingProp = "user", clipSrc = null, clipRate = 1, onExit }) {
+export default function LivePractice({ ideal, shotName, shotKey = "", sport, hand: handProp = "right", facing: facingProp = "user", clipSrc = null, clipRate = 1, onExit, session = null, onPaywall = null }) {
   const detectorRef = useRef(createSwingDetector());
   const ringRef = useRef([]); // recent frames {t, px, wl, vis, vw, vh}
   const bmpRef = useRef([]); // recent small pictures {t, bmp}
@@ -118,6 +120,18 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const cam = useLiveCamera({ clipSrc, clipRate, facing: facingProp, onFrame: (f) => onFrameRef.current?.(f), trackName: "practice", trackProps: { sport, shot: shotName } });
   const { videoRef, canvasRef, engineRef, phase, facing, flip, start, stop } = cam;
   useEffect(() => { facingRef.current = facing; }, [facing]);
+
+  // The free trial counts down while the camera is live; when it runs out the session ends and the paywall opens.
+  const trialWarnedRef = useRef(false);
+  const meter = usePracticeMeter({ session, running: phase === "live", sport, shot: shotKey, onExpire: () => { finish(); onPaywall?.("trial_over"); } });
+  useEffect(() => {
+    if (meter.onTrial && meter.left != null && meter.left <= 60 && meter.left > 0 && !trialWarnedRef.current) {
+      trialWarnedRef.current = true;
+      setNotice("Last minute of your free trial");
+      clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = setTimeout(() => setNotice(null), 5000);
+    }
+  }, [meter.onTrial, meter.left]);
 
   // ─── a swing ───
   // For most shots the moment of contact is the fastest-wrist moment (tPeak). For shots hit up high it is not:
@@ -344,7 +358,17 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     setSummaryOpen(true);
   };
 
-  const again = () => {
+  const again = async () => {
+    // a fresh session: the trial may have run out, or a pass just been bought
+    if (session) {
+      const r = await meter.restart();
+      if (!r.ok) {
+        if (r.code === "trial_over" || r.code === "pass_expired") onPaywall?.(r.code);
+        else setNotice(r.error || "Couldn't start. Try again.");
+        return;
+      }
+      trialWarnedRef.current = false;
+    }
     repsRef.current = []; setReps([]); setVerdict(null);
     for (const k of Object.keys(readingsRef.current)) readingsRef.current[k] = [];
     coachRef.current.reset(); coachKeyRef.current = ""; setCoachLine(null);
@@ -417,7 +441,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   return (
     <>
     <PracticeShell
-      top={<PracticeTopBar title={shotName} subtitle={sport?.replace(/_/g, " ")} onClose={phase === "live" ? finish : onExit} sound={sound} onToggleSound={toggleSound} onSettings={() => setSettingsOpen(true)} slow={hud.slow} />}
+      top={<PracticeTopBar title={shotName} subtitle={sport?.replace(/_/g, " ")} onClose={phase === "live" ? finish : onExit} sound={sound} onToggleSound={toggleSound} onSettings={() => setSettingsOpen(true)} slow={hud.slow} badge={meter.onTrial && meter.left != null ? `Free ${fmtClock(meter.left)}` : null} badgeWarn={meter.left != null && meter.left <= 60} />}
       bottom={(
         <div className="px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-zinc-950 space-y-2.5">
           <FormChips groups={[swingGroup, stanceGroup]} showValues={showValues} />

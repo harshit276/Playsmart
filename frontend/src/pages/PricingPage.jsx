@@ -11,6 +11,8 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import SEO from "@/components/SEO";
+import { PracticePlans } from "@/components/PracticePaywall";
+import { Activity } from "lucide-react";
 
 
 const PLAN_ICON = { free: Sparkles, starter: Zap, pro: Trophy, elite: Crown };
@@ -101,7 +103,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-zinc-950 py-8 sm:py-12">
       <SEO
         title="Pricing - AI Video Analysis for Badminton, Tennis, Cricket"
-        description="Pay-as-you-go AI sports video analysis. From ₹49 per analysis, with bulk discount packs. No subscription required."
+        description="Pay-as-you-go AI sports video analysis. From ₹49 per analysis, with bulk discount packs, and live practice passes from ₹200 a week after a free 10-minute trial."
         keywords="sports video analysis pricing, badminton coaching app, AI cricket analysis cost India"
         url="https://www.formanti.com/pricing"
       />
@@ -115,6 +117,25 @@ export default function PricingPage() {
             {analysisPriceLabel} per analysis. Buy a pack, use it whenever — analyses don't expire.
             Start with 2 free analyses on signup.
           </p>
+        </motion.div>
+
+        {/* Live practice: a free trial, then a one-time pass */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.05 }}
+          className="bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 mb-8" data-testid="practice-pricing">
+          <div className="flex items-start gap-4 mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-lime-400/10 border border-lime-400/30 flex items-center justify-center shrink-0">
+              <Activity className="w-6 h-6 text-lime-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wider text-lime-400 font-bold">Live practice</p>
+              <h2 className="font-heading font-bold text-xl text-white">10 minutes free, then a pass</h2>
+              <p className="text-[13px] text-zinc-400 mt-1">
+                Practise any shot as often as you like, with a voice coach and a drill for what you keep missing. Runs on your phone; your video isn't uploaded.
+                One payment, no auto-renewal. Buy again while a pass is running and the days are added on.
+              </p>
+            </div>
+          </div>
+          <PracticePlans source="pricing" />
         </motion.div>
 
         {/* Per-analysis cost summary — one flat price */}

@@ -55,6 +55,7 @@ export default function TermsPage() {
         <Section title="4. Tokens, Pricing &amp; Payments">
           <p><strong className="text-white">Tokens</strong> are the in-app credits used to run AI analyses and access certain paid features. Tokens can be purchased in packs, with prices displayed in Indian Rupees (INR) inclusive of applicable taxes at checkout.</p>
           <p>Payments are processed by our third-party payment partner, <strong className="text-white">Razorpay</strong>. We do not store your card, UPI, or bank details on our servers. By making a purchase you also agree to Razorpay's terms.</p>
+          <p><strong className="text-white">Live practice</strong> needs an account. Each account gets one free trial of 10 minutes of live practice, counted by our servers across sessions; after that, practice is open only while a <strong className="text-white">practice pass</strong> is running. A pass is a one-time payment for a fixed period, does not renew automatically, and adds its days to any pass already running.</p>
           <p>Tokens are credited to your account after successful payment confirmation. Tokens are non-transferable, hold no cash value, and are governed by our <Link to="/refund" className="text-lime-400 hover:text-lime-300">Refund Policy</Link> and <Link to="/cancellation" className="text-lime-400 hover:text-lime-300">Cancellation Policy</Link>.</p>
         </Section>
 
