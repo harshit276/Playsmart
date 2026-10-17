@@ -190,7 +190,7 @@ const ROUTES = {
     faqs: [
       ["Does shadow practice upload my video?", "No. The pose tracking runs on your phone, so your video stays on it."],
       ["Is shadow practice free?", "Your first 10 minutes are free with a free account. After that a pass opens it for a week, a month or a year. You pay once and nothing renews on its own."],
-      ["Which sports does it cover?", "Badminton, tennis, table tennis, pickleball and squash swings, and the deadlift. More lifts are coming."],
+      ["Which sports does it cover?", "Badminton, tennis, table tennis, pickleball and squash swings, and seven lifts: deadlift, squat, push-up, lunge, overhead press, bent-over row and Romanian deadlift."],
       ["Do I need a coach or any equipment?", "No. Prop your phone up two to three metres away with your whole body in view. The target ranges are guide values, not a coach's verdict."],
     ],
   },

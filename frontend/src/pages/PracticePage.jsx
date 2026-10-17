@@ -214,7 +214,7 @@ export default function PracticePage() {
 
         <ul className="mt-4 space-y-2 text-[13px] text-zinc-300">
           <li className="flex gap-2.5"><Smartphone className="w-4 h-4 shrink-0 mt-0.5 text-zinc-500" /> Prop the phone up 2 to 3 metres away, about waist height.</li>
-          <li className="flex gap-2.5"><Camera className="w-4 h-4 shrink-0 mt-0.5 text-zinc-500" /> {isLift ? "Stand side-on to the camera, whole body in view from head to feet." : "Turn so your hitting side faces the camera, whole body in view."}</li>
+          <li className="flex gap-2.5"><Camera className="w-4 h-4 shrink-0 mt-0.5 text-zinc-500" /> {isLift ? (lift?.setupTip || "Stand side-on to the camera, whole body in view from head to feet.") : "Turn so your hitting side faces the camera, whole body in view."}</li>
         </ul>
 
         <div className="mt-4 rounded-xl border border-zinc-800 px-3.5 py-2.5">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { liveDelegate } from "@/ai/livePose";
-import { LIFTS, measureLift, findDeadliftReps, gradeLiftRep, planLiftCorrection, liftCue, liftFaultsNow, viewLabel } from "@/ai/liftPose";
+import { LIFTS, measureLift, findLiftReps, liftPhaseNow, liftSignal, gradeLiftRep, planLiftCorrection, liftCue, liftFaultsNow, viewLabel } from "@/ai/liftPose";
+import { jointLabel } from "@/ai/exercises";
 import { createCoach } from "@/ai/liveCoach";
 import { correctLift } from "@/ai/liftCorrect";
 import { drawLiftFrame } from "@/ai/liftDraw";
@@ -30,7 +31,11 @@ import { fmtClock, fmtDate } from "@/lib/practiceAccess";
  * top the coach says what to fix, and the corrected pose is drawn in green. All on the device:
  * nothing is uploaded.
  *
- * Props: lift ("deadlift"), facing, clipSrc/clipRate (a same-site video instead of the camera), onExit().
+ * Works for the deadlift and for the data-driven exercises in ai/exercises (squat, push-up, lunge, overhead press,
+ * row, Romanian deadlift): the rep is found from one joint angle (the "signal"), and "setup" / "lockout" are the
+ * low and high ends of it, with on-screen names from the exercise's own `labels`.
+ *
+ * Props: lift ("deadlift" | "squat" | ...), facing, clipSrc/clipRate (a same-site video instead of the camera), onExit().
  */
 
 const median = (a) => { const s = a.filter((v) => v != null).sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : null; };
@@ -44,8 +49,8 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   const picsRef = useRef([]); // {t, url, vw}
   const picAtRef = useRef(0);
   const fwdRef = useRef(null);
-  const readingsRef = useRef({ hip: [], knee: [], trunk: [] });
-  const histRef = useRef([]); // {t, hip, trunk} last ~0.6 s, to tell holding still from moving
+  const readingsRef = useRef({ hip: [], knee: [], kneeMin: [], trunk: [], elbow: [], wristUp: [] });
+  const histRef = useRef([]); // {t, sig, trunk} last ~0.6 s, to tell holding still from moving
   const viewsRef = useRef([]);
   const inFrameSinceRef = useRef(0);
   const nullRunRef = useRef(0);
@@ -91,7 +96,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
 
     // a small picture of each key moment with the skeleton (and the fix, where there is one) drawn on
     const pictures = {};
-    for (const [ph, t] of [["setup", r.tPull - 0.3], ["lockout", r.tLock]]) {
+    for (const [ph, t] of [["setup", L.generic ? r.tSetup : r.tPull - 0.3], ["lockout", r.tLock]]) {
       try {
         const pic = picsRef.current.reduce((b, p) => (!b || Math.abs(p.t - t) < Math.abs(b.t - t) ? p : b), null);
         const fr = framesRef.current.reduce((b, p) => (!b || Math.abs(p.t - t) < Math.abs(b.t - t) ? p : b), null);
@@ -127,7 +132,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
       if (!grade.inBand && grade.cues.length) speakCue(grade.cues.map((c) => c.headline).join(". "), { priority: 2, minGapMs: 0 });
       else if (grade.inBand) speakCue(streak >= 3 ? `${streak} in a row` : "Good rep", { priority: 2, minGapMs: 0 });
     }
-  }, [lift]);
+  }, [lift, L.generic]);
 
   // ─── every camera frame ───
   const onFrame = useCallback((f) => {
@@ -153,14 +158,15 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     if (m.view != null) { viewsRef.current.push(m.view); if (viewsRef.current.length > 40) viewsRef.current.shift(); }
 
     // "in frame": hips, knees and trunk all measurable, both hips seen
-    const inFrame = m.hip != null && m.knee != null && m.trunk != null && f.vis[23] >= 0.5 && f.vis[24] >= 0.5;
+    const sigKey = liftSignal(lift);
+    const inFrame = m.hip != null && m.knee != null && m.trunk != null && m[sigKey] != null && f.vis[23] >= 0.5 && f.vis[24] >= 0.5;
     const nowMs = performance.now();
     if (inFrame) { if (!inFrameSinceRef.current) inFrameSinceRef.current = nowMs; } else inFrameSinceRef.current = 0;
     const armed = !!inFrameSinceRef.current && nowMs - inFrameSinceRef.current > 800;
 
     // history for rep finding, frames and pictures for the verdict
     if (m.ok && m.hip != null && m.trunkAbs != null) {
-      seriesRef.current.push({ t: f.t, hip: m.hip, knee: m.knee, trunk: m.trunk, trunkAbs: m.trunkAbs });
+      seriesRef.current.push({ t: f.t, hip: m.hip, knee: m.knee, kneeMin: m.kneeMin, elbow: m.elbow, wristUp: m.wristUp, trunk: m.trunk, trunkAbs: m.trunkAbs });
       while (seriesRef.current.length && seriesRef.current[0].t < f.t - HISTORY_S) seriesRef.current.shift();
     }
     framesRef.current.push({ t: f.t, px: f.px, wl: f.wl, vis: f.vis, vw: f.vw, vh: f.vh });
@@ -179,18 +185,19 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     }
 
     // smooth the readings over a few frames
-    for (const j of ["hip", "knee", "trunk"]) {
+    const smooth = {};
+    for (const j of Object.keys(readingsRef.current)) {
       const arr = readingsRef.current[j];
       if (m[j] != null) { arr.push(m[j]); if (arr.length > 5) arr.shift(); } else arr.length = 0;
+      smooth[j] = median(arr);
     }
-    const smooth = { hip: median(readingsRef.current.hip), knee: median(readingsRef.current.knee), trunk: median(readingsRef.current.trunk) };
-    histRef.current.push({ t: f.t, hip: smooth.hip, trunk: smooth.trunk });
+    histRef.current.push({ t: f.t, sig: smooth[sigKey], trunk: smooth.trunk });
     while (histRef.current.length && histRef.current[0].t < f.t - 0.6) histRef.current.shift();
     const span = (k) => { const v = histRef.current.map((h) => h[k]).filter((x) => x != null); return v.length ? Math.max(...v) - Math.min(...v) : 99; };
-    const holding = histRef.current.length >= 3 && span("hip") < 8 && span("trunk") < 8;
+    const holding = histRef.current.length >= 3 && span("sig") < 8 && span("trunk") < 8;
 
-    // which position are we judging right now?
-    const phaseNow = smooth.hip == null ? null : smooth.hip >= 140 ? "lockout" : smooth.hip <= 110 ? "setup" : null;
+    // which position are we judging right now? ("setup" = the low end of the rep, "lockout" = the high end)
+    const phaseNow = liftPhaseNow(lift, smooth);
 
     // continuous coaching: while you hold the setup or the top, say what to fix (or that it's good)
     const faultsNow = armed && holding && phaseNow ? liftFaultsNow(lift, phaseNow, smooth) : null;
@@ -202,7 +209,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     // reps: look every 0.4 s; a rep is graded once its lockout has held for 0.9 s
     if (armed && nowMs - lastCheckRef.current > 400) {
       lastCheckRef.current = nowMs;
-      const found = findDeadliftReps(seriesRef.current);
+      const found = findLiftReps(lift, seriesRef.current);
       for (const r of found) {
         if (f.t - r.tLock >= 0.9 && r.tLock - lastRepTRef.current > 1.5) {
           lastRepTRef.current = r.tLock;
@@ -240,7 +247,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
 
   const reset = () => {
     seriesRef.current = []; framesRef.current = []; picsRef.current = [];
-    readingsRef.current = { hip: [], knee: [], trunk: [] }; histRef.current = [];
+    readingsRef.current = { hip: [], knee: [], kneeMin: [], trunk: [], elbow: [], wristUp: [] }; histRef.current = [];
     lastRepTRef.current = -Infinity; inFrameSinceRef.current = 0;
     coachRef.current.reset(); coachKeyRef.current = ""; setCoachLine(null);
   };
@@ -269,16 +276,15 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   // ─── what's on screen ───
   const good = reps.filter((r) => r.inBand).length;
   const last = reps[reps.length - 1] || null;
-  const num = (v) => (v == null ? null : `${Math.round(Math.abs(v))}°`);
+  const phaseLabel = { setup: L.labels?.setup || "Setup", lockout: L.labels?.lockout || "Top" };
+  const jointName = (j) => (L.generic ? jointLabel(L, j) : { hip: "Hips", knee: "Knees", trunk: "Back" }[j] || j);
+  const num = (j, v) => (v == null ? null : L[hud.phase || "setup"]?.[j]?.unit ? `${v.toFixed(1)}×` : `${Math.round(Math.abs(v))}°`);
   const faultKeys = new Set(hud.armed && hud.phase ? liftFaultsNow(lift, hud.phase, hud.vals).map((f) => f.key) : []);
   const nowState = (j) => (!hud.armed || !hud.phase || hud.vals?.[j] == null ? "na" : faultKeys.has(`${hud.phase}.${j}`) ? "off" : "ok");
+  const nowJoints = Object.keys(L[hud.phase || "setup"] || {});
   const nowGroup = {
-    label: hud.phase === "setup" ? "Setup now" : hud.phase === "lockout" ? "Top now" : "Position",
-    items: [
-      { key: "hip", label: "Hips", state: nowState("hip"), detail: num(hud.vals?.hip) },
-      { key: "knee", label: "Knees", state: nowState("knee"), detail: num(hud.vals?.knee) },
-      { key: "trunk", label: "Back", state: nowState("trunk"), detail: num(hud.vals?.trunk) },
-    ],
+    label: hud.phase ? `${phaseLabel[hud.phase]} now` : "Position",
+    items: nowJoints.map((j) => ({ key: j, label: jointName(j), state: nowState(j), detail: num(j, hud.vals?.[j]) })),
   };
   const phaseState = (p) => {
     if (!last) return "na";
@@ -288,19 +294,20 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
   const lastGroup = {
     label: "Last rep",
     items: [
-      { key: "setup", label: "Setup", state: phaseState("setup") },
-      { key: "top", label: "Top", state: phaseState("lockout") },
+      { key: "setup", label: phaseLabel.setup, state: phaseState("setup") },
+      { key: "top", label: phaseLabel.lockout, state: phaseState("lockout") },
+      ...(last && last.grade.items.some((i) => i.phase === "between") ? [{ key: "swing", label: "Torso", state: phaseState("between") }] : []),
       ...(last && last.grade.faults.some((f) => f.phase === "pull") ? [{ key: "pull", label: "Pull", state: "off" }] : []),
     ],
   };
 
   const tip = !hud.inFrame ? "Step back so you're in view from head to feet, side-on to the camera"
     : !hud.armed ? "Hold still for a moment…"
-    : reps.length === 0 && !coachLine ? (hud.view === "head-on" ? "Turn side-on to the camera for the most accurate angles" : "Hold your setup or the top and we'll coach you. Do a rep and we'll check it.") : null;
+    : reps.length === 0 && !coachLine ? (hud.view === "head-on" ? "Turn side-on to the camera for the most accurate angles" : L.generic ? "Do a rep and we'll check it" : "Hold your setup or the top and we'll coach you. Do a rep and we'll check it.") : null;
   const banner = coachLine && !verdict ? { kind: coachLine.kind, text: coachLine.text } : tip && !verdict ? { kind: "info", text: tip } : null;
 
   const verdictText = verdict && (verdict.inBand
-    ? { headline: "Setup and top in range", detail: null }
+    ? { headline: `${phaseLabel.setup} and ${phaseLabel.lockout.toLowerCase()} in range`, detail: null }
     : { headline: verdict.grade.cues[0]?.headline || "Close: check the numbers", detail: verdict.grade.cues[1]?.headline || null });
 
   // the summary: the most common leg fault and the most common back fault
@@ -311,7 +318,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
       counts[k] = counts[k] || { n: 0, f };
       counts[k].n++; counts[k].f = f;
     }
-    const isBack = (f) => f.joint === "trunk" || f.joint === "hips";
+    const isBack = (f) => f.joint === "trunk" || f.joint === "hips" || f.joint === "swing";
     const top = (back) => Object.values(counts).filter((c) => isBack(c.f) === back).sort((a, b) => b.n - a.n)[0];
     return [top(false), top(true)].filter(Boolean).sort((a, b) => b.n - a.n).map((c) => ({
       count: c.n,
