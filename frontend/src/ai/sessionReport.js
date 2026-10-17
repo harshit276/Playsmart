@@ -35,6 +35,8 @@ const CHECK_LABEL = (overhead) => ({
   prep: "Elbow lead",
   speed: "Swing speed",
   body: "Body position",
+  contact: "Contact point",
+  backswing: "Backswing",
 });
 
 /** Longest run of in-range swings: { len, from, to } (swing numbers). */
@@ -83,7 +85,7 @@ export function buildReport({ reps, durationSec = null }) {
 
   // check by check
   const checks = [];
-  for (const key of ["shoulder", "elbow", "prep", "speed", "body"]) {
+  for (const key of ["shoulder", "elbow", "prep", "speed", "contact", "backswing", "body"]) {
     const ok = reps.filter((r) => r.chips?.[key] === "ok").length;
     const off = reps.filter((r) => r.chips?.[key] === "off").length;
     if (ok + off === 0) continue;
@@ -128,6 +130,17 @@ export function buildReport({ reps, durationSec = null }) {
   const notes = [];
   if (speed.tired) notes.push({ key: "tired", text: `Your swing speed dropped late in the session (${speed.first.toFixed(1)} to ${speed.last.toFixed(1)} m/s). Rest between sets, or shorten the set.` });
   if (jumps && jumps.late >= 2) notes.push({ key: "jumplate", text: `On ${jumps.late} swings you hit on the way down. Jump a touch earlier so you meet it at the top.` });
+  // contact height varied a lot from swing to swing (shots judged by where the hand is at contact)
+  const heights = reps.map((r) => r.feat && r.feat.height).filter(Number.isFinite);
+  if (heights.length >= 6) {
+    const spread = Math.max(...heights) - Math.min(...heights);
+    if (spread > 1.1) notes.push({ key: "heightvar", text: "Your contact height varied a lot from swing to swing. Aim to meet the ball at the same height each time: a repeatable contact point is what makes a stroke reliable." });
+  }
+  // the player was facing the camera on most swings, so contact point and backswing could not be judged
+  const ruled = reps.filter((r) => r.ruled);
+  if (ruled.length >= 4 && ruled.filter((r) => r.feat && r.feat.sideOn === false).length / ruled.length >= 0.6) {
+    notes.push({ key: "sideon", text: "You were facing the camera on most swings, so how far in front you hit and how big your backswing was could not be checked. Film from the side to include them." });
+  }
   let calibration = null;
   if (!validated && total >= REPORT.minForConclusions) {
     calibration = rate / 100 <= REPORT.guideLowRate

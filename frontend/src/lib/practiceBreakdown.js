@@ -17,6 +17,7 @@ import { LIFTS, liftCue, liftSay } from "@/ai/liftPose";
 import { jointLabel } from "@/ai/exercises";
 import { BANK } from "@/ai/coachPhrases";
 import { shortShotName } from "@/lib/practiceShots";
+import { strokeRule, strokeCue, heightWords, grossOnly } from "@/ai/strokeRules";
 
 const deg = (r) => (r.unit ? `at least ${r.min}× your torso above the shoulders` : `${r.min}–${r.max}°`);
 const spoken = (key) => (BANK[key] && BANK[key][0]) || null;
@@ -33,7 +34,9 @@ export function racquetBreakdown(sport, key) {
   const ideal = IDEAL_ANGLES[sport]?.[key];
   if (!ideal) return null;
   const overhead = usesReach(sport, key, ideal);
-  const w = overhead ? widen(ideal) : ideal;
+  // shots not hit up high are judged by where the hand is at contact (ai/strokeRules); their arm angles only count when far off
+  const rule = !overhead ? strokeRule(sport, key) : null;
+  const w = overhead ? widen(ideal) : rule ? grossOnly(ideal) : ideal;
   const rp = readyProfile(sport);
 
   const ready = {
@@ -50,10 +53,16 @@ export function racquetBreakdown(sport, key) {
 
   const checks = [];
   if (overhead) checks.push({ label: "Reach", range: "hand clearly above your shoulder", why: "an overhead shot is hit up high" });
-  if (w.shoulder) checks.push({ label: overhead ? "Arm height at the top" : "Arm height at contact", range: deg(w.shoulder), why: ideal.shoulder.why });
-  if (w.elbow) checks.push({ label: "Elbow", range: deg(w.elbow), why: ideal.elbow.why });
+  if (rule) {
+    if (rule.front) checks.push({ label: "Contact in front", range: "hand clearly in front of your shoulder", why: "meet it in front of you, not beside or behind" });
+    if (rule.height) checks.push({ label: "Contact height", range: heightWords(rule.height), why: "the height this shot is usually hit at" });
+    if (rule.back) checks.push({ label: "Backswing", range: "short and compact", why: "less swing back means more control on this shot" });
+    if (rule.kneeMax) checks.push({ label: "Knee bend", range: `bent: under ${rule.kneeMax}°`, why: "get low with your legs, not your back" });
+  }
+  if (w.shoulder) checks.push({ label: overhead ? "Arm height at the top" : rule ? "Arm height (only if far off)" : "Arm height at contact", range: deg(w.shoulder), why: ideal.shoulder.why });
+  if (w.elbow) checks.push({ label: rule ? "Elbow (only if far off)" : "Elbow", range: deg(w.elbow), why: ideal.elbow.why });
   if (overhead) checks.push({ label: "Elbow lead", range: "elbow up before you swing", why: "lead with the elbow, then throw" });
-  if (ideal.knee) checks.push({ label: "Knee bend", range: deg(ideal.knee), why: ideal.knee.why });
+  if (ideal.knee && !rule?.kneeMax) checks.push({ label: "Knee bend", range: deg(ideal.knee), why: ideal.knee.why });
   if (overhead) checks.push({ label: "Speed", range: "against your own other swings", why: "power comes from a quick whip, not a push" });
   else checks.push({ label: "Body at contact", range: "legs not locked, no leaning back", why: "a stable base to hit from" });
   const swing = {
@@ -84,6 +93,18 @@ export function racquetBreakdown(sport, key) {
     drills.push({ id: "speed", label: "A slow swing", headline: SPEED_CUE.headline, say: spoken("fix.speed.1"), drill: SPEED_CUE.drill });
     addArm("knee");
   } else {
+    if (rule) {
+      const addRule = (id, label, k, low, fixKey) => {
+        const c = strokeCue(k, low, rule);
+        if (c) drills.push({ id, label, headline: c.headline, say: spoken(fixKey), drill: c.drill });
+      };
+      if (rule.front) addRule("contact.front", "Hitting it too close to you", "contact.front", true, "fix.contact.front.low.1");
+      if (rule.height) {
+        addRule("contact.height.high", "Hitting it too high", "contact.height", false, "fix.contact.height.high.1");
+        addRule("contact.height.low", "Hitting it too low", "contact.height", true, "fix.contact.height.low.1");
+      }
+      if (rule.back) addRule("backswing", "Too big a backswing", "backswing", false, "fix.backswing.high.1");
+    }
     addArm("shoulder");
     addArm("elbow");
     addArm("knee");
@@ -95,7 +116,8 @@ export function racquetBreakdown(sport, key) {
   stance({ knee: rp.knee.max + 30 }, "stance.knee", "Legs too straight in your stance", "ready.knee.high");
   stance({ trunk: rp.trunk.max + 30 }, "stance.trunk", "Hunched over in your stance", "ready.trunk.high");
 
-  return { kind: "racquet", sport, key, name: shortShotName(ideal.label, key), overhead, ready, swing, drills };
+  const note = rule ? "Guide values: where the hand should be at contact comes from coaching rules (" + rule.source + ") and has not yet been checked against real players. Contact point and backswing need you side-on to the camera." : null;
+  return { kind: "racquet", sport, key, name: shortShotName(ideal.label, key), overhead, ready, swing, drills, note };
 }
 
 /** The lift version: the low and the high end of the rep, then the same drills idea. Any lift, from its own config. */

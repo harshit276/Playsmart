@@ -97,6 +97,19 @@ export const BANK = {
   "fix.body.trunk.high.2": ["Chest up.", "More upright.", "Lift up."],
   "fix.body.trunk.high.3": ["You keep folding over. Slow shadow swings, chest up, back long."],
 
+  "fix.contact.front.low.1": ["Meet it further out in front.", "Reach out and hit it in front of you.", "Too close to your body. Get it out in front."],
+  "fix.contact.front.low.2": ["Further out front.", "Hit it in front.", "Reach for it."],
+  "fix.contact.front.low.3": ["Same thing again. Slow shadow swings, freezing at contact with your hand well in front of your shoulder.", "Let's fix the contact point. Shadow slowly and freeze with your hand out in front, then swing for real."],
+  "fix.contact.height.high.1": ["Let it drop. Meet it lower.", "You're hitting it too high. Get lower to it.", "Bend your knees and meet it lower."],
+  "fix.contact.height.high.2": ["Drop it lower.", "Let it come down.", "Meet it lower."],
+  "fix.contact.height.high.3": ["You keep hitting it too high. Slow shadow swings, bending your knees so your hand meets it at the right height.", "Let's drop the contact point. Knees down, and freeze at contact at the right height."],
+  "fix.contact.height.low.1": ["Take it a bit higher.", "You're hitting it too low. Meet it higher.", "Get your hand up to meet it."],
+  "fix.contact.height.low.2": ["Higher.", "Take it higher.", "Hand up."],
+  "fix.contact.height.low.3": ["You keep hitting it too low. Slow shadow swings, freezing at contact with your hand at the right height.", "Let's raise the contact point. Freeze at contact at the right height, then swing for real."],
+  "fix.backswing.high.1": ["Shorten the backswing.", "Keep it compact. Less backswing.", "Too big a swing back. Keep it short."],
+  "fix.backswing.high.2": ["Shorter.", "Compact.", "Less backswing."],
+  "fix.backswing.high.3": ["Your backswing keeps getting too big. Shadow with a wall behind you that your racket can't touch.", "Let's tighten it up. Short, compact swings, never past your shoulder line."],
+
   // ── between swings, while holding the ready stance (ai/liveCoach). Line 0 is the on-screen wording ──
   "ready.knee.low": ["Stand a little taller", "Come up a touch.", "Not so low. Stand up a bit."],
   "ready.knee.high": ["Bend your knees", "Get lower. Soft knees.", "Sink down a bit. Bend the knees."],
@@ -141,7 +154,9 @@ export function fixKeyFor(fault) {
   const k = fault?.key;
   if (!k) return null;
   if (k === "reach" || k === "prep" || k === "speed") return `fix.${k}`;
-  if (["shoulder", "elbow", "knee", "body.knee", "body.trunk"].includes(k)) return `fix.${k}.${fault.low ? "low" : "high"}`;
+  if (["shoulder", "elbow", "knee", "body.knee", "body.trunk", "contact.height"].includes(k)) return `fix.${k}.${fault.low ? "low" : "high"}`;
+  if (k === "contact.front") return "fix.contact.front.low";
+  if (k === "backswing") return "fix.backswing.high";
   return null;
 }
 
