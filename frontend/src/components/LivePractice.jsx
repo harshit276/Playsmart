@@ -8,7 +8,11 @@ import { correctLift } from "@/ai/liftCorrect";
 import { drawLiftFrame } from "@/ai/liftDraw";
 import { fixCue } from "@/ai/fixCues";
 import { createCoach } from "@/ai/liveCoach";
-import { speakCue, cancelCue, speakTest, deliverCue } from "@/lib/speakCue";
+import { createCoachPolicy } from "@/ai/coachPolicy";
+import { jumpOf } from "@/ai/coachSignals";
+import { prefetchIds } from "@/ai/coachPhrases";
+import { cancelCue, speakTest, deliverCue, speakPhrase, cueBusy, tone } from "@/lib/speakCue";
+import { prefetch, getVoicePref, setVoicePref } from "@/lib/coachVoice";
 import { useVoiceHealth, voiceNote } from "@/lib/useVoiceHealth";
 import { useLiveCamera } from "@/lib/useLiveCamera";
 import { track } from "@/lib/analytics";
@@ -66,6 +70,8 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const bmpRef = useRef([]); // recent small pictures {t, bmp}
   const snapRef = useRef(null);
   const coachRef = useRef(createCoach({ holdMs: 1000, cooldownMs: 4000, repeatMs: 12000, goodText: "Good stance" }));
+  const policyRef = useRef(createCoachPolicy()); // what to say after a swing, and what it remembers of the session
+  const laterRef = useRef(null); // a line for when the player is back in the ready stance (set summary, tired arm)
   const coachKeyRef = useRef("");
   const fwdRef = useRef(null);
   const readingsRef = useRef({ shoulder: [], elbow: [], knee: [], bknee: [], btrunk: [], bstance: [] });
@@ -84,6 +90,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const [sound, setSound] = useState(true);
   const [hand, setHand] = useState(handProp);
   const [showValues, setShowValues] = useState(false);
+  const [voicePref, setVoicePrefState] = useState(getVoicePref);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [hud, setHud] = useState({ inFrame: false, armed: false, slow: false, stance: {} });
@@ -96,6 +103,12 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const judged = ["shoulder", "elbow", "knee"].filter((j) => ideal?.[j]);
   const armJudged = ["shoulder", "elbow"].filter((j) => ideal?.[j]);
   const toggleSound = () => { const next = !sound; setSound(next); if (next) speakTest(); }; // the tap proves whether sound works
+
+  const changeVoice = (v) => {
+    setVoicePref(v); setVoicePrefState(v); cancelCue();
+    if (v !== "device") prefetch(prefetchIds());
+    if (soundRef.current) speakTest(); // so the new voice is heard straight away
+  };
 
   useEffect(() => { soundRef.current = sound; if (!sound) cancelCue(); }, [sound]);
   useEffect(() => { handRef.current = hand; detectorRef.current.reset(); }, [hand]);
@@ -145,7 +158,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     const faults = [
       ...armFaults,
       ...kneeFaults,
-      ...bodyFaults("contact", bodyVals, { sport, shot: shotKey, skip: ideal?.knee ? ["knee"] : [] }).map((f) => ({ key: f.key, area: "body", cue: f.cue, severity: f.severity })),
+      ...bodyFaults("contact", bodyVals, { sport, shot: shotKey, skip: ideal?.knee ? ["knee"] : [] }).map((f) => ({ key: f.key, area: "body", cue: f.cue, severity: f.severity, low: f.value < f.range.min })),
     ].filter((f) => f.cue?.headline).sort((a, b) => b.severity - a.severity);
     const inBand = faults.length === 0;
     // Shots hit up high have more to say (reach, arm, elbow, prep, speed): the two worst. Otherwise one cue for the arm and one for the body.
@@ -190,7 +203,11 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
       } catch { picture = null; }
     }
 
-    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, bodyVals, faults, cues, chips, picture, peakSpeed, byReach: !!oj, overhead: oj ? oj.isOverhead : null, reachUp: oj ? oj.reach.up : null };
+    // what a coach would make of this swing, given the session so far (ai/coachPolicy): what to say, and a note for the screen
+    const lowOf = (f) => (f.low != null ? f.low : f.from != null && f.to != null ? f.to > f.from : undefined);
+    const jump = oj && oj.isOverhead ? jumpOf(ring, tAt) : null;
+    const said = policyRef.current.judge({ inBand, faults: faults.map((f) => ({ ...f, low: lowOf(f) })), peakSpeed, reachUp: oj ? oj.reach.up : null, overhead: oj ? oj.isOverhead : false, jump });
+    const rep = { n: repsRef.current.length + 1, t: tPeak, inBand, measured, bodyVals, faults, cues, chips, picture, peakSpeed, byReach: !!oj, overhead: oj ? oj.isOverhead : null, reachUp: oj ? oj.reach.up : null, jump, note: said.note, drill: said.drill };
     repsRef.current = [...repsRef.current, rep];
     setReps(repsRef.current);
     lastSwingAtRef.current = performance.now();
@@ -199,13 +216,13 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     setVerdict(rep);
     verdictTimerRef.current = setTimeout(() => setVerdict(null), verdictMs(VERDICT_MS));
 
+    // a set summary or "your arm is tiring" waits for the player to stop and take their stance again
+    laterRef.current = said.later ? { parts: said.later.parts, text: said.later.parts.map((p) => p.text).join(" "), at: performance.now() } : null;
     if (soundRef.current) {
-      const streak = (() => { let n = 0; for (let i = repsRef.current.length - 1; i >= 0 && repsRef.current[i].inBand; i--) n++; return n; })();
-      // the verdict on the swing is the most important thing said: it interrupts a routine cue
-      // say what was right as well as what to fix, so it doesn't sound like the same complaint every time
-      const praise = oj && oj.isOverhead && oj.checks.shoulder === "ok" ? "Good reach. " : "";
-      if (!inBand && cues.length) speakCue(praise + cues.map((c) => c.headline).join(". "), { priority: 2, minGapMs: 0 });
-      else if (inBand) speakCue(streak >= 3 ? `${streak} in a row` : oj ? "Good reach and arm" : "Good", { priority: 2, minGapMs: 0 });
+      // the verdict on the swing is the most important thing said: it interrupts a routine cue. One thing per swing, in
+      // wording not used lately; a swing with nothing new to say gets a soft tone instead of the same "good" again.
+      if (said.parts.length || said.fallbackText) speakPhrase(said.parts, { fallbackText: said.fallbackText, priority: 2, minGapMs: 0, tone: said.tone });
+      else if (said.tone) tone(said.tone);
     }
   }, [ideal, judged, armJudged, sport, shotKey, clipSrc]);
 
@@ -276,7 +293,18 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     const co = coachRef.current.update({ now: nowMs, active: armed && !moving && !quiet && measurable, faults: faultsNow });
     const lineKey = co.line ? `${co.line.kind}:${co.line.text}` : "";
     if (lineKey !== coachKeyRef.current) { coachKeyRef.current = lineKey; setCoachLine(co.line); }
-    deliverCue(co, soundRef.current);
+    deliverCue(co, soundRef.current, (t) => policyRef.current.varyReady(t));
+    const later = laterRef.current;
+    if (later) {
+      if (nowMs - later.at > 25000) laterRef.current = null;
+      else if (armed && !moving && nowMs - lastSwingAtRef.current > 3500 && !cueBusy()) {
+        laterRef.current = null;
+        if (soundRef.current) speakPhrase(later.parts, { priority: 1, minGapMs: 0 });
+        setNotice(later.text);
+        clearTimeout(noticeTimerRef.current);
+        noticeTimerRef.current = setTimeout(() => setNotice(null), 4500);
+      }
+    }
 
     // draw: the skeleton, and the corrected stance in green while you hold still outside the target
     if (ctx) {
@@ -302,6 +330,8 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   useEffect(() => { onFrameRef.current = onFrame; }, [onFrame]);
   useEffect(() => () => { clearTimeout(verdictTimerRef.current); clearTimeout(noticeTimerRef.current); for (const p of bmpRef.current) { try { p.bmp.close(); } catch { /* noop */ } } }, []);
   useEffect(() => { if (phase === "live" && !startedAtRef.current) startedAtRef.current = Date.now(); }, [phase]);
+  // once the camera is running (the pose model has the connection until then), warm the coach's recordings
+  useEffect(() => { if (phase === "live") prefetch(prefetchIds()); }, [phase]);
 
   const finish = () => {
     const list = repsRef.current;
@@ -318,6 +348,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     repsRef.current = []; setReps([]); setVerdict(null);
     for (const k of Object.keys(readingsRef.current)) readingsRef.current[k] = [];
     coachRef.current.reset(); coachKeyRef.current = ""; setCoachLine(null);
+    policyRef.current.reset(); laterRef.current = null;
     lastSwingAtRef.current = -1e9; startedAtRef.current = Date.now();
     setSummaryOpen(false);
     start(facing);
@@ -354,12 +385,12 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const tip = notice || (!hud.inFrame ? "Step back so your whole body is in view"
     : !hud.armed ? "Hold still for a moment…"
     : reps.length === 0 && !coachLine ? "Take your ready stance, then swing" : null);
-  const banner = coachLine && !verdict ? { kind: coachLine.kind, text: coachLine.text } : tip && !verdict ? { kind: "info", text: tip } : null;
+  const banner = verdict ? null : notice ? { kind: "info", text: notice } : coachLine ? { kind: coachLine.kind, text: coachLine.text } : tip ? { kind: "info", text: tip } : null;
 
   const speedWords = verdict?.peakSpeed != null ? `Swing speed ${verdict.peakSpeed.toFixed(1)} m/s` : null;
   const verdictText = verdict && (verdict.inBand
-    ? { headline: verdict.byReach ? "Good: reach, arm and elbow in range" : "In range: arm and body", detail: verdict.byReach ? speedWords : null }
-    : { headline: verdict.cues[0]?.headline || "Close: check the target", detail: verdict.cues[1]?.headline || (verdict.byReach && verdict.chips.shoulder === "ok" ? `Good reach. ${speedWords || ""}`.trim() : null) });
+    ? { headline: verdict.byReach ? "Good: reach, arm and elbow in range" : "In range: arm and body", detail: [verdict.note, verdict.byReach ? speedWords : null].filter(Boolean).join(" · ") || null }
+    : { headline: verdict.cues[0]?.headline || "Close: check the target", detail: verdict.drill || verdict.cues[1]?.headline || (verdict.byReach && verdict.chips.shoulder === "ok" ? `Good reach. ${speedWords || ""}`.trim() : null) });
 
   // the summary: what went wrong most often, up to three things (the same fault counts once, however many swings had it)
   const summaryCards = (() => {
@@ -407,6 +438,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
           hand={hand} onHand={setHand}
           canFlip={!clipSrc} onFlip={flip}
           sound={sound} onToggleSound={toggleSound}
+          voice={voicePref} onVoice={changeVoice}
           showValues={showValues} onShowValues={setShowValues}
           note={vnote}
         />

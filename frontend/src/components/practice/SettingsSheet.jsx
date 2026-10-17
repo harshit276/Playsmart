@@ -1,5 +1,6 @@
-import { Volume2, VolumeX, SwitchCamera, Hand, Eye } from "lucide-react";
+import { Volume2, VolumeX, SwitchCamera, Hand, Eye, Mic } from "lucide-react";
 import { cuesSupported } from "@/lib/speakCue";
+import { COACH_VOICES } from "@/lib/coachVoice";
 
 /**
  * Everything you don't need while practising, one tap away: racket hand, which camera, sound,
@@ -23,7 +24,7 @@ const Seg = ({ value, onChange, options }) => (
   </div>
 );
 
-export default function SettingsSheet({ open, onClose, hand, onHand, canFlip, onFlip, sound, onToggleSound, showValues, onShowValues, note }) {
+export default function SettingsSheet({ open, onClose, hand, onHand, canFlip, onFlip, sound, onToggleSound, showValues, onShowValues, note, voice, onVoice }) {
   if (!open) return null;
   return (
     <div className="absolute inset-0 z-30 flex items-end bg-black/60" onClick={onClose}>
@@ -34,6 +35,9 @@ export default function SettingsSheet({ open, onClose, hand, onHand, canFlip, on
         )}
         {cuesSupported() && (
           <Row icon={sound ? Volume2 : VolumeX} label="Voice coach"><Seg value={sound ? "on" : "off"} onChange={(v) => { if ((v === "on") !== sound) onToggleSound(); }} options={[["on", "On"], ["off", "Off"]]} /></Row>
+        )}
+        {cuesSupported() && onVoice && sound && (
+          <Row icon={Mic} label="Coach voice"><Seg value={voice} onChange={onVoice} options={COACH_VOICES} /></Row>
         )}
         <Row icon={Eye} label="Show angles"><Seg value={showValues ? "on" : "off"} onChange={(v) => onShowValues(v === "on")} options={[["on", "On"], ["off", "Off"]]} /></Row>
         {canFlip && (

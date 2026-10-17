@@ -10,6 +10,7 @@ import { readyProfile } from "@/ai/bodyCheck";
 import { usesReach, widen } from "@/ai/overheadSwing";
 import { PRACTICE_SPORTS, LIFT_SPORT, isLiftSport, liftShots, shotsFor, resolveShot, isPracticeSport } from "@/lib/practiceShots";
 import { unlockSpeech, cuesSupported } from "@/lib/speakCue";
+import { allowClips } from "@/lib/coachVoice";
 import { hasWebGL, autoGhostAllowed } from "@/lib/webgl";
 import { preloadLivePose } from "@/ai/livePose";
 
@@ -228,7 +229,7 @@ export default function PracticePage() {
       <div className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] md:bottom-0 z-50 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent px-4 pt-6 pb-3 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="max-w-md mx-auto">
           {!canRun && <p className="text-[12px] text-amber-200 mb-2">This browser can't run the live pose model (graphics acceleration is off). Try Chrome or Safari.</p>}
-          <button type="button" disabled={!ready || !canRun} onClick={() => { unlockSpeech(); setActive(true); }}
+          <button type="button" disabled={!ready || !canRun} onClick={() => { allowClips(!isLift); unlockSpeech(); setActive(true); }}
             className="w-full py-3.5 rounded-xl bg-lime-400 text-black font-bold text-base disabled:opacity-40">
             Start camera
           </button>
