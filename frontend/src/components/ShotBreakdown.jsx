@@ -110,7 +110,10 @@ export function ShotBreakdown({ sport, shotKey, layout = "stack", drillLimit = 4
           <Drills drills={bd.drills} limit={drillLimit} />
         </Step>
       </div>
-      <p className="mt-3 text-[12px] text-zinc-500 leading-snug">Guide ranges, not a coach's verdict. Practice checks your arm and body position, not whether the swing is the shot you picked.</p>
+      <p className="mt-3 text-[12px] text-zinc-500 leading-snug">
+        Guide ranges, not a coach's verdict. Practice checks your arm and body position, not whether the swing is the shot you picked.
+        {bd.note && <span className="block mt-1 text-amber-200/80">{bd.note}</span>}
+      </p>
     </div>
   );
 }

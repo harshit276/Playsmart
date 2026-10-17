@@ -14,10 +14,11 @@ import { fixCue } from "@/ai/fixCues";
 import { usesReach, widen, REACH_CUE, PREP_CUE, SPEED_CUE } from "@/ai/overheadSwing";
 import { readyProfile, bodyFaults } from "@/ai/bodyCheck";
 import { LIFTS, liftCue, liftSay } from "@/ai/liftPose";
+import { jointLabel } from "@/ai/exercises";
 import { BANK } from "@/ai/coachPhrases";
 import { shortShotName } from "@/lib/practiceShots";
 
-const deg = (r) => `${r.min}–${r.max}°`;
+const deg = (r) => (r.unit ? `at least ${r.min}× your torso above the shoulders` : `${r.min}–${r.max}°`);
 const spoken = (key) => (BANK[key] && BANK[key][0]) || null;
 const atTop = (cue) => ({ ...cue, headline: cue.headline.replace(/ at contact$/, " at the top of the swing") });
 
@@ -97,33 +98,51 @@ export function racquetBreakdown(sport, key) {
   return { kind: "racquet", sport, key, name: shortShotName(ideal.label, key), overhead, ready, swing, drills };
 }
 
-/** The lift version: a setup and a lockout, then the same drills idea. */
+/** The lift version: the low and the high end of the rep, then the same drills idea. Any lift, from its own config. */
 export function liftBreakdown(key) {
   const L = LIFTS[key];
   if (!L) return null;
+  const old = !L.generic; // the deadlift keeps its own wording
   const JL = { hip: "Hips", knee: "Knees", trunk: "Back angle" };
-  const moment = (phase, title, sub, say) => ({
+  const name = (j) => (old ? JL[j] : jointLabel(L, j));
+  const lower = (s) => String(s).toLowerCase();
+  const sayFor = (phase, joints) => {
+    const out = [];
+    for (const j of joints) {
+      const r = L[phase][j];
+      for (const v of [r.min - 20, r.max + 20]) { const s = liftSay(key, phase, j, v, r); if (s && !out.includes(s)) out.push(s); }
+    }
+    return out.slice(0, 2);
+  };
+  const moment = (phase, title, sub) => ({
     title, sub,
-    checks: ["hip", "knee", "trunk"].map((j) => ({ label: JL[j], range: deg(L[phase][j]), why: L[phase][j].why })),
-    say, show: "Wherever you are off, the correct position appears in green on your own skeleton.",
+    checks: Object.keys(L[phase]).map((j) => ({ label: name(j), range: deg(L[phase][j]), why: L[phase][j].why })),
+    say: sayFor(phase, Object.keys(L[phase])),
+    show: "Wherever you are off, the correct position appears in green on your own skeleton.",
   });
-  const setup = moment("setup", "Your setup", "Where the bar leaves the floor. Hold the position and the coach talks you into it.", ["Chest up", "More knee bend"]);
-  const lockout = moment("lockout", "Your lockout", "The top of every rep, judged the same way, plus a check that your chest rises with your hips on the pull.", ["Drive your hips through", "Lock your knees"]);
+  const setup = old
+    ? moment("setup", "Your setup", "Where the bar leaves the floor. Hold the position and the coach talks you into it.")
+    : moment("setup", `Your ${lower(L.labels.setup)}`, "The low point of every rep, judged against the guide ranges.");
+  const lockout = old
+    ? moment("lockout", "Your lockout", "The top of every rep, judged the same way, plus a check that your chest rises with your hips on the pull.")
+    : moment("lockout", `Your ${lower(L.labels.lockout)}`, "The top of every rep, judged the same way." + (L.consistency && L.consistency.length ? " Plus a check that your torso stays still between the two." : ""));
   const drills = [];
   for (const phase of ["setup", "lockout"]) {
-    for (const j of ["hip", "knee", "trunk"]) {
+    for (const j of Object.keys(L[phase])) {
       const r = L[phase][j];
       for (const low of [true, false]) {
         const v = low ? r.min - 20 : r.max + 20;
         const cue = liftCue(key, phase, j, v, r);
         if (!cue) continue;
         // some joints have a single cue whichever way you are off: list those once
-        if (!low && drills.some((d) => d.headline === cue.headline)) continue;
+        if (drills.some((d) => d.headline === cue.headline)) continue;
         drills.push({ id: `${phase}.${j}.${low ? "low" : "high"}`, label: cue.headline, headline: cue.headline, say: liftSay(key, phase, j, v, r), drill: cue.drill });
       }
     }
   }
-  const pull = liftCue(key, "pull", "hips", null, null);
+  const between = L.cues && L.cues["between.swing"];
+  if (between) drills.push({ id: "between.swing", label: between.headline, headline: between.headline, say: between.say || null, drill: between.drill });
+  const pull = old ? liftCue(key, "pull", "hips", null, null) : null;
   if (pull) drills.push({ id: "pull", label: pull.headline, headline: pull.headline, say: null, drill: pull.drill });
-  return { kind: "lift", sport: "strength", key, name: L.label, overhead: false, ready: setup, swing: lockout, drills };
+  return { kind: "lift", sport: "strength", key, name: L.label, overhead: false, ready: setup, swing: lockout, drills, note: old ? null : "New: ranges from standard coaching references, not yet checked against real lifters." };
 }

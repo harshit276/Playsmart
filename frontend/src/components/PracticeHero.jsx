@@ -88,9 +88,9 @@ export function PracticeInfo() {
             </p>
           </div>
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
-            <p className="font-bold">Deadlift</p>
+            <p className="font-bold">Lifting</p>
             <p className="text-[13px] text-zinc-400 mt-1 leading-snug">
-              Hips, knees and back angle at the setup and the lockout of every rep, with a cue like "chest up" while you hold. More lifts are on the way.
+              Deadlift, squat, push-up, lunge, overhead press, bent-over row and Romanian deadlift. Every rep is counted and checked at the bottom and the top (depth, back angle, elbows, lockout), with a cue and a drill for what you keep missing. The ranges for the newer lifts are guide values from standard coaching references.
             </p>
           </div>
         </div>

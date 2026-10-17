@@ -23,8 +23,10 @@
  *     not a spine. We measure trunk angle, not lumbar curve.
  */
 import { L_SH, R_SH, L_HIP, R_HIP, L_KN, R_KN, L_AN, R_AN, sub, dot, norm, angleDeg } from "./correctPose.js";
+import { EXERCISES, genericCue, genericSay, findGenericReps } from "./exercises.js";
 
 const L_HEEL = 29, R_HEEL = 30, L_TOE = 31, R_TOE = 32;
+const L_EL = 13, R_EL = 14, L_WR = 15, R_WR = 16;
 const VIS_MIN = 0.5;
 const UP = [0, -1, 0]; // world y points down
 
@@ -53,7 +55,9 @@ export const LIFTS = {
       trunk: { min: -12, max: 12, ideal: 2, why: "tall, shoulders over hips, no lean back" },
     },
   },
+  ...EXERCISES, // squat, push-up, lunge, overhead press, row, Romanian deadlift: see ai/exercises.js
 };
+const generic = (lift) => (LIFTS[lift] && LIFTS[lift].generic ? LIFTS[lift] : null);
 
 export const isLiftKey = (k) => !!LIFTS[k];
 
@@ -80,6 +84,7 @@ const amount = (d) => (Math.abs(d) >= 25 ? "a lot " : Math.abs(d) >= 10 ? "" : "
  * feel like, and a practice cue. Same shape as fixCues.fixCue.
  */
 export function liftCue(lift, phase, joint, measured, range) {
+  if (generic(lift)) return genericCue(generic(lift), phase, joint, measured, range);
   const rangeless = joint === "hips"; // the pull check compares two phases, so it has no angle range
   if (!rangeless && (!Number.isFinite(measured) || !range)) return null;
   const low = range ? measured < range.min : false;
@@ -141,6 +146,7 @@ export function liftCue(lift, phase, joint, measured, range) {
  * the lifter moves.
  */
 export function liftSay(lift, phase, joint, measured, range) {
+  if (generic(lift)) return genericSay(generic(lift), phase, joint, measured, range);
   const low = range ? measured < range.min : false;
   switch (`${lift}.${phase}.${joint}`) {
     case "deadlift.setup.hip": return low ? "Hips up a little" : "Hips down a little";
@@ -160,7 +166,7 @@ export function liftSay(lift, phase, joint, measured, range) {
 export function liftFaultsNow(lift, phase, vals) {
   const L = LIFTS[lift];
   const out = [];
-  for (const j of ["hip", "knee", "trunk"]) {
+  for (const j of Object.keys(L?.[phase] || {})) {
     const r = L?.[phase]?.[j];
     const v = vals?.[j];
     if (!r || v == null) continue;
@@ -222,10 +228,24 @@ export function measureLift(wl, vis, fwd = null) {
     }
   }
   const hip = mean(hips), knee = mean(knees);
+  // for the other exercises: elbow angle, the lower of the two knees (the front knee of a lunge), and how far the
+  // hands are above the shoulders in torso lengths (a press lockout)
+  const elbows = [];
+  for (const [SH, EL, WR] of [[L_SH, L_EL, L_WR], [R_SH, R_EL, R_WR]]) {
+    if (Math.min(vis[SH], vis[EL], vis[WR]) >= VIS_MIN) elbows.push(angleDeg(wl[SH], wl[EL], wl[WR]));
+  }
+  const elbow = mean(elbows);
+  const kneeMin = knees.length ? Math.min(...knees) : null;
+  let wristUp = null;
+  const wrs = [L_WR, R_WR].filter((w) => vis[w] >= VIS_MIN);
+  if (wrs.length && trunkOk) {
+    const tl = norm(sub(shMid, hpMid));
+    if (tl > 0.05) wristUp = (mean(wrs.map((w) => -wl[w][1])) - -shMid[1]) / tl; // world y points down
+  }
   const f = fwd || fwdFrame;
   // 0 = filmed side-on, 90 = head-on: the angle between the facing direction and the camera's depth axis.
   const view = f ? deg(Math.atan2(Math.abs(f[2]), Math.abs(f[0]))) : null;
-  return { ok: hip != null || knee != null || trunk != null, hip, knee, trunk, trunkAbs, signed, fwdFrame, view };
+  return { ok: hip != null || knee != null || trunk != null, hip, knee, kneeMin, elbow, wristUp, trunk, trunkAbs, signed, fwdFrame, view };
 }
 
 /** A whole-clip facing estimate: the median of the per-frame heel→toe directions. */
@@ -323,6 +343,25 @@ export function findDeadliftReps(frames, o = {}) {
   return reps;
 }
 
+/** Find the reps of any lift: the deadlift's own finder, or the generic one driven by the exercise's rep signal. */
+export function findLiftReps(lift, frames) {
+  const g = generic(lift);
+  return g ? findGenericReps(g, frames) : findDeadliftReps(frames);
+}
+
+/** Which position the lifter is in right now ("setup" = the low end, "lockout" = the high end), or null in between. */
+export function liftPhaseNow(lift, vals) {
+  const g = generic(lift);
+  if (g) {
+    const v = vals?.[g.signal];
+    return v == null ? null : v >= g.topAt ? "lockout" : v <= g.bottomAt ? "setup" : null;
+  }
+  return vals?.hip == null ? null : vals.hip >= 140 ? "lockout" : vals.hip <= 110 ? "setup" : null;
+}
+
+/** The measure that tells holding still from moving, and the one that decides the rep. */
+export const liftSignal = (lift) => (generic(lift) ? generic(lift).signal : "hip");
+
 // ─── grading ────────────────────────────────────────────────────────────
 /**
  * Grade one rep against the lift's ranges.
@@ -344,11 +383,16 @@ export function gradeLiftRep(lift, rep) {
     items.push({ phase, joint, value: v, range, ok, borderline: ok && miss > 0, miss, severity: miss / Math.max(10, (range.max - range.min) / 2) });
   };
   const sg = rep.signed !== false;
-  for (const j of ["hip", "knee", "trunk"]) judge("setup", j, rep.setup?.[j], sg);
-  for (const j of ["hip", "knee", "trunk"]) judge("lockout", j, rep.lockout?.[j], sg);
+  for (const j of Object.keys(L.setup)) judge("setup", j, rep.setup?.[j], sg);
+  for (const j of Object.keys(L.lockout)) judge("lockout", j, rep.lockout?.[j], sg);
+  // checks between the two positions (a row done with momentum swings the torso)
+  for (const c of L.consistency || []) {
+    const diff = rep.swing?.[c.joint];
+    if (diff != null && diff > c.maxDiff) items.push({ phase: "between", joint: c.key, value: diff, range: { min: 0, max: c.maxDiff, ideal: 0 }, ok: false, borderline: false, miss: diff - c.maxDiff, severity: Math.min(2, (diff - c.maxDiff) / 15 + 0.4) });
+  }
 
   const faults = items.filter((i) => !i.ok).sort((a, b) => b.severity - a.severity);
-  const area = (i) => (i.joint === "trunk" ? "trunk" : "legs");
+  const area = (i) => (i.joint === "trunk" || i.joint === "swing" ? "trunk" : i.joint === "elbow" || i.joint === "wristUp" ? "arms" : "legs");
   const cues = [];
   const used = new Set();
   for (const f of faults) {
@@ -373,13 +417,15 @@ export function planLiftCorrection(lift, phase, measured) {
   const L = LIFTS[lift];
   const delta = { knee: 0, trunk: 0 };
   const applied = [];
-  for (const j of ["knee", "trunk", "hip"]) {
+  for (const j of Object.keys(L[phase] || {})) {
     const r = L[phase]?.[j];
     const v = measured?.[j];
-    if (!r || v == null) continue;
+    if (!r || v == null || r.unit) continue;
     if ((v < r.min ? r.min - v : v > r.max ? v - r.max : 0) <= TOLERANCE_DEG) continue;
     applied.push({ joint: j, from: Math.round(v), to: r.ideal, deltaDeg: Math.round(r.ideal - v) });
-    if (j === "knee" || j === "trunk") delta[j] = r.ideal - v;
+    // only the knee and the back are redrawn on the picture (the front knee of a lunge counts as the knee)
+    if (j === "knee" || j === "kneeMin") delta.knee = r.ideal - v;
+    else if (j === "trunk") delta.trunk = r.ideal - v;
   }
   return { applied, delta };
 }
