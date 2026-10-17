@@ -3267,8 +3267,18 @@ def _practice_exempt(user: dict) -> Optional[str]:
     return None
 
 
+def _practice_intl(request: Request) -> bool:
+    """Does this visitor pay the international price (double)? Country comes from Vercel's edge header; India, an
+    unknown country and the low / lower-middle income countries pay the India price (pricing_config)."""
+    return _pa().is_intl(_request_country(request))
+
+
 def _practice_use_usd(request: Request) -> bool:
-    return bool(INTERNATIONAL_CHARGING and not _is_india(request))
+    return bool(INTERNATIONAL_CHARGING and _practice_intl(request))
+
+
+def _practice_plans_for(request: Request) -> list:
+    return _pa().plans_for(_practice_intl(request), _practice_use_usd(request))
 
 
 async def _practice_store():
@@ -3323,7 +3333,7 @@ async def practice_plans(request: Request):
     """The trial length and the passes on sale, priced for the visitor's country (same rule as the order)."""
     pa = _pa()
     return {"trial_seconds": pa.TRIAL_SECONDS, "paywall": PRACTICE_PAYWALL, "autorenew": False,
-            "plans": pa.plans_for(_practice_use_usd(request))}
+            "plans": _practice_plans_for(request)}
 
 
 @api_router.get("/practice/access")
@@ -3414,9 +3424,9 @@ async def razorpay_create_pass_order(req: CreatePassOrderRequest, request: Reque
         return {"order_id": order_id, "amount": int(plan["price_inr"] * 100), "currency": "INR",
                 "key_id": "demo", "provider": "razorpay", "demo_mode": True}
 
-    use_usd = _practice_use_usd(request) and plan.get("price_usd")
-    amount = plan["price_usd"] if use_usd else plan["price_inr"]
-    currency = "USD" if use_usd else "INR"
+    # charge exactly what the plan cards showed this visitor (same function, same country rule)
+    priced = next(p for p in _practice_plans_for(request) if p["key"] == plan["key"])
+    amount, currency = priced["price"], priced["currency"]
     payload = {"amount": int(round(amount * 100)), "currency": currency,
                "receipt": f"pp_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
                "notes": {"user_id": user["id"], "plan_key": plan["key"], "kind": "practice_pass", "days": str(plan["days"])}}
@@ -3442,7 +3452,7 @@ async def razorpay_create_pass_order(req: CreatePassOrderRequest, request: Reque
     if not order_id:
         raise HTTPException(status_code=502, detail="No order id from Razorpay")
     await _save({**base_row, "razorpay_order_id": order_id, "amount": amount, "currency": currency,
-                 "amount_inr": plan["price_inr"], "status": "created", "provider": "razorpay"})
+                 "amount_inr": priced["price_inr"], "tier": priced["tier"], "status": "created", "provider": "razorpay"})
     return {"order_id": order_id, "amount": data.get("amount"), "currency": currency, "key_id": RAZORPAY_KEY_ID,
             "provider": "razorpay", "name": "Formanti", "description": desc,
             "prefill_email": user.get("email") or "", "prefill_contact": user.get("phone") or ""}

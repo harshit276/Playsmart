@@ -75,7 +75,7 @@ const FAQS = [
   },
   {
     q: "Is Formanti free?",
-    a: "You can get started for free: new users get 2 free analyses. After that it is ₹49 per analysis, cheaper in bigger packs, and analyses never expire. Analyses have no subscription. Live practice is free for your first 10 minutes with an account, then a pass from ₹49 for a week (one payment, nothing renews on its own). Equipment recommendations and training content are free. See our Pricing page for the packs.",
+    a: "You can get started for free: new users get 2 free analyses. After that it is ₹49 per analysis, cheaper in bigger packs, and analyses never expire. Analyses have no subscription. Live practice is free for your first 10 minutes with an account, then a pass from ₹200 for a week (one payment, nothing renews on its own). Equipment recommendations and training content are free. See our Pricing page for the packs.",
   },
   {
     q: "What happens to the video I upload?",

@@ -81,14 +81,24 @@ def run(coro):
     return asyncio.run(coro)
 
 
-def test_plans():
+def test_plans_and_the_country_price_rule():
     ps = pa.plans_for()
     assert [p["key"] for p in ps] == ["practice_week", "practice_month", "practice_year"]
-    assert all(p["currency"] == "INR" and p["price"] == p["price_inr"] for p in ps)
+    assert [p["price"] for p in ps] == [200, 400, 3500] and all(p["currency"] == "INR" and p["tier"] == "base" for p in ps)
     assert ps[1]["highlight"] and not ps[0]["highlight"]
-    usd = pa.plans_for(use_usd=True)
-    assert all(p["currency"] == "USD" and p["price"] == p["price_usd"] for p in usd)
+    # international visitors pay double, in rupees while dollar charging is off...
+    intl = pa.plans_for(intl=True)
+    assert [p["price"] for p in intl] == [400, 800, 7000] and all(p["currency"] == "INR" and p["tier"] == "intl" for p in intl)
+    # ...and in dollars once it is on; use_usd means nothing for the India price
+    usd = pa.plans_for(intl=True, use_usd=True)
+    assert [p["price"] for p in usd] == [5, 10, 80] and all(p["currency"] == "USD" for p in usd)
+    assert [p["price"] for p in pa.plans_for(intl=False, use_usd=True)] == [200, 400, 3500]
     assert pa.get_plan("nope") is None
+    # who is international: India, unknown and the low / lower-middle income countries pay the India price
+    for c in ["IN", "in", "", None, "BD", "PK", "LK", "NP", "ID", "PH", "VN", "NG", "KE", "GH", "EG", "ET", "UA", "UZ"]:
+        assert not pa.is_intl(c), c
+    for c in ["US", "GB", "DE", "FR", "AE", "SG", "AU", "CA", "JP", "ZA", "BR", "MY", "TH", "SA", "CH"]:
+        assert pa.is_intl(c), c
 
 
 def test_compute_access_states():

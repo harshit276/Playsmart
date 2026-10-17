@@ -80,7 +80,7 @@ export function PracticePlans({ source, onPaid, className = "" }) {
   );
 }
 
-/** "Free for 10 minutes, then ₹49 a week, ₹149 a month or ₹999 a year": the same prices as the cards, in a sentence. */
+/** "Free for 10 minutes, then ₹200 a week, ₹400 a month or ₹3,500 a year": the same prices as the cards, in a sentence. */
 export function PracticePriceLine({ className = "" }) {
   const [d, setD] = useState(null);
   useEffect(() => { getPracticePlans().then(setD).catch(() => {}); }, []);

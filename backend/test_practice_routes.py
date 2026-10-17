@@ -31,7 +31,7 @@ TREE = ast.parse(SRC)
 
 WANT = {
     # practice block
-    "PRACTICE_PAYWALL", "PRACTICE_FREE_EMAILS", "_practice_indexed", "_pa", "_practice_exempt", "_practice_use_usd",
+    "PRACTICE_PAYWALL", "PRACTICE_FREE_EMAILS", "_practice_indexed", "_pa", "_practice_exempt", "_practice_intl", "_practice_use_usd", "_practice_plans_for",
     "_practice_store", "_practice_grant_for_order", "practice_plans", "practice_access_status", "PracticeSessionStart",
     "PracticeSessionBeat", "practice_session_start", "practice_session_beat", "CreatePassOrderRequest",
     "razorpay_create_pass_order", "AdminPracticeGrantRequest", "admin_practice_grant",
@@ -107,6 +107,7 @@ def build():
         logger=__import__("logging").getLogger("test"), get_current_user=get_current_user,
         _notify_admin_now=_notify_admin_now, _require_admin=lambda k: (_ for _ in ()).throw(HTTPException(403, "no")) if k != "adminkey" else None,
         _user_id_for_email=lambda e: "derived-" + e, _is_india=lambda r: (r.headers.get("x-vercel-ip-country") or "IN") == "IN",
+        _request_country=lambda r: (r.headers.get("x-vercel-ip-country") or "").strip().upper(),
         INTERNATIONAL_CHARGING=False, DEMO_ACCOUNT_EMAIL="demo@formanti.com", DEMO_USER_EMAIL="demo@formanti.com",
         DEMO_USER_ID="demo-user-id", RAZORPAY_KEY_ID="rzp_test_x", RAZORPAY_KEY_SECRET="secret123", RAZORPAY_DEMO=False,
         RAZORPAY_WEBHOOK_SECRET="whsecret", _credit_tokens=None, _get_balance=None, _credit_razorpay_order=None,
@@ -180,9 +181,9 @@ def test_pass_purchase_live_mode_verify_then_webhook_is_idempotent():
     c = TestClient(app)
     db.practice_access.rows.append({"user_id": "u1", "trial_seconds_used": 600})
     o = c.post("/api/payments/razorpay/create-pass-order", json={"plan_key": "practice_month"}, headers=auth("u1")).json()
-    assert o["order_id"].startswith("order_") and o["amount"] == 14900 and o["currency"] == "INR" and o["key_id"] == "rzp_test_x"
+    assert o["order_id"].startswith("order_") and o["amount"] == 40000 and o["currency"] == "INR" and o["key_id"] == "rzp_test_x"
     sent = calls[-1]["json"]
-    assert sent["amount"] == 14900 and sent["notes"]["plan_key"] == "practice_month" and sent["notes"]["kind"] == "practice_pass"
+    assert sent["amount"] == 40000 and sent["notes"]["plan_key"] == "practice_month" and sent["notes"]["kind"] == "practice_pass"
     assert calls[-1]["url"] == "https://api.razorpay.com/v1/orders" and calls[-1]["auth"] == ("rzp_test_x", "secret123")
     row = db.payment_orders.rows[0]
     assert row["plan_key"] == "practice_month" and row["days"] == 30 and row["user_id"] == "u1" and row["status"] == "created"
@@ -292,19 +293,39 @@ def test_unknown_plan_and_demo_mode():
     assert c.post("/api/payments/razorpay/verify", json={"order_id": o["order_id"]}, headers=auth("u1")).status_code == 400
 
 
-def test_usd_for_foreign_visitors_only_when_international_charging_is_on():
+def order_for(c, country, plan="practice_month"):
+    h = {**auth("u1")}
+    if country:
+        h["x-vercel-ip-country"] = country
+    return c.post("/api/payments/razorpay/create-pass-order", json={"plan_key": plan}, headers=h).json()
+
+
+def test_international_visitors_pay_double_and_cheap_countries_pay_the_india_price():
     app, ns, db, notices, calls = build()
     c = TestClient(app)
-    de = {"x-vercel-ip-country": "DE"}
-    p = c.get("/api/practice/plans", headers=de).json()["plans"]
-    assert p[1]["currency"] == "INR"  # off: rupees, whatever the country
+    prices = lambda country: [(p["price"], p["currency"]) for p in c.get("/api/practice/plans", headers={"x-vercel-ip-country": country} if country else {}).json()["plans"]]
+    # dollar charging is OFF (the state of the live account today): rupees everywhere, doubled for the expensive countries
+    assert prices("IN") == [(200, "INR"), (400, "INR"), (3500, "INR")]
+    assert prices("") == prices("IN")                      # unknown country = India
+    assert prices("NG") == prices("IN") and prices("BD") == prices("IN") and prices("PH") == prices("IN")  # cheap countries
+    assert prices("DE") == [(400, "INR"), (800, "INR"), (7000, "INR")]
+    assert prices("US") == prices("DE") and prices("ZA") == prices("DE")
+    # and the ORDER charges exactly what the cards showed
+    assert order_for(c, "IN")["amount"] == 40000 and order_for(c, "BD")["amount"] == 40000
+    o = order_for(c, "DE")
+    assert o["amount"] == 80000 and o["currency"] == "INR" and calls[-1]["json"]["amount"] == 80000
+    assert order_for(c, "DE", "practice_week")["amount"] == 40000 and order_for(c, "DE", "practice_year")["amount"] == 700000
+    # dollar charging ON: only the expensive countries are charged in dollars
     ns["INTERNATIONAL_CHARGING"] = True
-    p = c.get("/api/practice/plans", headers=de).json()["plans"]
-    assert p[1]["currency"] == "USD" and p[1]["price"] == 5
-    o = c.post("/api/payments/razorpay/create-pass-order", json={"plan_key": "practice_month"}, headers={**auth("u1"), **de}).json()
-    assert o["currency"] == "USD" and o["amount"] == 500
-    o = c.post("/api/payments/razorpay/create-pass-order", json={"plan_key": "practice_month"}, headers={**auth("u1"), "x-vercel-ip-country": "IN"}).json()
-    assert o["currency"] == "INR" and o["amount"] == 14900
+    assert prices("DE") == [(5, "USD"), (10, "USD"), (80, "USD")]
+    assert prices("NG") == prices("IN") == [(200, "INR"), (400, "INR"), (3500, "INR")]
+    o = order_for(c, "DE")
+    assert o["currency"] == "USD" and o["amount"] == 1000
+    o = order_for(c, "NG")
+    assert o["currency"] == "INR" and o["amount"] == 40000
+    # the stored order says what was charged
+    rows = [r for r in db.payment_orders.rows if r.get("tier") == "intl"]
+    assert rows and rows[-1]["currency"] == "USD" and rows[-1]["amount"] == 10
 
 
 def test_admin_grant():

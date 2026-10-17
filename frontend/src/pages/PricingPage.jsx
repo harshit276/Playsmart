@@ -103,7 +103,7 @@ export default function PricingPage() {
     <div className="min-h-screen bg-zinc-950 py-8 sm:py-12">
       <SEO
         title="Pricing - AI Video Analysis for Badminton, Tennis, Cricket"
-        description="Pay-as-you-go AI sports video analysis with bulk discount packs, and live practice passes from ₹49 a week after a free 10-minute trial."
+        description="Pay-as-you-go AI sports video analysis with bulk discount packs, and live practice passes from ₹200 a week after a free 10-minute trial."
         keywords="sports video analysis pricing, badminton coaching app, AI cricket analysis cost India"
         url="https://www.formanti.com/pricing"
       />

@@ -32,7 +32,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from pricing_config import PRACTICE_PLANS, PRACTICE_TRIAL_SECONDS
+from pricing_config import PRACTICE_BASE_PRICE_COUNTRIES, PRACTICE_INTL_MULTIPLIER, PRACTICE_PLANS, PRACTICE_TRIAL_SECONDS
 
 TRIAL_SECONDS = PRACTICE_TRIAL_SECONDS
 BEAT_MAX_GAP_S = 45          # one heartbeat counts for at most this much (they come every ~15 s)
@@ -57,17 +57,32 @@ def get_plan(key: str) -> Optional[dict]:
     return next((p for p in PRACTICE_PLANS if p["key"] == key), None)
 
 
-def plans_for(use_usd: bool = False) -> list:
-    """The plans as the pricing UI shows them. `price` is in `currency`; per_day is for the 'about Rs X a day' line."""
+def is_intl(country: str) -> bool:
+    """True when this visitor pays the international price (double). India, an unknown country and the low and
+    lower-middle income countries in PRACTICE_BASE_PRICE_COUNTRIES pay the India price."""
+    c = (country or "").strip().upper()
+    return c not in ("", "IN") and c not in PRACTICE_BASE_PRICE_COUNTRIES
+
+
+def plans_for(intl: bool = False, use_usd: bool = False) -> list:
+    """The plans as the pricing UI shows them, priced for one visitor.
+
+    intl:    pays the international price (PRACTICE_INTL_MULTIPLIER x the India price).
+    use_usd: charge in dollars (only for intl visitors, and only once international charging is on); otherwise
+             rupees, and an intl visitor's rupee price is the doubled one.
+    `price` is in `currency`; `price_inr` is what it costs in rupees for this visitor; per_day is for 'about X a day'.
+    """
     out = []
     for p in PRACTICE_PLANS:
-        usd = use_usd and p.get("price_usd")
-        price = p["price_usd"] if usd else p["price_inr"]
+        usd = bool(intl and use_usd and p.get("price_usd"))
+        inr = p["price_inr"] * (PRACTICE_INTL_MULTIPLIER if intl else 1)
+        price = p["price_usd"] if usd else inr
         out.append({
             "key": p["key"], "label": p["label"], "days": p["days"],
             "price": price, "currency": "USD" if usd else "INR",
-            "price_inr": p["price_inr"], "price_usd": p.get("price_usd"),
+            "price_inr": inr, "price_usd": p.get("price_usd") if intl else None,
             "per_day": round(price / p["days"], 2), "highlight": bool(p.get("highlight")),
+            "tier": "intl" if intl else "base",
         })
     return out
 
