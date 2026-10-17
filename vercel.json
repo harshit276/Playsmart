@@ -110,6 +110,11 @@
       "continue": true
     },
     {
+      "src": "/coach-voice/v1/(.*)",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" },
+      "continue": true
+    },
+    {
       "src": "/(.*\\.(json|png|jpg|jpeg|svg|webp|ico|mp3|mp4))",
       "dest": "/frontend/$1"
     },
