@@ -6,7 +6,7 @@ import { cuesSupported } from "@/lib/speakCue";
  * Everything rarely used (racket hand, switching camera, showing angles) lives in the settings
  * sheet, so the bar stays quiet. A small amber dot says the phone is struggling to keep up.
  */
-export default function PracticeTopBar({ title, subtitle, onClose, sound, onToggleSound, onSettings, slow = false }) {
+export default function PracticeTopBar({ title, subtitle, onClose, sound, onToggleSound, onSettings, slow = false, badge = null, badgeWarn = false }) {
   const btn = "w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:bg-white/20";
   return (
     <div className="flex items-center gap-2 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
@@ -15,6 +15,9 @@ export default function PracticeTopBar({ title, subtitle, onClose, sound, onTogg
         <p className="text-[15px] font-bold leading-tight truncate">{title}</p>
         {subtitle && <p className="text-[11px] text-zinc-400 leading-tight truncate">{subtitle}</p>}
       </div>
+      {badge && (
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold tabular-nums ${badgeWarn ? "bg-amber-400 text-black" : "bg-white/10 text-zinc-200"}`} data-testid="trial-badge" aria-live="off">{badge}</span>
+      )}
       {slow && <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" title="Running slowly on this phone" aria-label="Running slowly on this phone" />}
       {cuesSupported() && (
         <button type="button" onClick={onToggleSound} className={btn} aria-label={sound ? "Mute the coach" : "Unmute the coach"}>

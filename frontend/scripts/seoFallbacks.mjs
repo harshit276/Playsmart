@@ -181,7 +181,7 @@ const ROUTES = {
   "/practice": {
     title: "Shadow Practice: Live AI Form Coach on Your Phone",
     description:
-      "Practise in front of your phone camera. Formanti tracks your form live, shows the correct position and tells you out loud what to fix. Nothing is uploaded.",
+      "Practise in front of your phone camera. Formanti tracks your form live, shows the correct position, tells you out loud what to fix and gives you a drill for what you keep missing. Free for 10 minutes with an account. Nothing is uploaded.",
     // its own preview card for shared links (the site-wide card is used when this is omitted)
     image: `${ORIGIN}/icons/og-practice.png`,
     h1: "Shadow Practice: A Form Coach in Front of Your Phone",
@@ -189,6 +189,7 @@ const ROUTES = {
       "Prop your phone up and swing, or lift, with no equipment. Formanti follows your body live on your phone, draws the correct position in green wherever you are off, and tells you out loud what to fix. Your video never leaves your phone.",
     faqs: [
       ["Does shadow practice upload my video?", "No. The pose tracking runs on your phone, so your video stays on it."],
+      ["Is shadow practice free?", "Your first 10 minutes are free with a free account. After that a pass opens it for a week, a month or a year. You pay once and nothing renews on its own."],
       ["Which sports does it cover?", "Badminton, tennis, table tennis, pickleball and squash swings, and the deadlift. More lifts are coming."],
       ["Do I need a coach or any equipment?", "No. Prop your phone up two to three metres away with your whole body in view. The target ranges are guide values, not a coach's verdict."],
     ],

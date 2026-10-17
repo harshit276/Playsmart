@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ShieldCheck, Smartphone, Activity, Mic, Check } from "lucide-react";
+import { PracticePriceLine } from "@/components/PracticePaywall";
 
 /**
  * The marketing side of /practice: what shadow practice is, how it works, what it checks and
@@ -44,7 +45,7 @@ export function PracticeHero() {
       <h1 className="font-heading text-4xl md:text-5xl font-black leading-[1.05] mt-1">A form coach in front of your phone</h1>
       <p className="text-zinc-300 text-base mt-3 max-w-xl">
         Prop your phone up and swing, or lift. Formanti follows your body live, draws the correct position in green wherever you're off,
-        and tells you out loud what to fix. No account needed.
+        and tells you out loud what to fix. Your first 10 minutes are free with a free account.
       </p>
       <div className="mt-5 flex flex-wrap gap-2.5">
         <a href="#pick" className="px-5 py-3 rounded-xl bg-lime-400 text-black font-bold text-sm">Choose your shot</a>
@@ -95,10 +96,16 @@ export function PracticeInfo() {
         </div>
       </section>
 
+      <section className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
+        <p className="font-bold">What it costs</p>
+        <PracticePriceLine className="text-[13px] text-zinc-300 mt-1.5 leading-snug" />
+        <p className="text-[12px] text-zinc-500 mt-1.5 leading-snug">The 10 minutes count your time with the camera on, across sessions, once per account. Buy again while a pass is running and the days are added on.</p>
+      </section>
+
       <section className="rounded-xl border border-lime-400/25 bg-lime-400/5 p-4">
         <p className="flex items-center gap-2 font-bold"><ShieldCheck className="w-4 h-4 text-lime-400" /> Your video stays on your phone</p>
         <p className="text-[13px] text-zinc-300 mt-1.5 leading-snug">
-          The pose tracking runs on your phone, so nothing is uploaded and you don't need an account. The first time, it downloads a 20 MB pose model.
+          The pose tracking runs on your phone, so nothing is uploaded. You need a free account to start, so we can keep your free minutes. The first time, it downloads a 20 MB pose model.
         </p>
       </section>
 
@@ -122,6 +129,7 @@ export function PracticeInfo() {
         <div className="mt-3 space-y-3">
           {[
             ["Does it upload my video?", "No. Everything is tracked on your phone, and the video never leaves it."],
+            ["Is it free?", "Your first 10 minutes are free with a free account. After that a pass opens it for a week, a month or a year. You pay once; nothing renews on its own."],
             ["Do I need a coach or equipment?", "No. A phone and a spot to prop it up. You can practise with no shuttle, or the hinge with no weight."],
             ["Which phones does it work on?", "Recent phones in Chrome or Safari with the camera allowed. If it runs slowly, it says so on screen."],
           ].map(([q, a]) => (

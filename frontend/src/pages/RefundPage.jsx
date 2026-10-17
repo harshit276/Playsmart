@@ -31,7 +31,7 @@ export default function RefundPage() {
           <RefreshCcw className="w-8 h-8 text-lime-400" />
           <h1 className="font-heading font-black text-3xl md:text-4xl text-white uppercase tracking-tighter">Refund Policy</h1>
         </div>
-        <p className="text-zinc-500 text-sm mb-12">Last updated: July 7, 2026</p>
+        <p className="text-zinc-500 text-sm mb-12">Last updated: October 17, 2026</p>
 
         <Section title="1. Overview">
           <p>
@@ -78,7 +78,19 @@ export default function RefundPage() {
           </p>
         </Section>
 
-        <Section title="8. Contact">
+        <Section title="8. Practice Passes">
+          <p>
+            A <strong className="text-white">practice pass</strong> is a one-time payment that opens live practice for a fixed period (7, 30 or 365 days). It does not renew and nothing further is charged. Every account also gets one free 10-minute trial of live practice.
+          </p>
+          <p>
+            If your payment was charged but your pass <strong className="text-white">did not open</strong>, or you were charged more than once for the same order, you are entitled to a full refund or the missing days, as in section 2.
+          </p>
+          <p>
+            If you have <strong className="text-white">not used live practice since buying a pass</strong>, you may ask for a full refund within <strong className="text-white">7 days</strong> of purchase. Once you have practised with a pass it is non-refundable, because the access it sells has begun. If a fault on our side stopped live practice from working, we will extend the pass by the time lost or refund the unused part.
+          </p>
+        </Section>
+
+        <Section title="9. Contact">
           <p>
             Questions about a refund? Reach us at <a href="mailto:support@formanti.com" className="text-lime-400 hover:text-lime-300 font-medium">support@formanti.com</a>. See also our <Link to="/cancellation" className="text-lime-400 hover:text-lime-300">Cancellation Policy</Link> and <Link to="/terms" className="text-lime-400 hover:text-lime-300">Terms &amp; Conditions</Link>.
           </p>

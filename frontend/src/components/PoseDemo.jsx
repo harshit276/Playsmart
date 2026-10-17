@@ -195,7 +195,7 @@ export default function PoseDemo({ className = "" }) {
         </div>
         <Link to="/practice?sport=badminton&shot=smash"
           className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-zinc-950 border border-lime-400/30 hover:border-lime-400/70 px-3.5 py-3 min-h-11 text-[14px] font-bold text-white transition-colors">
-          <span>Try it live. No account.</span>
+          <span>Try it live. 10 minutes free.</span>
           <ArrowRight className="w-4 h-4 text-lime-400" aria-hidden="true" />
         </Link>
         <p className="mt-2 flex items-center gap-1.5 text-xs text-zinc-400">

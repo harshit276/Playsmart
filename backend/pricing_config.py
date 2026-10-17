@@ -168,3 +168,19 @@ def analysis_cost(mode: Literal["keyframes", "video", "universal", "premium"] = 
 def premium_unlocked_for(plan_key: str | None) -> bool:
     p = get_plan(plan_key or "free")
     return bool(p and p.get("premium_unlocked"))
+
+
+# ─── Live practice: free trial + passes ──────────────────────────────
+# Live practice runs on the player's phone and costs us nothing per use, so it is
+# sold as time: every account gets one free trial of PRACTICE_TRIAL_SECONDS of
+# camera time (counted across sessions, once per account), then a pass.
+# A pass is a ONE-TIME payment that opens practice for `days` days; buying again
+# while a pass is running adds the days on the end. (No auto-renewal yet: that
+# needs Razorpay Subscriptions and an e-mandate, see practice_access.py.)
+# Prices are the founder's to change: edit here, nothing else reads them.
+PRACTICE_TRIAL_SECONDS = 600
+PRACTICE_PLANS = [
+    {"key": "practice_week",  "label": "1 week",  "days": 7,   "price_inr": 49,  "price_usd": 2},
+    {"key": "practice_month", "label": "1 month", "days": 30,  "price_inr": 149, "price_usd": 5, "highlight": True},
+    {"key": "practice_year",  "label": "1 year",  "days": 365, "price_inr": 999, "price_usd": 30},
+]

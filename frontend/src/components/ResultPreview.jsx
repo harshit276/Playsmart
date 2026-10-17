@@ -116,7 +116,7 @@ function CoachPanel({ shown }) {
 
 function PractisePanel({ shown }) {
   return (
-    <Panel n="4" title="Practise the fix" lead="Then rehearse it live in front of your phone. A voice tells you what to fix on every swing. No account, and nothing is uploaded." shown={shown} className="lg:col-span-2 lg:row-start-3">
+    <Panel n="4" title="Practise the fix" lead="Then rehearse it live in front of your phone. A voice tells you what to fix on every swing. The first 10 minutes are free, and nothing is uploaded." shown={shown} className="lg:col-span-2 lg:row-start-3">
       <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4 flex-1 flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-8">
         <div className="flex flex-col gap-3 lg:shrink-0 lg:items-start">
         <div className="flex justify-center lg:justify-start">

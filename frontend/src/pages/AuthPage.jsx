@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { takeAfterLogin } from "@/lib/practiceAccess";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/App";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ export default function AuthPage() {
   // magic verify link, which must run to completion so the tokens get granted.
   useEffect(() => {
     if (isAuthenticated && !verifying && !window.location.search.includes("verify=")) {
-      navigate("/dashboard", { replace: true });
+      navigate(takeAfterLogin() || "/dashboard", { replace: true });
     }
   }, [isAuthenticated, verifying, navigate]);
 
@@ -90,7 +91,7 @@ export default function AuthPage() {
     // No profile yet → drop straight into the analyzer instead of forcing
     // the long intake quiz. Profile is captured post-analysis via the
     // PostAnalysisProfilePrompt modal.
-    navigate(data.has_profile ? "/dashboard" : "/analyze");
+    navigate(takeAfterLogin() || (data.has_profile ? "/dashboard" : "/analyze"));
   };
 
   // ─── Magic verify link: /auth?verify=<token> ───
@@ -110,7 +111,7 @@ export default function AuthPage() {
         trackSignupConversion(data.user?.id);
         trackSignup(data.user?.id, "email");
         toast.success(`Email verified! You have ${formatAnalyses(data.tokens)}.`);
-        navigate(data.has_profile ? "/dashboard" : "/analyze", { replace: true });
+        navigate(takeAfterLogin() || (data.has_profile ? "/dashboard" : "/analyze"), { replace: true });
       } catch (err) {
         toast.error(err?.response?.data?.detail || "That verification link didn't work. Please sign up again.");
         setMode("signup");
@@ -143,7 +144,7 @@ export default function AuthPage() {
         const { data } = await api.post("/auth/login-password", { email, password: emailPass });
         login(data.token, data.user, data.has_profile, data.tokens);
         toast.success(`Welcome back${data.user?.name ? ", " + data.user.name : ""}!`);
-        navigate(data.has_profile ? "/dashboard" : "/analyze");
+        navigate(takeAfterLogin() || (data.has_profile ? "/dashboard" : "/analyze"));
       }
     } catch (err) {
       const status = err?.response?.status;
@@ -180,7 +181,7 @@ export default function AuthPage() {
       const { data } = await api.post("/auth/demo-login", {});
       login(data.token, data.user, data.has_profile, data.tokens);
       toast.success(`Logged in as Demo Player · ${formatAnalyses(data.tokens)}`);
-      navigate(data.has_profile ? "/dashboard" : "/analyze");
+      navigate(takeAfterLogin() || (data.has_profile ? "/dashboard" : "/analyze"));
     } catch (err) {
       toast.error("Demo login failed: " + (err?.response?.data?.detail || err.message || "unknown"));
     }

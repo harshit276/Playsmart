@@ -1615,6 +1615,9 @@ _USER_OWNED_COLLECTIONS = [
     ("training_progress", ["user_id"]),
     ("training_plans", ["user_id"]),
     ("payment_orders", ["user_id"]),
+    ("practice_access", ["user_id"]),
+    ("practice_sessions", ["user_id"]),
+    ("practice_grants", ["user_id"]),
     ("game_attendance", ["user_id"]),
     ("game_ratings", ["user_id"]),
     ("analysis_feedback", ["user_id"]),
@@ -3141,6 +3144,9 @@ async def razorpay_verify(req: RazorpayVerifyRequest, authorization: str = Heade
             raise HTTPException(status_code=503, detail="Could not confirm right now — please retry.")
         if not demo_order or demo_order.get("user_id") != user["id"] or not demo_order.get("demo"):
             raise HTTPException(status_code=404, detail="Order not found")
+        if demo_order.get("plan_key"):
+            _fresh, acc = await _practice_grant_for_order(user["id"], demo_order, "demo_" + oid)
+            return {"ok": True, "kind": "practice_pass", "plan_key": demo_order["plan_key"], "access": acc}
         pack = _get_pack(demo_order.get("pack_key", ""))
         if not pack:
             raise HTTPException(status_code=400, detail="Unknown demo pack")
@@ -3170,6 +3176,9 @@ async def razorpay_verify(req: RazorpayVerifyRequest, authorization: str = Heade
         raise HTTPException(status_code=404, detail="Order not found")
     if order.get("user_id") != user["id"]:
         raise HTTPException(status_code=403, detail="Order belongs to another user")
+    if order.get("plan_key"):
+        _fresh, acc = await _practice_grant_for_order(user["id"], order, req.razorpay_payment_id)
+        return {"ok": True, "kind": "practice_pass", "plan_key": order["plan_key"], "access": acc}
     pack = _get_pack(order.get("pack_key", ""))
     bal = await _credit_razorpay_order(user["id"], order, req.razorpay_payment_id)
     if bal is None:  # already credited (duplicate)
@@ -3183,12 +3192,18 @@ async def razorpay_webhook(request: Request):
     x-razorpay-signature = HMAC-SHA256(raw_body, webhook_secret)."""
     raw = await request.body()
     sig = request.headers.get("x-razorpay-signature", "")
-    if RAZORPAY_WEBHOOK_SECRET and sig:
-        import hmac as _hmac, hashlib as _hl
-        expected = _hmac.new(RAZORPAY_WEBHOOK_SECRET.encode(), raw, _hl.sha256).hexdigest()
-        if not _hmac.compare_digest(expected, sig):
-            logger.warning("Razorpay webhook: signature mismatch")
-            raise HTTPException(status_code=400, detail="Invalid signature")
+    # SECURITY: the signature is mandatory. This used to be checked only `if secret and sig`, so with no
+    # RAZORPAY_WEBHOOK_SECRET configured (the webhook had never been set up) ANY unsigned POST naming a real order id
+    # was accepted and credited: create an order, post a forged payment.captured for it, get free tokens (or a free
+    # practice pass). Until the secret is configured the webhook refuses everything; Razorpay simply retries later.
+    if not RAZORPAY_WEBHOOK_SECRET:
+        logger.error("Razorpay webhook called but RAZORPAY_WEBHOOK_SECRET is not set: refusing")
+        raise HTTPException(status_code=503, detail="webhook not configured")
+    import hmac as _hmac, hashlib as _hl
+    expected = _hmac.new(RAZORPAY_WEBHOOK_SECRET.encode(), raw, _hl.sha256).hexdigest()
+    if not sig or not _hmac.compare_digest(expected, sig):
+        logger.warning("Razorpay webhook: missing or wrong signature")
+        raise HTTPException(status_code=400, detail="Invalid signature")
     try:
         body = json.loads(raw)
     except Exception:
@@ -3212,6 +3227,10 @@ async def razorpay_webhook(request: Request):
         # Genuinely unknown order (e.g. created against another environment).
         # 200 so Razorpay stops retrying something we can never settle.
         return {"ok": False, "error": "order not found"}
+    if order.get("plan_key"):
+        # a non-2xx makes Razorpay retry, which is what we want if the grant could not be written
+        fresh, _acc = await _practice_grant_for_order(order["user_id"], order, payment_id)
+        return {"ok": True, "credited": fresh, "kind": "practice_pass"}
     try:
         bal = await _credit_razorpay_order(order["user_id"], order, payment_id)
     except Exception as exc:
@@ -3219,6 +3238,244 @@ async def razorpay_webhook(request: Request):
                      payment_id[:16], str(exc)[:160])
         raise HTTPException(status_code=500, detail="credit failed, retry")
     return {"ok": True, "credited": bal is not None, "balance": bal}
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Live practice: an account, a one-time free trial, then a pass.
+# The rules and the storage live in practice_access.py (tested against a fake
+# database); these are the thin routes. Set PRACTICE_PAYWALL=off in the
+# environment to open practice to everyone again without a deploy.
+# ──────────────────────────────────────────────────────────────────────
+PRACTICE_PAYWALL = os.environ.get("PRACTICE_PAYWALL", "on").strip().lower() not in ("off", "0", "false", "no")
+PRACTICE_FREE_EMAILS = {e.strip().lower() for e in os.environ.get("PRACTICE_FREE_EMAILS", "").split(",") if e.strip()}
+_practice_indexed = False
+
+
+def _pa():
+    """Imported on first use: a problem in that module must break practice, never the whole API."""
+    import practice_access
+    return practice_access
+
+
+def _practice_exempt(user: dict) -> Optional[str]:
+    """Accounts that never meet the paywall: the demo / test accounts and anything in PRACTICE_FREE_EMAILS."""
+    email = (user.get("email") or "").strip().lower()
+    if email and (email in PRACTICE_FREE_EMAILS or email in (DEMO_ACCOUNT_EMAIL, DEMO_USER_EMAIL)):
+        return email
+    if user.get("id") == DEMO_USER_ID:
+        return "demo"
+    return None
+
+
+def _practice_use_usd(request: Request) -> bool:
+    return bool(INTERNATIONAL_CHARGING and not _is_india(request))
+
+
+async def _practice_store():
+    global _practice_indexed
+    pa = _pa()
+    if not _practice_indexed:
+        _practice_indexed = True  # once per container; the indexes only make lookups quicker
+        try:
+            await asyncio.wait_for(db.practice_access.create_index("user_id", unique=True), timeout=8.0)
+            await asyncio.wait_for(db.practice_sessions.create_index("id", unique=True), timeout=8.0)
+            await asyncio.wait_for(db.practice_sessions.create_index([("user_id", 1), ("started_at", -1)]), timeout=8.0)
+        except Exception as exc:
+            logger.warning("practice index setup skipped: %s", str(exc)[:120])
+    return pa.PracticeStore(db)
+
+
+async def _practice_grant_for_order(user_id: str, order: dict, payment_id: str):
+    """Open (or extend) practice for a paid pass order. Idempotent per payment id, so the client's verify and the
+    webhook can both run. Errors are retryable 503s: by now the customer has been charged."""
+    now = datetime.now(timezone.utc)
+    store = await _practice_store()
+    try:
+        fresh, acc = await store.grant_pass(
+            user_id, order.get("plan_key", ""), payment_id, now,
+            order_id=order.get("razorpay_order_id") or "", amount=order.get("amount"), currency=order.get("currency") or "INR")
+    except ValueError as exc:
+        logger.error("practice grant refused for %s: %s", payment_id[:16], exc)
+        raise HTTPException(status_code=400, detail="This payment could not be applied to your account.")
+    except Exception as exc:
+        logger.error("practice grant failed for %s: %s", payment_id[:16], str(exc)[:160])
+        raise HTTPException(
+            status_code=503,
+            detail="We could not open your pass just now. Your payment went through: retrying in a moment will open it.")
+    try:
+        await asyncio.wait_for(db.payment_orders.update_one(
+            {"razorpay_order_id": order.get("razorpay_order_id")},
+            {"$set": {"status": "paid", "razorpay_payment_id": payment_id, "paid_at": now.isoformat()}}), timeout=3.0)
+    except Exception:
+        pass
+    if fresh:
+        try:
+            await _notify_admin_now(
+                f"\U0001f4b0 Practice pass \u00b7 {order.get('currency') or 'INR'} {order.get('amount')}",
+                f"User: {user_id[:12]}\u2026\nPlan: {order.get('plan_key')}\nPass until: {acc.get('pass_until')}")
+        except Exception:
+            pass
+    return fresh, acc
+
+
+@api_router.get("/practice/plans")
+async def practice_plans(request: Request):
+    """The trial length and the passes on sale, priced for the visitor's country (same rule as the order)."""
+    pa = _pa()
+    return {"trial_seconds": pa.TRIAL_SECONDS, "paywall": PRACTICE_PAYWALL, "autorenew": False,
+            "plans": pa.plans_for(_practice_use_usd(request))}
+
+
+@api_router.get("/practice/access")
+async def practice_access_status(authorization: str = Header(None)):
+    """May this account practise right now, and why (trial time left / pass until / trial used up)."""
+    user = await get_current_user(authorization)
+    store = await _practice_store()
+    try:
+        return await store.get_access(user["id"], datetime.now(timezone.utc), exempt=_practice_exempt(user), paywall=PRACTICE_PAYWALL)
+    except Exception as exc:
+        logger.error("practice access lookup failed for %s: %s", user["id"][:8], str(exc)[:160])
+        raise HTTPException(status_code=503, detail="We couldn't check your practice access just now. Please try again.")
+
+
+class PracticeSessionStart(BaseModel):
+    sport: str = Field("", max_length=30)
+    shot: str = Field("", max_length=40)
+
+
+class PracticeSessionBeat(BaseModel):
+    session_id: str = Field(..., max_length=64)
+    final: bool = False
+
+
+@api_router.post("/practice/session/start")
+async def practice_session_start(req: PracticeSessionStart, authorization: str = Header(None)):
+    """Open a practice session. 402 when the free trial is used up and there is no pass."""
+    user = await get_current_user(authorization)
+    store = await _practice_store()
+    try:
+        acc, sid = await store.start_session(user["id"], req.sport, req.shot, datetime.now(timezone.utc),
+                                             exempt=_practice_exempt(user), paywall=PRACTICE_PAYWALL)
+    except Exception as exc:
+        logger.error("practice session start failed for %s: %s", user["id"][:8], str(exc)[:160])
+        raise HTTPException(status_code=503, detail="We couldn't start your session just now. Please try again.")
+    if not sid:
+        raise HTTPException(status_code=402, detail={"code": acc["reason"], "access": acc})
+    return {"session_id": sid, "access": acc}
+
+
+@api_router.post("/practice/session/beat")
+async def practice_session_beat(req: PracticeSessionBeat, authorization: str = Header(None)):
+    """Heartbeat while the camera is live (every ~15 s): counts trial time and says whether practice may go on."""
+    user = await get_current_user(authorization)
+    store = await _practice_store()
+    try:
+        acc, known = await store.beat(user["id"], req.session_id, datetime.now(timezone.utc), final=req.final,
+                                      exempt=_practice_exempt(user), paywall=PRACTICE_PAYWALL)
+    except Exception as exc:
+        logger.warning("practice beat failed for %s: %s", user["id"][:8], str(exc)[:160])
+        raise HTTPException(status_code=503, detail="retry")
+    return {"access": acc, "session_known": known}
+
+
+class CreatePassOrderRequest(BaseModel):
+    plan_key: str = Field(..., max_length=40)
+
+
+@api_router.post("/payments/razorpay/create-pass-order")
+async def razorpay_create_pass_order(req: CreatePassOrderRequest, request: Request, authorization: str = Header(None)):
+    """Create a Razorpay order for a practice pass. Same shape as /create-order; verify and the webhook open the pass."""
+    user = await get_current_user(authorization)
+    plan = _pa().get_plan(req.plan_key)
+    if not plan:
+        raise HTTPException(status_code=400, detail="Unknown plan")
+    desc = f"Formanti practice pass \u00b7 {plan['label']}"
+
+    async def _save(row: dict, tries: int = 3):
+        # An order we cannot find again is one we cannot settle, so unlike the token packs this must not be best-effort.
+        last = None
+        for i in range(tries):
+            try:
+                await asyncio.wait_for(db.payment_orders.insert_one(dict(row)), timeout=8.0)
+                return
+            except Exception as exc:
+                last = exc
+                await asyncio.sleep(0.5 * (i + 1))
+        logger.error("practice create-pass-order persist failed: %s", str(last)[:160])
+        raise HTTPException(status_code=503, detail="We couldn't start the payment just now. Please try again.")
+
+    base_row = {"id": str(uuid.uuid4()), "user_id": user["id"], "plan_key": plan["key"], "days": plan["days"],
+                "kind": "practice_pass", "created_at": datetime.now(timezone.utc).isoformat(), "paid_at": None}
+
+    if RAZORPAY_DEMO:
+        order_id = f"DEMO_{plan['key']}_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}"
+        await _save({**base_row, "razorpay_order_id": order_id, "amount": plan["price_inr"], "currency": "INR",
+                     "amount_inr": plan["price_inr"], "status": "created", "provider": "razorpay_demo", "demo": True})
+        return {"order_id": order_id, "amount": int(plan["price_inr"] * 100), "currency": "INR",
+                "key_id": "demo", "provider": "razorpay", "demo_mode": True}
+
+    use_usd = _practice_use_usd(request) and plan.get("price_usd")
+    amount = plan["price_usd"] if use_usd else plan["price_inr"]
+    currency = "USD" if use_usd else "INR"
+    payload = {"amount": int(round(amount * 100)), "currency": currency,
+               "receipt": f"pp_{int(_time.time() * 1000)}_{uuid.uuid4().hex[:6]}",
+               "notes": {"user_id": user["id"], "plan_key": plan["key"], "kind": "practice_pass", "days": str(plan["days"])}}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post("https://api.razorpay.com/v1/orders",
+                                  auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET), json=payload)
+            if r.status_code >= 400:
+                msg = r.text[:300]
+                try:
+                    msg = (r.json().get("error") or {}).get("description") or msg
+                except Exception:
+                    pass
+                logger.error(f"Razorpay create-pass-order failed {r.status_code}: {r.text[:300]}")
+                raise HTTPException(status_code=502, detail=f"Razorpay: {msg}")
+            data = r.json()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"razorpay create-pass-order exception: {exc}")
+        raise HTTPException(status_code=503, detail="Payment provider unreachable")
+    order_id = data.get("id")
+    if not order_id:
+        raise HTTPException(status_code=502, detail="No order id from Razorpay")
+    await _save({**base_row, "razorpay_order_id": order_id, "amount": amount, "currency": currency,
+                 "amount_inr": plan["price_inr"], "status": "created", "provider": "razorpay"})
+    return {"order_id": order_id, "amount": data.get("amount"), "currency": currency, "key_id": RAZORPAY_KEY_ID,
+            "provider": "razorpay", "name": "Formanti", "description": desc,
+            "prefill_email": user.get("email") or "", "prefill_contact": user.get("phone") or ""}
+
+
+class AdminPracticeGrantRequest(BaseModel):
+    identifier: str = Field(..., max_length=200)  # email or user id
+    days: int = Field(..., ge=1, le=366)
+    note: str = Field("", max_length=200)
+
+
+@api_router.post("/admin/practice-grant")
+async def admin_practice_grant(req: AdminPracticeGrantRequest, x_admin_key: str = Header(None, alias="X-Admin-Key")):
+    """Give an account N days of practice (support, comps, a payment that could not be applied). Adds to a running pass."""
+    _require_admin(x_admin_key)
+    ident = (req.identifier or "").strip()
+    lower = ident.lower()
+    try:
+        user = await asyncio.wait_for(db.users.find_one({"$or": [{"email": lower}, {"id": ident}]}, {"_id": 0, "id": 1, "email": 1}), timeout=8.0)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="DB error: {}".format(str(exc)[:120]))
+    if not user and "@" in lower:
+        user = {"id": _user_id_for_email(lower), "email": lower}
+    if not user:
+        raise HTTPException(status_code=404, detail="No account matches '{}'".format(ident[:80]))
+    store = await _practice_store()
+    pa = _pa()
+    try:
+        _fresh, acc = await store.grant_pass(user["id"], pa.ADMIN_GRANT, f"admin_{uuid.uuid4()}", datetime.now(timezone.utc),
+                                             days=req.days, order_id=(req.note or "")[:200])
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Could not grant: {}".format(str(exc)[:120]))
+    return {"ok": True, "user_id": user["id"], "email": user.get("email"), "access": acc}
 
 
 async def _settle_pending_referrals(user_id: str) -> None:
