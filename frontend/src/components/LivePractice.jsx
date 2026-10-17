@@ -17,7 +17,8 @@ import { useVoiceHealth, voiceNote } from "@/lib/useVoiceHealth";
 import { useLiveCamera } from "@/lib/useLiveCamera";
 import { track } from "@/lib/analytics";
 import { usePracticeMeter } from "@/lib/usePracticeMeter";
-import { fmtClock } from "@/lib/practiceAccess";
+import { fmtClock, fmtDate } from "@/lib/practiceAccess";
+import { buildReport, rememberSession, compareWithLast } from "@/ai/sessionReport";
 import { deviceKind } from "@/lib/frameSource";
 import { verdictMs } from "@/lib/testHooks";
 import PracticeShell from "@/components/practice/PracticeShell";
@@ -99,6 +100,8 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
   const [reps, setReps] = useState([]);
   const [verdict, setVerdict] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [report, setReport] = useState(null); // the end-of-session report (ai/sessionReport)
+  const [compare, setCompare] = useState(null); // against the last session of this shot on this device
   const [coachLine, setCoachLine] = useState(null);
   const vnote = voiceNote(useVoiceHealth());
 
@@ -349,6 +352,12 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
 
   const finish = () => {
     const list = repsRef.current;
+    const durationSec = Math.round((Date.now() - (startedAtRef.current || Date.now())) / 1000);
+    const rep = buildReport({ reps: list, durationSec });
+    const goodNow = list.filter((r) => r.inBand).length;
+    const prev = rememberSession({ sport, shot: shotKey, total: list.length, good: goodNow, speedMedian: rep.speed.median });
+    setReport(rep);
+    setCompare(compareWithLast(prev, list.length, goodNow));
     track("practice_ended", {
       sport, shot: shotName, reps: list.length, in_range: list.filter((r) => r.inBand).length,
       seconds: Math.round((Date.now() - (startedAtRef.current || Date.now())) / 1000),
@@ -373,6 +382,7 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     for (const k of Object.keys(readingsRef.current)) readingsRef.current[k] = [];
     coachRef.current.reset(); coachKeyRef.current = ""; setCoachLine(null);
     policyRef.current.reset(); laterRef.current = null;
+    setReport(null); setCompare(null);
     lastSwingAtRef.current = -1e9; startedAtRef.current = Date.now();
     setSummaryOpen(false);
     start(facing);
@@ -423,6 +433,18 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
     return Object.values(counts).sort((a, b) => b.n - a.n).slice(0, 3).map((c) => ({ ...c.f.cue, count: c.n }));
   })();
 
+  // what the end-of-session screen says about access: trial time left, the pass, or the way to get one
+  const summaryCta = (() => {
+    const a = meter.access;
+    if (!session || !a || a.reason === "staff" || a.reason === "open") return null;
+    if (a.reason === "pass") return { title: `Practice pass active until ${fmtDate(a.pass_until)}`, text: "Practise as often as you like.", button: null };
+    if (a.reason === "trial") {
+      const left = meter.left != null ? meter.left : a.trial_seconds_left;
+      return { title: `Free trial: ${fmtClock(left)} of ${fmtClock(a.trial_seconds_total)} left`, text: "A pass keeps the coach, the drills and reports like this one going after your free minutes.", button: "Get a practice pass", onClick: () => onPaywall?.("trial_ending") };
+    }
+    return { title: a.reason === "pass_expired" ? "Your practice pass has ended" : "Your free trial is used up", text: "Get a pass to keep practising with the coach.", button: "Get a practice pass", onClick: () => onPaywall?.(a.reason) };
+  })();
+
   const summary = summaryOpen ? (
     <PracticeSummary
       title={shotName}
@@ -430,7 +452,10 @@ export default function LivePractice({ ideal, shotName, shotKey = "", sport, han
       good={good}
       noun="swing"
       thumbs={reps.filter((r) => r.picture).map((r) => ({ n: r.n, inBand: r.inBand, url: r.picture }))}
-      cards={summaryCards}
+      cards={report ? report.work : summaryCards}
+      report={report}
+      compare={compare}
+      cta={summaryCta}
       onAgain={again}
       onExit={onExit}
       analyzeText="Film a real rally and get the full analysis"

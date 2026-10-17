@@ -19,7 +19,7 @@ import VerdictCard from "@/components/practice/VerdictCard";
 import SettingsSheet from "@/components/practice/SettingsSheet";
 import PracticeSummary from "@/components/practice/PracticeSummary";
 import { usePracticeMeter } from "@/lib/usePracticeMeter";
-import { fmtClock } from "@/lib/practiceAccess";
+import { fmtClock, fmtDate } from "@/lib/practiceAccess";
 
 /**
  * LiftPractice — shadow practice for a lift, with the phone's camera.
@@ -319,6 +319,17 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
     })).filter((c) => c.cue).map((c) => ({ ...c.cue, count: c.count }));
   })();
 
+  const summaryCta = (() => {
+    const a = meter.access;
+    if (!session || !a || a.reason === "staff" || a.reason === "open") return null;
+    if (a.reason === "pass") return { title: `Practice pass active until ${fmtDate(a.pass_until)}`, text: "Practise as often as you like.", button: null };
+    if (a.reason === "trial") {
+      const left = meter.left != null ? meter.left : a.trial_seconds_left;
+      return { title: `Free trial: ${fmtClock(left)} of ${fmtClock(a.trial_seconds_total)} left`, text: "A pass keeps the coach and the drills going after your free minutes.", button: "Get a practice pass", onClick: () => onPaywall?.("trial_ending") };
+    }
+    return { title: a.reason === "pass_expired" ? "Your practice pass has ended" : "Your free trial is used up", text: "Get a pass to keep practising with the coach.", button: "Get a practice pass", onClick: () => onPaywall?.(a.reason) };
+  })();
+
   const summary = summaryOpen ? (
     <PracticeSummary
       title={L.label}
@@ -327,6 +338,7 @@ export default function LiftPractice({ lift = "deadlift", facing: facingProp = "
       noun="rep"
       thumbs={reps.map((r) => ({ n: r.n, inBand: r.inBand, url: r.pictures.lockout || r.pictures.setup })).filter((t) => t.url)}
       cards={summaryCards}
+      cta={summaryCta}
       onAgain={again}
       onExit={onExit}
       analyzeText="Film a real lift and get the full check"
